@@ -454,8 +454,12 @@ We need experts to inspect the algorithms and proofs presented in this paper to 
 	
 	\item[Participant] \hfill \\
 	A network-connected computer offering a discreet and inflexible volume of storage to the network.
+	A participant is the local representation, and contains data such as private keys.
+	\item[Sibling] \hfill \\
+	A public representation of a participant.
+	Private data such as private keys is not contained in a sibling.
 	\item[Quorum] \hfill \\
-	A set of randomly chosen participants working in consensus to monitor a subset of the Sia network.
+	A set of randomly chosen siblings working in consensus to monitor a subset of the Sia network.
 	\item[State] \hfill \\
 	The status of a quorum-monitored subset of the Sia network.
 	Every participant in the same quorum will have an identical state.
