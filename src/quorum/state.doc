@@ -1,8 +1,0 @@
-The Bootstrapping Process
-1. Announce ourselves as a participant to the bootstrap address
-2. The bootstrap address finds an index for the new participant
-3. The bootstrap address announces the new participant with its index to the quorum
-4. Each participant adds the new participant to their state object
-5. Each participant tells the new participant about themselves
-
-Errors will happen if anyone tries to bootstrap after the first few seconds, this is not a secure procedure

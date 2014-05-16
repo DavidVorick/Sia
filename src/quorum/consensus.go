@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// All information that needs to be passed between participants each block
+// All information that needs to be passed between siblings each block
 type heartbeat struct {
 	entropy common.Entropy
 }
@@ -23,23 +23,6 @@ type SignedHeartbeat struct {
 	heartbeatHash crypto.TruncatedHash
 	signatories   []byte             // a list of everyone who's seen the heartbeat
 	signatures    []crypto.Signature // their corresponding signatures
-}
-
-// Using the current State, newHeartbeat() creates a heartbeat that fulfills all
-// of the requirements of the quorum.
-func (s *State) newHeartbeat() (hb *heartbeat, err error) {
-	hb = new(heartbeat)
-
-	// Generate Entropy
-	entropy, err := crypto.RandomByteSlice(common.EntropyVolume)
-	if err != nil {
-		return
-	}
-	copy(hb.entropy[:], entropy)
-
-	// more code will be added here
-
-	return
 }
 
 // Convert heartbeat to []byte
@@ -73,9 +56,20 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	return
 }
 
-// take new heartbeat (our own), sign it, and package it into a signedHearteat
-// I'm pretty sure this only follows a newHeartbeat() call; they can be merged
-func (s *State) signHeartbeat(hb *heartbeat) (sh *SignedHeartbeat, err error) {
+// Using the current State, newSignedHeartbeat() creates a heartbeat for the
+// quorum and then signs and announces it.
+func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
+	hb := new(heartbeat)
+
+	// Generate Entropy
+	entropy, err := crypto.RandomByteSlice(common.EntropyVolume)
+	if err != nil {
+		return
+	}
+	copy(hb.entropy[:], entropy)
+
+	// more code will be added here
+
 	sh = new(SignedHeartbeat)
 
 	// confirm heartbeat and hash
@@ -91,20 +85,25 @@ func (s *State) signHeartbeat(hb *heartbeat) (sh *SignedHeartbeat, err error) {
 
 	// fill out signatures
 	sh.signatures = make([]crypto.Signature, 1)
-	signedHb, err := s.secretKey.Sign(sh.heartbeatHash[:])
+	signedHb, err := p.secretKey.Sign(sh.heartbeatHash[:])
 	if err != nil {
 		return
 	}
 	sh.signatures[0] = signedHb.Signature
 	sh.signatories = make([]byte, 1)
-	sh.signatories[0] = s.self.index
+	sh.signatories[0] = p.self.index
+
+	err = p.announceSignedHeartbeat(sh)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	return
 }
 
 // Takes a signed heartbeat and broadcasts it to the quorum
-func (s *State) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
-	s.broadcast(&common.Message{
-		Proc: "State.HandleSignedHeartbeat",
+func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
+	p.broadcast(&common.Message{
+		Proc: "Participant.HandleSignedHeartbeat",
 		Args: *sh,
 		Resp: nil,
 	})
@@ -115,7 +114,7 @@ var hsherrMismatchedSignatures = errors.New("SignedHeartbeat has mismatches sign
 var hsherrOversigned = errors.New("Received an over-signed signedHeartbeat")
 var hsherrNoSync = errors.New("Received an out-of-sync SignedHeartbeat")
 var hsherrBounds = errors.New("Received an out of bounds index for signatory")
-var hsherrNonParticipant = errors.New("Received heartbeat from non-participant")
+var hsherrNonSibling = errors.New("Received heartbeat from non-sibling")
 var hsherrHaveHeartbeat = errors.New("Already have this heartbeat")
 var hsherrManyHeartbeats = errors.New("Received many heartbeats from this host")
 var hsherrDoubleSigned = errors.New("Received a double signature")
@@ -125,7 +124,7 @@ var hsherrInvalidSignature = errors.New("Received heartbeat with invalid signatu
 // 'incomingSignedHeartbeat' and verifies it according to the specification
 //
 // What sort of input error checking is needed for this function?
-func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
+func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 	// Check that the slices of signatures and signatories are of the same length
 	if len(sh.signatures) != len(sh.signatories) {
 		return hsherrMismatchedSignatures
@@ -136,9 +135,9 @@ func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 		return hsherrOversigned
 	}
 
-	s.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
-	currentStep := s.currentStep
-	s.stepLock.Unlock()
+	p.quorum.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
+	currentStep := p.quorum.currentStep
+	p.quorum.stepLock.Unlock()
 	// s.CurrentStep must be less than or equal to len(sh.Signatories), unless
 	// there is a new block and s.CurrentStep is common.QuorumSize
 	if currentStep > len(sh.signatories) {
@@ -157,24 +156,24 @@ func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 	}
 
 	// we are starting to read from memory, initiate locks
-	s.participantsLock.RLock()
-	s.heartbeatsLock.Lock()
-	defer s.participantsLock.RUnlock()
-	defer s.heartbeatsLock.Unlock()
+	p.quorum.siblingsLock.RLock()
+	p.quorum.heartbeatsLock.Lock()
+	defer p.quorum.siblingsLock.RUnlock()
+	defer p.quorum.heartbeatsLock.Unlock()
 
-	// check that first signatory is a participant
-	if s.participants[sh.signatories[0]] == nil {
-		return hsherrNonParticipant
+	// check that first signatory is a sibling
+	if p.quorum.siblings[sh.signatories[0]] == nil {
+		return hsherrNonSibling
 	}
 
 	// Check if we have already received this heartbeat
-	_, exists := s.heartbeats[sh.signatories[0]][sh.heartbeatHash]
+	_, exists := p.quorum.heartbeats[sh.signatories[0]][sh.heartbeatHash]
 	if exists {
 		return hsherrHaveHeartbeat
 	}
 
 	// Check if we already have two heartbeats from this host
-	if len(s.heartbeats[sh.signatories[0]]) >= 2 {
+	if len(p.quorum.heartbeats[sh.signatories[0]]) >= 2 {
 		return hsherrManyHeartbeats
 	}
 
@@ -188,9 +187,9 @@ func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 			return hsherrBounds
 		}
 
-		// Verify that the signatory is a participant in the quorum
-		if s.participants[signatory] == nil {
-			return hsherrNonParticipant
+		// Verify that the signatory is a sibling in the quorum
+		if p.quorum.siblings[signatory] == nil {
+			return hsherrNonSibling
 		}
 
 		// Verify that the signatory has only been seen once in the current SignedHeartbeat
@@ -203,7 +202,7 @@ func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 
 		// verify the signature
 		signedMessage.Signature = sh.signatures[i]
-		verification := s.participants[signatory].publicKey.Verify(&signedMessage)
+		verification := p.quorum.siblings[signatory].publicKey.Verify(&signedMessage)
 
 		// check status of verification
 		if !verification {
@@ -220,20 +219,20 @@ func (s *State) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
 	}
 
 	// Add heartbeat to list of seen heartbeats
-	s.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
+	p.quorum.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
 
 	// Sign the stack of signatures and send it to all hosts
-	signedMessage, err := s.secretKey.Sign(signedMessage.Message)
+	signedMessage, err := p.secretKey.Sign(signedMessage.Message)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// add our signature to the signedHeartbeat
 	sh.signatures = append(sh.signatures, signedMessage.Signature)
-	sh.signatories = append(sh.signatories, s.self.index)
+	sh.signatories = append(sh.signatories, p.self.index)
 
 	// broadcast the message to the quorum
-	err = s.announceSignedHeartbeat(&sh)
+	err = p.announceSignedHeartbeat(&sh)
 	if err != nil {
 		log.Fatalln(err)
 		return err
@@ -272,7 +271,7 @@ func (sh *SignedHeartbeat) GobEncode() (gobSignedHeartbeat []byte, err error) {
 	return
 }
 
-func (shb *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
+func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 	if gobSignedHeartbeat == nil {
 		err = fmt.Errorf("cannot decode a nil byte slice")
 		return
@@ -280,139 +279,90 @@ func (shb *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 
 	r := bytes.NewBuffer(gobSignedHeartbeat)
 	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&shb.heartbeat)
+	err = decoder.Decode(&sh.heartbeat)
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&shb.heartbeatHash)
+	err = decoder.Decode(&sh.heartbeatHash)
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&shb.signatories)
+	err = decoder.Decode(&sh.signatories)
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&shb.signatures)
+	err = decoder.Decode(&sh.signatures)
 	if err != nil {
 		return
 	}
-
-	return
-}
-
-// participants are processed in a random order each block, determined by the
-// entropy for the block. participantOrdering() deterministically picks that
-// order, using entropy from the state.
-func (s *State) participantOrdering() (participantOrdering [common.QuorumSize]byte) {
-	// create an in-order list of participants
-	for i := range participantOrdering {
-		participantOrdering[i] = byte(i)
-	}
-
-	// shuffle the list of participants
-	for i := range participantOrdering {
-		newIndex, err := s.randInt(i, common.QuorumSize)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		tmp := participantOrdering[newIndex]
-		participantOrdering[newIndex] = participantOrdering[i]
-		participantOrdering[i] = tmp
-	}
-
-	return
-}
-
-// Removes all traces of a participant from the State
-func (s *State) tossParticipant(pi byte) {
-	// remove from s.Participants
-	s.participants[pi] = nil
-
-	// nil map in s.Heartbeats
-	s.heartbeats[pi] = nil
-}
-
-// Update the state according to the information presented in the heartbeat
-// processHeartbeat uses return codes for testing purposes
-func (s *State) processHeartbeat(hb *heartbeat, i byte) (err error) {
-	print("Confirming Participant ")
-	println(i)
-
-	// Add the entropy to UpcomingEntropy
-	th, err := crypto.CalculateTruncatedHash(append(s.upcomingEntropy[:], hb.entropy[:]...))
-	s.upcomingEntropy = common.Entropy(th)
 
 	return
 }
 
 // compile() takes the list of heartbeats and uses them to advance the state.
-func (s *State) compile() {
-	// fetch a participant ordering
-	participantOrdering := s.participantOrdering()
+//
+// Needs updated error handling
+func (p *Participant) compile() {
+	// fetch a sibling ordering
+	siblingOrdering := p.quorum.siblingOrdering()
 
-	// Lock down s.participants and s.heartbeats for editing
-	s.participantsLock.Lock()
-	s.heartbeatsLock.Lock()
+	// Lock down s.siblings and s.heartbeats for editing
+	p.quorum.siblingsLock.Lock()
+	p.quorum.heartbeatsLock.Lock()
 
 	// Read heartbeats, process them, then archive them.
-	for _, participant := range participantOrdering {
-		if s.participants[participant] == nil {
+	for _, sibling := range siblingOrdering {
+		if p.quorum.siblings[sibling] == nil {
 			continue
 		}
 
-		// each participant must submit exactly 1 heartbeat
-		if len(s.heartbeats[participant]) != 1 {
-			s.tossParticipant(participant)
+		// each sibling must submit exactly 1 heartbeat
+		if len(p.quorum.heartbeats[sibling]) != 1 {
+			p.quorum.tossSibling(sibling)
 			continue
 		}
 
 		// this is the only way I know to access the only element of a map;
 		// the key is unknown
-		for _, hb := range s.heartbeats[participant] {
-			s.processHeartbeat(hb, participant)
+		for _, hb := range p.quorum.heartbeats[sibling] {
+			p.quorum.processHeartbeat(hb, sibling)
 		}
 
 		// archive heartbeats (unimplemented)
 
 		// clear heartbeat list for next block
-		s.heartbeats[participant] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.quorum.heartbeats[sibling] = make(map[crypto.TruncatedHash]*heartbeat)
 	}
 
-	s.participantsLock.Unlock()
-	s.heartbeatsLock.Unlock()
+	p.quorum.siblingsLock.Unlock()
+	p.quorum.heartbeatsLock.Unlock()
 
 	// move UpcomingEntropy to CurrentEntropy
-	s.currentEntropy = s.upcomingEntropy
+	p.quorum.currentEntropy = p.quorum.upcomingEntropy
 
 	// generate, sign, and announce new heartbeat
-	hb, err := s.newHeartbeat()
+	sh, err := p.newSignedHeartbeat()
 	if err != nil {
-		log.Fatalln(err)
+		return
 	}
-	shb, err := s.signHeartbeat(hb)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	err = s.announceSignedHeartbeat(shb)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	err = p.announceSignedHeartbeat(sh)
+	return
 }
 
 // Tick() updates s.CurrentStep, and calls compile() when all steps are complete
-func (s *State) tick() {
+func (p *Participant) tick() {
 	// Every common.StepDuration, advance the state stage
 	ticker := time.Tick(common.StepDuration)
 	for _ = range ticker {
-		s.stepLock.Lock()
-		if s.currentStep == common.QuorumSize {
+		p.quorum.stepLock.Lock()
+		if p.quorum.currentStep == common.QuorumSize {
 			println("compiling")
-			s.compile()
-			s.currentStep = 1
+			p.compile()
+			p.quorum.currentStep = 1
 		} else {
 			println("stepping")
-			s.currentStep += 1
+			p.quorum.currentStep += 1
 		}
-		s.stepLock.Unlock()
+		p.quorum.stepLock.Unlock()
 	}
 }

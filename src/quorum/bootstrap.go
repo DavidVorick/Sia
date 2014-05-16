@@ -6,92 +6,122 @@ import (
 	"fmt"
 )
 
+/*
+The Bootstrapping Process
+1. Announce ourselves as a participant to the bootstrap address
+2. The bootstrap address finds an index for the new participant
+3. The bootstrap address announces the new participant with its index to the quorum
+4. Each participant adds the new participant to their state object
+5. Each participant tells the new participant about themselves
+
+Errors will happen if anyone tries to bootstrap after the first few seconds, this is not a secure procedure
+*/
+
+// Bootstrapping
+var bootstrapAddress = common.Address{
+	ID:   1,
+	Host: "localhost",
+	Port: 9988,
+}
+
 // Announce ourself to the bootstrap address, who will announce us to the quorum
-func (s *State) JoinSia() (err error) {
+func (p *Participant) joinSia() (err error) {
 	m := &common.Message{
 		Dest: bootstrapAddress,
-		Proc: "State.HandleJoinSia",
-		Args: *s.self,
+		Proc: "Participant.HandleJoinSia",
+		Args: *p.self,
 		Resp: nil,
 	}
-	s.messageRouter.SendAsyncMessage(m)
+	p.messageRouter.SendAsyncMessage(m)
 	return
 }
 
-// Adds a new Participants, and then announces them with their index
-// Currently not safe - Participants need to be added during compile()
-func (s *State) HandleJoinSia(p Participant, arb *struct{}) (err error) {
-	// find index for Participant
-	s.participantsLock.Lock()
+// Adds a new Sibling, and then announces them with their index
+// Currently not safe - Siblings need to be added during compile()
+func (p *Participant) HandleJoinSia(s Sibling, arb *struct{}) (err error) {
+	// find index for Sibling
+	p.quorum.siblingsLock.Lock()
 	i := 0
 	for i = 0; i < common.QuorumSize; i++ {
-		if s.participants[i] == nil {
+		if p.quorum.siblings[i] == nil {
 			break
 		}
 	}
-	s.participantsLock.Unlock()
-	p.index = byte(i)
-	err = s.AddNewParticipant(p, nil)
+	p.quorum.siblingsLock.Unlock()
+	s.index = byte(i)
+	err = p.AddNewSibling(s, nil)
 	if err != nil {
 		return
 	}
 
 	// see if the quorum is full
 	if i == common.QuorumSize {
-		return fmt.Errorf("failed to add Participant")
+		return fmt.Errorf("failed to add Sibling")
 	}
 
-	// now announce a new Participant at index i
-	s.broadcast(&common.Message{
-		Proc: "State.AddNewParticipant",
-		Args: p,
+	// now announce a new Sibling at index i
+	p.broadcast(&common.Message{
+		Proc: "Participant.AddNewSibling",
+		Args: s,
 		Resp: nil,
 	})
 	return
 }
 
-// Add a Participant to the state, tell the Participant about ourselves
-func (s *State) AddNewParticipant(p Participant, arb *struct{}) (err error) {
-	if int(p.index) > len(s.participants) {
-		err = fmt.Errorf("Corrupt Input")
+// Add a Sibling to the state, tell the Sibling about ourselves
+func (p *Participant) AddNewSibling(s Sibling, arb *struct{}) (err error) {
+	if int(s.index) > len(p.quorum.siblings) {
+		err = fmt.Errorf("sibling index exceeds lenght of siblings array")
 		return
 	}
 
-	s.participantsLock.RLock()
-	if s.participants[p.index] != nil {
-		s.participantsLock.RUnlock()
+	p.quorum.siblingsLock.RLock()
+	if p.quorum.siblings[s.index] != nil {
+		p.quorum.siblingsLock.RUnlock()
+		err = fmt.Errorf("sibling already exists at targeted location")
 		return
 	}
-	s.participantsLock.RUnlock()
-	// for this Participant, make the heartbeat map and add the default heartbeat
+	p.quorum.siblingsLock.RUnlock()
+
+	// for this sibling, make the heartbeat map and add the default heartbeat
 	hb := new(heartbeat)
-	s.heartbeatsLock.Lock()
-	s.participantsLock.Lock()
-	s.heartbeats[p.index] = make(map[crypto.TruncatedHash]*heartbeat)
-	s.heartbeats[p.index][emptyHash] = hb
-	s.heartbeatsLock.Unlock()
+	p.quorum.heartbeatsLock.Lock()
+	p.quorum.siblingsLock.Lock()
+	p.quorum.heartbeats[s.index] = make(map[crypto.TruncatedHash]*heartbeat)
 
-	compare := p.compare(s.self)
+	// get the hash of the default heartbeat
+	ehb, err := hb.GobEncode()
+	if err != nil {
+		return
+	}
+	hbHash, err := crypto.CalculateTruncatedHash(ehb)
+	if err != nil {
+		return
+	}
+	p.quorum.heartbeats[s.index][hbHash] = hb
+	p.quorum.heartbeatsLock.Unlock()
+
+	compare := s.compare(p.self)
 	if compare == true {
-		// add our self object to the correct index in Participants
-		s.self.index = p.index
-		s.participants[p.index] = s.self
-		s.tickingLock.Lock()
-		s.ticking = true
-		s.tickingLock.Unlock()
-		go s.tick()
+		// add our self object to the correct index in Sibings
+		p.self.index = s.index
+		p.quorum.siblings[s.index] = p.self
+		p.quorum.tickingLock.Lock()
+		p.quorum.ticking = true
+		p.quorum.tickingLock.Unlock()
+		go p.tick()
 	} else {
-		// add the Participant to Participants
-		s.participants[p.index] = &p
+		// add the Sibling to siblings
+		p.quorum.siblings[s.index] = &s
 
 		// tell the new guy about ourselves
-		s.messageRouter.SendAsyncMessage(&common.Message{
-			Dest: p.address,
-			Proc: "State.AddNewParticipant",
-			Args: *s.self,
+		p.messageRouter.SendAsyncMessage(&common.Message{
+			Dest: s.address,
+			Proc: "Participant.AddNewSibling",
+			Args: *p.self,
 			Resp: nil,
 		})
 	}
-	s.participantsLock.Unlock()
+	p.quorum.siblingsLock.Unlock()
 	return
 }

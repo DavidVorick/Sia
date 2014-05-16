@@ -59,24 +59,20 @@ func TestSignedHeartbeatEncoding(t *testing.T) {
 	}
 
 	// Test the encoding and decoding of a simple signed heartbeat
-	s, err := CreateState(common.NewZeroNetwork())
+	p, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
-	hb, err := s.newHeartbeat()
+	sh, err := p.newSignedHeartbeat()
 	if err != nil {
 		t.Fatal(err)
 	}
-	sh, err := s.signHeartbeat(hb)
+	esh, err := sh.GobEncode()
 	if err != nil {
 		t.Fatal(err)
 	}
-	msh, err := sh.GobEncode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ush := new(SignedHeartbeat)
-	err = ush.GobDecode(msh)
+	dsh := new(SignedHeartbeat)
+	err = dsh.GobDecode(esh)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,8 +81,8 @@ func TestSignedHeartbeatEncoding(t *testing.T) {
 }
 
 func TestHandleSignedHeartbeat(t *testing.T) {
-	// create a state and populate it with the signatories as participants
-	s, err := CreateState(common.NewZeroNetwork())
+	// create a state and populate it with the signatories as siblings
+	p, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,25 +97,29 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create participants and add them to s
-	var p1 Participant
-	var p2 Participant
+	// create siblings and add them to s
+	var p1 Sibling
+	var p2 Sibling
+	p.self.index = 0
 	p1.index = 1
 	p2.index = 2
 	p1.publicKey = pubKey1
 	p2.publicKey = pubKey2
-	err = s.AddNewParticipant(p1, nil)
+	err = p.AddNewSibling(*p.self, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.AddNewParticipant(p2, nil)
+	err = p.AddNewSibling(p1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.AddNewSibling(p2, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// create SignedHeartbeat
-	var sh SignedHeartbeat
-	sh.heartbeat, err = s.newHeartbeat()
+	sh, err := p.newSignedHeartbeat()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,22 +156,25 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh.signatories[1] = 2
 
 	// delete existing heartbeat from state; makes the remaining tests easier
-	s.heartbeats[sh.signatories[0]] = make(map[crypto.TruncatedHash]*heartbeat)
+	p.quorum.heartbeats[sh.signatories[0]] = make(map[crypto.TruncatedHash]*heartbeat)
 
 	// handle the signed heartbeat, expecting nil error
-	err = s.HandleSignedHeartbeat(sh, nil)
+	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// verify that a repeat heartbeat gets ignored
-	err = s.HandleSignedHeartbeat(sh, nil)
+	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != hsherrHaveHeartbeat {
 		t.Error("expected heartbeat to get ignored as a duplicate:", err)
 	}
 
+	// save the signature from the old heartbeat to falsify the new heartbeat
+	badSig := sh.signatures[1]
+
 	// create a different heartbeat, this will be used to test the fail conditions
-	sh.heartbeat, err = s.newHeartbeat()
+	sh, err = p.newSignedHeartbeat()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,16 +188,17 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// verify a heartbeat with bad signatures is rejected
-	err = s.HandleSignedHeartbeat(sh, nil)
+	sh.signatures[0] = badSig
+	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != hsherrInvalidSignature {
-		t.Error("expected heartbeat to get ignored as having invalid signatures: ", err)
+		t.Fatal("expected heartbeat to get ignored as having invalid signatures: ", err)
 	}
 
-	// verify that a non-participant gets rejected
+	// verify that a non-sibling gets rejected
 	sh.signatories[0] = 3
-	err = s.HandleSignedHeartbeat(sh, nil)
-	if err != hsherrNonParticipant {
-		t.Error("expected non-participant to be rejected: ", err)
+	err = p.HandleSignedHeartbeat(*sh, nil)
+	if err != hsherrNonSibling {
+		t.Error("expected non-sibling to be rejected: ", err)
 	}
 
 	// give heartbeat repeat signatures
@@ -213,13 +217,15 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// adjust signatories slice
+	sh.signatures = make([]crypto.Signature, 2)
+	sh.signatories = make([]byte, 2)
 	sh.signatures[0] = signature1.Signature
 	sh.signatures[1] = signature2.Signature
 	sh.signatories[0] = 1
 	sh.signatories[1] = 1
 
 	// verify repeated signatures are rejected
-	err = s.HandleSignedHeartbeat(sh, nil)
+	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != hsherrDoubleSigned {
 		t.Error("expected heartbeat to be rejected for duplicate signatures: ", err)
 	}
@@ -229,10 +235,10 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh.signatories = sh.signatories[:1]
 
 	// handle heartbeat when tick is larger than num signatures
-	s.stepLock.Lock()
-	s.currentStep = 2
-	s.stepLock.Unlock()
-	err = s.HandleSignedHeartbeat(sh, nil)
+	p.quorum.stepLock.Lock()
+	p.quorum.currentStep = 2
+	p.quorum.stepLock.Unlock()
+	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != hsherrNoSync {
 		t.Error("expected heartbeat to be rejected as out-of-sync: ", err)
 	}
@@ -243,50 +249,50 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// send a heartbeat right at the edge of a new block
-	s.stepLock.Lock()
-	s.currentStep = common.QuorumSize
-	s.stepLock.Unlock()
+	p.quorum.stepLock.Lock()
+	p.quorum.currentStep = common.QuorumSize
+	p.quorum.stepLock.Unlock()
 
 	// submit heartbeat in separate thread
 	go func() {
-		err = s.HandleSignedHeartbeat(sh, nil)
+		err = p.HandleSignedHeartbeat(*sh, nil)
 		if err != nil {
 			t.Fatal("expected heartbeat to succeed!: ", err)
 		}
 		// need some way to verify with the test that the funcion gets here
 	}()
 
-	s.stepLock.Lock()
-	s.currentStep = 1
-	s.stepLock.Unlock()
+	p.quorum.stepLock.Lock()
+	p.quorum.currentStep = 1
+	p.quorum.stepLock.Unlock()
 	time.Sleep(time.Second)
 	time.Sleep(common.StepDuration)
 }
 
-func TestTossParticipant(t *testing.T) {
+func TestTossSibling(t *testing.T) {
 	// tbi
 }
 
 // Check that valid heartbeats are accepted and invalid heartbeats are rejected
 func TestProcessHeartbeat(t *testing.T) {
 	// create states and add them to each other
-	s0, err := CreateState(common.NewZeroNetwork())
+	p0, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
-	s1, err := CreateState(common.NewZeroNetwork())
+	p1, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
-	s0.AddNewParticipant(*s1.self, nil)
-	s1.AddNewParticipant(*s0.self, nil)
+	p0.AddNewSibling(*p1.self, nil)
+	p1.AddNewSibling(*p0.self, nil)
 
 	// check that a valid heartbeat passes
-	hb0, err := s0.newHeartbeat()
+	sh0, err := p0.newSignedHeartbeat()
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s1.processHeartbeat(hb0, 0)
+	err = p1.quorum.processHeartbeat(sh0.heartbeat, 0)
 	if err != nil {
 		t.Error("processHeartbeat threw out a valid heartbeat: ", err)
 	}
@@ -304,23 +310,23 @@ func TestRegularTick(t *testing.T) {
 		t.Skip()
 	}
 
-	s, err := CreateState(common.NewZeroNetwork())
+	p, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// verify that tick is updating CurrentStep
-	s.stepLock.Lock()
-	s.currentStep = 1
-	s.stepLock.Unlock()
-	go s.tick()
+	p.quorum.stepLock.Lock()
+	p.quorum.currentStep = 1
+	p.quorum.stepLock.Unlock()
+	go p.tick()
 	time.Sleep(common.StepDuration)
 	time.Sleep(time.Second)
-	s.stepLock.Lock()
-	if s.currentStep != 2 {
-		t.Fatal("s.currentStep failed to update correctly: ", s.currentStep)
+	p.quorum.stepLock.Lock()
+	if p.quorum.currentStep != 2 {
+		t.Fatal("s.currentStep failed to update correctly: ", p.quorum.currentStep)
 	}
-	s.stepLock.Unlock()
+	p.quorum.stepLock.Unlock()
 }
 
 // ensures Tick() calles compile() and then resets the counter to step 1
@@ -331,19 +337,19 @@ func TestCompilationTick(t *testing.T) {
 	}
 
 	// create state, set values for compile
-	s, err := CreateState(common.NewZeroNetwork())
+	p, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.currentStep = common.QuorumSize
-	go s.tick()
+	p.quorum.currentStep = common.QuorumSize
+	go p.tick()
 
 	// verify that tick is wrapping around properly
 	time.Sleep(common.StepDuration)
 	time.Sleep(time.Second)
-	s.stepLock.Lock()
-	if s.currentStep != 1 {
-		t.Error("s.currentStep failed to roll over: ", s.currentStep)
+	p.quorum.stepLock.Lock()
+	if p.quorum.currentStep != 1 {
+		t.Error("p.quorum.currentStep failed to roll over: ", p.quorum.currentStep)
 	}
-	s.stepLock.Unlock()
+	p.quorum.stepLock.Unlock()
 }

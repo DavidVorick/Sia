@@ -15,8 +15,7 @@ func establishQuorum() {
 		println(err)
 		return
 	}
-	s, err := quorum.CreateState(networkServer)
-	s.JoinSia()
+	_, err = quorum.CreateParticipant(networkServer)
 	select {}
 }
 

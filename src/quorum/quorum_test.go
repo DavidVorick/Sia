@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestParticipantCompare(t *testing.T) {
-	var p0 *Participant
-	var p1 *Participant
+func TestSiblingCompare(t *testing.T) {
+	var p0 *Sibling
+	var p1 *Sibling
 
 	// compare nil values
 	compare := p0.compare(p1)
@@ -17,7 +17,7 @@ func TestParticipantCompare(t *testing.T) {
 	}
 
 	// compare when one is nil
-	p0 = new(Participant)
+	p0 = new(Sibling)
 	compare = p0.compare(p1)
 	if compare == true {
 		t.Error("Comparing a zero participant to a nil participant should return false")
@@ -28,7 +28,7 @@ func TestParticipantCompare(t *testing.T) {
 	}
 
 	// initialize each participant with a public key
-	p1 = new(Participant)
+	p1 = new(Sibling)
 	pubKey, _, err := crypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
@@ -74,14 +74,14 @@ func TestParticipantCompare(t *testing.T) {
 	}
 }
 
-func TestParticipantEncoding(t *testing.T) {
+func TestSiblingEncoding(t *testing.T) {
 	// Try nil values
-	var p *Participant
+	var p *Sibling
 	_, err := p.GobEncode()
 	if err == nil {
 		t.Error("Encoded nil participant without error")
 	}
-	p = new(Participant)
+	p = new(Sibling)
 	_, err = p.GobEncode()
 	if err == nil {
 		t.Fatal("Should not be able to encode nil values")
@@ -95,7 +95,7 @@ func TestParticipantEncoding(t *testing.T) {
 	p.publicKey = pubKey
 	p.address = bootstrapAddress
 
-	up := new(Participant)
+	up := new(Sibling)
 	ep, err := p.GobEncode()
 	if err != nil {
 		t.Fatal(err)
@@ -122,45 +122,16 @@ func TestParticipantEncoding(t *testing.T) {
 	}
 }
 
-// Create a state, check the defaults
-func TestCreateState(t *testing.T) {
-	// make sure CreateState does not cause errors
-	s, err := CreateState(common.NewZeroNetwork())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// sanity check the default values
-	if s.self.index != 255 {
-		t.Error("s.self.index initialized to ", s.self.index)
-	}
-	if s.currentStep != 1 {
-		t.Error("s.currentStep should be initialized to 1!")
-	}
-}
-
-func TestSetAddress(t *testing.T) {
-	// Later
-}
-
-func TestUpdateParticipant(t *testing.T) {
-	// Later
-}
-
-func TestBroadcast(t *testing.T) {
-	// make sure that a message gets sent to every participant...?
-}
-
 // check general case, check corner cases, and then do some fuzzing
 func TestRandInt(t *testing.T) {
-	s, err := CreateState(common.NewZeroNetwork())
+	p, err := CreateParticipant(common.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// check that it works in the vanilla case
-	previousEntropy := s.currentEntropy
-	randInt, err := s.randInt(0, 5)
+	previousEntropy := p.quorum.currentEntropy
+	randInt, err := p.quorum.randInt(0, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,14 +140,14 @@ func TestRandInt(t *testing.T) {
 	}
 
 	// check that s.CurrentEntropy flipped to next value
-	if previousEntropy == s.currentEntropy {
+	if previousEntropy == p.quorum.currentEntropy {
 		t.Error(previousEntropy)
-		t.Error(s.currentEntropy)
+		t.Error(p.quorum.currentEntropy)
 		t.Fatal("When calling randInt, s.CurrentEntropy was not changed")
 	}
 
 	// check the zero value
-	randInt, err = s.randInt(0, 0)
+	randInt, err = p.quorum.randInt(0, 0)
 	if err == nil {
 		t.Fatal("Randint(0,0) should return a bounds error")
 	}
@@ -189,7 +160,7 @@ func TestRandInt(t *testing.T) {
 	low := 0
 	high := common.QuorumSize
 	for i := 0; i < 100000; i++ {
-		randInt, err = s.randInt(low, high)
+		randInt, err = p.quorum.randInt(low, high)
 		if err != nil {
 			t.Fatal("randInt fuzzing error: ", err, " low: ", low, " high: ", high)
 		}

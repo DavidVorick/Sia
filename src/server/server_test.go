@@ -15,27 +15,22 @@ func TestNetworkedQuorum(t *testing.T) {
 		println("message sender creation failed")
 	}
 
-	s0, err := quorum.CreateState(rpcs)
+	_, err = quorum.CreateParticipant(rpcs)
 	if err != nil {
-		println("s0 creation failed")
+		println("p0 creation failed")
 	}
-	s1, err := quorum.CreateState(rpcs)
+	_, err = quorum.CreateParticipant(rpcs)
 	if err != nil {
-		println("s1 creation failed")
+		println("p1 creation failed")
 	}
-	s2, err := quorum.CreateState(rpcs)
+	_, err = quorum.CreateParticipant(rpcs)
 	if err != nil {
-		println("s2 creation failed")
+		println("p2 creation failed")
 	}
-	s3, err := quorum.CreateState(rpcs)
+	_, err = quorum.CreateParticipant(rpcs)
 	if err != nil {
-		println("s3 creation failed")
+		println("p3 creation failed")
 	}
-
-	s0.JoinSia()
-	s1.JoinSia()
-	s2.JoinSia()
-	s3.JoinSia()
 
 	// Basically checking for errors up to this point
 	if testing.Short() {
