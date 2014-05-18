@@ -99,14 +99,26 @@ func (rpcs *RPCServer) SendMessage(m *common.Message) error {
 // It returns a *Call, which contains the fields "Done channel" and "Error error".
 func (rpcs *RPCServer) SendAsyncMessage(m *common.Message) *rpc.Call {
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
-	d := make(chan *rpc.Call, 1)
+	d := make(chan *rpc.Call, 2)
 	if err != nil {
 		// make a dummy *Call
 		errCall := &rpc.Call{"", nil, nil, err, d}
 		errCall.Done <- nil
 		return errCall
 	}
+
 	// add identifier to service name
 	name := strings.Replace(m.Proc, ".", string(m.Dest.ID)+".", 1)
-	return conn.Go(name, m.Args, m.Resp, d)
+
+	// send message
+	call := conn.Go(name, m.Args, m.Resp, d)
+
+	// spawn a goroutine to send a timeout error
+	go func() {
+		<-time.After(common.StepDuration / 2)
+		call.Error = errors.New("request timed out")
+		call.Done <- nil
+	}()
+
+	return call
 }
