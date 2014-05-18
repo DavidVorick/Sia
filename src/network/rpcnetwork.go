@@ -2,11 +2,13 @@ package network
 
 import (
 	"common"
+	"errors"
 	"net"
 	"net/rpc"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
@@ -74,28 +76,47 @@ func (rpcs *RPCServer) serverHandler() {
 }
 
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
+// It times out after waiting for half the step duration.
 func (rpcs *RPCServer) SendMessage(m *common.Message) error {
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		return err
 	}
+
 	// add identifier to service name
 	name := strings.Replace(m.Proc, ".", string(m.Dest.ID)+".", 1)
-	return conn.Call(name, m.Args, m.Resp)
+
+	// send message
+	select {
+	case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
+		return call.Error
+	case <-time.After(common.StepDuration / 2):
+		return errors.New("request timed out")
+	}
 }
 
 // SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
-// It returns a *Call, which contains the fields "Done channel" and "Error error".
-func (rpcs *RPCServer) SendAsyncMessage(m *common.Message) *rpc.Call {
+// It returns a channel that will contain an error value when the request completes.
+func (rpcs *RPCServer) SendAsyncMessage(m *common.Message) chan error {
+	errChan := make(chan error, 2)
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
-	d := make(chan *rpc.Call, 1)
 	if err != nil {
-		// make a dummy *Call
-		errCall := &rpc.Call{"", nil, nil, err, d}
-		errCall.Done <- nil
-		return errCall
+		errChan <- err
+		return errChan
 	}
+
 	// add identifier to service name
 	name := strings.Replace(m.Proc, ".", string(m.Dest.ID)+".", 1)
-	return conn.Go(name, m.Args, m.Resp, d)
+
+	// send message
+	go func() {
+		select {
+		case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
+			errChan <- call.Error
+		case <-time.After(common.StepDuration / 2):
+			errChan <- errors.New("request timed out")
+		}
+	}()
+
+	return errChan
 }

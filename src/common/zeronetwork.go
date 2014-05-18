@@ -1,7 +1,6 @@
 package common
 
 import (
-	"net/rpc"
 	"sync"
 )
 
@@ -25,11 +24,11 @@ func (z *ZeroNetwork) SendMessage(m *Message) error {
 	return nil
 }
 
-func (z *ZeroNetwork) SendAsyncMessage(m *Message) *rpc.Call {
+func (z *ZeroNetwork) SendAsyncMessage(m *Message) (c chan error) {
 	z.messagesLock.Lock()
 	z.messages = append(z.messages, m)
 	z.messagesLock.Unlock()
-	return nil
+	return
 }
 
 func (z *ZeroNetwork) Close() {
