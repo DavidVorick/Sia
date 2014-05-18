@@ -2,11 +2,13 @@ package network
 
 import (
 	"common"
+	"errors"
 	"net"
 	"net/rpc"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
@@ -74,14 +76,23 @@ func (rpcs *RPCServer) serverHandler() {
 }
 
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
+// It times out after waiting for half the step duration.
 func (rpcs *RPCServer) SendMessage(m *common.Message) error {
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		return err
 	}
+
 	// add identifier to service name
 	name := strings.Replace(m.Proc, ".", string(m.Dest.ID)+".", 1)
-	return conn.Call(name, m.Args, m.Resp)
+
+	// send message
+	select {
+	case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
+		return call.Error
+	case <-time.After(common.StepDuration / 2):
+		return errors.New("request timed out")
+	}
 }
 
 // SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
