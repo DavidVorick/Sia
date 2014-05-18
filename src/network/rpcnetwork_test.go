@@ -16,19 +16,24 @@ func (tsh *TestStoreHandler) StoreMessage(message string, arb *struct{}) error {
 	return nil
 }
 
-// TestRPCSendMessage tests the NewRPCServer and RegisterHandler functions.
+func (tsh *TestStoreHandler) DoNothing(message string, arb *struct{}) error {
+	select {}
+	return nil
+}
+
+// TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and Send(Async)Message functions.
 // NewRPCServer must properly initialize a RPC server.
-// RegisterHandler must make a RPC available to the client.
-// The RPC must sucessfully store a message.
+// RegisterHandler must make an RPC available to the client.
+// SendMessage and SendAsyncMessage must complete successfully.
 func TestRPCSendMessage(t *testing.T) {
-	// create RPCServer and add a message handler
+	// create RPCServer
 	rpcs, err := NewRPCServer(9987)
 	if err != nil {
 		t.Fatal("Failed to initialize TCPServer:", err)
 	}
 	defer rpcs.Close()
 
-	// create message handler and add it to the TCPServer
+	// add a message handler to the server
 	tsh := new(TestStoreHandler)
 	id := rpcs.RegisterHandler(tsh)
 
@@ -58,5 +63,44 @@ func TestRPCSendMessage(t *testing.T) {
 
 	if tsh.message != "hello, world!" {
 		t.Fatal("Bad response: expected \"hello, world!\", got \"" + tsh.message + "\"")
+	}
+}
+
+// TestRPCTimeout tests the timeout functionality of Send(Async)Message.
+// During the test, a message is sent to a handler that does nothing with it.
+// The sender should eventually timeout and return an error instead of continuing to wait.
+func TestRPCTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	// create RPCServer
+	rpcs, err := NewRPCServer(9987)
+	if err != nil {
+		t.Fatal("Failed to initialize TCPServer:", err)
+	}
+	defer rpcs.Close()
+
+	// add a message handler to the server
+	tsh := new(TestStoreHandler)
+	id := rpcs.RegisterHandler(tsh)
+
+	// send a message
+	m := &common.Message{
+		common.Address{id, "localhost", 9987},
+		"TestStoreHandler.DoNothing",
+		"hello, world!",
+		nil,
+	}
+	err = rpcs.SendMessage(m)
+	if err == nil {
+		t.Fatal("Error: SendMessage did not timeout")
+	}
+
+	// send a message asynchronously
+	tsh.message = ""
+	async := rpcs.SendAsyncMessage(m)
+	<-async.Done
+	if async.Error == nil {
+		t.Fatal("Error: SendAsyncMessage did not timeout")
 	}
 }
