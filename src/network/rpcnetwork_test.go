@@ -55,10 +55,10 @@ func TestRPCSendMessage(t *testing.T) {
 
 	// send a message asynchronously
 	tsh.message = ""
-	async := rpcs.SendAsyncMessage(m)
-	<-async.Done
-	if async.Error != nil {
-		t.Fatal("Failed to send message:", async.Error)
+	errChan := rpcs.SendAsyncMessage(m)
+	err = <-errChan
+	if err != nil {
+		t.Fatal("Failed to send message:", err)
 	}
 
 	if tsh.message != "hello, world!" {
@@ -98,9 +98,8 @@ func TestRPCTimeout(t *testing.T) {
 
 	// send a message asynchronously
 	tsh.message = ""
-	async := rpcs.SendAsyncMessage(m)
-	<-async.Done
-	if async.Error == nil {
+	errChan := rpcs.SendAsyncMessage(m)
+	if <-errChan == nil {
 		t.Fatal("Error: SendAsyncMessage did not timeout")
 	}
 }
