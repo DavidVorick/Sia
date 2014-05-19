@@ -80,6 +80,7 @@ func TestSignedHeartbeatEncoding(t *testing.T) {
 	// check encoding and decoding of a signedHeartbeat with many signatures
 }
 
+// Test takes .66 seconds to run... why?
 func TestHandleSignedHeartbeat(t *testing.T) {
 	// create a state and populate it with the signatories as siblings
 	p, err := CreateParticipant(common.NewZeroNetwork())

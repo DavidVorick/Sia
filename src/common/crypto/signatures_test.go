@@ -7,6 +7,8 @@ import (
 
 // Basic testing of key creation, signing, and verification
 // Implicitly tests SignedMessage.CombinedMessage()
+//
+// Test takes .4 seconds to run... why?
 func TestSigning(t *testing.T) {
 	// Create a keypair
 	publicKey, secretKey, err := CreateKeyPair()
