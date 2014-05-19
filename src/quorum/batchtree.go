@@ -9,6 +9,8 @@ type batchNode struct {
 
 	children int
 	weight   int
+
+	data *batch
 }
 
 // insert takes a batch object that is not yet in the batchTree and puts it
@@ -102,4 +104,66 @@ func (parent *batchNode) delete(bn *batchNode) {
 			replacementNode.weight += replacementNode.right.weight
 		}
 	}
+}
+
+// insertDelete takes an element to be inserted and an element to be deleted and
+// performs both operations at once. Doing both operations at the same time
+// means that less work overall must be performed; you replace the deleted
+// element with the inserted element, and then you update the parent-set once.
+// This is less work than even a single insert or a single delete.
+func (parent *batchNode) insertDelete(insertBN, deleteBN *batchNode) {
+	// tbi
+}
+
+// randomSector takes a random int between 0 and the total weight of the
+// batchTree and picks a sector at random to be used in the proof-of-storage
+func (q *quorum) randomSector() (b *batch, sector int) {
+	// get a random number between 0 and the batch tree weight
+	random, err := q.randInt(0, q.parent.weight)
+	if err != nil {
+		// not sure
+		return
+	}
+
+	// tree is post-ordered; the parent comes after the children
+	// this just makes the code a bit cleaner
+	currentNode := q.parent
+	for {
+		// check for nil statemenets
+		if currentNode.left == nil && currentNode.right == nil {
+			break
+		} else if currentNode.left == nil {
+			if random < currentNode.right.weight {
+				currentNode = currentNode.right
+			}
+			break
+		} else if currentNode.right == nil {
+			if random < currentNode.left.weight {
+				currentNode = currentNode.left
+			}
+			break
+		}
+
+		// logic if no nil statements are found
+		if random < currentNode.left.weight {
+			currentNode = currentNode.left
+		} else if random < (currentNode.left.weight + currentNode.right.weight) {
+			random -= currentNode.left.weight
+			random -= currentNode.weight
+			currentNode = currentNode.right
+		} else {
+			break
+		}
+	}
+	b = currentNode.data
+
+	// figure out which index to use
+	for index, value := range currentNode.data.sectorLengths {
+		if value > random {
+			sector = index
+			break
+		}
+		random -= value
+	}
+	return
 }

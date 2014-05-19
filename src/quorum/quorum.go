@@ -33,11 +33,15 @@ type quorum struct {
 	currentEntropy  common.Entropy // Used to generate random numbers during compilation
 	upcomingEntropy common.Entropy // Used to compute entropy for next block
 
+	// These variables might all need to go to Participant
 	// Consensus Algorithm Status
 	currentStep int
 	stepLock    sync.RWMutex // prevents a benign race condition
 	ticking     bool
 	tickingLock sync.Mutex
+
+	// Batch management
+	parent *batchNode
 }
 
 // Returns true if the values of the siblings are equivalent
