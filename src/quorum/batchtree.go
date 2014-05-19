@@ -77,26 +77,29 @@ func (parent *batchNode) delete(bn *batchNode) {
 		} else {
 			currentNode.right = replacementNode
 		}
+		replacementNode.parent = currentNode
 
 		// calculate weight of bn
-		bnWeight := bn.weight
 		if bn.left != nil {
-			bnWeight -= bn.left.weight
+			bn.weight -= bn.left.weight
 		}
 		if bn.right != nil {
-			bnWeight -= bn.right.weight
+			bn.weight -= bn.right.weight
 		}
 
 		// update the weights of the parents
 		for currentNode != nil {
-			currentNode.weight -= bnWeight
+			currentNode.weight -= bn.weight
 			currentNode.weight += replacementNode.weight
 			currentNode = currentNode.parent
 		}
 
-		// update replacementNode weight and pointers
+		// update weights and pointers
 		replacementNode.left = bn.left
 		replacementNode.right = bn.right
+		replacementNode.children = bn.children
+		bn.left = nil
+		bn.right = nil
 		if replacementNode.left != nil {
 			replacementNode.weight += replacementNode.left.weight
 		}
@@ -140,6 +143,8 @@ func (q *quorum) randomSector() (b *batch, sector int) {
 		} else if currentNode.right == nil {
 			if random < currentNode.left.weight {
 				currentNode = currentNode.left
+			} else {
+				random -= currentNode.left.weight
 			}
 			break
 		}
@@ -149,9 +154,10 @@ func (q *quorum) randomSector() (b *batch, sector int) {
 			currentNode = currentNode.left
 		} else if random < (currentNode.left.weight + currentNode.right.weight) {
 			random -= currentNode.left.weight
-			random -= currentNode.weight
 			currentNode = currentNode.right
 		} else {
+			random -= currentNode.left.weight
+			random -= currentNode.right.weight
 			break
 		}
 	}
