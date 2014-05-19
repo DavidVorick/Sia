@@ -311,27 +311,27 @@ func (p *Participant) compile() {
 	p.quorum.heartbeatsLock.Lock()
 
 	// Read heartbeats, process them, then archive them.
-	for _, sibling := range siblingOrdering {
-		if p.quorum.siblings[sibling] == nil {
+	for _, i := range siblingOrdering {
+		if p.quorum.siblings[i] == nil {
 			continue
 		}
 
 		// each sibling must submit exactly 1 heartbeat
-		if len(p.quorum.heartbeats[sibling]) != 1 {
-			p.quorum.tossSibling(sibling)
+		if len(p.quorum.heartbeats[i]) != 1 {
+			p.quorum.tossSibling(i)
 			continue
 		}
 
 		// this is the only way I know to access the only element of a map;
 		// the key is unknown
-		for _, hb := range p.quorum.heartbeats[sibling] {
-			p.quorum.processHeartbeat(hb, sibling)
+		for _, hb := range p.quorum.heartbeats[i] {
+			p.quorum.processHeartbeat(hb, i)
 		}
 
 		// archive heartbeats (unimplemented)
 
 		// clear heartbeat list for next block
-		p.quorum.heartbeats[sibling] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.quorum.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
 	}
 
 	p.quorum.siblingsLock.Unlock()
