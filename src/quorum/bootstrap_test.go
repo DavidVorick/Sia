@@ -21,7 +21,7 @@ func TestJoinQuorum(t *testing.T) {
 	if m == nil {
 		t.Fatal("message 0 never received")
 	}
-	p0.HandleJoinSia(m.Args.(Sibling), nil)
+	p0.JoinSia(m.Args.(Sibling), nil)
 
 	// Verify that a broadcast message went out indicating a new sibling
 
@@ -54,7 +54,7 @@ func TestJoinQuorum(t *testing.T) {
 
 	// Deliver message to bootstrap
 	m = z.RecentMessage(2)
-	p0.HandleJoinSia(m.Args.(Sibling), nil)
+	p0.JoinSia(m.Args.(Sibling), nil)
 
 	// Deliver the broadcasted messages
 	m = z.RecentMessage(3)

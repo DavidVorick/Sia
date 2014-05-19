@@ -47,7 +47,14 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	// register State and store our assigned ID
 	p.self.address.ID = messageRouter.RegisterHandler(p)
 
-	p.joinSia()
+	// send join request to bootstrap
+	errChan := p.messageRouter.SendAsyncMessage(&common.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.JoinSia",
+		Args: *p.self,
+		Resp: nil,
+	})
+	err = <-errChan
 	return
 }
 

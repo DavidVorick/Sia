@@ -24,21 +24,9 @@ var bootstrapAddress = common.Address{
 	Port: 9988,
 }
 
-// Announce ourself to the bootstrap address, who will announce us to the quorum
-func (p *Participant) joinSia() (err error) {
-	m := &common.Message{
-		Dest: bootstrapAddress,
-		Proc: "Participant.HandleJoinSia",
-		Args: *p.self,
-		Resp: nil,
-	}
-	p.messageRouter.SendAsyncMessage(m)
-	return
-}
-
 // Adds a new Sibling, and then announces them with their index
 // Currently not safe - Siblings need to be added during compile()
-func (p *Participant) HandleJoinSia(s Sibling, arb *struct{}) (err error) {
+func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
 	// find index for Sibling
 	p.quorum.siblingsLock.Lock()
 	i := 0
@@ -56,7 +44,7 @@ func (p *Participant) HandleJoinSia(s Sibling, arb *struct{}) (err error) {
 
 	// see if the quorum is full
 	if i == common.QuorumSize {
-		return fmt.Errorf("failed to add Sibling")
+		return fmt.Errorf("quorum already full")
 	}
 
 	// now announce a new Sibling at index i
