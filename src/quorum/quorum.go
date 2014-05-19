@@ -44,6 +44,83 @@ type quorum struct {
 	parent *batchNode
 }
 
+// returns the current state of the quorum in human-readable form
+func (q *quorum) Status() (b string) {
+	b = "Quorum state:\n\tSiblings:\n"
+	for _, s := range q.siblings {
+		if s != nil {
+			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
+		}
+	}
+	return
+}
+
+// Convert quorum to []byte
+// Only the siblings and entropy are encoded.
+func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
+	// if q == nil, encode a zero quorum
+	if q == nil {
+		q = new(quorum)
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+
+	// only encode non-nil siblings
+	var encSiblings []*Sibling
+	for _, s := range q.siblings {
+		if s != nil {
+			encSiblings = append(encSiblings, s)
+		}
+	}
+	err = encoder.Encode(encSiblings)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.currentEntropy)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.upcomingEntropy)
+	if err != nil {
+		return
+	}
+
+	gobQuorum = w.Bytes()
+	return
+}
+
+// Convert []byte to quorum
+// Only the siblings and entropy are decoded.
+func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
+	// if q == nil, make a new quorum and decode into that
+	if q == nil {
+		q = new(quorum)
+	}
+
+	r := bytes.NewBuffer(gobQuorum)
+	decoder := gob.NewDecoder(r)
+
+	// not all siblings were encoded
+	var encSiblings []*Sibling
+	err = decoder.Decode(&encSiblings)
+	if err != nil {
+		return
+	}
+	for _, s := range encSiblings {
+		q.siblings[s.index] = s
+	}
+	err = decoder.Decode(&q.currentEntropy)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.upcomingEntropy)
+	if err != nil {
+		return
+	}
+	return
+}
+
 // Returns true if the values of the siblings are equivalent
 func (s0 *Sibling) compare(s1 *Sibling) bool {
 	// false if either sibling is nil
