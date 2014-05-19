@@ -13,12 +13,7 @@ type batchNode struct {
 
 // insert takes a batch object that is not yet in the batchTree and puts it
 // into the batchTree
-func (parent *batchNode) insert(batch *batch) {
-	batch.node = new(batchNode)
-	for _, value := range batch.sectorLengths {
-		batch.node.weight += value
-	}
-
+func (parent *batchNode) insert(bn *batchNode) {
 	// insert the node into the lightest-weight half of the parent
 	currentNode := parent
 	for currentNode.children > 1 {
@@ -30,16 +25,16 @@ func (parent *batchNode) insert(batch *batch) {
 	}
 	// either one child is nil (max 1 child) or both are nil
 	if currentNode.left == nil {
-		currentNode.left = batch.node
-	} else if currentNode.left == nil {
-		currentNode.right = batch.node
+		currentNode.left = bn
+	} else {
+		currentNode.right = bn
 	}
-	batch.node.parent = currentNode
+	bn.parent = currentNode
 
 	// update the aggregate values of all parents
 	for currentNode != nil {
 		currentNode.children += 1
-		currentNode.weight += batchWeight
+		currentNode.weight += bn.weight
 		currentNode = currentNode.parent
 	}
 }
@@ -94,6 +89,7 @@ func (parent *batchNode) delete(bn *batchNode) {
 		for currentNode != nil {
 			currentNode.weight -= bnWeight
 			currentNode.weight += replacementNode.weight
+			currentNode = currentNode.parent
 		}
 
 		// update replacementNode weight and pointers
