@@ -28,6 +28,8 @@ func (z *ZeroNetwork) SendAsyncMessage(m *Message) (c chan error) {
 	z.messagesLock.Lock()
 	z.messages = append(z.messages, m)
 	z.messagesLock.Unlock()
+	c = make(chan error, 1)
+	c <- nil
 	return
 }
 
