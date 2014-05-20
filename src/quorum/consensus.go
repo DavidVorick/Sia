@@ -363,7 +363,7 @@ func (p *Participant) compile() {
 		gobQuorum, _ := p.quorum.GobEncode()
 		p.messageRouter.SendAsyncMessage(&common.Message{
 			Dest: s.address,
-			Proc: "Participant.DownloadQuorum",
+			Proc: "Participant.TransferQuorum",
 			Args: gobQuorum,
 			Resp: nil,
 		})

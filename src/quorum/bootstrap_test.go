@@ -58,7 +58,7 @@ func TestJoinQuorum(t *testing.T) {
 
 	// deliver download message to new sibling
 	gobQuorum, _ := p0.quorum.GobEncode()
-	p1.DownloadQuorum(gobQuorum, nil)
+	p1.TransferQuorum(gobQuorum, nil)
 
 	// Verify that new sibling started ticking
 	p1.tickingLock.Lock()

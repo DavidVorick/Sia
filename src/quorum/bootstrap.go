@@ -53,7 +53,7 @@ func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
 	return
 }
 
-func (p *Participant) DownloadQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
+func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
 	err = p.quorum.GobDecode(encodedQuorum)
 	fmt.Println("downloaded quorum:")
 	fmt.Print(p.quorum.Status())
