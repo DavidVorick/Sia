@@ -8,13 +8,22 @@ import (
 
 /*
 The Bootstrapping Process
-1. Announce ourselves as a participant to the bootstrap address
-2. The bootstrap address finds an index for the new participant
-3. The bootstrap address announces the new participant with its index to the quorum
-4. Each participant adds the new participant to their state object
-5. Each participant tells the new participant about themselves
+1. The new sibling announces its intent to the quorum.
+2. The quorum includes the sibling as a "hopeful" in the next heartbeat.
+3. During compile, the quorum decides whether or not to add the hopeful, and where.
+4. If accepted, the hopeful downloads the current quorum state.
+5. The current quorum siblings add the new participant, along with the default heartbeat.
+6. The hopeful listens to the quorum and processes any incoming heartbeats.
+7. After the next compile, the hopeful becomes a full sibling.
 
-Errors will happen if anyone tries to bootstrap after the first few seconds, this is not a secure procedure
+
+[- Interim 0 -]       [-- Compile --]       [- Interim 1 -]       [-- Compile --]       [- Interim 2 -]       [-- Compile --]       [- Interim 3 -]       [-- Compile --]
+[   hopeful   ]       [             ]       [   hopeful   ]       [   quorum    ]       [ hopeful gets]       [ default hb  ]       [   hopeful   ]       [             ]
+[  announces  ]  -->  [             ]  -->  [  added to   ]  -->  [ decides to  ]  -->  [  state and  ]  -->  [  used for   ]  -->  [  now fully  ]  -->  [             ]
+[   intent    ]       [             ]       [  heartbeat  ]       [ add hopeful ]       [  heartbeats ]       [   compile   ]       [  integrated ]       [             ]
+[-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]
+
+
 */
 
 // Bootstrapping
@@ -27,55 +36,48 @@ var bootstrapAddress = common.Address{
 // Adds a new Sibling, and then announces them with their index
 // Currently not safe - Siblings need to be added during compile()
 func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
-	// find index for Sibling
-	p.quorum.siblingsLock.Lock()
-	i := 0
-	for i = 0; i < common.QuorumSize; i++ {
-		if p.quorum.siblings[i] == nil {
-			break
-		}
-	}
-	p.quorum.siblingsLock.Unlock()
-	s.index = byte(i)
-	err = p.AddNewSibling(s, nil)
-	if err != nil {
-		return
-	}
-
-	// see if the quorum is full
-	if i == common.QuorumSize {
-		return fmt.Errorf("quorum already full")
-	}
-
-	// now announce a new Sibling at index i
 	p.broadcast(&common.Message{
-		Proc: "Participant.AddNewSibling",
+		Proc: "Participant.AddHopeful",
 		Args: s,
 		Resp: nil,
 	})
 	return
 }
 
+func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
+	fmt.Println("got join request")
+	p.currHeartbeat.addHopeful(&s)
+	return
+}
+
+func (p *Participant) DownloadQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
+	err = p.quorum.GobDecode(encodedQuorum)
+	fmt.Println("downloaded quorum:")
+	fmt.Print(p.quorum.Status())
+	// determine our index by searching through the quorum
+	// also create maps for each sibling
+	for i, s := range p.quorum.siblings {
+		if s.compare(p.self) {
+			p.self.index = byte(i)
+			p.addNewSibling(p.self)
+		} else {
+			p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+		}
+	}
+	p.tickingLock.Lock()
+	defer p.tickingLock.Unlock()
+	if !p.ticking {
+		p.ticking = true
+		go p.tick()
+	}
+	return
+}
+
 // Add a Sibling to the state, tell the Sibling about ourselves
-func (p *Participant) AddNewSibling(s Sibling, arb *struct{}) (err error) {
-	if int(s.index) > len(p.quorum.siblings) {
-		err = fmt.Errorf("sibling index exceeds lenght of siblings array")
-		return
-	}
-
-	p.quorum.siblingsLock.RLock()
-	if p.quorum.siblings[s.index] != nil {
-		p.quorum.siblingsLock.RUnlock()
-		err = fmt.Errorf("sibling already exists at targeted location")
-		return
-	}
-	p.quorum.siblingsLock.RUnlock()
-
-	// for this sibling, make the heartbeat map and add the default heartbeat
+// Note: p.heartbeats and p.quorum.siblings are already locked by compile()
+func (p *Participant) addNewSibling(s *Sibling) (err error) {
+	// make the heartbeat map and add the default heartbeat
 	hb := new(heartbeat)
-	p.quorum.heartbeatsLock.Lock()
-	p.quorum.siblingsLock.Lock()
-	p.quorum.heartbeats[s.index] = make(map[crypto.TruncatedHash]*heartbeat)
 
 	// get the hash of the default heartbeat
 	ehb, err := hb.GobEncode()
@@ -86,30 +88,10 @@ func (p *Participant) AddNewSibling(s Sibling, arb *struct{}) (err error) {
 	if err != nil {
 		return
 	}
-	p.quorum.heartbeats[s.index][hbHash] = hb
-	p.quorum.heartbeatsLock.Unlock()
 
-	compare := s.compare(p.self)
-	if compare == true {
-		// add our self object to the correct index in Sibings
-		p.self.index = s.index
-		p.quorum.siblings[s.index] = p.self
-		p.quorum.tickingLock.Lock()
-		p.quorum.ticking = true
-		p.quorum.tickingLock.Unlock()
-		go p.tick()
-	} else {
-		// add the Sibling to siblings
-		p.quorum.siblings[s.index] = &s
+	p.heartbeats[s.index] = make(map[crypto.TruncatedHash]*heartbeat)
+	p.heartbeats[s.index][hbHash] = hb
+	p.quorum.siblings[s.index] = s
 
-		// tell the new guy about ourselves
-		p.messageRouter.SendAsyncMessage(&common.Message{
-			Dest: s.address,
-			Proc: "Participant.AddNewSibling",
-			Args: *p.self,
-			Resp: nil,
-		})
-	}
-	p.quorum.siblingsLock.Unlock()
 	return
 }

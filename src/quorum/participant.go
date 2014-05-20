@@ -57,7 +57,16 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	// register State and store our assigned ID
 	p.self.address.ID = messageRouter.RegisterHandler(p)
 
-	// send join request to bootstrap
+	// if we are the bootstrap participant, initialize
+	if p.self.address == bootstrapAddress {
+		p.self.index = 0
+		p.addNewSibling(p.self)
+		p.ticking = true
+		go p.tick()
+		return
+	}
+	// otherwise, send a join request to the bootstrap
+	fmt.Println("joining network...")
 	errChan := p.messageRouter.SendAsyncMessage(&common.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.JoinSia",
@@ -70,6 +79,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 
 // Remove a Sibling from the quorum and heartbeats
 func (p *Participant) tossSibling(pi byte) {
+	fmt.Println("tossing sibling", pi, "(submitted", len(p.heartbeats[pi]), "heartbeats)")
 	p.quorum.siblings[pi] = nil
 	p.heartbeats[pi] = nil
 }
