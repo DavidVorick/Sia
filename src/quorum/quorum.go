@@ -24,21 +24,11 @@ type quorum struct {
 	siblingsLock sync.RWMutex                // prevents race conditions
 	// meta quorum
 
-	// Heartbeat Variables
-	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
-	heartbeatsLock sync.Mutex
 	// file proofs stage 2
 
 	// Compile Variables
 	currentEntropy  common.Entropy // Used to generate random numbers during compilation
 	upcomingEntropy common.Entropy // Used to compute entropy for next block
-
-	// These variables might all need to go to Participant
-	// Consensus Algorithm Status
-	currentStep int
-	stepLock    sync.RWMutex // prevents a benign race condition
-	ticking     bool
-	tickingLock sync.Mutex
 
 	// Batch management
 	parent *batchNode
@@ -163,15 +153,6 @@ func (q *quorum) siblingOrdering() (siblingOrdering [common.QuorumSize]byte) {
 	}
 
 	return
-}
-
-// Removes all traces of a sibling from the State
-func (q *quorum) tossSibling(pi byte) {
-	// remove from s.Siblings
-	q.siblings[pi] = nil
-
-	// nil map in s.Heartbeats
-	q.heartbeats[pi] = nil
 }
 
 func (s *Sibling) GobEncode() (gobSibling []byte, err error) {

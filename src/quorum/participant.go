@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/crypto"
 	"fmt"
+	"sync"
 )
 
 type Participant struct {
@@ -14,6 +15,17 @@ type Participant struct {
 	messageRouter common.MessageRouter
 	self          *Sibling         // the sibling object for this participant
 	secretKey     crypto.SecretKey // secret key matching self.publicKey
+
+	// Heartbeat Variables
+	currHeartbeat  heartbeat
+	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
+	heartbeatsLock sync.Mutex
+
+	// Consensus Algorithm Status
+	currentStep int
+	stepLock    sync.RWMutex // prevents a benign race condition
+	ticking     bool
+	tickingLock sync.Mutex
 }
 
 // CreateParticipant creates a participant.
@@ -32,16 +44,14 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 
 	// initialize State with default values and keypair
 	p = &Participant{
-		quorum: quorum{
-			currentStep: 1,
-		},
 		messageRouter: messageRouter,
 		self: &Sibling{
 			index:     255,
 			address:   messageRouter.Address(),
 			publicKey: pubKey,
 		},
-		secretKey: secKey,
+		secretKey:   secKey,
+		currentStep: 1,
 	}
 
 	// register State and store our assigned ID
@@ -56,6 +66,12 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	})
 	err = <-errChan
 	return
+}
+
+// Remove a Sibling from the quorum and heartbeats
+func (p *Participant) tossSibling(pi byte) {
+	p.quorum.siblings[pi] = nil
+	p.heartbeats[pi] = nil
 }
 
 // Takes a Message and broadcasts it to every Sibling in the quorum
