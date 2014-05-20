@@ -65,10 +65,6 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	return
 }
 
-func (hb *heartbeat) addHopeful(s *Sibling) {
-	hb.hopefuls = append(hb.hopefuls, s)
-}
-
 // Using the current State, newSignedHeartbeat() creates a heartbeat for the
 // quorum and then signs and announces it.
 func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
@@ -82,7 +78,9 @@ func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
 	copy(hb.entropy[:], entropy)
 
 	// incorporate currHeartbeat
+	p.currHeartbeatLock.Lock()
 	hb.hopefuls = p.currHeartbeat.hopefuls
+	p.currHeartbeatLock.Unlock()
 	if len(hb.hopefuls) > 0 {
 		fmt.Println("including", len(hb.hopefuls), "hopeful(s) in heartbeat")
 	}

@@ -44,9 +44,12 @@ func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
 	return
 }
 
+// add a potential sibling to the heartbeat-in-progress
 func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
 	fmt.Println("got join request")
-	p.currHeartbeat.addHopeful(&s)
+	p.currHeartbeatLock.Lock()
+	p.currHeartbeat.hopefuls = append(p.currHeartbeat.hopefuls, &s)
+	p.currHeartbeatLock.Unlock()
 	return
 }
 

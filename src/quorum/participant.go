@@ -17,9 +17,10 @@ type Participant struct {
 	secretKey     crypto.SecretKey // secret key matching self.publicKey
 
 	// Heartbeat Variables
-	currHeartbeat  heartbeat
-	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
-	heartbeatsLock sync.Mutex
+	currHeartbeat     heartbeat
+	currHeartbeatLock sync.Mutex
+	heartbeats        [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
+	heartbeatsLock    sync.Mutex
 
 	// Consensus Algorithm Status
 	currentStep int
