@@ -25,5 +25,3 @@ const (
 )
 
 type Entropy [EntropyVolume]byte
-
-type Quorum [QuorumSize]Address

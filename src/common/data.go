@@ -29,7 +29,7 @@ type Segment struct {
 // A RingHeader contains all the metadata necessary to retrieve and rebuild a Sector from a Ring.
 // This includes the hosts on which Ring Segments are stored, the encoding parameters, the hashes of each Segment.
 type RingHeader struct {
-	Hosts     Quorum
+	Hosts     [QuorumSize]Address
 	Params    *EncodingParams
 	SegHashes [QuorumSize]crypto.Hash
 }

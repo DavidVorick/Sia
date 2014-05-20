@@ -97,7 +97,7 @@ func readQuorumAddresses() (q [common.QuorumSize]common.Address) {
 	return
 }
 
-func generateSector(q common.Quorum) (s *common.Sector, err error) {
+func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err error) {
 	if q[0].Port == 0 {
 		err = fmt.Errorf("you must connect to a quorum first")
 		return
@@ -123,7 +123,7 @@ func main() {
 	SectorDB = make(map[crypto.Hash]*common.RingHeader)
 	var (
 		input string
-		q     common.Quorum
+		q     [common.QuorumSize]common.Address
 		s     *common.Sector
 		h     crypto.Hash
 		err   error
