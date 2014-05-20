@@ -341,11 +341,11 @@ func (p *Participant) compile() {
 	p.quorum.currentEntropy = p.quorum.upcomingEntropy
 
 	// generate, sign, and announce new heartbeat
-	sh, err := p.newSignedHeartbeat()
+	_, err := p.newSignedHeartbeat()
 	if err != nil {
 		return
 	}
-	err = p.announceSignedHeartbeat(sh)
+
 	return
 }
 
