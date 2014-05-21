@@ -14,58 +14,56 @@ func TestJoinQuorum(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Verify the message for correctness
+	// Bootstrap does not send any messages
 
-	// Forward message to bootstrap State (ourselves, as it were)
-	m := z.RecentMessage(0)
-	if m == nil {
-		t.Fatal("message 0 never received")
-	}
-	p0.HandleJoinSia(m.Args.(Sibling), nil)
-
-	// Verify that a broadcast message went out indicating a new sibling
-
-	// Forward message to recipient
-	m = z.RecentMessage(1)
-	if m == nil {
-		t.Fatal("message 1 never received")
-	}
-	p0.AddNewSibling(m.Args.(Sibling), nil)
-
-	// Verify that we started ticking
-	p0.quorum.tickingLock.Lock()
-	if !p0.quorum.ticking {
+	// Verify that bootstrap started ticking
+	p0.tickingLock.Lock()
+	if !p0.ticking {
 		t.Fatal("Bootstrap state not ticking after joining Sia")
 	}
-	p0.quorum.tickingLock.Unlock()
+	p0.tickingLock.Unlock()
 
 	// Verify that s0.self.index updated
 	if p0.self.index == 255 {
 		t.Error("Bootstrapping failed to update State.self.index")
 	}
 
-	// Create a new state to bootstrap
+	// Create a new participant
 	p1, err := CreateParticipant(z)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify message for correctness
+	// Forward message to bootstrap
+	m := z.RecentMessage(0)
+	if m == nil {
+		t.Fatal("message 0 never received")
+	} else if m.Proc != "Participant.JoinSia" {
+		t.Fatal("message 0 has wrong type: expected Participant.JoinSia, got", m.Proc)
+	}
+	p0.JoinSia(m.Args.(Sibling), nil)
 
-	// Deliver message to bootstrap
-	m = z.RecentMessage(2)
-	p0.HandleJoinSia(m.Args.(Sibling), nil)
+	// Verify that a broadcast message went out indicating a new sibling
+	m = z.RecentMessage(1)
+	if m == nil {
+		t.Fatal("message 1 never received")
+	} else if m.Proc != "Participant.AddHopeful" {
+		t.Fatal("message 1 has wrong type: expected Participant.AddHopeful, got", m.Proc)
+	}
 
-	// Deliver the broadcasted messages
-	m = z.RecentMessage(3)
-	p0.AddNewSibling(m.Args.(Sibling), nil)
-	m = z.RecentMessage(4)
-	p1.AddNewSibling(m.Args.(Sibling), nil)
+	// skip ahead and just add the new sibling
+	s := m.Args.(Sibling)
+	s.index = 1
+	p0.addNewSibling(&s)
 
-	// Verify the messages made it
-	p1.quorum.tickingLock.Lock()
-	if !p1.quorum.ticking {
-		t.Error("s1 did not start ticking")
+	// deliver download message to new sibling
+	gobQuorum, _ := p0.quorum.GobEncode()
+	p1.TransferQuorum(gobQuorum, nil)
+
+	// Verify that new sibling started ticking
+	p1.tickingLock.Lock()
+	if !p1.ticking {
+		t.Error("p1 did not start ticking")
 	}
 
 	// both swarms should be aware of each other... maybe test their ongoing interactions?

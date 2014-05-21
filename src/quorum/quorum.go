@@ -24,24 +24,91 @@ type quorum struct {
 	siblingsLock sync.RWMutex                // prevents race conditions
 	// meta quorum
 
-	// Heartbeat Variables
-	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
-	heartbeatsLock sync.Mutex
 	// file proofs stage 2
 
 	// Compile Variables
 	currentEntropy  common.Entropy // Used to generate random numbers during compilation
 	upcomingEntropy common.Entropy // Used to compute entropy for next block
 
-	// These variables might all need to go to Participant
-	// Consensus Algorithm Status
-	currentStep int
-	stepLock    sync.RWMutex // prevents a benign race condition
-	ticking     bool
-	tickingLock sync.Mutex
-
 	// Batch management
 	parent *batchNode
+}
+
+// returns the current state of the quorum in human-readable form
+func (q *quorum) Status() (b string) {
+	b = "\tSiblings:\n"
+	for _, s := range q.siblings {
+		if s != nil {
+			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
+		}
+	}
+	return
+}
+
+// Convert quorum to []byte
+// Only the siblings and entropy are encoded.
+func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
+	// if q == nil, encode a zero quorum
+	if q == nil {
+		q = new(quorum)
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+
+	// only encode non-nil siblings
+	var encSiblings []*Sibling
+	for _, s := range q.siblings {
+		if s != nil {
+			encSiblings = append(encSiblings, s)
+		}
+	}
+	err = encoder.Encode(encSiblings)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.currentEntropy)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.upcomingEntropy)
+	if err != nil {
+		return
+	}
+
+	gobQuorum = w.Bytes()
+	return
+}
+
+// Convert []byte to quorum
+// Only the siblings and entropy are decoded.
+func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
+	// if q == nil, make a new quorum and decode into that
+	if q == nil {
+		q = new(quorum)
+	}
+
+	r := bytes.NewBuffer(gobQuorum)
+	decoder := gob.NewDecoder(r)
+
+	// not all siblings were encoded
+	var encSiblings []*Sibling
+	err = decoder.Decode(&encSiblings)
+	if err != nil {
+		return
+	}
+	for _, s := range encSiblings {
+		q.siblings[s.index] = s
+	}
+	err = decoder.Decode(&q.currentEntropy)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.upcomingEntropy)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // Returns true if the values of the siblings are equivalent
@@ -68,15 +135,17 @@ func (s0 *Sibling) compare(s1 *Sibling) bool {
 // siblings are processed in a random order each block, determined by the
 // entropy for the block. siblingOrdering() deterministically picks that
 // order, using entropy from the state.
-func (q *quorum) siblingOrdering() (siblingOrdering [common.QuorumSize]byte) {
+func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
 	// create an in-order list of siblings
-	for i := range siblingOrdering {
-		siblingOrdering[i] = byte(i)
+	for i, s := range q.siblings {
+		if s != nil {
+			siblingOrdering = append(siblingOrdering, byte(i))
+		}
 	}
 
 	// shuffle the list of siblings
 	for i := range siblingOrdering {
-		newIndex, err := q.randInt(i, common.QuorumSize)
+		newIndex, err := q.randInt(i, len(siblingOrdering))
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -86,15 +155,6 @@ func (q *quorum) siblingOrdering() (siblingOrdering [common.QuorumSize]byte) {
 	}
 
 	return
-}
-
-// Removes all traces of a sibling from the State
-func (q *quorum) tossSibling(pi byte) {
-	// remove from s.Siblings
-	q.siblings[pi] = nil
-
-	// nil map in s.Heartbeats
-	q.heartbeats[pi] = nil
 }
 
 func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
@@ -160,10 +220,26 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 }
 
 // Update the state according to the information presented in the heartbeat
-// processHeartbeat uses return codes for testing purposes
-func (q *quorum) processHeartbeat(hb *heartbeat, i byte) (err error) {
-	print("Confirming Sibling")
-	println(i)
+func (q *quorum) processHeartbeat(hb *heartbeat) (newSiblings []*Sibling, err error) {
+	// add hopefuls to any available slots
+	// q.siblings has already been locked by compile()
+	for _, s := range hb.hopefuls {
+		j := 0
+		for {
+			if j == common.QuorumSize {
+				log.Infoln("failed to add hopeful: quorum already full")
+				break
+			}
+			if q.siblings[j] == nil {
+				println("placed hopeful at index", j)
+				s.index = byte(j)
+				q.siblings[s.index] = s
+				newSiblings = append(newSiblings, s)
+				break
+			}
+			j++
+		}
+	}
 
 	// Add the entropy to UpcomingEntropy
 	th, err := crypto.CalculateTruncatedHash(append(q.upcomingEntropy[:], hb.entropy[:]...))

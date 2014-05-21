@@ -106,15 +106,15 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	p2.index = 2
 	p1.publicKey = pubKey1
 	p2.publicKey = pubKey2
-	err = p.AddNewSibling(*p.self, nil)
+	err = p.addNewSibling(p.self)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.AddNewSibling(p1, nil)
+	err = p.addNewSibling(&p1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.AddNewSibling(p2, nil)
+	err = p.addNewSibling(&p2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh.signatories[1] = 2
 
 	// delete existing heartbeat from state; makes the remaining tests easier
-	p.quorum.heartbeats[sh.signatories[0]] = make(map[crypto.TruncatedHash]*heartbeat)
+	p.heartbeats[sh.signatories[0]] = make(map[crypto.TruncatedHash]*heartbeat)
 
 	// handle the signed heartbeat, expecting nil error
 	err = p.HandleSignedHeartbeat(*sh, nil)
@@ -236,9 +236,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh.signatories = sh.signatories[:1]
 
 	// handle heartbeat when tick is larger than num signatures
-	p.quorum.stepLock.Lock()
-	p.quorum.currentStep = 2
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Lock()
+	p.currentStep = 2
+	p.stepLock.Unlock()
 	err = p.HandleSignedHeartbeat(*sh, nil)
 	if err != hsherrNoSync {
 		t.Error("expected heartbeat to be rejected as out-of-sync: ", err)
@@ -250,9 +250,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// send a heartbeat right at the edge of a new block
-	p.quorum.stepLock.Lock()
-	p.quorum.currentStep = common.QuorumSize
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Lock()
+	p.currentStep = common.QuorumSize
+	p.stepLock.Unlock()
 
 	// submit heartbeat in separate thread
 	go func() {
@@ -263,9 +263,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		// need some way to verify with the test that the funcion gets here
 	}()
 
-	p.quorum.stepLock.Lock()
-	p.quorum.currentStep = 1
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Lock()
+	p.currentStep = 1
+	p.stepLock.Unlock()
 	time.Sleep(time.Second)
 	time.Sleep(common.StepDuration)
 }
@@ -285,17 +285,19 @@ func TestProcessHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p0.AddNewSibling(*p1.self, nil)
-	p1.AddNewSibling(*p0.self, nil)
+	p0.self.index = 0
+	p1.self.index = 1
+	p0.addNewSibling(p1.self)
+	p1.addNewSibling(p0.self)
 
 	// check that a valid heartbeat passes
 	sh0, err := p0.newSignedHeartbeat()
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p1.quorum.processHeartbeat(sh0.heartbeat, 0)
+	_, err = p1.quorum.processHeartbeat(sh0.heartbeat)
 	if err != nil {
-		t.Error("processHeartbeat threw out a valid heartbeat: ", err)
+		t.Error("processHeartbeat threw out a valid heartbeat:", err)
 	}
 }
 
@@ -317,17 +319,13 @@ func TestRegularTick(t *testing.T) {
 	}
 
 	// verify that tick is updating CurrentStep
-	p.quorum.stepLock.Lock()
-	p.quorum.currentStep = 1
-	p.quorum.stepLock.Unlock()
-	go p.tick()
 	time.Sleep(common.StepDuration)
 	time.Sleep(time.Second)
-	p.quorum.stepLock.Lock()
-	if p.quorum.currentStep != 2 {
-		t.Fatal("s.currentStep failed to update correctly: ", p.quorum.currentStep)
+	p.stepLock.Lock()
+	if p.currentStep != 2 {
+		t.Fatal("s.currentStep failed to update correctly:", p.currentStep)
 	}
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Unlock()
 }
 
 // ensures Tick() calles compile() and then resets the counter to step 1
@@ -342,15 +340,16 @@ func TestCompilationTick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.quorum.currentStep = common.QuorumSize
-	go p.tick()
+	p.stepLock.Lock()
+	p.currentStep = common.QuorumSize
+	p.stepLock.Unlock()
 
 	// verify that tick is wrapping around properly
 	time.Sleep(common.StepDuration)
 	time.Sleep(time.Second)
-	p.quorum.stepLock.Lock()
-	if p.quorum.currentStep != 1 {
-		t.Error("p.quorum.currentStep failed to roll over: ", p.quorum.currentStep)
+	p.stepLock.Lock()
+	if p.currentStep != 1 {
+		t.Error("p.currentStep failed to roll over:", p.currentStep)
 	}
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Unlock()
 }

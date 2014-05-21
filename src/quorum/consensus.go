@@ -13,7 +13,8 @@ import (
 
 // All information that needs to be passed between siblings each block
 type heartbeat struct {
-	entropy common.Entropy
+	entropy  common.Entropy
+	hopefuls []*Sibling
 }
 
 // Contains a heartbeat that has been signed iteratively, is a key part of the
@@ -38,6 +39,10 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	if err != nil {
 		return
 	}
+	err = encoder.Encode(hb.hopefuls)
+	if err != nil {
+		return
+	}
 
 	gobHeartbeat = w.Bytes()
 	return
@@ -53,6 +58,10 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	r := bytes.NewBuffer(gobHeartbeat)
 	decoder := gob.NewDecoder(r)
 	err = decoder.Decode(&hb.entropy)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&hb.hopefuls)
 	return
 }
 
@@ -68,7 +77,13 @@ func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
 	}
 	copy(hb.entropy[:], entropy)
 
-	// more code will be added here
+	// incorporate currHeartbeat
+	p.currHeartbeatLock.Lock()
+	hb.hopefuls = p.currHeartbeat.hopefuls
+	p.currHeartbeatLock.Unlock()
+	if len(hb.hopefuls) > 0 {
+		fmt.Println("including", len(hb.hopefuls), "hopeful(s) in heartbeat")
+	}
 
 	sh = new(SignedHeartbeat)
 
@@ -135,9 +150,9 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 		return hsherrOversigned
 	}
 
-	p.quorum.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
-	currentStep := p.quorum.currentStep
-	p.quorum.stepLock.Unlock()
+	p.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
+	currentStep := p.currentStep
+	p.stepLock.Unlock()
 	// s.CurrentStep must be less than or equal to len(sh.Signatories), unless
 	// there is a new block and s.CurrentStep is common.QuorumSize
 	if currentStep > len(sh.signatories) {
@@ -157,9 +172,9 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 
 	// we are starting to read from memory, initiate locks
 	p.quorum.siblingsLock.RLock()
-	p.quorum.heartbeatsLock.Lock()
+	p.heartbeatsLock.Lock()
 	defer p.quorum.siblingsLock.RUnlock()
-	defer p.quorum.heartbeatsLock.Unlock()
+	defer p.heartbeatsLock.Unlock()
 
 	// check that first signatory is a sibling
 	if p.quorum.siblings[sh.signatories[0]] == nil {
@@ -167,13 +182,13 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	}
 
 	// Check if we have already received this heartbeat
-	_, exists := p.quorum.heartbeats[sh.signatories[0]][sh.heartbeatHash]
+	_, exists := p.heartbeats[sh.signatories[0]][sh.heartbeatHash]
 	if exists {
 		return hsherrHaveHeartbeat
 	}
 
 	// Check if we already have two heartbeats from this host
-	if len(p.quorum.heartbeats[sh.signatories[0]]) >= 2 {
+	if len(p.heartbeats[sh.signatories[0]]) >= 2 {
 		return hsherrManyHeartbeats
 	}
 
@@ -219,7 +234,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	}
 
 	// Add heartbeat to list of seen heartbeats
-	p.quorum.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
+	p.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
 
 	// Sign the stack of signatures and send it to all hosts
 	signedMessage, err := p.secretKey.Sign(signedMessage.Message)
@@ -303,49 +318,72 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 //
 // Needs updated error handling
 func (p *Participant) compile() {
+	var newSiblings []*Sibling
 	// fetch a sibling ordering
 	siblingOrdering := p.quorum.siblingOrdering()
 
 	// Lock down s.siblings and s.heartbeats for editing
 	p.quorum.siblingsLock.Lock()
-	p.quorum.heartbeatsLock.Lock()
+	p.heartbeatsLock.Lock()
 
 	// Read heartbeats, process them, then archive them.
-	for _, sibling := range siblingOrdering {
-		if p.quorum.siblings[sibling] == nil {
-			continue
-		}
-
+	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
-		if len(p.quorum.heartbeats[sibling]) != 1 {
-			p.quorum.tossSibling(sibling)
+		if len(p.heartbeats[i]) != 1 {
+			p.tossSibling(i)
 			continue
 		}
 
 		// this is the only way I know to access the only element of a map;
 		// the key is unknown
-		for _, hb := range p.quorum.heartbeats[sibling] {
-			p.quorum.processHeartbeat(hb, sibling)
+		fmt.Println("Confirming Sibling", i)
+		for _, hb := range p.heartbeats[i] {
+			newSiblings, _ = p.quorum.processHeartbeat(hb)
 		}
 
 		// archive heartbeats (unimplemented)
 
 		// clear heartbeat list for next block
-		p.quorum.heartbeats[sibling] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+	}
+
+	// add new siblings
+	for _, s := range newSiblings {
+		err := p.addNewSibling(s)
+		if err != nil {
+			log.Fatalln("failed to add new sibling:", err)
+		}
+	}
+	if len(newSiblings) != 0 {
+		fmt.Println("sending quorum state:")
+		fmt.Print(p.quorum.Status())
+	}
+	// send each new sibling the current quorum state
+	for _, s := range newSiblings {
+		gobQuorum, _ := p.quorum.GobEncode()
+		p.messageRouter.SendAsyncMessage(&common.Message{
+			Dest: s.address,
+			Proc: "Participant.TransferQuorum",
+			Args: gobQuorum,
+			Resp: nil,
+		})
 	}
 
 	p.quorum.siblingsLock.Unlock()
-	p.quorum.heartbeatsLock.Unlock()
+	p.heartbeatsLock.Unlock()
 
 	// move UpcomingEntropy to CurrentEntropy
 	p.quorum.currentEntropy = p.quorum.upcomingEntropy
 
 	// generate, sign, and announce new heartbeat
-	sh, err := p.newSignedHeartbeat()
+	_, err := p.newSignedHeartbeat()
 	if err != nil {
 		return
 	}
-	err = p.announceSignedHeartbeat(sh)
+
+	// reset the WIP heartbeat
+	p.currHeartbeat = heartbeat{}
+
 	return
 }
 
@@ -354,15 +392,15 @@ func (p *Participant) tick() {
 	// Every common.StepDuration, advance the state stage
 	ticker := time.Tick(common.StepDuration)
 	for _ = range ticker {
-		p.quorum.stepLock.Lock()
-		if p.quorum.currentStep == common.QuorumSize {
-			println("compiling")
+		p.stepLock.Lock()
+		if p.currentStep == common.QuorumSize {
+			fmt.Println("compiling")
 			p.compile()
-			p.quorum.currentStep = 1
+			p.currentStep = 1
 		} else {
-			println("stepping")
-			p.quorum.currentStep += 1
+			fmt.Println("stepping")
+			p.currentStep += 1
 		}
-		p.quorum.stepLock.Unlock()
+		p.stepLock.Unlock()
 	}
 }
