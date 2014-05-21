@@ -154,7 +154,7 @@ func (q *quorum) tossSibling(pi byte) {
 }
 
 // Update the state according to the information presented in the heartbeat
-func (q *quorum) processHeartbeat(hb *heartbeat, seed common.Entropy) (newSiblings []*Sibling, newSeed common.Entropy, err error) {
+func (q *quorum) processHeartbeat(hb *heartbeat, seed *common.Entropy) (newSiblings []*Sibling, err error) {
 	// add hopefuls to any available slots
 	// quorum.siblings has already been locked by compile()
 	j := 0
@@ -173,7 +173,7 @@ func (q *quorum) processHeartbeat(hb *heartbeat, seed common.Entropy) (newSiblin
 
 	// Add the entropy to newSeed
 	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
-	newSeed = common.Entropy(th)
+	copy(seed[:], th[:])
 
 	return
 }

@@ -79,6 +79,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 }
 
 // Takes a Message and broadcasts it to every Sibling in the quorum
+// Even sends the message to self, this may be revised
 func (p *Participant) broadcast(m *common.Message) {
 	p.quorum.siblingsLock.RLock()
 	for i := range p.quorum.siblings {

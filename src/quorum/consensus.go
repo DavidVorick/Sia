@@ -318,14 +318,14 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 //
 // Needs updated error handling
 func (p *Participant) compile() {
-	var newSiblings []*Sibling
-	// fetch a sibling ordering
-	siblingOrdering := p.quorum.siblingOrdering()
-
 	// Lock down s.siblings and s.heartbeats for editing
 	p.quorum.siblingsLock.Lock()
 	p.heartbeatsLock.Lock()
 
+	// fetch a sibling ordering
+	siblingOrdering := p.quorum.siblingOrdering()
+
+	var newSiblings []*Sibling
 	var newSeed common.Entropy
 	// Read heartbeats, process them, then archive them.
 	for _, i := range siblingOrdering {
@@ -339,10 +339,10 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			newSiblings, newSeed, _ = p.quorum.processHeartbeat(hb, newSeed)
+			newSiblings, _ = p.quorum.processHeartbeat(hb, &newSeed)
 		}
 
-		// archive heartbeats (unimplemented)
+		// archive heartbeats (tbi)
 
 		// clear heartbeat list for next block
 		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
@@ -373,16 +373,16 @@ func (p *Participant) compile() {
 	p.quorum.siblingsLock.Unlock()
 	p.heartbeatsLock.Unlock()
 
-	// move UpcomingEntropy to CurrentEntropy
+	// copy the new seed into the quorum
 	p.quorum.seed = newSeed
 
-	// generate, sign, and announce new heartbeat
+	// create the new heartbeat (it gets broadcast automatically)
 	_, err := p.newSignedHeartbeat()
 	if err != nil {
 		return
 	}
 
-	// reset the WIP heartbeat
+	// reset the in-progress heartbeat
 	p.currHeartbeat = heartbeat{}
 
 	return
