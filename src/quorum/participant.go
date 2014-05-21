@@ -17,9 +17,9 @@ type Participant struct {
 	secretKey     crypto.SecretKey // secret key matching self.publicKey
 
 	// Heartbeat Variables
-	currHeartbeat     heartbeat
+	currHeartbeat     heartbeat // in-progress heartbeat
 	currHeartbeatLock sync.Mutex
-	heartbeats        [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
+	heartbeats        [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock    sync.Mutex
 
 	// Consensus Algorithm Status
@@ -76,13 +76,6 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	})
 	err = <-errChan
 	return
-}
-
-// Remove a Sibling from the quorum and heartbeats
-func (p *Participant) tossSibling(pi byte) {
-	fmt.Println("tossing sibling", pi, "(submitted", len(p.heartbeats[pi]), "heartbeats)")
-	p.quorum.siblings[pi] = nil
-	p.heartbeats[pi] = nil
 }
 
 // Takes a Message and broadcasts it to every Sibling in the quorum

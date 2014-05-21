@@ -331,7 +331,7 @@ func (p *Participant) compile() {
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
-			p.tossSibling(i)
+			p.quorum.tossSibling(i)
 			continue
 		}
 

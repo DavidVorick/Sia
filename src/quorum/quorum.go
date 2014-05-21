@@ -147,6 +147,12 @@ func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
 	return
 }
 
+// Removes a sibling from the list of siblings
+func (q *quorum) tossSibling(pi byte) {
+	println("tossing sibling", pi)
+	q.siblings[pi] = nil
+}
+
 // Update the state according to the information presented in the heartbeat
 func (q *quorum) processHeartbeat(hb *heartbeat, seed common.Entropy) (newSiblings []*Sibling, newSeed common.Entropy, err error) {
 	// add hopefuls to any available slots
