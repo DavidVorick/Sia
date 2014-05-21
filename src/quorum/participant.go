@@ -80,7 +80,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 // Takes a Message and broadcasts it to every Sibling in the quorum
 // Even sends the message to self, this may be revised
 func (p *Participant) broadcast(m *common.Message) {
-	p.quorum.siblingsLock.RLock()
+	p.quorum.lock.RLock()
 	for i := range p.quorum.siblings {
 		if p.quorum.siblings[i] != nil {
 			nm := *m
@@ -88,5 +88,5 @@ func (p *Participant) broadcast(m *common.Message) {
 			p.messageRouter.SendAsyncMessage(&nm)
 		}
 	}
-	p.quorum.siblingsLock.RUnlock()
+	p.quorum.lock.RUnlock()
 }

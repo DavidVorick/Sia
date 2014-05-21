@@ -23,9 +23,11 @@ type Sibling struct {
 // quorum. Data in the quorum can only be updated during a block, and the
 // update must be deterministic and reversable.
 type quorum struct {
+	// quorum-wide lock
+	lock sync.RWMutex
+
 	// Network Variables
-	siblings     [common.QuorumSize]*Sibling
-	siblingsLock sync.RWMutex
+	siblings [common.QuorumSize]*Sibling
 	// meta quorum
 
 	// file proofs stage 1

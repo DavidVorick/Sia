@@ -171,9 +171,9 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	}
 
 	// we are starting to read from memory, initiate locks
-	p.quorum.siblingsLock.RLock()
+	p.quorum.lock.RLock()
 	p.heartbeatsLock.Lock()
-	defer p.quorum.siblingsLock.RUnlock()
+	defer p.quorum.lock.RUnlock()
 	defer p.heartbeatsLock.Unlock()
 
 	// check that first signatory is a sibling
@@ -318,8 +318,8 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 //
 // Needs updated error handling
 func (p *Participant) compile() {
-	// Lock down s.siblings and s.heartbeats for editing
-	p.quorum.siblingsLock.Lock()
+	// Lock down s.heartbeats and quorum for editing
+	p.quorum.lock.Lock()
 	p.heartbeatsLock.Lock()
 
 	// fetch a sibling ordering
@@ -370,13 +370,15 @@ func (p *Participant) compile() {
 		})
 	}
 
-	p.quorum.siblingsLock.Unlock()
-	p.heartbeatsLock.Unlock()
+	// print the status of the quorum after compiling
+	fmt.Print(p.quorum.Status)
 
 	// copy the new seed into the quorum
 	p.quorum.seed = newSeed
+	p.quorum.lock.Unlock()
+	p.heartbeatsLock.Unlock()
 
-	// create the new heartbeat (it gets broadcast automatically)
+	// create new heartbeat (it gets broadcast automatically)
 	_, err := p.newSignedHeartbeat()
 	if err != nil {
 		return
