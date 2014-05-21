@@ -79,7 +79,7 @@ func TestSiblingEncoding(t *testing.T) {
 	var p *Sibling
 	_, err := p.GobEncode()
 	if err == nil {
-		t.Error("Encoded nil participant without error")
+		t.Error("Encoded nil sibling without error")
 	}
 	p = new(Sibling)
 	_, err = p.GobEncode()
@@ -130,7 +130,7 @@ func TestRandInt(t *testing.T) {
 	}
 
 	// check that it works in the vanilla case
-	previousEntropy := p.quorum.currentEntropy
+	previousSeed := p.quorum.seed
 	randInt, err := p.quorum.randInt(0, 5)
 	if err != nil {
 		t.Fatal(err)
@@ -140,9 +140,9 @@ func TestRandInt(t *testing.T) {
 	}
 
 	// check that s.CurrentEntropy flipped to next value
-	if previousEntropy == p.quorum.currentEntropy {
-		t.Error(previousEntropy)
-		t.Error(p.quorum.currentEntropy)
+	if previousSeed == p.quorum.seed {
+		t.Error(previousSeed)
+		t.Error(p.quorum.seed)
 		t.Fatal("When calling randInt, s.CurrentEntropy was not changed")
 	}
 

@@ -326,6 +326,7 @@ func (p *Participant) compile() {
 	p.quorum.siblingsLock.Lock()
 	p.heartbeatsLock.Lock()
 
+	var newSeed common.Entropy
 	// Read heartbeats, process them, then archive them.
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
@@ -338,7 +339,7 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			newSiblings, _ = p.quorum.processHeartbeat(hb)
+			newSiblings, newSeed, _ = p.quorum.processHeartbeat(hb, newSeed)
 		}
 
 		// archive heartbeats (unimplemented)
@@ -373,7 +374,7 @@ func (p *Participant) compile() {
 	p.heartbeatsLock.Unlock()
 
 	// move UpcomingEntropy to CurrentEntropy
-	p.quorum.currentEntropy = p.quorum.upcomingEntropy
+	p.quorum.seed = newSeed
 
 	// generate, sign, and announce new heartbeat
 	_, err := p.newSignedHeartbeat()

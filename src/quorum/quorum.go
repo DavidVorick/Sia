@@ -20,15 +20,14 @@ type Sibling struct {
 
 type quorum struct {
 	// Network Variables
-	siblings     [common.QuorumSize]*Sibling // list of all siblings in quorum
-	siblingsLock sync.RWMutex                // prevents race conditions
+	siblings     [common.QuorumSize]*Sibling
+	siblingsLock sync.RWMutex
 	// meta quorum
 
-	// file proofs stage 2
+	// file proofs stage 1
 
 	// Compile Variables
-	currentEntropy  common.Entropy // Used to generate random numbers during compilation
-	upcomingEntropy common.Entropy // Used to compute entropy for next block
+	seed common.Entropy // Used to generate random numbers during compilation
 
 	// Batch management
 	parent *batchNode
@@ -42,6 +41,8 @@ func (q *quorum) Status() (b string) {
 			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
 		}
 	}
+
+	fmt.Printf("Seed: ", q.seed)
 	return
 }
 
@@ -56,7 +57,8 @@ func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 
-	// only encode non-nil siblings
+	// Encode network variabes
+	// Only encode non-nil siblings
 	var encSiblings []*Sibling
 	for _, s := range q.siblings {
 		if s != nil {
@@ -67,14 +69,15 @@ func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(q.currentEntropy)
+
+	// Encode compile variables
+	err = encoder.Encode(q.seed)
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(q.upcomingEntropy)
-	if err != nil {
-		return
-	}
+
+	// Encode batch variables
+	// tbi
 
 	gobQuorum = w.Bytes()
 	return
@@ -91,7 +94,7 @@ func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
 	r := bytes.NewBuffer(gobQuorum)
 	decoder := gob.NewDecoder(r)
 
-	// not all siblings were encoded
+	// decode slice of siblings into the sibling array
 	var encSiblings []*Sibling
 	err = decoder.Decode(&encSiblings)
 	if err != nil {
@@ -100,14 +103,16 @@ func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
 	for _, s := range encSiblings {
 		q.siblings[s.index] = s
 	}
-	err = decoder.Decode(&q.currentEntropy)
+
+	// decode compile variables
+	err = decoder.Decode(&q.seed)
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&q.upcomingEntropy)
-	if err != nil {
-		return
-	}
+
+	// decode batch variables
+	// tbi
+
 	return
 }
 
@@ -220,7 +225,7 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 }
 
 // Update the state according to the information presented in the heartbeat
-func (q *quorum) processHeartbeat(hb *heartbeat) (newSiblings []*Sibling, err error) {
+func (q *quorum) processHeartbeat(hb *heartbeat, seed common.Entropy) (newSiblings []*Sibling, newSeed common.Entropy, err error) {
 	// add hopefuls to any available slots
 	// q.siblings has already been locked by compile()
 	for _, s := range hb.hopefuls {
@@ -241,9 +246,9 @@ func (q *quorum) processHeartbeat(hb *heartbeat) (newSiblings []*Sibling, err er
 		}
 	}
 
-	// Add the entropy to UpcomingEntropy
-	th, err := crypto.CalculateTruncatedHash(append(q.upcomingEntropy[:], hb.entropy[:]...))
-	q.upcomingEntropy = common.Entropy(th)
+	// Add the entropy to newSeed
+	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
+	newSeed = common.Entropy(th)
 
 	return
 }
@@ -261,13 +266,13 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 	rollingInt := 0
 	for i := 0; i < 4; i++ {
 		rollingInt = rollingInt << 8
-		rollingInt += int(q.currentEntropy[i])
+		rollingInt += int(q.seed[i])
 	}
 
 	randInt = (rollingInt % (high - low)) + low
 
 	// Convert random number seed to next value
-	truncatedHash, err := crypto.CalculateTruncatedHash(q.currentEntropy[:])
-	q.currentEntropy = common.Entropy(truncatedHash)
+	truncatedHash, err := crypto.CalculateTruncatedHash(q.seed[:])
+	q.seed = common.Entropy(truncatedHash)
 	return
 }
