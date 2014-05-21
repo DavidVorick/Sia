@@ -117,8 +117,8 @@ func TestSiblingEncoding(t *testing.T) {
 	// try to decode into nil participant
 	up = nil
 	err = up.GobDecode(ep)
-	if err == nil {
-		t.Error("decoded into nil participant without error")
+	if err != nil {
+		t.Error("falid to deceode into nil participant")
 	}
 }
 
