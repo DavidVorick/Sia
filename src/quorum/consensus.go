@@ -390,6 +390,14 @@ func (p *Participant) compile() {
 
 // Tick() updates s.CurrentStep, and calls compile() when all steps are complete
 func (p *Participant) tick() {
+	p.tickingLock.Lock()
+	if p.ticking {
+		p.tickingLock.Unlock()
+		return
+	}
+	p.ticking = true
+	p.tickingLock.Unlock()
+
 	// Every common.StepDuration, advance the state stage
 	ticker := time.Tick(common.StepDuration)
 	for _ = range ticker {

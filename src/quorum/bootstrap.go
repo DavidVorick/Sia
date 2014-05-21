@@ -67,12 +67,7 @@ func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err e
 			p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
 		}
 	}
-	p.tickingLock.Lock()
-	defer p.tickingLock.Unlock()
-	if !p.ticking {
-		p.ticking = true
-		go p.tick()
-	}
+	go p.tick()
 	return
 }
 

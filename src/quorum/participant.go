@@ -62,7 +62,6 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	if p.self.address == bootstrapAddress {
 		p.self.index = 0
 		p.addNewSibling(p.self)
-		p.ticking = true
 		go p.tick()
 		return
 	}
