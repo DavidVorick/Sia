@@ -37,3 +37,19 @@ body {
 .shadow {
 	box-shadow: inset 0 0 40px rgba(0,0,0,.3);
 }
+
+#logo {
+	background-image: url('../img/sia.png');
+	width: 438px;
+	height: 180px;
+	background-size: 438px 180px;
+}
+
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+	   only screen and (-o-min-device-pixel-ratio: 3/2),
+	   only screen and (min--moz-device-pixel-ratio: 1.5),
+	   only screen and (min-device-pixel-ratio: 1.5) {
+	   #logo {
+		   background-image: url('../img/sia.svg');
+	   }
+}
