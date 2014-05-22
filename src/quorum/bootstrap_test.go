@@ -14,15 +14,6 @@ func TestJoinQuorum(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Bootstrap does not send any messages
-
-	// Verify that bootstrap started ticking
-	p0.tickingLock.Lock()
-	if !p0.ticking {
-		t.Fatal("Bootstrap state not ticking after joining Sia")
-	}
-	p0.tickingLock.Unlock()
-
 	// Verify that s0.self.index updated
 	if p0.self.index == 255 {
 		t.Error("Bootstrapping failed to update State.self.index")
@@ -60,11 +51,10 @@ func TestJoinQuorum(t *testing.T) {
 	gobQuorum, _ := p0.quorum.GobEncode()
 	p1.TransferQuorum(gobQuorum, nil)
 
-	// Verify that new sibling started ticking
-	p1.tickingLock.Lock()
-	if !p1.ticking {
-		t.Error("p1 did not start ticking")
-	}
+	// ticking is not being tested at the moment, due to a race condition on
+	// the locks. The test gets the locks before the tick() function does, which
+	// means that ticking is not updated by the time the test is checking it.
 
-	// both swarms should be aware of each other... maybe test their ongoing interactions?
+	// additionally, no testing is done to see that the siblings are sending
+	// messages to each other.
 }

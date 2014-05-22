@@ -155,31 +155,6 @@ func (q *quorum) tossSibling(pi byte) {
 	q.siblings[pi] = nil
 }
 
-// Update the state according to the information presented in the heartbeat
-func (q *quorum) processHeartbeat(hb *heartbeat, seed *common.Entropy) (newSiblings []*Sibling, err error) {
-	// add hopefuls to any available slots
-	// quorum.siblings has already been locked by compile()
-	j := 0
-	for _, s := range hb.hopefuls {
-		for j < common.QuorumSize {
-			if q.siblings[j] == nil {
-				println("placed hopeful at index", j)
-				s.index = byte(j)
-				q.siblings[s.index] = s
-				newSiblings = append(newSiblings, s)
-				break
-			}
-			j++
-		}
-	}
-
-	// Add the entropy to newSeed
-	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
-	copy(seed[:], th[:])
-
-	return
-}
-
 // Use the entropy stored in the state to generate a random integer [low, high)
 // randInt only runs during compile(), when the mutexes are already locked
 func (q *quorum) randInt(low int, high int) (randInt int, err error) {

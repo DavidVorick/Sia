@@ -325,9 +325,8 @@ func (p *Participant) compile() {
 	// fetch a sibling ordering
 	siblingOrdering := p.quorum.siblingOrdering()
 
-	var newSiblings []*Sibling
-	var newSeed common.Entropy
 	// Read heartbeats, process them, then archive them.
+	var newSeed common.Entropy
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
@@ -339,7 +338,7 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			newSiblings, _ = p.quorum.processHeartbeat(hb, &newSeed)
+			p.processHeartbeat(hb, &newSeed)
 		}
 
 		// archive heartbeats (tbi)
@@ -348,33 +347,12 @@ func (p *Participant) compile() {
 		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
 	}
 
-	// add new siblings
-	for _, s := range newSiblings {
-		err := p.addNewSibling(s)
-		if err != nil {
-			log.Fatalln("failed to add new sibling:", err)
-		}
-	}
-	if len(newSiblings) != 0 {
-		fmt.Println("sending quorum state:")
-		fmt.Print(p.quorum.Status())
-	}
-	// send each new sibling the current quorum state
-	for _, s := range newSiblings {
-		gobQuorum, _ := p.quorum.GobEncode()
-		p.messageRouter.SendAsyncMessage(&common.Message{
-			Dest: s.address,
-			Proc: "Participant.TransferQuorum",
-			Args: gobQuorum,
-			Resp: nil,
-		})
-	}
+	// copy the new seed into the quorum
+	p.quorum.seed = newSeed
 
 	// print the status of the quorum after compiling
 	fmt.Print(p.quorum.Status)
 
-	// copy the new seed into the quorum
-	p.quorum.seed = newSeed
 	p.quorum.lock.Unlock()
 	p.heartbeatsLock.Unlock()
 
@@ -398,6 +376,7 @@ func (p *Participant) tick() {
 		return
 	}
 	p.ticking = true
+	println(p)
 	p.tickingLock.Unlock()
 
 	// Every common.StepDuration, advance the state stage

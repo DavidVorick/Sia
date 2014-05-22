@@ -77,6 +77,48 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	return
 }
 
+// Update the state according to the information presented in the heartbeat
+//
+// What if a hopeful is denied because the quorum is full, but then later a
+// participant gets tossed. This is really a question of when updates should
+// be processed. Should they be processed before or after the participants
+// are processed? Should proccessUpdates be its own funciton?
+func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy) (err error) {
+	// add hopefuls to any available slots
+	// quorum is already locked by compile()
+	j := 0
+	for _, s := range hb.hopefuls {
+		for j < common.QuorumSize {
+			if p.quorum.siblings[j] == nil {
+				// transfer the quorum to the new sibling
+				go func() {
+					// wait until compile() releases the mutex
+					p.quorum.lock.RLock()
+					gobQuorum, _ := p.quorum.GobEncode()
+					p.quorum.lock.RUnlock() // quorum can be unlocked as soon as GobEncode() completes
+					p.messageRouter.SendAsyncMessage(&common.Message{
+						Dest: s.address,
+						Proc: "Participant.TransferQuorum",
+						Args: gobQuorum,
+						Resp: nil,
+					})
+				}()
+				s.index = byte(j)
+				p.addNewSibling(s)
+				println("placed hopeful at index", j)
+				break
+			}
+			j++
+		}
+	}
+
+	// Add the entropy to newSeed
+	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
+	copy(seed[:], th[:])
+
+	return
+}
+
 // Takes a Message and broadcasts it to every Sibling in the quorum
 // Even sends the message to self, this may be revised
 func (p *Participant) broadcast(m *common.Message) {
