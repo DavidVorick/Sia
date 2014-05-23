@@ -54,11 +54,17 @@ func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
 }
 
 func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
+	// lock the quorum before making major changes
+	p.quorum.lock.Lock()
 	err = p.quorum.GobDecode(encodedQuorum)
+	p.quorum.lock.Unlock()
+
 	fmt.Println("downloaded quorum:")
 	fmt.Print(p.quorum.Status())
+
 	// determine our index by searching through the quorum
 	// also create maps for each sibling
+	p.quorum.lock.RLock()
 	for i, s := range p.quorum.siblings {
 		if s.compare(p.self) {
 			p.self.index = byte(i)
@@ -67,12 +73,8 @@ func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err e
 			p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
 		}
 	}
-	p.tickingLock.Lock()
-	defer p.tickingLock.Unlock()
-	if !p.ticking {
-		p.ticking = true
-		go p.tick()
-	}
+	p.quorum.lock.RUnlock()
+	go p.tick()
 	return
 }
 

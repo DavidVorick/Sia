@@ -295,7 +295,8 @@ func TestProcessHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = p1.quorum.processHeartbeat(sh0.heartbeat)
+	var newSeed common.Entropy
+	err = p1.processHeartbeat(sh0.heartbeat, &newSeed)
 	if err != nil {
 		t.Error("processHeartbeat threw out a valid heartbeat:", err)
 	}

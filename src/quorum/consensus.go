@@ -171,9 +171,9 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	}
 
 	// we are starting to read from memory, initiate locks
-	p.quorum.siblingsLock.RLock()
+	p.quorum.lock.RLock()
 	p.heartbeatsLock.Lock()
-	defer p.quorum.siblingsLock.RUnlock()
+	defer p.quorum.lock.RUnlock()
 	defer p.heartbeatsLock.Unlock()
 
 	// check that first signatory is a sibling
@@ -318,19 +318,19 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 //
 // Needs updated error handling
 func (p *Participant) compile() {
-	var newSiblings []*Sibling
+	// Lock down s.heartbeats and quorum for editing
+	p.quorum.lock.Lock()
+	p.heartbeatsLock.Lock()
+
 	// fetch a sibling ordering
 	siblingOrdering := p.quorum.siblingOrdering()
 
-	// Lock down s.siblings and s.heartbeats for editing
-	p.quorum.siblingsLock.Lock()
-	p.heartbeatsLock.Lock()
-
 	// Read heartbeats, process them, then archive them.
+	var newSeed common.Entropy
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
-			p.tossSibling(i)
+			p.quorum.tossSibling(i)
 			continue
 		}
 
@@ -338,50 +338,31 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			newSiblings, _ = p.quorum.processHeartbeat(hb)
+			p.processHeartbeat(hb, &newSeed)
 		}
 
-		// archive heartbeats (unimplemented)
+		// archive heartbeats (tbi)
 
 		// clear heartbeat list for next block
 		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
 	}
 
-	// add new siblings
-	for _, s := range newSiblings {
-		err := p.addNewSibling(s)
-		if err != nil {
-			log.Fatalln("failed to add new sibling:", err)
-		}
-	}
-	if len(newSiblings) != 0 {
-		fmt.Println("sending quorum state:")
-		fmt.Print(p.quorum.Status())
-	}
-	// send each new sibling the current quorum state
-	for _, s := range newSiblings {
-		gobQuorum, _ := p.quorum.GobEncode()
-		p.messageRouter.SendAsyncMessage(&common.Message{
-			Dest: s.address,
-			Proc: "Participant.TransferQuorum",
-			Args: gobQuorum,
-			Resp: nil,
-		})
-	}
+	// copy the new seed into the quorum
+	p.quorum.seed = newSeed
 
-	p.quorum.siblingsLock.Unlock()
+	// print the status of the quorum after compiling
+	fmt.Print(p.quorum.Status)
+
+	p.quorum.lock.Unlock()
 	p.heartbeatsLock.Unlock()
 
-	// move UpcomingEntropy to CurrentEntropy
-	p.quorum.currentEntropy = p.quorum.upcomingEntropy
-
-	// generate, sign, and announce new heartbeat
+	// create new heartbeat (it gets broadcast automatically)
 	_, err := p.newSignedHeartbeat()
 	if err != nil {
 		return
 	}
 
-	// reset the WIP heartbeat
+	// reset the in-progress heartbeat
 	p.currHeartbeat = heartbeat{}
 
 	return
@@ -389,6 +370,15 @@ func (p *Participant) compile() {
 
 // Tick() updates s.CurrentStep, and calls compile() when all steps are complete
 func (p *Participant) tick() {
+	p.tickingLock.Lock()
+	if p.ticking {
+		p.tickingLock.Unlock()
+		return
+	}
+	p.ticking = true
+	println(p)
+	p.tickingLock.Unlock()
+
 	// Every common.StepDuration, advance the state stage
 	ticker := time.Tick(common.StepDuration)
 	for _ = range ticker {

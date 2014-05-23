@@ -11,107 +11,35 @@ import (
 	"sync"
 )
 
-// Identifies other members of the quorum
+// A Sibling is the public facing information of participants on the quorum.
+// Every quorum contains a list of all siblings.
 type Sibling struct {
-	index     byte // not sure that this is the appropriate place for this variable
+	index     byte
 	address   common.Address
 	publicKey *crypto.PublicKey
 }
 
+// A quorum is a set of data that is identical across all participants in the
+// quorum. Data in the quorum can only be updated during a block, and the
+// update must be deterministic and reversable.
 type quorum struct {
+	// quorum-wide lock
+	lock sync.RWMutex
+
 	// Network Variables
-	siblings     [common.QuorumSize]*Sibling // list of all siblings in quorum
-	siblingsLock sync.RWMutex                // prevents race conditions
+	siblings [common.QuorumSize]*Sibling
 	// meta quorum
 
-	// file proofs stage 2
+	// file proofs stage 1
 
 	// Compile Variables
-	currentEntropy  common.Entropy // Used to generate random numbers during compilation
-	upcomingEntropy common.Entropy // Used to compute entropy for next block
+	seed common.Entropy // Used to generate random numbers during compilation
 
 	// Batch management
 	parent *batchNode
 }
 
-// returns the current state of the quorum in human-readable form
-func (q *quorum) Status() (b string) {
-	b = "\tSiblings:\n"
-	for _, s := range q.siblings {
-		if s != nil {
-			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
-		}
-	}
-	return
-}
-
-// Convert quorum to []byte
-// Only the siblings and entropy are encoded.
-func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
-	// if q == nil, encode a zero quorum
-	if q == nil {
-		q = new(quorum)
-	}
-
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	// only encode non-nil siblings
-	var encSiblings []*Sibling
-	for _, s := range q.siblings {
-		if s != nil {
-			encSiblings = append(encSiblings, s)
-		}
-	}
-	err = encoder.Encode(encSiblings)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(q.currentEntropy)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(q.upcomingEntropy)
-	if err != nil {
-		return
-	}
-
-	gobQuorum = w.Bytes()
-	return
-}
-
-// Convert []byte to quorum
-// Only the siblings and entropy are decoded.
-func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
-	// if q == nil, make a new quorum and decode into that
-	if q == nil {
-		q = new(quorum)
-	}
-
-	r := bytes.NewBuffer(gobQuorum)
-	decoder := gob.NewDecoder(r)
-
-	// not all siblings were encoded
-	var encSiblings []*Sibling
-	err = decoder.Decode(&encSiblings)
-	if err != nil {
-		return
-	}
-	for _, s := range encSiblings {
-		q.siblings[s.index] = s
-	}
-	err = decoder.Decode(&q.currentEntropy)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&q.upcomingEntropy)
-	if err != nil {
-		return
-	}
-	return
-}
-
-// Returns true if the values of the siblings are equivalent
+// Sibling.compare returns true if the values of each Sibling are equivalent
 func (s0 *Sibling) compare(s1 *Sibling) bool {
 	// false if either sibling is nil
 	if s0 == nil || s1 == nil {
@@ -132,33 +60,10 @@ func (s0 *Sibling) compare(s1 *Sibling) bool {
 	return true
 }
 
-// siblings are processed in a random order each block, determined by the
-// entropy for the block. siblingOrdering() deterministically picks that
-// order, using entropy from the state.
-func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
-	// create an in-order list of siblings
-	for i, s := range q.siblings {
-		if s != nil {
-			siblingOrdering = append(siblingOrdering, byte(i))
-		}
-	}
-
-	// shuffle the list of siblings
-	for i := range siblingOrdering {
-		newIndex, err := q.randInt(i, len(siblingOrdering))
-		if err != nil {
-			log.Fatalln(err)
-		}
-		tmp := siblingOrdering[newIndex]
-		siblingOrdering[newIndex] = siblingOrdering[i]
-		siblingOrdering[i] = tmp
-	}
-
-	return
-}
-
 func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	// Error checking for nil values
+	// Because public keys cannot be nil and are not valid as zero-values, a nil
+	// participant cannot be encoded
 	if s == nil {
 		err = fmt.Errorf("Cannot encode nil sibling")
 		return
@@ -197,9 +102,9 @@ func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 }
 
 func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
+	// if nil, make a new sibling object
 	if s == nil {
-		err = fmt.Errorf("Cannot decode into nil sibling")
-		return
+		s = new(Sibling)
 	}
 
 	r := bytes.NewBuffer(gobSibling)
@@ -219,33 +124,35 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 	return
 }
 
-// Update the state according to the information presented in the heartbeat
-func (q *quorum) processHeartbeat(hb *heartbeat) (newSiblings []*Sibling, err error) {
-	// add hopefuls to any available slots
-	// q.siblings has already been locked by compile()
-	for _, s := range hb.hopefuls {
-		j := 0
-		for {
-			if j == common.QuorumSize {
-				log.Infoln("failed to add hopeful: quorum already full")
-				break
-			}
-			if q.siblings[j] == nil {
-				println("placed hopeful at index", j)
-				s.index = byte(j)
-				q.siblings[s.index] = s
-				newSiblings = append(newSiblings, s)
-				break
-			}
-			j++
+// siblings are processed in a random order each block, determined by the
+// entropy for the block. siblingOrdering() deterministically picks that
+// order, using entropy from the state.
+func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
+	// create an in-order list of siblings
+	for i, s := range q.siblings {
+		if s != nil {
+			siblingOrdering = append(siblingOrdering, byte(i))
 		}
 	}
 
-	// Add the entropy to UpcomingEntropy
-	th, err := crypto.CalculateTruncatedHash(append(q.upcomingEntropy[:], hb.entropy[:]...))
-	q.upcomingEntropy = common.Entropy(th)
+	// shuffle the list of siblings
+	for i := range siblingOrdering {
+		newIndex, err := q.randInt(i, len(siblingOrdering))
+		if err != nil {
+			log.Fatalln(err)
+		}
+		tmp := siblingOrdering[newIndex]
+		siblingOrdering[newIndex] = siblingOrdering[i]
+		siblingOrdering[i] = tmp
+	}
 
 	return
+}
+
+// Removes a sibling from the list of siblings
+func (q *quorum) tossSibling(pi byte) {
+	println("tossing sibling", pi)
+	q.siblings[pi] = nil
 }
 
 // Use the entropy stored in the state to generate a random integer [low, high)
@@ -261,13 +168,94 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 	rollingInt := 0
 	for i := 0; i < 4; i++ {
 		rollingInt = rollingInt << 8
-		rollingInt += int(q.currentEntropy[i])
+		rollingInt += int(q.seed[i])
 	}
 
 	randInt = (rollingInt % (high - low)) + low
 
 	// Convert random number seed to next value
-	truncatedHash, err := crypto.CalculateTruncatedHash(q.currentEntropy[:])
-	q.currentEntropy = common.Entropy(truncatedHash)
+	truncatedHash, err := crypto.CalculateTruncatedHash(q.seed[:])
+	q.seed = common.Entropy(truncatedHash)
+	return
+}
+
+// q.Status() enumerates the variables of the quorum in a human-readable output
+func (q *quorum) Status() (b string) {
+	b = "\tSiblings:\n"
+	for _, s := range q.siblings {
+		if s != nil {
+			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
+		}
+	}
+
+	b += fmt.Sprintf("\tSeed: %x\n", q.seed)
+	return
+}
+
+// Only the siblings and entropy are encoded.
+func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
+	// if q == nil, encode a zero quorum
+	if q == nil {
+		q = new(quorum)
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+
+	// Encode network variabes
+	// Only encode non-nil siblings
+	var encSiblings []*Sibling
+	for _, s := range q.siblings {
+		if s != nil {
+			encSiblings = append(encSiblings, s)
+		}
+	}
+	err = encoder.Encode(encSiblings)
+	if err != nil {
+		return
+	}
+
+	// Encode compile variables
+	err = encoder.Encode(q.seed)
+	if err != nil {
+		return
+	}
+
+	// Encode batch variables
+	// tbi
+
+	gobQuorum = w.Bytes()
+	return
+}
+
+// Only the siblings and entropy are decoded.
+func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
+	// if q == nil, make a new quorum and decode into that
+	if q == nil {
+		q = new(quorum)
+	}
+
+	r := bytes.NewBuffer(gobQuorum)
+	decoder := gob.NewDecoder(r)
+
+	// decode slice of siblings into the sibling array
+	var encSiblings []*Sibling
+	err = decoder.Decode(&encSiblings)
+	if err != nil {
+		return
+	}
+	for _, s := range encSiblings {
+		q.siblings[s.index] = s
+	}
+
+	// decode compile variables
+	err = decoder.Decode(&q.seed)
+	if err != nil {
+		return
+	}
+
+	// decode batch variables
+	// tbi
+
 	return
 }
