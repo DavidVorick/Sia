@@ -13,8 +13,8 @@ import (
 
 // All information that needs to be passed between siblings each block
 type heartbeat struct {
-	entropy  common.Entropy
-	hopefuls []*Sibling
+	entropy common.Entropy
+	updates map[Update]*Update
 }
 
 // Contains a heartbeat that has been signed iteratively, is a key part of the
@@ -39,7 +39,7 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(hb.hopefuls)
+	err = encoder.Encode(hb.updates)
 	if err != nil {
 		return
 	}
@@ -61,13 +61,23 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&hb.hopefuls)
+	err = decoder.Decode(&hb.updates)
+	return
+}
+
+// Takes a signed heartbeat and broadcasts it to the quorum
+func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
+	p.broadcast(&common.Message{
+		Proc: "Participant.HandleSignedHeartbeat",
+		Args: *sh,
+		Resp: nil,
+	})
 	return
 }
 
 // Using the current State, newSignedHeartbeat() creates a heartbeat for the
 // quorum and then signs and announces it.
-func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
+func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
@@ -77,15 +87,13 @@ func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
 	}
 	copy(hb.entropy[:], entropy)
 
-	// incorporate currHeartbeat
-	p.currHeartbeatLock.Lock()
-	hb.hopefuls = p.currHeartbeat.hopefuls
-	p.currHeartbeatLock.Unlock()
-	if len(hb.hopefuls) > 0 {
-		fmt.Println("including", len(hb.hopefuls), "hopeful(s) in heartbeat")
-	}
+	// Add updates gathered since last compile and clear the list
+	p.updatesLock.Lock()
+	hb.updates = p.updates
+	p.updates = make(map[Update]*Update)
+	p.updatesLock.Unlock()
 
-	sh = new(SignedHeartbeat)
+	sh := new(SignedHeartbeat)
 
 	// confirm heartbeat and hash
 	sh.heartbeat = hb
@@ -100,11 +108,11 @@ func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
 
 	// fill out signatures
 	sh.signatures = make([]crypto.Signature, 1)
-	signedHb, err := p.secretKey.Sign(sh.heartbeatHash[:])
+	hbSignature, err := p.secretKey.Sign(sh.heartbeatHash[:])
 	if err != nil {
 		return
 	}
-	sh.signatures[0] = signedHb.Signature
+	sh.signatures[0] = hbSignature.Signature
 	sh.signatories = make([]byte, 1)
 	sh.signatories[0] = p.self.index
 
@@ -112,16 +120,6 @@ func (p *Participant) newSignedHeartbeat() (sh *SignedHeartbeat, err error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return
-}
-
-// Takes a signed heartbeat and broadcasts it to the quorum
-func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
-	p.broadcast(&common.Message{
-		Proc: "Participant.HandleSignedHeartbeat",
-		Args: *sh,
-		Resp: nil,
-	})
 	return
 }
 
@@ -327,6 +325,7 @@ func (p *Participant) compile() {
 
 	// Read heartbeats, process them, then archive them.
 	var newSeed common.Entropy
+	var updateList map[Update]bool
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
@@ -338,7 +337,7 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			p.processHeartbeat(hb, &newSeed)
+			p.processHeartbeat(hb, &newSeed, updateList)
 		}
 
 		// archive heartbeats (tbi)
@@ -351,20 +350,13 @@ func (p *Participant) compile() {
 	p.quorum.seed = newSeed
 
 	// print the status of the quorum after compiling
-	fmt.Print(p.quorum.Status)
+	fmt.Print(p.quorum.Status())
 
 	p.quorum.lock.Unlock()
 	p.heartbeatsLock.Unlock()
 
 	// create new heartbeat (it gets broadcast automatically)
-	_, err := p.newSignedHeartbeat()
-	if err != nil {
-		return
-	}
-
-	// reset the in-progress heartbeat
-	p.currHeartbeat = heartbeat{}
-
+	p.newSignedHeartbeat()
 	return
 }
 
