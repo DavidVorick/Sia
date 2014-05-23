@@ -7,6 +7,15 @@ import (
 	"sync"
 )
 
+type Update interface {
+	process(p *Participant)
+
+	// parent block
+
+	GobEncode() ([]byte, error)
+	GobDecode([]byte) error
+}
+
 type Participant struct {
 	// The quorum in which the participant participates
 	quorum quorum
@@ -27,6 +36,17 @@ type Participant struct {
 	stepLock    sync.RWMutex // prevents a benign race condition
 	ticking     bool
 	tickingLock sync.Mutex
+}
+
+// AddUpdate takes an update from an arbitrary source and includes it in the
+// next heartbeat, kind of like a miner in Bitcoin will queue a transaction to
+// be added in the next block.
+func (p *Participant) AddUpdate(u Update, arb *struct{}) (err error) {
+	// to be added: check the update for being valid, as to not waste bandwidth
+	p.updatesLock.Lock()
+	p.updates[u] = &u
+	p.updatesLock.Unlock()
+	return
 }
 
 // CreateParticipant creates a participant.

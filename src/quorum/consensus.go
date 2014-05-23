@@ -376,7 +376,6 @@ func (p *Participant) tick() {
 		return
 	}
 	p.ticking = true
-	println(p)
 	p.tickingLock.Unlock()
 
 	// Every common.StepDuration, advance the state stage

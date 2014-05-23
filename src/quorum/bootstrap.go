@@ -1,8 +1,10 @@
 package quorum
 
 import (
+	"bytes"
 	"common"
 	"common/crypto"
+	"encoding/gob"
 	"fmt"
 )
 
@@ -23,7 +25,6 @@ The Bootstrapping Process
 [   intent    ]       [             ]       [  heartbeat  ]       [ add hopeful ]       [  heartbeats ]       [   compile   ]       [  integrated ]       [             ]
 [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]
 
-
 */
 
 // Bootstrapping
@@ -33,8 +34,78 @@ var bootstrapAddress = common.Address{
 	Port: 9988,
 }
 
-// Adds a new Sibling, and then announces them with their index
-// Currently not safe - Siblings need to be added during compile()
+// A Join is an update that is a participant requesting to join Sia.
+type Join struct {
+	Sibling   Sibling
+	Heartbeat SignedHeartbeat
+}
+
+func (j *Join) process(p *Participant) {
+	// add hopefuls to any available slots
+	// quorum is already locked by compile()
+	i := 0
+	for i < common.QuorumSize {
+		if p.quorum.siblings[i] == nil {
+			// transfer the quorum to the new sibling
+			go func() {
+				// wait until compile() releases the mutex
+				p.quorum.lock.RLock()
+				gobQuorum, _ := p.quorum.GobEncode()
+				p.quorum.lock.RUnlock() // quorum can be unlocked as soon as GobEncode() completes
+				p.messageRouter.SendAsyncMessage(&common.Message{
+					Dest: j.Sibling.address,
+					Proc: "Participant.TransferQuorum",
+					Args: gobQuorum,
+					Resp: nil,
+				})
+			}()
+			j.Sibling.index = byte(i)
+			p.addNewSibling(&j.Sibling)
+			println("placed hopeful at index", i)
+			break
+		}
+		i++
+	}
+}
+
+func (j *Join) GobEncode() (gobJoin []byte, err error) {
+	if j == nil {
+		err = fmt.Errorf("Cannot encode a nil Join")
+		return
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(j.Sibling)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(j.Heartbeat)
+	if err != nil {
+		return
+	}
+	gobJoin = w.Bytes()
+	return
+}
+
+func (j *Join) GobDecode(gobJoin []byte) (err error) {
+	if j == nil {
+		j = new(Join)
+	}
+
+	r := bytes.NewBuffer(gobJoin)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&j.Sibling)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&j.Heartbeat)
+	if err != nil {
+		return
+	}
+	return
+}
+
 func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
 	p.broadcast(&common.Message{
 		Proc: "Participant.AddHopeful",
@@ -44,15 +115,8 @@ func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
 	return
 }
 
-// add a potential sibling to the heartbeat-in-progress
-func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
-	fmt.Println("got join request")
-	p.currHeartbeatLock.Lock()
-	p.currHeartbeat.hopefuls = append(p.currHeartbeat.hopefuls, &s)
-	p.currHeartbeatLock.Unlock()
-	return
-}
-
+// A member of a quorum will call TransferQuorum on someone who has solicited
+// a quorum transfer. The quorum data is then sent between machines over RPC.
 func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
 	// lock the quorum before making major changes
 	p.quorum.lock.Lock()
