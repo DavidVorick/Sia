@@ -35,11 +35,11 @@ var bootstrapAddress = common.Address{
 }
 
 // A Join is an update that is a participant requesting to join Sia.
-type Join struct {
+type JoinRequest struct {
 	Sibling Sibling
 }
 
-func (j *Join) process(p *Participant) {
+func (j *JoinRequest) process(p *Participant) {
 	// add hopefuls to any available slots
 	// quorum is already locked by compile()
 	i := 0
@@ -56,7 +56,7 @@ func (j *Join) process(p *Participant) {
 	}
 }
 
-func (j *Join) GobEncode() (gobJoin []byte, err error) {
+func (j *JoinRequest) GobEncode() (gobJoin []byte, err error) {
 	if j == nil {
 		err = fmt.Errorf("Cannot encode a nil Join")
 		return
@@ -72,9 +72,9 @@ func (j *Join) GobEncode() (gobJoin []byte, err error) {
 	return
 }
 
-func (j *Join) GobDecode(gobJoin []byte) (err error) {
+func (j *JoinRequest) GobDecode(gobJoin []byte) (err error) {
 	if j == nil {
-		j = new(Join)
+		j = new(JoinRequest)
 	}
 
 	r := bytes.NewBuffer(gobJoin)
@@ -83,14 +83,5 @@ func (j *Join) GobDecode(gobJoin []byte) (err error) {
 	if err != nil {
 		return
 	}
-	return
-}
-
-func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
-	p.broadcast(&common.Message{
-		Proc: "Participant.AddHopeful",
-		Args: s,
-		Resp: nil,
-	})
 	return
 }

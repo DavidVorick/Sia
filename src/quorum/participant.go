@@ -1,8 +1,10 @@
 package quorum
 
 import (
+	"bytes"
 	"common"
 	"common/crypto"
+	"encoding/gob"
 	"fmt"
 	"sync"
 )
@@ -14,6 +16,11 @@ type Update interface {
 
 	GobEncode() ([]byte, error)
 	GobDecode([]byte) error
+}
+
+type Synchronize struct {
+	currentStep int
+	heartbeats  [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
 }
 
 type Participant struct {
@@ -41,15 +48,183 @@ type Participant struct {
 	tickingLock sync.Mutex
 }
 
+func (s *Synchronize) GobEncode() (gobSynchronize []byte, err error) {
+	if s == nil {
+		s = new(Synchronize)
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(s.currentStep)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(s.heartbeats)
+	if err != nil {
+		return
+	}
+	gobSynchronize = w.Bytes()
+	return
+}
+
+func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
+	if s == nil {
+		s = new(Synchronize)
+	}
+
+	r := bytes.NewBuffer(gobSynchronize)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&s.currentStep)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&s.heartbeats)
+	if err != nil {
+		return
+	}
+	return
+}
+
 // AddUpdate takes an update from an arbitrary source and includes it in the
 // next heartbeat, kind of like a miner in Bitcoin will queue a transaction to
 // be added in the next block.
-func (p *Participant) AddUpdate(u Update, arb *struct{}) (err error) {
+func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	// to be added: check the update for being valid, as to not waste bandwidth
 	p.updatesLock.Lock()
-	p.updates[u] = &u
+	p.updates[update] = &update
 	p.updatesLock.Unlock()
 	return
+}
+
+// A member of a quorum will call TransferQuorum on someone who has solicited
+// a quorum transfer. The quorum data is then sent between machines over RPC.
+func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
+	// lock the quorum before making major changes
+	p.quorum.lock.Lock()
+	err = p.quorum.GobDecode(encodedQuorum)
+	p.quorum.lock.Unlock()
+	if err != nil {
+		return
+	}
+
+	fmt.Println("downloaded quorum:")
+	fmt.Print(p.quorum.Status())
+
+	// create maps for each sibling
+	p.quorum.lock.RLock()
+	p.heartbeatsLock.Lock()
+	for i := range p.quorum.siblings {
+		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+	}
+	p.heartbeatsLock.Unlock()
+	p.quorum.lock.RUnlock()
+	go p.tick()
+	return
+}
+
+// Synchronize just sends over participant.currentStep, and is a temporary
+// function. It's not secure or trusted and is highely exploitable.
+func (p *Participant) Synchronize(s Synchronize, arb *struct{}) (err error) {
+	p.stepLock.Lock()
+	p.currentStep = s.currentStep
+	p.stepLock.Unlock()
+
+	p.heartbeatsLock.Lock()
+	p.heartbeats = s.heartbeats
+	p.heartbeatsLock.Unlock()
+	return
+}
+
+// Right now there's no way to stop listening. Eventually, listeners will also
+// have public keys which they can use to signal that they wish to stop
+// listening. We can probably also add timeouts so that listeners are
+// automatically ignored after M days andmust be renewed.
+func (p *Participant) AddListener(a common.Address, arb *struct{}) (err error) {
+	// add the address to listeners
+	p.listeners = append(p.listeners, a)
+
+	// transfer the quorum to the new listener
+	// this will also be moved to a completely seperate function in the future
+	p.quorum.lock.RLock()
+	gobQuorum, err := p.quorum.GobEncode()
+	if err != nil {
+		// error logging?
+		return
+	}
+	p.quorum.lock.RUnlock() // quorum unlocked after GobEncode() completes
+	p.messageRouter.SendMessage(&common.Message{
+		Dest: a,
+		Proc: "Participant.TransferQuorum",
+		Args: gobQuorum,
+		Resp: nil,
+	})
+
+	// may need to check for an error on the send here
+
+	// synchronize the other quorum to the current step (after stepping) and send
+	// the current list of heartbeats
+
+	// create the synchronize object
+	var sync Synchronize
+	p.stepLock.Lock()
+	p.heartbeatsLock.Lock()
+	sync.currentStep = p.currentStep
+	sync.heartbeats = p.heartbeats
+	p.stepLock.Unlock()
+	p.heartbeatsLock.Unlock()
+
+	// send the synnchronize object in a message
+	p.messageRouter.SendMessage(&common.Message{
+		Dest: a,
+		Proc: "Participant.Synchronize",
+		Args: sync,
+		Resp: nil,
+	})
+	return
+}
+
+// Update the state according to the information presented in the heartbeat
+//
+// What if a hopeful is denied because the quorum is full, but then later a
+// participant gets tossed. This is really a question of when updates should
+// be processed. Should they be processed before or after the participants
+// are processed? Should proccessUpdates be its own funciton?
+func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, updateList map[Update]bool) (err error) {
+	// Add the entropy to newSeed
+	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
+	copy(seed[:], th[:])
+
+	// Process updates and add to update list
+	for _, update := range hb.updates {
+		if updateList[*update] == false {
+			(*update).process(p)
+			updateList[*update] = true
+		}
+	}
+
+	return
+}
+
+// Takes a Message and broadcasts it to every Sibling in the quorum
+// Even sends the message to self, this may be revised
+// After sending to all siblings, all listeners are also sent the message
+func (p *Participant) broadcast(m *common.Message) {
+	// send the messagea to all of the siblings in the quorum
+	p.quorum.lock.RLock()
+	for i := range p.quorum.siblings {
+		if p.quorum.siblings[i] != nil {
+			nm := *m
+			nm.Dest = p.quorum.siblings[i].address
+			p.messageRouter.SendAsyncMessage(&nm)
+		}
+	}
+	p.quorum.lock.RUnlock()
+
+	for _, listener := range p.listeners {
+		nm := *m
+		nm.Dest = listener
+		p.messageRouter.SendAsyncMessage(&nm)
+	}
 }
 
 // CreateParticipant creates a participant.
@@ -90,109 +265,27 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 		return
 	}
 
-	// if we are not the bootstrap, send a join request to the bootstrap
-	// first create a join Update
+	// send a listener request to the bootstrap to become a listener on the quorum
+	fmt.Println("Synchronizing to Bootstrap")
+	err = p.messageRouter.SendMessage(&common.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.AddListener",
+		Args: p.self.address,
+		Resp: nil,
+	})
 
-	j := Join{
+	// Create a Join update and submit it to the quorum
+	j := JoinRequest{
 		Sibling: *p.self,
 	}
-
-	// j.GobEncode ===> make it an encoded update
-	// then send the encoded update over RPC to an Update receiver, instead of a join receiver
 
 	fmt.Println("joining network...")
 	errChan := p.messageRouter.SendAsyncMessage(&common.Message{
 		Dest: bootstrapAddress,
-		Proc: "Participant.JoinSia",
+		Proc: "Participant.AddUpdate",
 		Args: j,
 		Resp: nil,
 	})
 	err = <-errChan
-	return
-}
-
-// Update the state according to the information presented in the heartbeat
-//
-// What if a hopeful is denied because the quorum is full, but then later a
-// participant gets tossed. This is really a question of when updates should
-// be processed. Should they be processed before or after the participants
-// are processed? Should proccessUpdates be its own funciton?
-func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, updateList map[Update]bool) (err error) {
-	// Add the entropy to newSeed
-	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
-	copy(seed[:], th[:])
-
-	// Process updates and add to update list
-	for _, update := range hb.updates {
-		if updateList[*update] == false {
-			(*update).process(p)
-			updateList[*update] = true
-		}
-	}
-
-	return
-}
-
-// Takes a Message and broadcasts it to every Sibling in the quorum
-// Even sends the message to self, this may be revised
-func (p *Participant) broadcast(m *common.Message) {
-	p.quorum.lock.RLock()
-	for i := range p.quorum.siblings {
-		if p.quorum.siblings[i] != nil {
-			nm := *m
-			nm.Dest = p.quorum.siblings[i].address
-			p.messageRouter.SendAsyncMessage(&nm)
-		}
-	}
-	p.quorum.lock.RUnlock()
-}
-
-// Right now there's no way to stop listening. Eventually, listeners will also
-// have public keys which they can use to signal that they wish to stop
-// listening. We can probably also add timeouts so that listeners are
-// automatically ignored after M days andmust be renewed.
-func (p *Participant) QuorumListenerRequest(a common.Address, arb *struct{}) (err error) {
-	// add the address to listeners
-	p.listeners = append(p.listeners, a)
-
-	// transfer the quorum to the new listener
-	// this will also be moved to a completely seperate function in the future
-	p.quorum.lock.RLock()
-	gobQuorum, err := p.quorum.GobEncode()
-	if err != nil {
-		// error logging?
-		return
-	}
-	p.quorum.lock.RUnlock() // quorum unlocked after GobEncode() completes
-	p.messageRouter.SendAsyncMessage(&common.Message{
-		Dest: a,
-		Proc: "Participant.TransferQuorum",
-		Args: gobQuorum,
-		Resp: nil,
-	})
-	return
-}
-
-// A member of a quorum will call TransferQuorum on someone who has solicited
-// a quorum transfer. The quorum data is then sent between machines over RPC.
-func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
-	// lock the quorum before making major changes
-	p.quorum.lock.Lock()
-	err = p.quorum.GobDecode(encodedQuorum)
-	p.quorum.lock.Unlock()
-	if err != nil {
-		return
-	}
-
-	fmt.Println("downloaded quorum:")
-	fmt.Print(p.quorum.Status())
-
-	// create maps for each sibling
-	p.quorum.lock.RLock()
-	for i := range p.quorum.siblings {
-		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
-	}
-	p.quorum.lock.RUnlock()
-	go p.tick()
 	return
 }
