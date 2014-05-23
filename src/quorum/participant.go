@@ -21,9 +21,12 @@ type Participant struct {
 	quorum quorum
 
 	// Variables local to the participant
+	self      *Sibling         // the sibling object for this participant
+	secretKey crypto.SecretKey // secret key matching self.publicKey
+
+	// Network Related Variables
 	messageRouter common.MessageRouter
-	self          *Sibling         // the sibling object for this participant
-	secretKey     crypto.SecretKey // secret key matching self.publicKey
+	listeners     []common.Address
 
 	// Heartbeat Variables
 	updates        map[Update]*Update
@@ -81,7 +84,8 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.address == bootstrapAddress {
 		p.self.index = 0
-		p.addNewSibling(p.self)
+		p.heartbeats[p.self.index] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.quorum.siblings[p.self.index] = p.self
 		go p.tick()
 		return
 	}
@@ -90,10 +94,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	// first create a join Update
 
 	j := Join{
-		Sibling:   *p.self,
-		Heartbeat: SignedHeartbeat{
-		// tbi
-		},
+		Sibling: *p.self,
 	}
 
 	// j.GobEncode ===> make it an encoded update
@@ -144,4 +145,54 @@ func (p *Participant) broadcast(m *common.Message) {
 		}
 	}
 	p.quorum.lock.RUnlock()
+}
+
+// Right now there's no way to stop listening. Eventually, listeners will also
+// have public keys which they can use to signal that they wish to stop
+// listening. We can probably also add timeouts so that listeners are
+// automatically ignored after M days andmust be renewed.
+func (p *Participant) QuorumListenerRequest(a common.Address, arb *struct{}) (err error) {
+	// add the address to listeners
+	p.listeners = append(p.listeners, a)
+
+	// transfer the quorum to the new listener
+	// this will also be moved to a completely seperate function in the future
+	p.quorum.lock.RLock()
+	gobQuorum, err := p.quorum.GobEncode()
+	if err != nil {
+		// error logging?
+		return
+	}
+	p.quorum.lock.RUnlock() // quorum unlocked after GobEncode() completes
+	p.messageRouter.SendAsyncMessage(&common.Message{
+		Dest: a,
+		Proc: "Participant.TransferQuorum",
+		Args: gobQuorum,
+		Resp: nil,
+	})
+	return
+}
+
+// A member of a quorum will call TransferQuorum on someone who has solicited
+// a quorum transfer. The quorum data is then sent between machines over RPC.
+func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
+	// lock the quorum before making major changes
+	p.quorum.lock.Lock()
+	err = p.quorum.GobDecode(encodedQuorum)
+	p.quorum.lock.Unlock()
+	if err != nil {
+		return
+	}
+
+	fmt.Println("downloaded quorum:")
+	fmt.Print(p.quorum.Status())
+
+	// create maps for each sibling
+	p.quorum.lock.RLock()
+	for i := range p.quorum.siblings {
+		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+	}
+	p.quorum.lock.RUnlock()
+	go p.tick()
+	return
 }

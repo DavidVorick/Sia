@@ -36,8 +36,7 @@ var bootstrapAddress = common.Address{
 
 // A Join is an update that is a participant requesting to join Sia.
 type Join struct {
-	Sibling   Sibling
-	Heartbeat SignedHeartbeat
+	Sibling Sibling
 }
 
 func (j *Join) process(p *Participant) {
@@ -46,21 +45,10 @@ func (j *Join) process(p *Participant) {
 	i := 0
 	for i < common.QuorumSize {
 		if p.quorum.siblings[i] == nil {
-			// transfer the quorum to the new sibling
-			go func() {
-				// wait until compile() releases the mutex
-				p.quorum.lock.RLock()
-				gobQuorum, _ := p.quorum.GobEncode()
-				p.quorum.lock.RUnlock() // quorum can be unlocked as soon as GobEncode() completes
-				p.messageRouter.SendAsyncMessage(&common.Message{
-					Dest: j.Sibling.address,
-					Proc: "Participant.TransferQuorum",
-					Args: gobQuorum,
-					Resp: nil,
-				})
-			}()
 			j.Sibling.index = byte(i)
-			p.addNewSibling(&j.Sibling)
+			p.heartbeats[j.Sibling.index] = make(map[crypto.TruncatedHash]*heartbeat)
+			p.quorum.siblings[j.Sibling.index] = &j.Sibling
+
 			println("placed hopeful at index", i)
 			break
 		}
@@ -80,10 +68,6 @@ func (j *Join) GobEncode() (gobJoin []byte, err error) {
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(j.Heartbeat)
-	if err != nil {
-		return
-	}
 	gobJoin = w.Bytes()
 	return
 }
@@ -99,10 +83,6 @@ func (j *Join) GobDecode(gobJoin []byte) (err error) {
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&j.Heartbeat)
-	if err != nil {
-		return
-	}
 	return
 }
 
@@ -112,55 +92,5 @@ func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
 		Args: s,
 		Resp: nil,
 	})
-	return
-}
-
-// A member of a quorum will call TransferQuorum on someone who has solicited
-// a quorum transfer. The quorum data is then sent between machines over RPC.
-func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
-	// lock the quorum before making major changes
-	p.quorum.lock.Lock()
-	err = p.quorum.GobDecode(encodedQuorum)
-	p.quorum.lock.Unlock()
-
-	fmt.Println("downloaded quorum:")
-	fmt.Print(p.quorum.Status())
-
-	// determine our index by searching through the quorum
-	// also create maps for each sibling
-	p.quorum.lock.RLock()
-	for i, s := range p.quorum.siblings {
-		if s.compare(p.self) {
-			p.self.index = byte(i)
-			p.addNewSibling(p.self)
-		} else {
-			p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
-		}
-	}
-	p.quorum.lock.RUnlock()
-	go p.tick()
-	return
-}
-
-// Add a Sibling to the state, tell the Sibling about ourselves
-// Note: p.heartbeats and p.quorum.siblings are already locked by compile()
-func (p *Participant) addNewSibling(s *Sibling) (err error) {
-	// make the heartbeat map and add the default heartbeat
-	hb := new(heartbeat)
-
-	// get the hash of the default heartbeat
-	ehb, err := hb.GobEncode()
-	if err != nil {
-		return
-	}
-	hbHash, err := crypto.CalculateTruncatedHash(ehb)
-	if err != nil {
-		return
-	}
-
-	p.heartbeats[s.index] = make(map[crypto.TruncatedHash]*heartbeat)
-	p.heartbeats[s.index][hbHash] = hb
-	p.quorum.siblings[s.index] = s
-
 	return
 }
