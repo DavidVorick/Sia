@@ -12,6 +12,11 @@ import (
 )
 
 // All information that needs to be passed between siblings each block
+// This may need to be changed to a slice of updates, or a slice of []bytes (encoded updates)
+// The participant should have a map of updates. Upon copying the map into the heartbeat struct,
+// the participant can do a 'for range' if that makes more sense. I'm not particularly attatched
+// to map[Update]Update in the heartbeat itself. Change it to whatever makes the most sense to you.
+// Thanks!
 type heartbeat struct {
 	entropy common.Entropy
 	updates map[Update]Update
@@ -62,8 +67,10 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
-	hb.updates = make(map[Update]Update)
 	err = decoder.Decode(&hb.updates)
+	if err != nil {
+		return
+	}
 	return
 }
 
@@ -90,8 +97,11 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	copy(hb.entropy[:], entropy)
 
 	// Add updates gathered since last compile and clear the list
+	hb.updates = make(map[Update]Update)
 	p.updatesLock.Lock()
-	hb.updates = p.updates
+	for _, value := range p.updates {
+		hb.updates[value] = value
+	}
 	p.updates = make(map[Update]Update)
 	p.updatesLock.Unlock()
 

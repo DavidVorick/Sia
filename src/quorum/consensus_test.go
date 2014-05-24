@@ -5,7 +5,7 @@ import (
 	"common/crypto"
 	"reflect"
 	"testing"
-	//"time"
+	"time"
 )
 
 func TestHeartbeatEncoding(t *testing.T) {
@@ -39,8 +39,8 @@ func TestHeartbeatEncoding(t *testing.T) {
 			publicKey: pubKey,
 		},
 	}
-	hb.updates = make(map[Update]Update)
-	hb.updates[joinRequest] = joinRequest
+	hb.updates = make([]Update, 1)
+	hb.updates[0] = joinRequest
 
 	// encode and decode the filled out heartbeat
 	ehb, err = hb.GobEncode()
@@ -83,6 +83,7 @@ func TestNewSignedHeartbeat(t *testing.T) {
 func TestHandleSignedHeartbeat(t *testing.T) {
 	// create a state and populate it with the signatories as siblings
 	p, err := CreateParticipant(common.NewZeroNetwork())
+	p.self.index = 0
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,13 +99,15 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// create siblings and add them to s
-	var p1 Sibling
-	var p2 Sibling
-	p.self.index = 0
-	p1.index = 1
-	p2.index = 2
-	p1.publicKey = pubKey1
-	p2.publicKey = pubKey2
+	p1 := Sibling {
+		index: 1,
+		publicKey: pubKey1,
+	}
+	p2 := Sibling {
+		index: 2,
+		publicKey: pubKey2,
+	}
+
 	err = p.addNewSibling(p.self)
 	if err != nil {
 		t.Fatal(err)
@@ -305,6 +308,7 @@ func TestProcessHeartbeat(t *testing.T) {
 func TestCompile(t *testing.T) {
 	// tbi
 }
+*/
 
 // Ensures that Tick() updates CurrentStep
 func TestRegularTick(t *testing.T) {
@@ -352,4 +356,4 @@ func TestCompilationTick(t *testing.T) {
 		t.Error("p.currentStep failed to roll over:", p.currentStep)
 	}
 	p.stepLock.Unlock()
-}*/
+}
