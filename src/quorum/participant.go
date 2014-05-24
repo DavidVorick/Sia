@@ -36,7 +36,7 @@ type Participant struct {
 	listeners     []common.Address
 
 	// Heartbeat Variables
-	updates        map[Update]*Update
+	updates        map[Update]Update
 	updatesLock    sync.Mutex
 	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock sync.Mutex
@@ -91,7 +91,7 @@ func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
 func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	// to be added: check the update for being valid, as to not waste bandwidth
 	p.updatesLock.Lock()
-	p.updates[update] = &update
+	p.updates[update] = update
 	p.updatesLock.Unlock()
 	return
 }
@@ -196,9 +196,9 @@ func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, upda
 
 	// Process updates and add to update list
 	for _, update := range hb.updates {
-		if updateList[*update] == false {
-			(*update).process(p)
-			updateList[*update] = true
+		if updateList[update] == false {
+			(update).process(p)
+			updateList[update] = true
 		}
 	}
 

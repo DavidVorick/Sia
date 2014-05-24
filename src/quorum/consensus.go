@@ -14,7 +14,7 @@ import (
 // All information that needs to be passed between siblings each block
 type heartbeat struct {
 	entropy common.Entropy
-	updates map[Update]*Update
+	updates map[Update]Update
 }
 
 // Contains a heartbeat that has been signed iteratively, is a key part of the
@@ -52,7 +52,8 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	// if hb == nil, make a new heartbeat and decode into that
 	if hb == nil {
-		hb = new(heartbeat)
+		err = fmt.Errorf("Cannot decode into nil heartbeat")
+		return
 	}
 
 	r := bytes.NewBuffer(gobHeartbeat)
@@ -61,6 +62,7 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
+	hb.updates = make(map[Update]Update)
 	err = decoder.Decode(&hb.updates)
 	return
 }
@@ -90,7 +92,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	// Add updates gathered since last compile and clear the list
 	p.updatesLock.Lock()
 	hb.updates = p.updates
-	p.updates = make(map[Update]*Update)
+	p.updates = make(map[Update]Update)
 	p.updatesLock.Unlock()
 
 	sh := new(SignedHeartbeat)
