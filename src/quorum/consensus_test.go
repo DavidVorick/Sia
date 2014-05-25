@@ -11,6 +11,7 @@ import (
 
 func TestHeartbeatEncoding(t *testing.T) {
 	gob.Register(JoinRequest{})
+
 	// encode a nil heartbeat
 	var hb *heartbeat
 	ehb, err := hb.GobEncode()

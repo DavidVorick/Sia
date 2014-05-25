@@ -87,6 +87,7 @@ func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
 // be added in the next block.
 func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	// to be added: check the update for being valid, as to not waste bandwidth
+	println("got update")
 	p.updatesLock.Lock()
 	p.updates[update] = update
 	p.updatesLock.Unlock()
@@ -226,6 +227,9 @@ func (p *Participant) broadcast(m *common.Message) {
 
 // CreateParticipant creates a participant.
 func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err error) {
+	// Initializations
+	gob.Register(JoinRequest{})
+
 	// check for non-nil messageRouter
 	if messageRouter == nil {
 		err = fmt.Errorf("Cannot initialize with a nil messageRouter")
@@ -251,6 +255,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	}
 
 	// register State and store our assigned ID
+	// to-do: write a test for RegisterHandler related functions
 	p.self.address.ID = messageRouter.RegisterHandler(p)
 
 	// if we are the bootstrap participant, initialize a new quorum
@@ -258,6 +263,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 		p.self.index = 0
 		p.heartbeats[p.self.index] = make(map[crypto.TruncatedHash]*heartbeat)
 		p.quorum.siblings[p.self.index] = p.self
+		p.newSignedHeartbeat()
 		go p.tick()
 		return
 	}
@@ -270,6 +276,9 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 		Args: p.self.address,
 		Resp: nil,
 	})
+	if err != nil {
+		return
+	}
 
 	// Create a Join update and submit it to the quorum
 	j := JoinRequest{
@@ -277,12 +286,11 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	}
 
 	fmt.Println("joining network...")
-	errChan := p.messageRouter.SendAsyncMessage(&common.Message{
+	err = p.messageRouter.SendMessage(&common.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.AddUpdate",
 		Args: j,
 		Resp: nil,
 	})
-	err = <-errChan
 	return
 }
