@@ -3,12 +3,14 @@ package quorum
 import (
 	"common"
 	"common/crypto"
+	"encoding/gob"
 	"reflect"
 	"testing"
 	"time"
 )
 
 func TestHeartbeatEncoding(t *testing.T) {
+	gob.Register(JoinRequest{})
 	// encode a nil heartbeat
 	var hb *heartbeat
 	ehb, err := hb.GobEncode()
@@ -32,15 +34,14 @@ func TestHeartbeatEncoding(t *testing.T) {
 
 	// add each type of update to the map
 	// currently there is only one type of update
-	joinRequest := &JoinRequest{
+	joinRequest := JoinRequest{
 		Sibling: Sibling{
 			index:     255,
 			address:   bootstrapAddress,
 			publicKey: pubKey,
 		},
 	}
-	hb.updates = make([]Update, 1)
-	hb.updates[0] = joinRequest
+	hb.updates = append(hb.updates, joinRequest)
 
 	// encode and decode the filled out heartbeat
 	ehb, err = hb.GobEncode()
