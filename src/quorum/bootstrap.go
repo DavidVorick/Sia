@@ -39,7 +39,7 @@ type JoinRequest struct {
 	Sibling Sibling
 }
 
-func (j *JoinRequest) process(p *Participant) {
+func (j JoinRequest) process(p *Participant) {
 	// add hopefuls to any available slots
 	// quorum is already locked by compile()
 	i := 0

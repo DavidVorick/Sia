@@ -13,9 +13,6 @@ type Update interface {
 	process(p *Participant)
 
 	// parent block
-
-	GobEncode() ([]byte, error)
-	GobDecode([]byte) error
 }
 
 type Synchronize struct {
