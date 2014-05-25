@@ -39,8 +39,7 @@ func TestHeartbeatEncoding(t *testing.T) {
 			publicKey: pubKey,
 		},
 	}
-	hb.updates = make([]Update, 1)
-	hb.updates[0] = joinRequest
+	hb.updates = append(hb.updates, joinRequest)
 
 	// encode and decode the filled out heartbeat
 	ehb, err = hb.GobEncode()

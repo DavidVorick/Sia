@@ -19,7 +19,7 @@ import (
 // Thanks!
 type heartbeat struct {
 	entropy common.Entropy
-	updates map[Update]Update
+	updates []Update
 }
 
 // Contains a heartbeat that has been signed iteratively, is a key part of the
@@ -97,10 +97,9 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	copy(hb.entropy[:], entropy)
 
 	// Add updates gathered since last compile and clear the list
-	hb.updates = make(map[Update]Update)
 	p.updatesLock.Lock()
 	for _, value := range p.updates {
-		hb.updates[value] = value
+		hb.updates = append(hb.updates, value)
 	}
 	p.updates = make(map[Update]Update)
 	p.updatesLock.Unlock()
