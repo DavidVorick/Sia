@@ -195,7 +195,7 @@ func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, upda
 	// Process updates and add to update list
 	for _, update := range hb.updates {
 		if updateList[update] == false {
-			(update).process(p)
+			update.process(p)
 			updateList[update] = true
 		}
 	}
@@ -281,15 +281,14 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	}
 
 	// Create a Join update and submit it to the quorum
-	j := JoinRequest{
+	var j Update = JoinRequest{
 		Sibling: *p.self,
 	}
-
 	fmt.Println("joining network...")
 	err = p.messageRouter.SendMessage(&common.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.AddUpdate",
-		Args: j,
+		Args: &j,
 		Resp: nil,
 	})
 	return
