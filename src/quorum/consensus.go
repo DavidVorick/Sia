@@ -336,7 +336,7 @@ func (p *Participant) compile() {
 
 	// Read heartbeats, process them, then archive them.
 	var newSeed common.Entropy
-	var updateList map[Update]bool
+	updateList := make(map[Update]bool)
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
