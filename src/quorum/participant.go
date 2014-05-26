@@ -104,8 +104,8 @@ func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err e
 		return
 	}
 
-	fmt.Println("downloaded quorum:")
-	fmt.Print(p.quorum.Status())
+	// fmt.Println("downloaded quorum:")
+	// fmt.Print(p.quorum.Status())
 
 	// create maps for each sibling
 	p.quorum.lock.RLock()

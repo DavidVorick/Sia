@@ -84,7 +84,7 @@ func (j *JoinRequest) GobEncode() (gobJoin []byte, err error) {
 
 func (j *JoinRequest) GobDecode(gobJoin []byte) (err error) {
 	if j == nil {
-		err = fmt.Errorf("Cannod decode into nil JoinRequest")
+		err = fmt.Errorf("Cannot decode into nil JoinRequest")
 		return
 	}
 

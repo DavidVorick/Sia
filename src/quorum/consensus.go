@@ -79,7 +79,7 @@ func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
 	p.broadcast(&common.Message{
 		Proc: "Participant.HandleSignedHeartbeat",
 		Args: *sh,
-		Resp: nil,
+		Resp: err,
 	})
 	return
 }
