@@ -148,15 +148,17 @@ var hsherrInvalidSignature = errors.New("Received heartbeat with invalid signatu
 // 'incomingSignedHeartbeat' and verifies it according to the specification
 //
 // What sort of input error checking is needed for this function?
-func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) error {
+func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (err error) {
 	// Check that the slices of signatures and signatories are of the same length
 	if len(sh.signatures) != len(sh.signatories) {
-		return hsherrMismatchedSignatures
+		err = hsherrMismatchedSignatures
+		return
 	}
 
 	// check that there are not too many signatures and signatories
 	if len(sh.signatories) > common.QuorumSize {
-		return hsherrOversigned
+		err = hsherrOversigned
+		return
 	}
 
 	p.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
@@ -170,13 +172,15 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 			time.Sleep(common.StepDuration)
 			// now continue to rest of function
 		} else {
-			return hsherrNoSync
+			err = hsherrNoSync
+			return
 		}
 	}
 
 	// Check bounds on first signatory
 	if int(sh.signatories[0]) >= common.QuorumSize {
-		return hsherrBounds
+		err = hsherrBounds
+		return
 	}
 
 	// we are starting to read from memory, initiate locks
@@ -187,18 +191,21 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 
 	// check that first signatory is a sibling
 	if p.quorum.siblings[sh.signatories[0]] == nil {
-		return hsherrNonSibling
+		err = hsherrNonSibling
+		return
 	}
 
 	// Check if we have already received this heartbeat
 	_, exists := p.heartbeats[sh.signatories[0]][sh.heartbeatHash]
 	if exists {
-		return hsherrHaveHeartbeat
+		err = hsherrHaveHeartbeat
+		return
 	}
 
 	// Check if we already have two heartbeats from this host
 	if len(p.heartbeats[sh.signatories[0]]) >= 2 {
-		return hsherrManyHeartbeats
+		err = hsherrManyHeartbeats
+		return
 	}
 
 	// iterate through the signatures and make sure each is legal
@@ -208,17 +215,20 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	for i, signatory := range sh.signatories {
 		// Check bounds on the signatory
 		if int(signatory) >= common.QuorumSize {
-			return hsherrBounds
+			err = hsherrBounds
+			return
 		}
 
 		// Verify that the signatory is a sibling in the quorum
 		if p.quorum.siblings[signatory] == nil {
-			return hsherrNonSibling
+			err = hsherrNonSibling
+			return
 		}
 
 		// Verify that the signatory has only been seen once in the current SignedHeartbeat
 		if previousSignatories[signatory] {
-			return hsherrDoubleSigned
+			err = hsherrDoubleSigned
+			return
 		}
 
 		// record that we've seen this signatory in the current SignedHeartbeat
@@ -230,7 +240,8 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 
 		// check status of verification
 		if !verification {
-			return hsherrInvalidSignature
+			err = hsherrInvalidSignature
+			return
 		}
 
 		// throwing the signature into the message here makes code cleaner in the loop
@@ -246,7 +257,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) e
 	p.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
 
 	// Sign the stack of signatures and send it to all hosts
-	signedMessage, err := p.secretKey.Sign(signedMessage.Message)
+	signedMessage, err = p.secretKey.Sign(signedMessage.Message)
 	if err != nil {
 		log.Fatalln(err)
 	}
