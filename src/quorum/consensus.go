@@ -106,7 +106,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 
 	sh := new(SignedHeartbeat)
 
-	// confirm heartbeat and hash
+	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
 	gobHb, err := hb.GobEncode()
 	if err != nil {
@@ -127,10 +127,9 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	sh.signatories = make([]byte, 1)
 	sh.signatories[0] = p.self.index
 
+	// Add heartbeat to list of seen heartbeats and announce it
+	p.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
 	err = p.announceSignedHeartbeat(sh)
-	if err != nil {
-		log.Fatalln(err)
-	}
 	return
 }
 
@@ -270,10 +269,9 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	err = p.announceSignedHeartbeat(&sh)
 	if err != nil {
 		log.Fatalln(err)
-		return err
 	}
 
-	return nil
+	return
 }
 
 func (sh *SignedHeartbeat) GobEncode() (gobSignedHeartbeat []byte, err error) {
@@ -351,6 +349,7 @@ func (p *Participant) compile() {
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
+			fmt.Printf("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
 			p.quorum.tossSibling(i)
 			continue
 		}

@@ -87,7 +87,6 @@ func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
 // be added in the next block.
 func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	// to be added: check the update for being valid, as to not waste bandwidth
-	println("got update")
 	p.updatesLock.Lock()
 	p.updates[update] = update
 	p.updatesLock.Unlock()
