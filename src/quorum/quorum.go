@@ -184,7 +184,10 @@ func (q *quorum) Status() (b string) {
 	b = "\tSiblings:\n"
 	for _, s := range q.siblings {
 		if s != nil {
-			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
+			// get hash of publicKey
+			pubKey, _ := s.publicKey.GobEncode()
+			hash, _ := crypto.CalculateTruncatedHash(pubKey)
+			b += fmt.Sprintf("\t\t%v \n\t\t\t%v\n\t\t\t%v\n", s.index, s.address, hash[:6])
 		}
 	}
 
