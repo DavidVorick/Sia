@@ -1,6 +1,5 @@
 package main
 
-/*
 import (
 	"common"
 	"network"
@@ -49,4 +48,4 @@ func TestNetworkedQuorum(t *testing.T) {
 	// there needs to be a s0.ParticipantStatus() call returning a function with public information about the participant
 	// there needs to be a s0.QuorumStatus() call returning public information about the quorum
 	// 		all participants in a public quorum should return the same information
-}*/
+}
