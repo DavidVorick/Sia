@@ -151,27 +151,36 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// Check that the slices of signatures and signatories are of the same length
 	if len(sh.signatures) != len(sh.signatories) {
 		err = hsherrMismatchedSignatures
+		fmt.Println(err)
 		return
 	}
 
 	// check that there are not too many signatures and signatories
 	if len(sh.signatories) > common.QuorumSize {
 		err = hsherrOversigned
+		fmt.Println(err)
 		return
 	}
+
+	// check that heartbeat matches heartbeatHash
+	// tbi
 
 	p.stepLock.Lock() // prevents a benign race condition; is here to follow best practices
 	currentStep := p.currentStep
 	p.stepLock.Unlock()
 	// s.CurrentStep must be less than or equal to len(sh.Signatories), unless
 	// there is a new block and s.CurrentStep is common.QuorumSize
+	//
+	// IMPORTANT: synchronizaation is broken, and hot-fixed together in an
+	// insecure way. What's important is that the parents block line up.
 	if currentStep > len(sh.signatories) {
-		if currentStep == common.QuorumSize && len(sh.signatories) == 1 {
+		if currentStep == common.QuorumSize {
 			// by waiting common.StepDuration, the new block will be compiled
 			time.Sleep(common.StepDuration)
 			// now continue to rest of function
 		} else {
 			err = hsherrNoSync
+			fmt.Println(err)
 			return
 		}
 	}
@@ -179,6 +188,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// Check bounds on first signatory
 	if int(sh.signatories[0]) >= common.QuorumSize {
 		err = hsherrBounds
+		fmt.Println(err)
 		return
 	}
 
@@ -191,6 +201,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// check that first signatory is a sibling
 	if p.quorum.siblings[sh.signatories[0]] == nil {
 		err = hsherrNonSibling
+		fmt.Println(err)
 		return
 	}
 
@@ -198,12 +209,14 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	_, exists := p.heartbeats[sh.signatories[0]][sh.heartbeatHash]
 	if exists {
 		err = hsherrHaveHeartbeat
+		// fmt.Println(err)
 		return
 	}
 
 	// Check if we already have two heartbeats from this host
 	if len(p.heartbeats[sh.signatories[0]]) >= 2 {
 		err = hsherrManyHeartbeats
+		fmt.Println(err)
 		return
 	}
 
@@ -215,18 +228,21 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 		// Check bounds on the signatory
 		if int(signatory) >= common.QuorumSize {
 			err = hsherrBounds
+			fmt.Println(err)
 			return
 		}
 
 		// Verify that the signatory is a sibling in the quorum
 		if p.quorum.siblings[signatory] == nil {
 			err = hsherrNonSibling
+			fmt.Println(err)
 			return
 		}
 
 		// Verify that the signatory has only been seen once in the current SignedHeartbeat
 		if previousSignatories[signatory] {
 			err = hsherrDoubleSigned
+			fmt.Println(err)
 			return
 		}
 
@@ -248,6 +264,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 		newMessage, err := signedMessage.CombinedMessage()
 		signedMessage.Message = newMessage
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 	}
@@ -349,7 +366,7 @@ func (p *Participant) compile() {
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
-			fmt.Printf("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
+			fmt.Println("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
 			p.quorum.tossSibling(i)
 			continue
 		}
@@ -376,8 +393,11 @@ func (p *Participant) compile() {
 	p.quorum.lock.Unlock()
 	p.heartbeatsLock.Unlock()
 
-	// create new heartbeat (it gets broadcast automatically)
-	p.newSignedHeartbeat()
+	// create new heartbeat (it gets broadcast automatically), if in quorum
+	if p.self.index != 255 {
+		p.newSignedHeartbeat()
+	}
+
 	return
 }
 
@@ -397,12 +417,13 @@ func (p *Participant) tick() {
 		p.stepLock.Lock()
 		if p.currentStep == common.QuorumSize {
 			fmt.Println("compiling")
-			p.compile()
 			p.currentStep = 1
+			p.stepLock.Unlock() // compile needs stepLock unlocked
+			p.compile()
 		} else {
 			fmt.Println("stepping")
 			p.currentStep += 1
+			p.stepLock.Unlock()
 		}
-		p.stepLock.Unlock()
 	}
 }

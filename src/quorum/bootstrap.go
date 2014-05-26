@@ -45,6 +45,16 @@ func (j JoinRequest) process(p *Participant) {
 	i := 0
 	for i < common.QuorumSize {
 		if p.quorum.siblings[i] == nil {
+			// perhaps there is a better way to do this???
+			// also, there is an attack this opens up where someone submits you as a
+			// new participant, and you accept yourself, and so your old self gets
+			// thrown out =/
+			//
+			// that gets fixed once we start adding signatures to all updates
+			if j.Sibling.compare(p.self) {
+				p.self.index = byte(i)
+			}
+
 			j.Sibling.index = byte(i)
 			p.heartbeats[j.Sibling.index] = make(map[crypto.TruncatedHash]*heartbeat)
 			p.quorum.siblings[j.Sibling.index] = &j.Sibling

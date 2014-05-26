@@ -5,6 +5,9 @@ import (
 	"testing"
 )
 
+// somewhere in this file we need a test that gob.Register is being called for
+// all updates
+
 func TestSynchronizeEncoding(t *testing.T) {
 	// tbi
 }
