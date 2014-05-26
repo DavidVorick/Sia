@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// test message routers and see that quorums can communicate through the routers
+func TestRouting(t *testing.T) {
+	// tbi
+}
+
 func TestNetworkedQuorum(t *testing.T) {
 	// create a MessageRouter and 4 participants
 	rpcs, err := network.NewRPCServer(9988)

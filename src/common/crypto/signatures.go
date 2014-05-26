@@ -1,11 +1,9 @@
 package crypto
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/gob"
 	"fmt"
 )
 
@@ -21,14 +19,9 @@ func (sm *SignedMessage) CombinedMessage() (combinedMessage []byte, err error) {
 		return
 	}
 
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(sm)
-	if err != nil {
-		return
-	}
+	combinedMessage = append(sm.Signature.R.Bytes(), sm.Signature.S.Bytes()...)
+	combinedMessage = append(combinedMessage, sm.Message...)
 
-	combinedMessage = w.Bytes()
 	return
 }
 

@@ -184,7 +184,7 @@ func (q *quorum) Status() (b string) {
 	b = "\tSiblings:\n"
 	for _, s := range q.siblings {
 		if s != nil {
-			b += fmt.Sprintf("\t\t%v %v\n", s.index, s.address)
+			b += fmt.Sprintf("\t\t%v \n\t\t\t%v\n\t\t\tPublic Key Here (Eventually)\n", s.index, s.address)
 		}
 	}
 

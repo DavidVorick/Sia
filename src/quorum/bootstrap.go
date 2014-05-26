@@ -1,8 +1,10 @@
 package quorum
 
 import (
+	"bytes"
 	"common"
 	"common/crypto"
+	"encoding/gob"
 	"fmt"
 )
 
@@ -23,7 +25,6 @@ The Bootstrapping Process
 [   intent    ]       [             ]       [  heartbeat  ]       [ add hopeful ]       [  heartbeats ]       [   compile   ]       [  integrated ]       [             ]
 [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]       [-------------]
 
-
 */
 
 // Bootstrapping
@@ -33,70 +34,65 @@ var bootstrapAddress = common.Address{
 	Port: 9988,
 }
 
-// Adds a new Sibling, and then announces them with their index
-// Currently not safe - Siblings need to be added during compile()
-func (p *Participant) JoinSia(s Sibling, arb *struct{}) (err error) {
-	p.broadcast(&common.Message{
-		Proc: "Participant.AddHopeful",
-		Args: s,
-		Resp: nil,
-	})
-	return
+// A Join is an update that is a participant requesting to join Sia.
+type JoinRequest struct {
+	Sibling Sibling
 }
 
-// add a potential sibling to the heartbeat-in-progress
-func (p *Participant) AddHopeful(s Sibling, arb *struct{}) (err error) {
-	fmt.Println("got join request")
-	p.currHeartbeatLock.Lock()
-	p.currHeartbeat.hopefuls = append(p.currHeartbeat.hopefuls, &s)
-	p.currHeartbeatLock.Unlock()
-	return
-}
+func (j JoinRequest) process(p *Participant) {
+	// add hopefuls to any available slots
+	// quorum is already locked by compile()
+	i := 0
+	for i < common.QuorumSize {
+		if p.quorum.siblings[i] == nil {
+			// perhaps there is a better way to do this???
+			// also, there is an attack this opens up where someone submits you as a
+			// new participant, and you accept yourself, and so your old self gets
+			// thrown out =/
+			//
+			// that gets fixed once we start adding signatures to all updates
+			if j.Sibling.compare(p.self) {
+				p.self.index = byte(i)
+			}
 
-func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {
-	// lock the quorum before making major changes
-	p.quorum.lock.Lock()
-	err = p.quorum.GobDecode(encodedQuorum)
-	p.quorum.lock.Unlock()
+			j.Sibling.index = byte(i)
+			p.heartbeats[j.Sibling.index] = make(map[crypto.TruncatedHash]*heartbeat)
+			p.quorum.siblings[j.Sibling.index] = &j.Sibling
 
-	fmt.Println("downloaded quorum:")
-	fmt.Print(p.quorum.Status())
-
-	// determine our index by searching through the quorum
-	// also create maps for each sibling
-	p.quorum.lock.RLock()
-	for i, s := range p.quorum.siblings {
-		if s.compare(p.self) {
-			p.self.index = byte(i)
-			p.addNewSibling(p.self)
-		} else {
-			p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+			println("placed hopeful at index", i)
+			break
 		}
+		i++
 	}
-	p.quorum.lock.RUnlock()
-	go p.tick()
+}
+
+func (j *JoinRequest) GobEncode() (gobJoin []byte, err error) {
+	if j == nil {
+		err = fmt.Errorf("Cannot encode a nil JoinRequest")
+		return
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(j.Sibling)
+	if err != nil {
+		return
+	}
+	gobJoin = w.Bytes()
 	return
 }
 
-// Add a Sibling to the state, tell the Sibling about ourselves
-// Note: p.heartbeats and p.quorum.siblings are already locked by compile()
-func (p *Participant) addNewSibling(s *Sibling) (err error) {
-	// make the heartbeat map and add the default heartbeat
-	hb := new(heartbeat)
-
-	// get the hash of the default heartbeat
-	ehb, err := hb.GobEncode()
-	if err != nil {
-		return
-	}
-	hbHash, err := crypto.CalculateTruncatedHash(ehb)
-	if err != nil {
+func (j *JoinRequest) GobDecode(gobJoin []byte) (err error) {
+	if j == nil {
+		err = fmt.Errorf("Cannot decode into nil JoinRequest")
 		return
 	}
 
-	p.heartbeats[s.index] = make(map[crypto.TruncatedHash]*heartbeat)
-	p.heartbeats[s.index][hbHash] = hb
-	p.quorum.siblings[s.index] = s
-
+	r := bytes.NewBuffer(gobJoin)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&j.Sibling)
+	if err != nil {
+		return
+	}
 	return
 }

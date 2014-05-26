@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+// somewhere in this file we need a test that gob.Register is being called for
+// all updates
+
+func TestSynchronizeEncoding(t *testing.T) {
+	// tbi
+}
+
 // Create a state, check the defaults
 func TestCreateParticipant(t *testing.T) {
 	zn := common.NewZeroNetwork()
@@ -33,6 +40,28 @@ func TestCreateParticipant(t *testing.T) {
 	if p1.currentStep != 1 {
 		t.Error("p1.currentStep should be initialized to 1!")
 	}
+
+	// test creating another participant that doesn't have the bootstrap address
+}
+
+func TestAddUpdate(t *testing.T) {
+	// tbi
+}
+
+func TestTransferQuorum(t *testing.T) {
+	// tbi
+}
+
+func TestSynchronize(t *testing.T) {
+	// tbi
+}
+
+func TestAddListener(t *testing.T) {
+	// tbi
+}
+
+func TestProcessHeartbeat(t *testing.T) {
+	// tbi
 }
 
 func TestBroadcast(t *testing.T) {
