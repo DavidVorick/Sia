@@ -3,6 +3,7 @@ package quorum
 import (
 	"bytes"
 	"common"
+	"common/crypto"
 	"encoding/gob"
 	"fmt"
 )
@@ -15,6 +16,7 @@ type CID [32]byte // not exactly sure what CID will end up looking like
 
 // A cylinder is the set of 128 corresponding batches in a quorum.
 type Cylinder struct {
+	Hash      crypto.TruncatedHash
 	RingPairs int
 	RingAtoms []int
 	RingMList []int
@@ -65,7 +67,7 @@ func (a AllocateCylinder) process(p *Participant) {
 	}
 
 	// verify that there's enough room on disk for the new cylinder
-	if p.quorum.parent.weight+weight > common.AtomsPerStack {
+	if p.quorum.cylinderTreeHead.weight+weight > common.AtomsPerStack {
 		// error
 		return
 	}
@@ -77,7 +79,7 @@ func (a AllocateCylinder) process(p *Participant) {
 	cn := new(cylinderNode)
 	cn.weight = weight
 	cn.data = &a.Cylinder
-	p.quorum.parent.insert(cn)
+	p.quorum.insert(cn)
 }
 
 func (a *AllocateCylinder) GobEncode() (gobAC []byte, err error) {

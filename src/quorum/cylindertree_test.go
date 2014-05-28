@@ -21,8 +21,9 @@ func countReachableNodes(bn *cylinderNode) (i int) {
 
 func TestBatchTree(t *testing.T) {
 	// create a parent node and children
-	parent := new(cylinderNode)
-	parent.weight = 1
+	q := new(quorum)
+	q.cylinderTreeHead = new(cylinderNode)
+	q.cylinderTreeHead.weight = 1
 	child0 := new(cylinderNode)
 	child0.weight = 5
 	child1 := new(cylinderNode)
@@ -35,43 +36,43 @@ func TestBatchTree(t *testing.T) {
 	child4.weight = 55
 
 	// insert children into batchTree
-	parent.insert(child0)
-	parent.insert(child1)
-	parent.insert(child2)
-	parent.insert(child3)
-	parent.insert(child4)
+	q.insert(child0)
+	q.insert(child1)
+	q.insert(child2)
+	q.insert(child3)
+	q.insert(child4)
 
-	reachableNodes := countReachableNodes(parent)
+	reachableNodes := countReachableNodes(q.cylinderTreeHead)
 	if reachableNodes != 6 {
 		t.Error("After insertion, wrong number of nodes counted as reachable:", reachableNodes)
 	}
 
 	// verify that aggregate values are correct
-	if parent.weight != 100 {
-		t.Error("parent.weight not updating correctly with insert:", parent.weight)
+	if q.cylinderTreeHead.weight != 100 {
+		t.Error("cylinderTree weight not updating correctly with insert:", q.cylinderTreeHead.weight)
 	}
-	if parent.children != 5 {
-		t.Error("parent.children not updating correctly with insert:", parent.children)
+	if q.cylinderTreeHead.children != 5 {
+		t.Error("cylinderTree children not updating correctly with insert:", q.cylinderTreeHead.children)
 	}
 
 	// delete children from aggregate tree
-	parent.delete(child0)
-	parent.delete(child1)
-	parent.delete(child2)
-	parent.delete(child3)
-	parent.delete(child4)
+	q.delete(child0)
+	q.delete(child1)
+	q.delete(child2)
+	q.delete(child3)
+	q.delete(child4)
 
-	reachableNodes = countReachableNodes(parent)
+	reachableNodes = countReachableNodes(q.cylinderTreeHead)
 	if reachableNodes != 1 {
 		t.Error("After deletion, wrong number of nodes counted as reachable:", reachableNodes)
 	}
 
 	// verify that aggregate values are correct
-	if parent.weight != 1 {
-		t.Error("parent.weight not updating correctly with delete:", parent.weight)
+	if q.cylinderTreeHead.weight != 1 {
+		t.Error("cylinderTree weight not updating correctly with delete:", q.cylinderTreeHead.weight)
 	}
-	if parent.children != 0 {
-		t.Error("parent.children not updating correctly with delete:", parent.children)
+	if q.cylinderTreeHead.children != 0 {
+		t.Error("cylinderTree children not updating correctly with delete:", q.cylinderTreeHead.children)
 	}
 
 	// After being deleted from the batchTree, the weight of a batch should be
@@ -92,40 +93,36 @@ func TestBatchTree(t *testing.T) {
 		t.Error("child4 weight altered after insertion and deletion:", child4.weight)
 	}
 
-	// create a quorum to fetch random numbers from
-	q := new(quorum)
-	q.parent = parent
-
 	// fill out sectors to give weights to each sector
-	parent.data = new(Cylinder)
-	parent.data.RingAtoms = make([]int, 1)
-	parent.data.RingAtoms[0] = 1
+	q.cylinderTreeHead.data = new(Cylinder)
+	q.cylinderTreeHead.data.RingAtoms = make([]int, 1)
+	q.cylinderTreeHead.data.RingAtoms[0] = 1
 	child0.data = new(Cylinder)
 	child0.data.RingAtoms = make([]int, 2)
 	child0.data.RingAtoms[0] = 2
 	child0.data.RingAtoms[1] = 3
-	parent.insert(child0)
+	q.insert(child0)
 	child1.data = new(Cylinder)
 	child1.data.RingAtoms = make([]int, 2)
 	child1.data.RingAtoms[0] = 4
 	child1.data.RingAtoms[1] = 5
-	parent.insert(child1)
+	q.insert(child1)
 	child2.data = new(Cylinder)
 	child2.data.RingAtoms = make([]int, 1)
 	child2.data.RingAtoms[0] = 6
-	parent.insert(child2)
+	q.insert(child2)
 	child3.data = new(Cylinder)
 	child3.data.RingAtoms = make([]int, 3)
 	child3.data.RingAtoms[0] = 7
 	child3.data.RingAtoms[1] = 8
 	child3.data.RingAtoms[2] = 9
-	parent.insert(child3)
+	q.insert(child3)
 	child4.data = new(Cylinder)
 	child4.data.RingAtoms = make([]int, 1)
 	child4.data.RingAtoms[0] = 55
-	parent.insert(child4)
+	q.insert(child4)
 
-	reachableNodes = countReachableNodes(parent)
+	reachableNodes = countReachableNodes(q.cylinderTreeHead)
 	if reachableNodes != 6 {
 		t.Error("After second insertion, wrong number of nodes counted as reachable:", reachableNodes)
 	}
