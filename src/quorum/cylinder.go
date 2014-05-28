@@ -20,7 +20,7 @@ type Cylinder struct {
 	RingPairs int
 	RingAtoms []int
 	RingMList []int
-	Cid       CID
+	CID       CID
 }
 
 // A cylinderMap maps CIDs to their cylinder object within the cylinderTree
@@ -30,12 +30,12 @@ type AllocateCylinder struct {
 	// a wallet to control the cylinder
 
 	Cylinder Cylinder
-	CID      CID
 }
 
 func (a AllocateCylinder) process(p *Participant) {
+	println("processing cylinder")
 	// check that CID is not already taken
-	_, exists := p.quorum.cylinderMap[a.CID]
+	_, exists := p.quorum.cylinderMap[a.Cylinder.CID]
 	if exists {
 		// error
 		return
@@ -73,13 +73,14 @@ func (a AllocateCylinder) process(p *Participant) {
 	}
 
 	// Place cylinder into cylinderMap for lookups
-	p.quorum.cylinderMap[a.CID] = &a.Cylinder
+	p.quorum.cylinderMap[a.Cylinder.CID] = &a.Cylinder
 
 	// Create a new cylinderNode and insert into the cylinderTree
 	cn := new(cylinderNode)
 	cn.weight = weight
 	cn.data = &a.Cylinder
 	p.quorum.insert(cn)
+	println("processed")
 }
 
 func (a *AllocateCylinder) GobEncode() (gobAC []byte, err error) {
@@ -93,7 +94,7 @@ func (a *AllocateCylinder) GobEncode() (gobAC []byte, err error) {
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(a.CID)
+	err = encoder.Encode(a.Cylinder.CID)
 	if err != nil {
 		return
 	}
@@ -113,7 +114,7 @@ func (a *AllocateCylinder) GobDecode(gobAC []byte) (err error) {
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&a.CID)
+	err = decoder.Decode(&a.Cylinder.CID)
 	if err != nil {
 		return
 	}

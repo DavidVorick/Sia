@@ -93,7 +93,7 @@ func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	return
 }
 
-func (p *Participant) RequestSiblings(update Update, siblings *[]*Sibling) (err error) {
+func (p *Participant) RequestSiblings(arb struct{}, siblings *[]*Sibling) (err error) {
 	*siblings = p.quorum.siblings[:]
 	return
 }
