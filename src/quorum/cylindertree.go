@@ -10,11 +10,11 @@ type cylinderNode struct {
 	children int
 	weight   int
 
-	data *batch
+	data *Cylinder
 }
 
-// insert takes a batch object that is not yet in the batchTree and puts it
-// into the batchTree
+// insert takes a cylinder object that is not yet in the cylinderTree and puts it
+// into the cylinderTree
 func (parent *cylinderNode) insert(bn *cylinderNode) {
 	// insert the node into the lightest-weight half of the parent
 	currentNode := parent
@@ -41,7 +41,7 @@ func (parent *cylinderNode) insert(bn *cylinderNode) {
 	}
 }
 
-// delete takes a node from the batchTree and deletes it from the tree
+// delete takes a node from the cylinderTree and deletes it from the tree
 func (parent *cylinderNode) delete(bn *cylinderNode) {
 	// get a replacement node from the heaviest part of the tree, removing it
 	var replacementNode *cylinderNode
@@ -119,8 +119,8 @@ func (parent *cylinderNode) insertDelete(insertBN, deleteBN *cylinderNode) {
 }
 
 // randomSector takes a random int between 0 and the total weight of the
-// batchTree and picks a sector at random to be used in the proof-of-storage
-func (q *quorum) randomSector() (b *batch, sector int) {
+// cylinderTree and picks a sector at random to be used in the proof-of-storage
+func (q *quorum) randomSector() (c *Cylinder, sector int) {
 	// get a random number between 0 and the batch tree weight
 	random, err := q.randInt(0, q.parent.weight)
 	if err != nil {
@@ -161,10 +161,10 @@ func (q *quorum) randomSector() (b *batch, sector int) {
 			break
 		}
 	}
-	b = currentNode.data
+	c = currentNode.data
 
 	// figure out which index to use
-	for index, value := range currentNode.data.sectorLengths {
+	for index, value := range currentNode.data.RingAtoms {
 		if value > random {
 			sector = index
 			break

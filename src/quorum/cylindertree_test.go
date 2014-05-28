@@ -97,32 +97,32 @@ func TestBatchTree(t *testing.T) {
 	q.parent = parent
 
 	// fill out sectors to give weights to each sector
-	parent.data = new(batch)
-	parent.data.sectorLengths = make([]int, 1)
-	parent.data.sectorLengths[0] = 1
-	child0.data = new(batch)
-	child0.data.sectorLengths = make([]int, 2)
-	child0.data.sectorLengths[0] = 2
-	child0.data.sectorLengths[1] = 3
+	parent.data = new(Cylinder)
+	parent.data.RingAtoms = make([]int, 1)
+	parent.data.RingAtoms[0] = 1
+	child0.data = new(Cylinder)
+	child0.data.RingAtoms = make([]int, 2)
+	child0.data.RingAtoms[0] = 2
+	child0.data.RingAtoms[1] = 3
 	parent.insert(child0)
-	child1.data = new(batch)
-	child1.data.sectorLengths = make([]int, 2)
-	child1.data.sectorLengths[0] = 4
-	child1.data.sectorLengths[1] = 5
+	child1.data = new(Cylinder)
+	child1.data.RingAtoms = make([]int, 2)
+	child1.data.RingAtoms[0] = 4
+	child1.data.RingAtoms[1] = 5
 	parent.insert(child1)
-	child2.data = new(batch)
-	child2.data.sectorLengths = make([]int, 1)
-	child2.data.sectorLengths[0] = 6
+	child2.data = new(Cylinder)
+	child2.data.RingAtoms = make([]int, 1)
+	child2.data.RingAtoms[0] = 6
 	parent.insert(child2)
-	child3.data = new(batch)
-	child3.data.sectorLengths = make([]int, 3)
-	child3.data.sectorLengths[0] = 7
-	child3.data.sectorLengths[1] = 8
-	child3.data.sectorLengths[2] = 9
+	child3.data = new(Cylinder)
+	child3.data.RingAtoms = make([]int, 3)
+	child3.data.RingAtoms[0] = 7
+	child3.data.RingAtoms[1] = 8
+	child3.data.RingAtoms[2] = 9
 	parent.insert(child3)
-	child4.data = new(batch)
-	child4.data.sectorLengths = make([]int, 1)
-	child4.data.sectorLengths[0] = 55
+	child4.data = new(Cylinder)
+	child4.data.RingAtoms = make([]int, 1)
+	child4.data.RingAtoms[0] = 55
 	parent.insert(child4)
 
 	reachableNodes = countReachableNodes(parent)
@@ -140,9 +140,9 @@ func TestBatchTree(t *testing.T) {
 	for i := 0; i < 1000000; i++ {
 		randomBatch, randomSector := q.randomSector()
 
-		old := selectionMap[randomBatch.sectorLengths[randomSector]]
+		old := selectionMap[randomBatch.RingAtoms[randomSector]]
 		old += 1
-		selectionMap[randomBatch.sectorLengths[randomSector]] = old
+		selectionMap[randomBatch.RingAtoms[randomSector]] = old
 	}
 
 	if len(selectionMap) != 10 {

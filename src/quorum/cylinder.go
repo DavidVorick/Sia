@@ -7,12 +7,18 @@ package quorum
 type CID [32]byte // not exactly sure what CID will end up looking like
 
 // A cylinder is the set of 128 corresponding batches in a quorum.
-type cylinder struct {
-	ringPairs int
-	ringMList []int
-	ringAtoms []int
-	cid       CID
+type Cylinder struct {
+	RingPairs int
+	RingMList []int
+	RingAtoms []int
+	Cid       CID
 }
 
 // A cylinderMap maps CIDs to their cylinder object within the cylinderTree
 type cylinderMap map[CID]batch
+
+type AllocateCylinder struct {
+	// a wallet to control the cylinder
+
+	Cylinder Cylinder
+}
