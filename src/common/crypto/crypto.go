@@ -55,6 +55,17 @@ func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	return true
 }
 
+func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
+	epk := (*ecdsa.PublicKey)(pk)
+	if epk.X == nil || epk.Y == nil {
+		return
+	}
+
+	combinedKey := append(epk.X.Bytes(), epk.Y.Bytes()...)
+	hash, err = CalculateTruncatedHash(combinedKey)
+	return
+}
+
 func (pk *PublicKey) GobEncode() (gobPk []byte, err error) {
 	if pk == nil {
 		err = fmt.Errorf("Cannot encode a nil value")

@@ -186,11 +186,25 @@ func (q *quorum) Status() (b string) {
 	b = "\tSiblings:\n"
 	for _, s := range q.siblings {
 		if s != nil {
-			b += fmt.Sprintf("\t\t%v \n\t\t\t%v\n\t\t\tPublic Key Here (Eventually)\n", s.index, s.address)
+			pubKeyHash, err := s.publicKey.Hash()
+			if err != nil {
+				// ???
+			}
+
+			b += fmt.Sprintf("\t\t%v\n", s.index)
+			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
+			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])
 		}
 	}
+	b += fmt.Sprintf("\n")
 
-	b += fmt.Sprintf("\tSeed: %x\n", q.seed)
+	b += fmt.Sprintf("\tFile List:\n")
+	for cid, cylinder := range q.cylinderMap {
+		b += fmt.Sprintf("\t\t%v: %v\n", cid, cylinder.Hash[:6])
+	}
+	b += fmt.Sprintf("\n")
+
+	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
 }
 

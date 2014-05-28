@@ -12,7 +12,7 @@ import (
 // has no relationship to where on disk or in the AA tree the batch is stored.
 // To perform lookups from a CID to the disk location of a CID, a map musst be
 // used.
-type CID [32]byte // not exactly sure what CID will end up looking like
+type CID int // not exactly sure what CID will end up looking like
 
 // A cylinder is the set of 128 corresponding batches in a quorum.
 type Cylinder struct {
