@@ -41,6 +41,10 @@ type quorum struct {
 	cylinderTreeHead *cylinderNode
 }
 
+func (s *Sibling) GetAddress() common.Address {
+	return s.address
+}
+
 // Sibling.compare returns true if the values of each Sibling are equivalent
 func (s0 *Sibling) compare(s1 *Sibling) bool {
 	// false if either sibling is nil
