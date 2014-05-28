@@ -198,9 +198,9 @@ func (q *quorum) Status() (b string) {
 	}
 	b += fmt.Sprintf("\n")
 
-	b += fmt.Sprintf("\tFile List:\n")
+	b += fmt.Sprintf("\tCylinders:\n")
 	for cid, cylinder := range q.cylinderMap {
-		b += fmt.Sprintf("\t\t%v: %v\n", cid, cylinder.Hash[:6])
+		b += fmt.Sprintf("\t\t%v: %v:%v\n", cid, cylinder.Hash[:6], 2*cylinder.RingPairs)
 	}
 	b += fmt.Sprintf("\n")
 
