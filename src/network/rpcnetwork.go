@@ -82,6 +82,7 @@ func (rpcs *RPCServer) SendMessage(m *common.Message) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	// add identifier to service name
 	name := strings.Replace(m.Proc, ".", string(m.Dest.ID)+".", 1)
@@ -110,11 +111,14 @@ func (rpcs *RPCServer) SendAsyncMessage(m *common.Message) chan error {
 
 	// send message
 	go func() {
+		defer conn.Close()
 		select {
 		case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
 			errChan <- call.Error
+			return
 		case <-time.After(common.StepDuration / 2):
 			errChan <- errors.New("request timed out")
+			return
 		}
 	}()
 
