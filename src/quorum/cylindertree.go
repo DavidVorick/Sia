@@ -1,11 +1,11 @@
 package quorum
 
-// batchNode is the basic element in the AA tree that enables efficient
+// cylinderNode is the basic element in the AA tree that enables efficient
 // selection of random sectors for verification
-type batchNode struct {
-	parent *batchNode
-	left   *batchNode
-	right  *batchNode
+type cylinderNode struct {
+	parent *cylinderNode
+	left   *cylinderNode
+	right  *cylinderNode
 
 	children int
 	weight   int
@@ -15,7 +15,7 @@ type batchNode struct {
 
 // insert takes a batch object that is not yet in the batchTree and puts it
 // into the batchTree
-func (parent *batchNode) insert(bn *batchNode) {
+func (parent *cylinderNode) insert(bn *cylinderNode) {
 	// insert the node into the lightest-weight half of the parent
 	currentNode := parent
 	for currentNode.children > 1 {
@@ -42,9 +42,9 @@ func (parent *batchNode) insert(bn *batchNode) {
 }
 
 // delete takes a node from the batchTree and deletes it from the tree
-func (parent *batchNode) delete(bn *batchNode) {
+func (parent *cylinderNode) delete(bn *cylinderNode) {
 	// get a replacement node from the heaviest part of the tree, removing it
-	var replacementNode *batchNode
+	var replacementNode *cylinderNode
 	currentNode := parent
 	for currentNode.children > 2 {
 		if currentNode.left.children > currentNode.right.children {
@@ -114,7 +114,7 @@ func (parent *batchNode) delete(bn *batchNode) {
 // means that less work overall must be performed; you replace the deleted
 // element with the inserted element, and then you update the parent-set once.
 // This is less work than even a single insert or a single delete.
-func (parent *batchNode) insertDelete(insertBN, deleteBN *batchNode) {
+func (parent *cylinderNode) insertDelete(insertBN, deleteBN *cylinderNode) {
 	// tbi
 }
 

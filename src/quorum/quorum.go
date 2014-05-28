@@ -38,7 +38,7 @@ type quorum struct {
 	// Batch management
 	// A cylinderMap connects a CID to a cylinder within the quorum
 	cylinderMap map[CID]cylinder
-	parent      *batchNode
+	parent      *cylinderNode
 }
 
 // Sibling.compare returns true if the values of each Sibling are equivalent

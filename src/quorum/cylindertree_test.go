@@ -9,7 +9,7 @@ import (
 //
 // countReachableNodes does not check for cycles and will get caught in an
 // infinite loop.
-func countReachableNodes(bn *batchNode) (i int) {
+func countReachableNodes(bn *cylinderNode) (i int) {
 	if bn == nil {
 		return
 	}
@@ -21,17 +21,17 @@ func countReachableNodes(bn *batchNode) (i int) {
 
 func TestBatchTree(t *testing.T) {
 	// create a parent node and children
-	parent := new(batchNode)
+	parent := new(cylinderNode)
 	parent.weight = 1
-	child0 := new(batchNode)
+	child0 := new(cylinderNode)
 	child0.weight = 5
-	child1 := new(batchNode)
+	child1 := new(cylinderNode)
 	child1.weight = 9
-	child2 := new(batchNode)
+	child2 := new(cylinderNode)
 	child2.weight = 6
-	child3 := new(batchNode)
+	child3 := new(cylinderNode)
 	child3.weight = 24
-	child4 := new(batchNode)
+	child4 := new(cylinderNode)
 	child4.weight = 55
 
 	// insert children into batchTree
