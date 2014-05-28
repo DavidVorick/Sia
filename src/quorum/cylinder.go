@@ -1,5 +1,12 @@
 package quorum
 
+import (
+	"bytes"
+	"common"
+	"encoding/gob"
+	"fmt"
+)
+
 // a CID, or Cylinder ID, is the global logical address of a batch on Sia. A CID
 // has no relationship to where on disk or in the AA tree the batch is stored.
 // To perform lookups from a CID to the disk location of a CID, a map musst be
@@ -9,8 +16,8 @@ type CID [32]byte // not exactly sure what CID will end up looking like
 // A cylinder is the set of 128 corresponding batches in a quorum.
 type Cylinder struct {
 	RingPairs int
-	RingMList []int
 	RingAtoms []int
+	RingMList []int
 	Cid       CID
 }
 
@@ -21,4 +28,93 @@ type AllocateCylinder struct {
 	// a wallet to control the cylinder
 
 	Cylinder Cylinder
+	CID      CID
+}
+
+func (a AllocateCylinder) process(p *Participant) {
+	// check that CID is not already taken
+	_, exists := p.quorum.cylinderMap[a.CID]
+	if exists {
+		// error
+		return
+	}
+
+	// check that the cylinder is valid
+	if a.Cylinder.RingPairs == 0 {
+		if len(a.Cylinder.RingAtoms) != 1 {
+			// error
+			return
+		}
+	} else {
+		if len(a.Cylinder.RingAtoms) != 2*a.Cylinder.RingPairs {
+			// error
+			return
+		}
+	}
+
+	if len(a.Cylinder.RingAtoms) != len(a.Cylinder.RingMList) {
+		// error
+		return
+	}
+
+	// Calculate weight of new cylinder
+	weight := 8                    // 8 atoms for nonredundant error detection
+	weight += a.Cylinder.RingPairs // 1 atom of error detection for each RingPair
+	for _, length := range a.Cylinder.RingAtoms {
+		weight += length // the atoms in each ring
+	}
+
+	// verify that there's enough room on disk for the new cylinder
+	if p.quorum.parent.weight+weight > common.AtomsPerStack {
+		// error
+		return
+	}
+
+	// Place cylinder into cylinderMap for lookups
+	p.quorum.cylinderMap[a.CID] = &a.Cylinder
+
+	// Create a new cylinderNode and insert into the cylinderTree
+	cn := new(cylinderNode)
+	cn.weight = weight
+	cn.data = &a.Cylinder
+	p.quorum.parent.insert(cn)
+}
+
+func (a *AllocateCylinder) GobEncode() (gobAC []byte, err error) {
+	if a == nil {
+		return nil, nil
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(a.Cylinder)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(a.CID)
+	if err != nil {
+		return
+	}
+	gobAC = w.Bytes()
+	return
+}
+
+func (a *AllocateCylinder) GobDecode(gobAC []byte) (err error) {
+	if a == nil {
+		err = fmt.Errorf("Cannot decode into nil object")
+		return
+	}
+
+	r := bytes.NewBuffer(gobAC)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&a.Cylinder)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&a.CID)
+	if err != nil {
+		return
+	}
+
+	return
 }

@@ -15,7 +15,7 @@ type cylinderNode struct {
 
 // insert takes a cylinder object that is not yet in the cylinderTree and puts it
 // into the cylinderTree
-func (parent *cylinderNode) insert(bn *cylinderNode) {
+func (parent *cylinderNode) insert(cn *cylinderNode) {
 	// insert the node into the lightest-weight half of the parent
 	currentNode := parent
 	for currentNode.children > 1 {
@@ -27,16 +27,16 @@ func (parent *cylinderNode) insert(bn *cylinderNode) {
 	}
 	// either one child is nil (max 1 child) or both are nil
 	if currentNode.left == nil {
-		currentNode.left = bn
+		currentNode.left = cn
 	} else {
-		currentNode.right = bn
+		currentNode.right = cn
 	}
-	bn.parent = currentNode
+	cn.parent = currentNode
 
 	// update the aggregate values of all parents
 	for currentNode != nil {
 		currentNode.children += 1
-		currentNode.weight += bn.weight
+		currentNode.weight += cn.weight
 		currentNode = currentNode.parent
 	}
 }

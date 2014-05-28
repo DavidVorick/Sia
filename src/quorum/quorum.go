@@ -37,7 +37,7 @@ type quorum struct {
 
 	// Batch management
 	// A cylinderMap connects a CID to a cylinder within the quorum
-	cylinderMap map[CID]Cylinder
+	cylinderMap map[CID]*Cylinder
 	parent      *cylinderNode
 }
 

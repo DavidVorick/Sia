@@ -66,7 +66,7 @@ func (j JoinRequest) process(p *Participant) {
 	}
 }
 
-func (j *JoinRequest) GobEncode() (gobJoin []byte, err error) {
+func (j *JoinRequest) GobEncode() (gobJR []byte, err error) {
 	if j == nil {
 		err = fmt.Errorf("Cannot encode a nil JoinRequest")
 		return
@@ -78,17 +78,17 @@ func (j *JoinRequest) GobEncode() (gobJoin []byte, err error) {
 	if err != nil {
 		return
 	}
-	gobJoin = w.Bytes()
+	gobJR = w.Bytes()
 	return
 }
 
-func (j *JoinRequest) GobDecode(gobJoin []byte) (err error) {
+func (j *JoinRequest) GobDecode(gobJR []byte) (err error) {
 	if j == nil {
 		err = fmt.Errorf("Cannot decode into nil JoinRequest")
 		return
 	}
 
-	r := bytes.NewBuffer(gobJoin)
+	r := bytes.NewBuffer(gobJR)
 	decoder := gob.NewDecoder(r)
 	err = decoder.Decode(&j.Sibling)
 	if err != nil {

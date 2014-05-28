@@ -12,3 +12,8 @@ type batch struct {
 	node          *cylinderNode
 	sectorLengths []int
 }
+
+// outline of a batch:
+// 8 atoms for encoding the layered portion
+// N atoms in the layered portion
+// M sectors in the non-layered portion
