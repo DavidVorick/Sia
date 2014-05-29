@@ -93,6 +93,11 @@ func (p *Participant) AddUpdate(update Update, arb *struct{}) (err error) {
 	return
 }
 
+func (p *Participant) RequestSiblings(arb struct{}, siblings *[]*Sibling) (err error) {
+	*siblings = p.quorum.siblings[:]
+	return
+}
+
 // A member of a quorum will call TransferQuorum on someone who has solicited
 // a quorum transfer. The quorum data is then sent between machines over RPC.
 func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err error) {

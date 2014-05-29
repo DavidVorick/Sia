@@ -1,23 +1,23 @@
 package quorum
 
-// batchNode is the basic element in the AA tree that enables efficient
+// cylinderNode is the basic element in the AA tree that enables efficient
 // selection of random sectors for verification
-type batchNode struct {
-	parent *batchNode
-	left   *batchNode
-	right  *batchNode
+type cylinderNode struct {
+	parent *cylinderNode
+	left   *cylinderNode
+	right  *cylinderNode
 
 	children int
 	weight   int
 
-	data *batch
+	data *Cylinder
 }
 
-// insert takes a batch object that is not yet in the batchTree and puts it
-// into the batchTree
-func (parent *batchNode) insert(bn *batchNode) {
+// insert takes a cylinder object that is not yet in the cylinderTree and puts it
+// into the cylinderTree
+func (q *quorum) insert(cn *cylinderNode) {
 	// insert the node into the lightest-weight half of the parent
-	currentNode := parent
+	currentNode := q.cylinderTreeHead
 	for currentNode.children > 1 {
 		if currentNode.left.children < currentNode.right.children {
 			currentNode = currentNode.left
@@ -27,25 +27,25 @@ func (parent *batchNode) insert(bn *batchNode) {
 	}
 	// either one child is nil (max 1 child) or both are nil
 	if currentNode.left == nil {
-		currentNode.left = bn
+		currentNode.left = cn
 	} else {
-		currentNode.right = bn
+		currentNode.right = cn
 	}
-	bn.parent = currentNode
+	cn.parent = currentNode
 
 	// update the aggregate values of all parents
 	for currentNode != nil {
 		currentNode.children += 1
-		currentNode.weight += bn.weight
+		currentNode.weight += cn.weight
 		currentNode = currentNode.parent
 	}
 }
 
-// delete takes a node from the batchTree and deletes it from the tree
-func (parent *batchNode) delete(bn *batchNode) {
+// delete takes a node from the cylinderTree and deletes it from the tree
+func (q *quorum) delete(bn *cylinderNode) {
 	// get a replacement node from the heaviest part of the tree, removing it
-	var replacementNode *batchNode
-	currentNode := parent
+	var replacementNode *cylinderNode
+	currentNode := q.cylinderTreeHead
 	for currentNode.children > 2 {
 		if currentNode.left.children > currentNode.right.children {
 			currentNode = currentNode.left
@@ -114,15 +114,15 @@ func (parent *batchNode) delete(bn *batchNode) {
 // means that less work overall must be performed; you replace the deleted
 // element with the inserted element, and then you update the parent-set once.
 // This is less work than even a single insert or a single delete.
-func (parent *batchNode) insertDelete(insertBN, deleteBN *batchNode) {
+func (parent *cylinderNode) insertDelete(insertBN, deleteBN *cylinderNode) {
 	// tbi
 }
 
 // randomSector takes a random int between 0 and the total weight of the
-// batchTree and picks a sector at random to be used in the proof-of-storage
-func (q *quorum) randomSector() (b *batch, sector int) {
+// cylinderTree and picks a sector at random to be used in the proof-of-storage
+func (q *quorum) randomSector() (c *Cylinder, sector int) {
 	// get a random number between 0 and the batch tree weight
-	random, err := q.randInt(0, q.parent.weight)
+	random, err := q.randInt(0, q.cylinderTreeHead.weight)
 	if err != nil {
 		// not sure
 		return
@@ -130,7 +130,7 @@ func (q *quorum) randomSector() (b *batch, sector int) {
 
 	// tree is post-ordered; the parent comes after the children
 	// this just makes the code a bit cleaner
-	currentNode := q.parent
+	currentNode := q.cylinderTreeHead
 	for {
 		// check for nil statemenets
 		if currentNode.left == nil && currentNode.right == nil {
@@ -161,10 +161,10 @@ func (q *quorum) randomSector() (b *batch, sector int) {
 			break
 		}
 	}
-	b = currentNode.data
+	c = currentNode.data
 
 	// figure out which index to use
-	for index, value := range currentNode.data.sectorLengths {
+	for index, value := range currentNode.data.RingAtoms {
 		if value > random {
 			sector = index
 			break

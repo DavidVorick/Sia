@@ -36,7 +36,13 @@ type quorum struct {
 	seed common.Entropy // Used to generate random numbers during compilation
 
 	// Batch management
-	parent *batchNode
+	// A cylinderMap connects a CID to a cylinder within the quorum
+	cylinderMap      map[CID]*Cylinder
+	cylinderTreeHead *cylinderNode
+}
+
+func (s *Sibling) GetAddress() common.Address {
+	return s.address
 }
 
 // Sibling.compare returns true if the values of each Sibling are equivalent
@@ -181,14 +187,31 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 
 // q.Status() enumerates the variables of the quorum in a human-readable output
 func (q *quorum) Status() (b string) {
-	b = "\tSiblings:\n"
+	b = "\nQuorum Status:\n"
+
+	b += fmt.Sprintf("\tSiblings:\n")
 	for _, s := range q.siblings {
 		if s != nil {
-			b += fmt.Sprintf("\t\t%v \n\t\t\t%v\n\t\t\tPublic Key Here (Eventually)\n", s.index, s.address)
+			pubKeyHash, err := s.publicKey.Hash()
+			if err != nil {
+				// ???
+			}
+
+			b += fmt.Sprintf("\t\t%v\n", s.index)
+			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
+			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])
 		}
 	}
+	b += fmt.Sprintf("\n")
 
-	b += fmt.Sprintf("\tSeed: %x\n", q.seed)
+	b += fmt.Sprintf("\tCylinders:\n")
+	for cid, cylinder := range q.cylinderMap {
+		// pretty aweful representation...
+		b += fmt.Sprintf("\t\t%v: %v:%v\n", cid, cylinder.Hash[:6], 2*cylinder.RingPairs)
+	}
+	b += fmt.Sprintf("\n")
+
+	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
 }
 
