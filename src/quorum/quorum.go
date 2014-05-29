@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"common"
 	"common/crypto"
-	"common/log"
 	"crypto/ecdsa"
 	"encoding/gob"
 	"fmt"
+	"logger"
 	"sync"
 )
 
@@ -145,7 +145,7 @@ func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
 	for i := range siblingOrdering {
 		newIndex, err := q.randInt(i, len(siblingOrdering))
 		if err != nil {
-			log.Fatalln(err)
+			logger.Fatalln(err)
 		}
 		tmp := siblingOrdering[newIndex]
 		siblingOrdering[newIndex] = siblingOrdering[i]

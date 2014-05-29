@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"common"
 	"common/crypto"
-	"common/log"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"logger"
 	"time"
 )
 
@@ -275,7 +275,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// Sign the stack of signatures and send it to all hosts
 	signedMessage, err = p.secretKey.Sign(signedMessage.Message)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalln(err)
 	}
 
 	// add our signature to the signedHeartbeat
@@ -285,7 +285,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// broadcast the message to the quorum
 	err = p.announceSignedHeartbeat(&sh)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalln(err)
 	}
 
 	return

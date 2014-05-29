@@ -18,7 +18,7 @@
 // immediately after making the log request, use it only with errors which
 // cannot be recovered from
 //
-package log
+package logger
 
 import (
 	"container/heap"
