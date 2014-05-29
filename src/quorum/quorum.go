@@ -187,7 +187,9 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 
 // q.Status() enumerates the variables of the quorum in a human-readable output
 func (q *quorum) Status() (b string) {
-	b = "\tSiblings:\n"
+	b = "\nQuorum Status:\n"
+
+	b += fmt.Sprintf("\tSiblings:\n")
 	for _, s := range q.siblings {
 		if s != nil {
 			pubKeyHash, err := s.publicKey.Hash()
@@ -204,6 +206,7 @@ func (q *quorum) Status() (b string) {
 
 	b += fmt.Sprintf("\tCylinders:\n")
 	for cid, cylinder := range q.cylinderMap {
+		// pretty aweful representation...
 		b += fmt.Sprintf("\t\t%v: %v:%v\n", cid, cylinder.Hash[:6], 2*cylinder.RingPairs)
 	}
 	b += fmt.Sprintf("\n")
