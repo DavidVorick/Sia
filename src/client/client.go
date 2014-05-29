@@ -5,19 +5,20 @@ import (
 	"common/erasure"
 	"fmt"
 	"network"
+	"quorum"
 	"siacrypto"
 )
 
 // global variables
 // (with apologies to Haskell)
 var (
-	router   common.MessageRouter
-	SectorDB map[siacrypto.Hash]*common.RingHeader
+	router   network.MessageRouter
+	SectorDB map[siacrypto.Hash]*quorum.RingHeader
 )
 
 // uploadSector splits a Sector into a Ring and distributes it across a quorum.
 // It hashes each of the Ring's segments and stores the hashes in the SectorDB.
-func uploadSector(sec *common.Sector) (err error) {
+func uploadSector(sec *quorum.Sector) (err error) {
 	// look up Sector in SectorDB
 	rh := SectorDB[sec.Hash]
 	if rh == nil {
@@ -41,7 +42,7 @@ func uploadSector(sec *common.Sector) (err error) {
 	// for now we just send segment i to host i
 	// this may need to be randomized for security
 	for i := range rh.Hosts {
-		err = router.SendMessage(&common.Message{
+		err = router.SendMessage(&network.Message{
 			Dest: rh.Hosts[i],
 			Proc: "Server.UploadSegment",
 			Args: ring[i],
@@ -57,7 +58,7 @@ func uploadSector(sec *common.Sector) (err error) {
 
 // downloadSector retrieves a Ring from the quorum it is stored on.
 // It reconstructs the original Sector from the Ring.
-func downloadSector(hash siacrypto.Hash) (sec *common.Sector, err error) {
+func downloadSector(hash siacrypto.Hash) (sec *quorum.Sector, err error) {
 	// look up Sector in SectorDB
 	rh := SectorDB[hash]
 	if rh == nil {
@@ -66,10 +67,10 @@ func downloadSector(hash siacrypto.Hash) (sec *common.Sector, err error) {
 	}
 
 	// send requests to each member of the quorum
-	var segs []common.Segment
+	var segs []quorum.Segment
 	for i := range rh.Hosts {
-		var seg common.Segment
-		sendErr := router.SendMessage(&common.Message{
+		var seg quorum.Segment
+		sendErr := router.SendMessage(&network.Message{
 			Dest: rh.Hosts[i],
 			Proc: "Server.DownloadSegment",
 			Args: rh.SegHashes[i],
@@ -87,17 +88,17 @@ func downloadSector(hash siacrypto.Hash) (sec *common.Sector, err error) {
 	return
 }
 
-func readQuorumAddresses() (q [common.QuorumSize]common.Address) {
+func readQuorumAddresses() (q [common.QuorumSize]network.Address) {
 	var input int
 	for i := range q {
 		fmt.Print("Please enter port number ", i, ": ")
 		fmt.Scanln(&input)
-		q[i] = common.Address{2, "localhost", input}
+		q[i] = network.Address{2, "localhost", input}
 	}
 	return
 }
 
-func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err error) {
+func generateSector(q [common.QuorumSize]network.Address) (s *quorum.Sector, err error) {
 	if q[0].Port == 0 {
 		err = fmt.Errorf("you must connect to a quorum first")
 		return
@@ -106,11 +107,11 @@ func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err 
 	if err != nil {
 		return
 	}
-	s, err = common.NewSector(data)
+	s, err = quorum.NewSector(data)
 	if err != nil {
 		return
 	}
-	SectorDB[s.Hash] = &common.RingHeader{
+	SectorDB[s.Hash] = &quorum.RingHeader{
 		Hosts:  q,
 		Params: s.CalculateParams(common.QuorumSize / 2),
 	}
@@ -120,11 +121,11 @@ func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err 
 func main() {
 	router, _ = network.NewRPCServer(9989)
 	defer router.Close()
-	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*quorum.RingHeader)
 	var (
 		input string
-		q     [common.QuorumSize]common.Address
-		s     *common.Sector
+		q     [common.QuorumSize]network.Address
+		s     *quorum.Sector
 		h     siacrypto.Hash
 		err   error
 	)

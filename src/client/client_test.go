@@ -4,20 +4,21 @@ import (
 	"common"
 	"common/erasure"
 	"network"
+	"quorum"
 	"siacrypto"
 	"testing"
 )
 
 type Server struct {
-	seg common.Segment
+	seg quorum.Segment
 }
 
-func (s *Server) UploadSegment(seg common.Segment, arb *struct{}) error {
+func (s *Server) UploadSegment(seg quorum.Segment, arb *struct{}) error {
 	s.seg = seg
 	return nil
 }
 
-func (s *Server) DownloadSegment(hash siacrypto.Hash, seg *common.Segment) error {
+func (s *Server) DownloadSegment(hash siacrypto.Hash, seg *quorum.Segment) error {
 	*seg = s.seg
 	return nil
 }
@@ -27,7 +28,7 @@ func (s *Server) DownloadSegment(hash siacrypto.Hash, seg *common.Segment) error
 // uploadSector must succesfully distribute a Sector among a quorum.
 // The uploaded Sector must be successfully reconstructed.
 func TestRPCuploadSector(t *testing.T) {
-	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*quorum.RingHeader)
 
 	// create RPCServer
 	var err error
@@ -38,10 +39,10 @@ func TestRPCuploadSector(t *testing.T) {
 	defer router.Close()
 
 	// create quorum
-	var q [common.QuorumSize]common.Address
+	var q [common.QuorumSize]network.Address
 	var shs [common.QuorumSize]Server
 	for i := 0; i < common.QuorumSize; i++ {
-		q[i] = common.Address{0, "localhost", 9000 + i}
+		q[i] = network.Address{0, "localhost", 9000 + i}
 		qrpc, err := network.NewRPCServer(9000 + i)
 		defer qrpc.Close()
 		if err != nil {
@@ -56,14 +57,14 @@ func TestRPCuploadSector(t *testing.T) {
 		t.Fatal("Could not generate test data:", err)
 	}
 
-	sec, err := common.NewSector(secData)
+	sec, err := quorum.NewSector(secData)
 	if err != nil {
 		t.Fatal("Failed to create sector:", err)
 	}
 
 	// add sector to database
 	k := common.QuorumSize / 2
-	SectorDB[sec.Hash] = &common.RingHeader{
+	SectorDB[sec.Hash] = &quorum.RingHeader{
 		Hosts:  q,
 		Params: sec.CalculateParams(k),
 	}
@@ -75,7 +76,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// rebuild file from first k segments
-	var newRing []common.Segment
+	var newRing []quorum.Segment
 	for i := 0; i < k; i++ {
 		newRing = append(newRing, shs[i].seg)
 	}
@@ -101,7 +102,7 @@ func TestRPCuploadSector(t *testing.T) {
 // downloadSector must successfully retrieve a Sector from a quorum.
 // The downloaded Sector must match the original Sector.
 func TestRPCdownloadSector(t *testing.T) {
-	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*quorum.RingHeader)
 
 	// create sector
 	secData, err := siacrypto.RandomByteSlice(70000)
@@ -109,7 +110,7 @@ func TestRPCdownloadSector(t *testing.T) {
 		t.Fatal("Could not generate test data:", err)
 	}
 
-	sec, err := common.NewSector(secData)
+	sec, err := quorum.NewSector(secData)
 	if err != nil {
 		t.Fatal("Failed to create sector:", err)
 	}
@@ -131,9 +132,9 @@ func TestRPCdownloadSector(t *testing.T) {
 	defer router.Close()
 
 	// create quorum
-	var q [common.QuorumSize]common.Address
+	var q [common.QuorumSize]network.Address
 	for i := 0; i < common.QuorumSize; i++ {
-		q[i] = common.Address{0, "localhost", 9000 + i}
+		q[i] = network.Address{0, "localhost", 9000 + i}
 		qrpc, err := network.NewRPCServer(9000 + i)
 		if err != nil {
 			t.Fatal("Failed to initialize RPCServer:", err)
@@ -144,7 +145,7 @@ func TestRPCdownloadSector(t *testing.T) {
 	}
 
 	// add sector to database
-	SectorDB[sec.Hash] = &common.RingHeader{
+	SectorDB[sec.Hash] = &quorum.RingHeader{
 		Hosts:  q,
 		Params: params,
 	}

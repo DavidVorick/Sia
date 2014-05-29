@@ -13,20 +13,20 @@ import (
 
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
 type RPCServer struct {
-	addr     common.Address
+	addr     Address
 	rpcServ  *rpc.Server
 	listener net.Listener
-	curID    common.Identifier
+	curID    Identifier
 }
 
-func (rpcs *RPCServer) Address() common.Address {
+func (rpcs *RPCServer) Address() Address {
 	return rpcs.addr
 }
 
 // RegisterHandler registers a message handler to the RPC server.
 // The handler is assigned an Identifier, which is returned to the caller.
 // The Identifier is appended to the service name before registration.
-func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id common.Identifier) {
+func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
 	id = rpcs.curID
 	name := reflect.Indirect(reflect.ValueOf(handler)).Type().Name() + string(id)
 	rpcs.rpcServ.RegisterName(name, handler)
@@ -44,7 +44,7 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	}
 
 	rpcs = &RPCServer{
-		addr:     common.Address{0, "localhost", port},
+		addr:     Address{0, "localhost", port},
 		rpcServ:  rpc.NewServer(),
 		listener: tcpServ,
 		curID:    1, // ID 0 is reserved for the RPCServer itself
@@ -77,7 +77,7 @@ func (rpcs *RPCServer) serverHandler() {
 
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
 // It times out after waiting for half the step duration.
-func (rpcs *RPCServer) SendMessage(m *common.Message) error {
+func (rpcs *RPCServer) SendMessage(m *Message) error {
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (rpcs *RPCServer) SendMessage(m *common.Message) error {
 
 // SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
 // It returns a channel that will contain an error value when the request completes.
-func (rpcs *RPCServer) SendAsyncMessage(m *common.Message) chan error {
+func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
 	errChan := make(chan error, 2)
 	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {

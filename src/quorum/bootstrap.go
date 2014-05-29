@@ -5,6 +5,7 @@ import (
 	"common"
 	"encoding/gob"
 	"fmt"
+	"network"
 	"siacrypto"
 )
 
@@ -28,7 +29,7 @@ The Bootstrapping Process
 */
 
 // Bootstrapping
-var bootstrapAddress = common.Address{
+var bootstrapAddress = network.Address{
 	ID:   1,
 	Host: "localhost",
 	Port: 9988,

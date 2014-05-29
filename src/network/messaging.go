@@ -1,4 +1,4 @@
-package common
+package network
 
 // An Identifier uniquely identifies a participant on a host.
 type Identifier byte

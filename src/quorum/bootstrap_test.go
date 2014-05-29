@@ -1,14 +1,14 @@
 package quorum
 
 import (
-	"common"
+	"network"
 	"testing"
 )
 
 // Bootstrap a state to the network, then another
 func TestBootstrapping(t *testing.T) {
 	// Make a new state and network; start bootstrapping
-	z := common.NewZeroNetwork()
+	z := network.NewZeroNetwork()
 	p0, err := CreateParticipant(z)
 	if err != nil {
 		t.Fatal(err)

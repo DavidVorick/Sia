@@ -1,7 +1,6 @@
 package network
 
 import (
-	"common"
 	"testing"
 )
 
@@ -38,8 +37,8 @@ func TestRPCSendMessage(t *testing.T) {
 	id := rpcs.RegisterHandler(tsh)
 
 	// send a message
-	m := &common.Message{
-		common.Address{id, "localhost", 9987},
+	m := &Message{
+		Address{id, "localhost", 9987},
 		"TestStoreHandler.StoreMessage",
 		"hello, world!",
 		nil,
@@ -85,8 +84,8 @@ func TestRPCTimeout(t *testing.T) {
 	id := rpcs.RegisterHandler(tsh)
 
 	// send a message
-	m := &common.Message{
-		common.Address{id, "localhost", 9987},
+	m := &Message{
+		Address{id, "localhost", 9987},
 		"TestStoreHandler.DoNothing",
 		"hello, world!",
 		nil,

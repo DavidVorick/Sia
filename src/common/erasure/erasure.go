@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"common"
 	"fmt"
+	"quorum"
 	"unsafe"
 )
 
@@ -29,7 +30,7 @@ import (
 // The return value is a Ring.
 // The first k Segments of the Ring are the original data split up.
 // The remaining Segments are newly generated redundant data.
-func EncodeRing(sec *common.Sector, params *common.EncodingParams) (ring [common.QuorumSize]common.Segment, err error) {
+func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [common.QuorumSize]quorum.Segment, err error) {
 	k, b, length := params.GetValues()
 
 	// check for legal size of k
@@ -63,7 +64,7 @@ func EncodeRing(sec *common.Sector, params *common.EncodingParams) (ring [common
 
 	// split paddedData into ring
 	for i := 0; i < k; i++ {
-		ring[i] = common.Segment{
+		ring[i] = quorum.Segment{
 			paddedData[i*b : (i+1)*b],
 			uint8(i),
 		}
@@ -71,7 +72,7 @@ func EncodeRing(sec *common.Sector, params *common.EncodingParams) (ring [common
 
 	// split redundantString into ring
 	for i := k; i < common.QuorumSize; i++ {
-		ring[i] = common.Segment{
+		ring[i] = quorum.Segment{
 			redundantBytes[(i-k)*b : (i-k+1)*b],
 			uint8(i),
 		}
@@ -89,7 +90,7 @@ func EncodeRing(sec *common.Sector, params *common.EncodingParams) (ring [common
 // Because recovery is just a bunch of matrix operations, there is no way to tell if the data has been corrupted
 // or if an incorrect value of k has been chosen. This error checking must happen before calling RebuildSector.
 // Each Segment's Data must have the correct Index from when it was encoded.
-func RebuildSector(ring []common.Segment, params *common.EncodingParams) (sec *common.Sector, err error) {
+func RebuildSector(ring []quorum.Segment, params *quorum.EncodingParams) (sec *quorum.Sector, err error) {
 	k, b, length := params.GetValues()
 	if k == 0 && b == 0 {
 		err = fmt.Errorf("could not rebuild using uninitialized encoding parameters")
@@ -138,6 +139,6 @@ func RebuildSector(ring []common.Segment, params *common.EncodingParams) (sec *c
 	C.recoverData(C.int(k), C.int(common.QuorumSize-k), C.int(b), (*C.uchar)(unsafe.Pointer(&segmentData[0])), (*C.uchar)(unsafe.Pointer(&segmentIndices[0])))
 
 	// remove padding introduced by EncodeRing()
-	sec, err = common.NewSector(segmentData[:length])
+	sec, err = quorum.NewSector(segmentData[:length])
 	return
 }

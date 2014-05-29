@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"logger"
+	"network"
 	"siacrypto"
 	"sync"
 )
@@ -15,7 +16,7 @@ import (
 // Every quorum contains a list of all siblings.
 type Sibling struct {
 	index     byte
-	address   common.Address
+	address   network.Address
 	publicKey *siacrypto.PublicKey
 }
 
@@ -41,7 +42,7 @@ type quorum struct {
 	cylinderTreeHead *cylinderNode
 }
 
-func (s *Sibling) GetAddress() common.Address {
+func (s *Sibling) GetAddress() network.Address {
 	return s.address
 }
 

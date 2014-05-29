@@ -1,7 +1,7 @@
 package quorum
 
 import (
-	"common"
+	"network"
 	"testing"
 )
 
@@ -14,7 +14,7 @@ func TestSynchronizeEncoding(t *testing.T) {
 
 // Create a state, check the defaults
 func TestCreateParticipant(t *testing.T) {
-	zn := common.NewZeroNetwork()
+	zn := network.NewZeroNetwork()
 	// make sure CreateState does not cause errors
 	p0, err := CreateParticipant(zn)
 	if err != nil {

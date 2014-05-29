@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"common"
+	"network"
 	"siacrypto"
 	"testing"
 )
@@ -124,7 +125,7 @@ func TestSiblingEncoding(t *testing.T) {
 
 // check general case, check corner cases, and then do some fuzzing
 func TestRandInt(t *testing.T) {
-	p, err := CreateParticipant(common.NewZeroNetwork())
+	p, err := CreateParticipant(network.NewZeroNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}

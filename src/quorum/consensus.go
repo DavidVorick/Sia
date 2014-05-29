@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"logger"
+	"network"
 	"siacrypto"
 	"time"
 )
@@ -76,7 +77,7 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 
 // Takes a signed heartbeat and broadcasts it to the quorum
 func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
-	p.broadcast(&common.Message{
+	p.broadcast(&network.Message{
 		Proc: "Participant.HandleSignedHeartbeat",
 		Args: *sh,
 		Resp: err,

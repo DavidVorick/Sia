@@ -5,6 +5,7 @@ import (
 	"common"
 	"encoding/gob"
 	"fmt"
+	"network"
 	"siacrypto"
 	"sync"
 )
@@ -29,8 +30,8 @@ type Participant struct {
 	secretKey siacrypto.SecretKey // secret key matching self.publicKey
 
 	// Network Related Variables
-	messageRouter common.MessageRouter
-	listeners     []common.Address
+	messageRouter network.MessageRouter
+	listeners     []network.Address
 
 	// Heartbeat Variables
 	updates        map[Update]Update
@@ -141,7 +142,7 @@ func (p *Participant) Synchronize(s Synchronize, arb *struct{}) (err error) {
 // have public keys which they can use to signal that they wish to stop
 // listening. We can probably also add timeouts so that listeners are
 // automatically ignored after M days andmust be renewed.
-func (p *Participant) AddListener(a common.Address, arb *struct{}) (err error) {
+func (p *Participant) AddListener(a network.Address, arb *struct{}) (err error) {
 	// add the address to listeners
 	p.listeners = append(p.listeners, a)
 
@@ -154,7 +155,7 @@ func (p *Participant) AddListener(a common.Address, arb *struct{}) (err error) {
 		return
 	}
 	p.quorum.lock.RUnlock() // quorum unlocked after GobEncode() completes
-	p.messageRouter.SendMessage(&common.Message{
+	p.messageRouter.SendMessage(&network.Message{
 		Dest: a,
 		Proc: "Participant.TransferQuorum",
 		Args: gobQuorum,
@@ -176,7 +177,7 @@ func (p *Participant) AddListener(a common.Address, arb *struct{}) (err error) {
 	p.heartbeatsLock.Unlock()
 
 	// send the synnchronize object in a message
-	p.messageRouter.SendMessage(&common.Message{
+	p.messageRouter.SendMessage(&network.Message{
 		Dest: a,
 		Proc: "Participant.Synchronize",
 		Args: sync,
@@ -210,7 +211,7 @@ func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, upda
 // Takes a Message and broadcasts it to every Sibling in the quorum
 // Even sends the message to self, this may be revised
 // After sending to all siblings, all listeners are also sent the message
-func (p *Participant) broadcast(m *common.Message) {
+func (p *Participant) broadcast(m *network.Message) {
 	// send the messagea to all of the siblings in the quorum
 	p.quorum.lock.RLock()
 	for i := range p.quorum.siblings {
@@ -230,7 +231,7 @@ func (p *Participant) broadcast(m *common.Message) {
 }
 
 // CreateParticipant creates a participant.
-func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err error) {
+func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err error) {
 	// Initializations
 	gob.Register(JoinRequest{})
 
@@ -274,7 +275,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 
 	// send a listener request to the bootstrap to become a listener on the quorum
 	fmt.Println("Synchronizing to Bootstrap")
-	err = p.messageRouter.SendMessage(&common.Message{
+	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.AddListener",
 		Args: p.self.address,
@@ -289,7 +290,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 		Sibling: *p.self,
 	}
 	fmt.Println("joining network...")
-	err = p.messageRouter.SendMessage(&common.Message{
+	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.AddUpdate",
 		Args: &j,
