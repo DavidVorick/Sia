@@ -2,9 +2,9 @@ package main
 
 import (
 	"common"
-	"common/crypto"
 	"common/erasure"
 	"network"
+	"siacrypto"
 	"testing"
 )
 
@@ -17,7 +17,7 @@ func (s *Server) UploadSegment(seg common.Segment, arb *struct{}) error {
 	return nil
 }
 
-func (s *Server) DownloadSegment(hash crypto.Hash, seg *common.Segment) error {
+func (s *Server) DownloadSegment(hash siacrypto.Hash, seg *common.Segment) error {
 	*seg = s.seg
 	return nil
 }
@@ -27,7 +27,7 @@ func (s *Server) DownloadSegment(hash crypto.Hash, seg *common.Segment) error {
 // uploadSector must succesfully distribute a Sector among a quorum.
 // The uploaded Sector must be successfully reconstructed.
 func TestRPCuploadSector(t *testing.T) {
-	SectorDB = make(map[crypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
 
 	// create RPCServer
 	var err error
@@ -51,7 +51,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// create sector
-	secData, err := crypto.RandomByteSlice(70000)
+	secData, err := siacrypto.RandomByteSlice(70000)
 	if err != nil {
 		t.Fatal("Could not generate test data:", err)
 	}
@@ -86,7 +86,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// check hash
-	rebuiltHash, err := crypto.CalculateHash(sec.Data)
+	rebuiltHash, err := siacrypto.CalculateHash(sec.Data)
 	if err != nil {
 		t.Fatal("Failed to calculate hash:", err)
 	}
@@ -101,10 +101,10 @@ func TestRPCuploadSector(t *testing.T) {
 // downloadSector must successfully retrieve a Sector from a quorum.
 // The downloaded Sector must match the original Sector.
 func TestRPCdownloadSector(t *testing.T) {
-	SectorDB = make(map[crypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
 
 	// create sector
-	secData, err := crypto.RandomByteSlice(70000)
+	secData, err := siacrypto.RandomByteSlice(70000)
 	if err != nil {
 		t.Fatal("Could not generate test data:", err)
 	}
@@ -156,7 +156,7 @@ func TestRPCdownloadSector(t *testing.T) {
 	}
 
 	// check hash
-	rebuiltHash, err := crypto.CalculateHash(sec.Data)
+	rebuiltHash, err := siacrypto.CalculateHash(sec.Data)
 	if err != nil {
 		t.Fatal("Failed to calculate hash:", err)
 	}

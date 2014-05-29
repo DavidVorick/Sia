@@ -3,9 +3,9 @@ package quorum
 import (
 	"bytes"
 	"common"
-	"common/crypto"
 	"encoding/gob"
 	"fmt"
+	"siacrypto"
 )
 
 /*
@@ -56,7 +56,7 @@ func (j JoinRequest) process(p *Participant) {
 			}
 
 			j.Sibling.index = byte(i)
-			p.heartbeats[j.Sibling.index] = make(map[crypto.TruncatedHash]*heartbeat)
+			p.heartbeats[j.Sibling.index] = make(map[siacrypto.TruncatedHash]*heartbeat)
 			p.quorum.siblings[j.Sibling.index] = &j.Sibling
 
 			println("placed hopeful at index", i)

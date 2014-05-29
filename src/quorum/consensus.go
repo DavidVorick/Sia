@@ -3,11 +3,11 @@ package quorum
 import (
 	"bytes"
 	"common"
-	"common/crypto"
 	"encoding/gob"
 	"errors"
 	"fmt"
 	"logger"
+	"siacrypto"
 	"time"
 )
 
@@ -26,9 +26,9 @@ type heartbeat struct {
 // signed solution to the Byzantine Generals Problem
 type SignedHeartbeat struct {
 	heartbeat     *heartbeat
-	heartbeatHash crypto.TruncatedHash
-	signatories   []byte             // a list of everyone who's seen the heartbeat
-	signatures    []crypto.Signature // their corresponding signatures
+	heartbeatHash siacrypto.TruncatedHash
+	signatories   []byte                // a list of everyone who's seen the heartbeat
+	signatures    []siacrypto.Signature // their corresponding signatures
 }
 
 // Convert heartbeat to []byte
@@ -90,7 +90,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
-	entropy, err := crypto.RandomByteSlice(common.EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(common.EntropyVolume)
 	if err != nil {
 		return
 	}
@@ -112,13 +112,13 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	if err != nil {
 		return
 	}
-	sh.heartbeatHash, err = crypto.CalculateTruncatedHash(gobHb)
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(gobHb)
 	if err != nil {
 		return
 	}
 
 	// fill out signatures
-	sh.signatures = make([]crypto.Signature, 1)
+	sh.signatures = make([]siacrypto.Signature, 1)
 	hbSignature, err := p.secretKey.Sign(sh.heartbeatHash[:])
 	if err != nil {
 		return
@@ -221,7 +221,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	}
 
 	// iterate through the signatures and make sure each is legal
-	var signedMessage crypto.SignedMessage // grows each iteration
+	var signedMessage siacrypto.SignedMessage // grows each iteration
 	signedMessage.Message = sh.heartbeatHash[:]
 	previousSignatories := make(map[byte]bool) // which signatories have already signed
 	for i, signatory := range sh.signatories {
@@ -381,7 +381,7 @@ func (p *Participant) compile() {
 		// archive heartbeats (tbi)
 
 		// clear heartbeat list for next block
-		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
 	}
 
 	// copy the new seed into the quorum

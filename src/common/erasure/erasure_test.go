@@ -2,7 +2,7 @@ package erasure
 
 import (
 	"common"
-	"common/crypto"
+	"siacrypto"
 	"testing"
 )
 
@@ -15,7 +15,7 @@ func TestCoding(t *testing.T) {
 	b := 1024
 
 	// create sector data
-	randomBytes, err := crypto.RandomByteSlice(b * k)
+	randomBytes, err := siacrypto.RandomByteSlice(b * k)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestCoding(t *testing.T) {
 	}
 
 	// compare to hash of data when first generated
-	recoveredDataHash, err := crypto.CalculateHash(newSec.Data)
+	recoveredDataHash, err := siacrypto.CalculateHash(newSec.Data)
 	if err != nil {
 		t.Fatal(err)
 	} else if recoveredDataHash != sec.Hash {

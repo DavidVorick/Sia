@@ -2,9 +2,9 @@ package quorum
 
 import (
 	"common"
-	"common/crypto"
 	"encoding/gob"
 	"reflect"
+	"siacrypto"
 	"testing"
 	"time"
 )
@@ -21,14 +21,14 @@ func TestHeartbeatEncoding(t *testing.T) {
 
 	// create entropy for the heartbeat
 	hb = new(heartbeat)
-	entropy, err := crypto.RandomByteSlice(common.EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(common.EntropyVolume)
 	if err != nil {
 		t.Fatal(err)
 	}
 	copy(hb.entropy[:], entropy)
 
 	// create a public key
-	pubKey, _, err := crypto.CreateKeyPair()
+	pubKey, _, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,11 +91,11 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// create keypairs
-	pubKey1, secKey1, err := crypto.CreateKeyPair()
+	pubKey1, secKey1, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubKey2, secKey2, err := crypto.CreateKeyPair()
+	pubKey2, secKey2, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,11 +132,11 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sh.heartbeatHash, err = crypto.CalculateTruncatedHash(esh)
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(esh)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sh.signatures = make([]crypto.Signature, 2)
+	sh.signatures = make([]siacrypto.Signature, 2)
 	sh.signatories = make([]byte, 2)
 
 	// Create a set of signatures for the SignedHeartbeat
@@ -161,7 +161,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh.signatories[1] = 2
 
 	// delete existing heartbeat from state; makes the remaining tests easier
-	p.heartbeats[sh.signatories[0]] = make(map[crypto.TruncatedHash]*heartbeat)
+	p.heartbeats[sh.signatories[0]] = make(map[siacrypto.TruncatedHash]*heartbeat)
 
 	// handle the signed heartbeat, expecting nil error
 	err = p.HandleSignedHeartbeat(*sh, nil)
@@ -187,7 +187,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sh.heartbeatHash, err = crypto.CalculateTruncatedHash(ehb)
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(ehb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 
 	// adjust signatories slice
-	sh.signatures = make([]crypto.Signature, 2)
+	sh.signatures = make([]siacrypto.Signature, 2)
 	sh.signatories = make([]byte, 2)
 	sh.signatures[0] = signature1.Signature
 	sh.signatures[1] = signature2.Signature

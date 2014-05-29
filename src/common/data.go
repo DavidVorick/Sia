@@ -1,19 +1,19 @@
 package common
 
 import (
-	"common/crypto"
+	"siacrypto"
 )
 
 // A Sector is a logical block of data.
 type Sector struct {
 	Data []byte
-	Hash crypto.Hash
+	Hash siacrypto.Hash
 }
 
 // NewSector creates a Sector from data.
 func NewSector(data []byte) (s *Sector, err error) {
 	// calculate hash
-	hash, err := crypto.CalculateHash(data)
+	hash, err := siacrypto.CalculateHash(data)
 
 	s = &Sector{data, hash}
 	return
@@ -31,7 +31,7 @@ type Segment struct {
 type RingHeader struct {
 	Hosts     [QuorumSize]Address
 	Params    *EncodingParams
-	SegHashes [QuorumSize]crypto.Hash
+	SegHashes [QuorumSize]siacrypto.Hash
 }
 
 // EncodingParams are the parameters needed to perform erasure encoding and decoding.

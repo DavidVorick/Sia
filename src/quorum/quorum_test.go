@@ -2,7 +2,7 @@ package quorum
 
 import (
 	"common"
-	"common/crypto"
+	"siacrypto"
 	"testing"
 )
 
@@ -29,12 +29,12 @@ func TestSiblingCompare(t *testing.T) {
 
 	// initialize each participant with a public key
 	p1 = new(Sibling)
-	pubKey, _, err := crypto.CreateKeyPair()
+	pubKey, _, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
 	p1.publicKey = pubKey
-	p0.publicKey = new(crypto.PublicKey)
+	p0.publicKey = new(siacrypto.PublicKey)
 	*p0.publicKey = *p1.publicKey
 
 	// compare initialized participants
@@ -59,7 +59,7 @@ func TestSiblingCompare(t *testing.T) {
 	}
 
 	// compare when public keys are not equivalent
-	pubKey, _, err = crypto.CreateKeyPair()
+	pubKey, _, err = siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestSiblingEncoding(t *testing.T) {
 	}
 
 	// Make a bootstrap participant
-	pubKey, _, err := crypto.CreateKeyPair()
+	pubKey, _, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}

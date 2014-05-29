@@ -2,17 +2,17 @@ package main
 
 import (
 	"common"
-	"common/crypto"
 	"common/erasure"
 	"fmt"
 	"network"
+	"siacrypto"
 )
 
 // global variables
 // (with apologies to Haskell)
 var (
 	router   common.MessageRouter
-	SectorDB map[crypto.Hash]*common.RingHeader
+	SectorDB map[siacrypto.Hash]*common.RingHeader
 )
 
 // uploadSector splits a Sector into a Ring and distributes it across a quorum.
@@ -32,7 +32,7 @@ func uploadSector(sec *common.Sector) (err error) {
 
 	// calculate and store segment hashes
 	for i := range ring {
-		rh.SegHashes[i], err = crypto.CalculateHash(ring[i].Data)
+		rh.SegHashes[i], err = siacrypto.CalculateHash(ring[i].Data)
 		if err != nil {
 			return
 		}
@@ -57,7 +57,7 @@ func uploadSector(sec *common.Sector) (err error) {
 
 // downloadSector retrieves a Ring from the quorum it is stored on.
 // It reconstructs the original Sector from the Ring.
-func downloadSector(hash crypto.Hash) (sec *common.Sector, err error) {
+func downloadSector(hash siacrypto.Hash) (sec *common.Sector, err error) {
 	// look up Sector in SectorDB
 	rh := SectorDB[hash]
 	if rh == nil {
@@ -102,7 +102,7 @@ func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err 
 		err = fmt.Errorf("you must connect to a quorum first")
 		return
 	}
-	data, err := crypto.RandomByteSlice(70000)
+	data, err := siacrypto.RandomByteSlice(70000)
 	if err != nil {
 		return
 	}
@@ -120,12 +120,12 @@ func generateSector(q [common.QuorumSize]common.Address) (s *common.Sector, err 
 func main() {
 	router, _ = network.NewRPCServer(9989)
 	defer router.Close()
-	SectorDB = make(map[crypto.Hash]*common.RingHeader)
+	SectorDB = make(map[siacrypto.Hash]*common.RingHeader)
 	var (
 		input string
 		q     [common.QuorumSize]common.Address
 		s     *common.Sector
-		h     crypto.Hash
+		h     siacrypto.Hash
 		err   error
 	)
 	for {
@@ -166,7 +166,7 @@ func main() {
 				fmt.Println("download failed")
 				break
 			}
-			rh, err := crypto.CalculateHash(rs.Data)
+			rh, err := siacrypto.CalculateHash(rs.Data)
 			if err != nil {
 				fmt.Println("error:", err)
 				break

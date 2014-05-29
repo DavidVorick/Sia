@@ -3,9 +3,9 @@ package quorum
 import (
 	"bytes"
 	"common"
-	"common/crypto"
 	"encoding/gob"
 	"fmt"
+	"siacrypto"
 )
 
 // a CID, or Cylinder ID, is the global logical address of a batch on Sia. A CID
@@ -16,7 +16,7 @@ type CID int // not exactly sure what CID will end up looking like
 
 // A cylinder is the set of 128 corresponding batches in a quorum.
 type Cylinder struct {
-	Hash      crypto.TruncatedHash
+	Hash      siacrypto.TruncatedHash
 	RingPairs int
 	RingAtoms []int
 	RingMList []int

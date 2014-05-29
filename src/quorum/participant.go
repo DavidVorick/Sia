@@ -3,9 +3,9 @@ package quorum
 import (
 	"bytes"
 	"common"
-	"common/crypto"
 	"encoding/gob"
 	"fmt"
+	"siacrypto"
 	"sync"
 )
 
@@ -17,7 +17,7 @@ type Update interface {
 
 type Synchronize struct {
 	currentStep int
-	heartbeats  [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat
+	heartbeats  [common.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
 }
 
 type Participant struct {
@@ -25,8 +25,8 @@ type Participant struct {
 	quorum quorum
 
 	// Variables local to the participant
-	self      *Sibling         // the sibling object for this participant
-	secretKey crypto.SecretKey // secret key matching self.publicKey
+	self      *Sibling            // the sibling object for this participant
+	secretKey siacrypto.SecretKey // secret key matching self.publicKey
 
 	// Network Related Variables
 	messageRouter common.MessageRouter
@@ -35,7 +35,7 @@ type Participant struct {
 	// Heartbeat Variables
 	updates        map[Update]Update
 	updatesLock    sync.Mutex
-	heartbeats     [common.QuorumSize]map[crypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
+	heartbeats     [common.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock sync.Mutex
 
 	// Consensus Algorithm Status
@@ -116,7 +116,7 @@ func (p *Participant) TransferQuorum(encodedQuorum []byte, arb *struct{}) (err e
 	p.quorum.lock.RLock()
 	p.heartbeatsLock.Lock()
 	for i := range p.quorum.siblings {
-		p.heartbeats[i] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
 	}
 	p.heartbeatsLock.Unlock()
 	p.quorum.lock.RUnlock()
@@ -193,7 +193,7 @@ func (p *Participant) AddListener(a common.Address, arb *struct{}) (err error) {
 // are processed? Should proccessUpdates be its own funciton?
 func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, updateList map[Update]bool) (err error) {
 	// Add the entropy to newSeed
-	th, err := crypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
+	th, err := siacrypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
 	copy(seed[:], th[:])
 
 	// Process updates and add to update list
@@ -241,7 +241,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	}
 
 	// create a signature keypair for this participant
-	pubKey, secKey, err := crypto.CreateKeyPair()
+	pubKey, secKey, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		return
 	}
@@ -265,7 +265,7 @@ func CreateParticipant(messageRouter common.MessageRouter) (p *Participant, err 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.address == bootstrapAddress {
 		p.self.index = 0
-		p.heartbeats[p.self.index] = make(map[crypto.TruncatedHash]*heartbeat)
+		p.heartbeats[p.self.index] = make(map[siacrypto.TruncatedHash]*heartbeat)
 		p.quorum.siblings[p.self.index] = p.self
 		p.newSignedHeartbeat()
 		go p.tick()

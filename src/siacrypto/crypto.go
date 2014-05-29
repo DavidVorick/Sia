@@ -1,7 +1,7 @@
 // package crypto uses libsodium and manages all of the crypto
 // for Sia. It has an explicit typing system that uses byte
 // arrays matching the sizes specified by the libsodium constants.
-package crypto
+package siacrypto
 
 import (
 	"bytes"

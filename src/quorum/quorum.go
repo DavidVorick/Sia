@@ -3,11 +3,11 @@ package quorum
 import (
 	"bytes"
 	"common"
-	"common/crypto"
 	"crypto/ecdsa"
 	"encoding/gob"
 	"fmt"
 	"logger"
+	"siacrypto"
 	"sync"
 )
 
@@ -16,7 +16,7 @@ import (
 type Sibling struct {
 	index     byte
 	address   common.Address
-	publicKey *crypto.PublicKey
+	publicKey *siacrypto.PublicKey
 }
 
 // A quorum is a set of data that is identical across all participants in the
@@ -66,6 +66,7 @@ func (s0 *Sibling) compare(s1 *Sibling) bool {
 	return true
 }
 
+// the use of ecdsa in this function should be removed
 func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	// Error checking for nil values
 	// Because public keys cannot be nil and are not valid as zero-values, a nil
@@ -180,7 +181,7 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 	randInt = (rollingInt % (high - low)) + low
 
 	// Convert random number seed to next value
-	truncatedHash, err := crypto.CalculateTruncatedHash(q.seed[:])
+	truncatedHash, err := siacrypto.CalculateTruncatedHash(q.seed[:])
 	q.seed = common.Entropy(truncatedHash)
 	return
 }
