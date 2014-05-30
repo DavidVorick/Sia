@@ -4,29 +4,29 @@ import (
 	"sync"
 )
 
-type ZeroNetwork struct {
+type DebugNetwork struct {
 	messages     []*Message
 	messagesLock sync.RWMutex
 	numHandlers  int
 }
 
-func (z *ZeroNetwork) Address() Address {
+func (z *DebugNetwork) Address() Address {
 	return Address{0, "localhost", 9988}
 }
 
-func (z *ZeroNetwork) RegisterHandler(handler interface{}) Identifier {
+func (z *DebugNetwork) RegisterHandler(handler interface{}) Identifier {
 	z.numHandlers++
 	return Identifier(z.numHandlers)
 }
 
-func (z *ZeroNetwork) SendMessage(m *Message) error {
+func (z *DebugNetwork) SendMessage(m *Message) error {
 	z.messagesLock.Lock()
 	z.messages = append(z.messages, m)
 	z.messagesLock.Unlock()
 	return nil
 }
 
-func (z *ZeroNetwork) SendAsyncMessage(m *Message) (c chan error) {
+func (z *DebugNetwork) SendAsyncMessage(m *Message) (c chan error) {
 	z.messagesLock.Lock()
 	z.messages = append(z.messages, m)
 	z.messagesLock.Unlock()
@@ -35,11 +35,11 @@ func (z *ZeroNetwork) SendAsyncMessage(m *Message) (c chan error) {
 	return
 }
 
-func (z *ZeroNetwork) Close() {
+func (z *DebugNetwork) Close() {
 	return
 }
 
-func (z *ZeroNetwork) RecentMessage(i int) *Message {
+func (z *DebugNetwork) RecentMessage(i int) *Message {
 	z.messagesLock.RLock()
 	defer z.messagesLock.RUnlock()
 	if i < len(z.messages) {
@@ -48,6 +48,6 @@ func (z *ZeroNetwork) RecentMessage(i int) *Message {
 	return nil
 }
 
-func NewZeroNetwork() *ZeroNetwork {
-	return new(ZeroNetwork)
+func NewDebugNetwork() *DebugNetwork {
+	return new(DebugNetwork)
 }

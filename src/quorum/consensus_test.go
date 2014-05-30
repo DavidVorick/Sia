@@ -84,7 +84,7 @@ func TestNewSignedHeartbeat(t *testing.T) {
 // Test takes .66 seconds to run... why?
 func TestHandleSignedHeartbeat(t *testing.T) {
 	// create a state and populate it with the signatories as siblings
-	p, err := CreateParticipant(network.NewZeroNetwork())
+	p, err := CreateParticipant(network.NewDebugNetwork())
 	p.self.index = 0
 	if err != nil {
 		t.Fatal(err)
@@ -281,11 +281,11 @@ func TestTossSibling(t *testing.T) {
 // Check that valid heartbeats are accepted and invalid heartbeats are rejected
 func TestProcessHeartbeat(t *testing.T) {
 	// create states and add them to each other
-	p0, err := CreateParticipant(network.NewZeroNetwork())
+	p0, err := CreateParticipant(network.NewDebugNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
-	p1, err := CreateParticipant(network.NewZeroNetwork())
+	p1, err := CreateParticipant(network.NewDebugNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestRegularTick(t *testing.T) {
 		t.Skip()
 	}
 
-	p, err := CreateParticipant(network.NewZeroNetwork())
+	p, err := CreateParticipant(network.NewDebugNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ func TestCompilationTick(t *testing.T) {
 	}
 
 	// create state, set values for compile
-	p, err := CreateParticipant(network.NewZeroNetwork())
+	p, err := CreateParticipant(network.NewDebugNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}

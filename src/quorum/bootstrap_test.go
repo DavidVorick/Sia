@@ -8,8 +8,8 @@ import (
 // Bootstrap a state to the network, then another
 func TestBootstrapping(t *testing.T) {
 	// Make a new state and network; start bootstrapping
-	z := network.NewZeroNetwork()
-	p0, err := CreateParticipant(z)
+	d := network.NewDebugNetwork()
+	p0, err := CreateParticipant(d)
 	if err != nil {
 		t.Fatal(err)
 	}

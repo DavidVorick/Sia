@@ -124,7 +124,7 @@ func TestSiblingEncoding(t *testing.T) {
 
 // check general case, check corner cases, and then do some fuzzing
 func TestRandInt(t *testing.T) {
-	p, err := CreateParticipant(network.NewZeroNetwork())
+	p, err := CreateParticipant(network.NewDebugNetwork())
 	if err != nil {
 		t.Fatal(err)
 	}

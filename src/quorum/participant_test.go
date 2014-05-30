@@ -14,7 +14,7 @@ func TestSynchronizeEncoding(t *testing.T) {
 
 // Create a state, check the defaults
 func TestCreateParticipant(t *testing.T) {
-	zn := network.NewZeroNetwork()
+	zn := network.NewDebugNetwork()
 	// make sure CreateState does not cause errors
 	p0, err := CreateParticipant(zn)
 	if err != nil {
