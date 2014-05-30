@@ -1,7 +1,6 @@
 package quorum
 
 import (
-	"common"
 	"encoding/gob"
 	"network"
 	"reflect"
@@ -22,7 +21,7 @@ func TestHeartbeatEncoding(t *testing.T) {
 
 	// create entropy for the heartbeat
 	hb = new(heartbeat)
-	entropy, err := siacrypto.RandomByteSlice(common.EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(EntropyVolume)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +255,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 
 	// send a heartbeat right at the edge of a new block
 	p.stepLock.Lock()
-	p.currentStep = common.QuorumSize
+	p.currentStep = QuorumSize
 	p.stepLock.Unlock()
 
 	// submit heartbeat in separate thread
@@ -272,7 +271,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	p.currentStep = 1
 	p.stepLock.Unlock()
 	time.Sleep(time.Second)
-	time.Sleep(common.StepDuration)
+	time.Sleep(StepDuration)
 }
 
 func TestTossSibling(t *testing.T) {
@@ -300,7 +299,7 @@ func TestProcessHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var newSeed common.Entropy
+	var newSeed Entropy
 	err = p1.processHeartbeat(sh0.heartbeat, &newSeed)
 	if err != nil {
 		t.Error("processHeartbeat threw out a valid heartbeat:", err)
@@ -315,7 +314,7 @@ func TestCompile(t *testing.T) {
 
 // Ensures that Tick() updates CurrentStep
 func TestRegularTick(t *testing.T) {
-	// test takes common.StepDuration seconds; skip for short testing
+	// test takes StepDuration seconds; skip for short testing
 	if testing.Short() {
 		t.Skip()
 	}
@@ -326,7 +325,7 @@ func TestRegularTick(t *testing.T) {
 	}
 
 	// verify that tick is updating CurrentStep
-	time.Sleep(common.StepDuration)
+	time.Sleep(StepDuration)
 	time.Sleep(time.Second)
 	p.stepLock.Lock()
 	if p.currentStep != 2 {
@@ -337,7 +336,7 @@ func TestRegularTick(t *testing.T) {
 
 // ensures Tick() calles compile() and then resets the counter to step 1
 func TestCompilationTick(t *testing.T) {
-	// test takes common.StepDuration seconds; skip for short testing
+	// test takes StepDuration seconds; skip for short testing
 	if testing.Short() {
 		t.Skip()
 	}
@@ -348,11 +347,11 @@ func TestCompilationTick(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.stepLock.Lock()
-	p.currentStep = common.QuorumSize
+	p.currentStep = QuorumSize
 	p.stepLock.Unlock()
 
 	// verify that tick is wrapping around properly
-	time.Sleep(common.StepDuration)
+	time.Sleep(StepDuration)
 	time.Sleep(time.Second)
 	p.stepLock.Lock()
 	if p.currentStep != 1 {

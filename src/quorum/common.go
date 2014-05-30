@@ -1,6 +1,6 @@
 // Common contains structs, data, and interfaces that
 // need to be referenced by other packages
-package common
+package quorum
 
 import (
 	"time"

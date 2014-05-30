@@ -16,13 +16,12 @@ import "C"
 
 import (
 	"bytes"
-	"common"
 	"fmt"
 	"quorum"
 	"unsafe"
 )
 
-// EncodeRing takes a Sector and encodes it as a Ring: a set of common.QuorumSize Segments that include redundancy.
+// EncodeRing takes a Sector and encodes it as a Ring: a set of quorum.QuorumSize Segments that include redundancy.
 // The encoding parameters are stored in params.
 // k is the number of non-redundant segments, and b is the size of each segment. b is calculated from k.
 // The erasure-coding algorithm requires that the original data must be k*b in size, so it is padded here as needed.
@@ -30,18 +29,18 @@ import (
 // The return value is a Ring.
 // The first k Segments of the Ring are the original data split up.
 // The remaining Segments are newly generated redundant data.
-func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [common.QuorumSize]quorum.Segment, err error) {
+func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [quorum.QuorumSize]quorum.Segment, err error) {
 	k, b, length := params.GetValues()
 
 	// check for legal size of k
-	if k <= 0 || k >= common.QuorumSize {
-		err = fmt.Errorf("k must be greater than 0 and smaller than %v", common.QuorumSize)
+	if k <= 0 || k >= quorum.QuorumSize {
+		err = fmt.Errorf("k must be greater than 0 and smaller than %v", quorum.QuorumSize)
 		return
 	}
 
 	// check for legal size of b
-	if b < common.MinSegmentSize || b > common.MaxSegmentSize {
-		err = fmt.Errorf("b must be greater than %v and smaller than %v", common.MinSegmentSize, common.MaxSegmentSize)
+	if b < quorum.MinSegmentSize || b > quorum.MaxSegmentSize {
+		err = fmt.Errorf("b must be greater than %v and smaller than %v", quorum.MinSegmentSize, quorum.MaxSegmentSize)
 		return
 	}
 
@@ -49,8 +48,8 @@ func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [common
 	if length != len(sec.Data) {
 		err = fmt.Errorf("length mismatch: sector length %v != parameter length %v", len(sec.Data), length)
 		return
-	} else if length > common.MaxSegmentSize*common.QuorumSize {
-		err = fmt.Errorf("length must be smaller than %v", common.MaxSegmentSize*common.QuorumSize)
+	} else if length > quorum.MaxSegmentSize*quorum.QuorumSize {
+		err = fmt.Errorf("length must be smaller than %v", quorum.MaxSegmentSize*quorum.QuorumSize)
 	}
 
 	// pad data as needed
@@ -58,7 +57,7 @@ func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [common
 	paddedData := append(sec.Data, bytes.Repeat([]byte{0x00}, padding)...)
 
 	// call the encoding function
-	m := common.QuorumSize - k
+	m := quorum.QuorumSize - k
 	redundantChunk := C.encodeRedundancy(C.int(k), C.int(m), C.int(b), (*C.char)(unsafe.Pointer(&paddedData[0])))
 	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(m*b))
 
@@ -71,7 +70,7 @@ func EncodeRing(sec *quorum.Sector, params *quorum.EncodingParams) (ring [common
 	}
 
 	// split redundantString into ring
-	for i := k; i < common.QuorumSize; i++ {
+	for i := k; i < quorum.QuorumSize; i++ {
 		ring[i] = quorum.Segment{
 			redundantBytes[(i-k)*b : (i-k+1)*b],
 			uint8(i),
@@ -98,20 +97,20 @@ func RebuildSector(ring []quorum.Segment, params *quorum.EncodingParams) (sec *q
 	}
 
 	// check for legal size of k
-	if k > common.QuorumSize || k < 1 {
-		err = fmt.Errorf("k must be greater than 0 but smaller than %v", common.QuorumSize)
+	if k > quorum.QuorumSize || k < 1 {
+		err = fmt.Errorf("k must be greater than 0 but smaller than %v", quorum.QuorumSize)
 		return
 	}
 
 	// check for legal size of b
-	if b < common.MinSegmentSize || b > common.MaxSegmentSize {
-		err = fmt.Errorf("b must be greater than %v and smaller than %v", common.MinSegmentSize, common.MaxSegmentSize)
+	if b < quorum.MinSegmentSize || b > quorum.MaxSegmentSize {
+		err = fmt.Errorf("b must be greater than %v and smaller than %v", quorum.MinSegmentSize, quorum.MaxSegmentSize)
 		return
 	}
 
 	// check for legal size of length
-	if length > common.MaxSegmentSize*common.QuorumSize {
-		err = fmt.Errorf("length must be smaller than %v", common.MaxSegmentSize*common.QuorumSize)
+	if length > quorum.MaxSegmentSize*quorum.QuorumSize {
+		err = fmt.Errorf("length must be smaller than %v", quorum.MaxSegmentSize*quorum.QuorumSize)
 	}
 
 	// check for correct number of segments
@@ -136,7 +135,7 @@ func RebuildSector(ring []quorum.Segment, params *quorum.EncodingParams) (sec *q
 
 	}
 	// call the recovery function
-	C.recoverData(C.int(k), C.int(common.QuorumSize-k), C.int(b), (*C.uchar)(unsafe.Pointer(&segmentData[0])), (*C.uchar)(unsafe.Pointer(&segmentIndices[0])))
+	C.recoverData(C.int(k), C.int(quorum.QuorumSize-k), C.int(b), (*C.uchar)(unsafe.Pointer(&segmentData[0])), (*C.uchar)(unsafe.Pointer(&segmentIndices[0])))
 
 	// remove padding introduced by EncodeRing()
 	sec, err = quorum.NewSector(segmentData[:length])

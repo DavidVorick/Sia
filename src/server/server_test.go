@@ -1,7 +1,6 @@
 package main
 
 import (
-	"common"
 	"network"
 	"quorum"
 	"testing"
@@ -42,7 +41,7 @@ func TestNetworkedQuorum(t *testing.T) {
 		t.Skip()
 	}
 
-	time.Sleep(3 * common.StepDuration * time.Duration(common.QuorumSize))
+	time.Sleep(3 * quorum.StepDuration * time.Duration(quorum.QuorumSize))
 
 	// if no seg faults, no errors
 	// there needs to be a s0.ParticipantStatus() call returning a function with public information about the participant

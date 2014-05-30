@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"common"
 	"encoding/gob"
 	"fmt"
 	"network"
@@ -18,7 +17,7 @@ type Update interface {
 
 type Synchronize struct {
 	currentStep int
-	heartbeats  [common.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
+	heartbeats  [QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
 }
 
 type Participant struct {
@@ -36,7 +35,7 @@ type Participant struct {
 	// Heartbeat Variables
 	updates        map[Update]Update
 	updatesLock    sync.Mutex
-	heartbeats     [common.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
+	heartbeats     [QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock sync.Mutex
 
 	// Consensus Algorithm Status
@@ -192,7 +191,7 @@ func (p *Participant) AddListener(a network.Address, arb *struct{}) (err error) 
 // participant gets tossed. This is really a question of when updates should
 // be processed. Should they be processed before or after the participants
 // are processed? Should proccessUpdates be its own funciton?
-func (p *Participant) processHeartbeat(hb *heartbeat, seed *common.Entropy, updateList map[Update]bool) (err error) {
+func (p *Participant) processHeartbeat(hb *heartbeat, seed *Entropy, updateList map[Update]bool) (err error) {
 	// Add the entropy to newSeed
 	th, err := siacrypto.CalculateTruncatedHash(append(seed[:], hb.entropy[:]...))
 	copy(seed[:], th[:])

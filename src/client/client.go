@@ -1,8 +1,6 @@
 package main
 
 import (
-	"common"
-	"common/erasure"
 	"fmt"
 	"network"
 	"quorum"
@@ -88,7 +86,7 @@ func downloadSector(hash siacrypto.Hash) (sec *quorum.Sector, err error) {
 	return
 }
 
-func readQuorumAddresses() (q [common.QuorumSize]network.Address) {
+func readQuorumAddresses() (q [quorum.QuorumSize]network.Address) {
 	var input int
 	for i := range q {
 		fmt.Print("Please enter port number ", i, ": ")
@@ -98,7 +96,7 @@ func readQuorumAddresses() (q [common.QuorumSize]network.Address) {
 	return
 }
 
-func generateSector(q [common.QuorumSize]network.Address) (s *quorum.Sector, err error) {
+func generateSector(q [quorum.QuorumSize]network.Address) (s *quorum.Sector, err error) {
 	if q[0].Port == 0 {
 		err = fmt.Errorf("you must connect to a quorum first")
 		return
@@ -113,7 +111,7 @@ func generateSector(q [common.QuorumSize]network.Address) (s *quorum.Sector, err
 	}
 	SectorDB[s.Hash] = &quorum.RingHeader{
 		Hosts:  q,
-		Params: s.CalculateParams(common.QuorumSize / 2),
+		Params: s.CalculateParams(quorum.QuorumSize / 2),
 	}
 	return
 }
@@ -124,7 +122,7 @@ func main() {
 	SectorDB = make(map[siacrypto.Hash]*quorum.RingHeader)
 	var (
 		input string
-		q     [common.QuorumSize]network.Address
+		q     [quorum.QuorumSize]network.Address
 		s     *quorum.Sector
 		h     siacrypto.Hash
 		err   error

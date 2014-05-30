@@ -1,8 +1,6 @@
 package main
 
 import (
-	"common"
-	"common/erasure"
 	"network"
 	"quorum"
 	"siacrypto"
@@ -39,9 +37,9 @@ func TestRPCuploadSector(t *testing.T) {
 	defer router.Close()
 
 	// create quorum
-	var q [common.QuorumSize]network.Address
-	var shs [common.QuorumSize]Server
-	for i := 0; i < common.QuorumSize; i++ {
+	var q [quorum.QuorumSize]network.Address
+	var shs [quorum.QuorumSize]Server
+	for i := 0; i < quorum.QuorumSize; i++ {
 		q[i] = network.Address{0, "localhost", 9000 + i}
 		qrpc, err := network.NewRPCServer(9000 + i)
 		defer qrpc.Close()
@@ -63,7 +61,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// add sector to database
-	k := common.QuorumSize / 2
+	k := quorum.QuorumSize / 2
 	SectorDB[sec.Hash] = &quorum.RingHeader{
 		Hosts:  q,
 		Params: sec.CalculateParams(k),
@@ -115,7 +113,7 @@ func TestRPCdownloadSector(t *testing.T) {
 		t.Fatal("Failed to create sector:", err)
 	}
 
-	k := common.QuorumSize / 2
+	k := quorum.QuorumSize / 2
 	params := sec.CalculateParams(k)
 
 	// encode sector
@@ -132,8 +130,8 @@ func TestRPCdownloadSector(t *testing.T) {
 	defer router.Close()
 
 	// create quorum
-	var q [common.QuorumSize]network.Address
-	for i := 0; i < common.QuorumSize; i++ {
+	var q [quorum.QuorumSize]network.Address
+	for i := 0; i < quorum.QuorumSize; i++ {
 		q[i] = network.Address{0, "localhost", 9000 + i}
 		qrpc, err := network.NewRPCServer(9000 + i)
 		if err != nil {

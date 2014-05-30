@@ -1,7 +1,6 @@
 package quorum
 
 import (
-	"common"
 	"network"
 	"siacrypto"
 	"testing"
@@ -159,7 +158,7 @@ func TestRandInt(t *testing.T) {
 	}
 
 	low := 0
-	high := common.QuorumSize
+	high := QuorumSize
 	for i := 0; i < 100000; i++ {
 		randInt, err = p.quorum.randInt(low, high)
 		if err != nil {

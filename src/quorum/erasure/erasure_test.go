@@ -1,7 +1,6 @@
 package erasure
 
 import (
-	"common"
 	"quorum"
 	"siacrypto"
 	"testing"
@@ -11,8 +10,8 @@ import (
 // will produce the correct results.
 func TestCoding(t *testing.T) {
 	// set encoding parameters
-	k := common.QuorumSize / 2
-	m := common.QuorumSize - k
+	k := quorum.QuorumSize / 2
+	m := quorum.QuorumSize - k
 	b := 1024
 
 	// create sector data
@@ -38,7 +37,7 @@ func TestCoding(t *testing.T) {
 
 	// create Ring from subset of encoded segments
 	var newRing []quorum.Segment
-	for i := m; i < common.QuorumSize; i++ {
+	for i := m; i < quorum.QuorumSize; i++ {
 		newRing = append(newRing, ring[i])
 	}
 

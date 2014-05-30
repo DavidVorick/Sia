@@ -1,7 +1,6 @@
 package quorum
 
 import (
-	"common"
 	"network"
 	"siacrypto"
 )
@@ -31,9 +30,9 @@ type Segment struct {
 // A RingHeader contains all the metadata necessary to retrieve and rebuild a Sector from a Ring.
 // This includes the hosts on which Ring Segments are stored, the encoding parameters, the hashes of each Segment.
 type RingHeader struct {
-	Hosts     [common.QuorumSize]network.Address
+	Hosts     [QuorumSize]network.Address
 	Params    *EncodingParams
-	SegHashes [common.QuorumSize]siacrypto.Hash
+	SegHashes [QuorumSize]siacrypto.Hash
 }
 
 // EncodingParams are the parameters needed to perform erasure encoding and decoding.

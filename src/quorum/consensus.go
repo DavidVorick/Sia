@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"common"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -19,7 +18,7 @@ import (
 // to map[Update]Update in the heartbeat itself. Change it to whatever makes the most sense to you.
 // Thanks!
 type heartbeat struct {
-	entropy common.Entropy
+	entropy Entropy
 	updates []Update
 }
 
@@ -91,7 +90,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
-	entropy, err := siacrypto.RandomByteSlice(common.EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(EntropyVolume)
 	if err != nil {
 		return
 	}
@@ -157,7 +156,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	}
 
 	// check that there are not too many signatures and signatories
-	if len(sh.signatories) > common.QuorumSize {
+	if len(sh.signatories) > QuorumSize {
 		err = hsherrOversigned
 		fmt.Println(err)
 		return
@@ -170,14 +169,14 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	currentStep := p.currentStep
 	p.stepLock.Unlock()
 	// s.CurrentStep must be less than or equal to len(sh.Signatories), unless
-	// there is a new block and s.CurrentStep is common.QuorumSize
+	// there is a new block and s.CurrentStep is QuorumSize
 	//
 	// IMPORTANT: synchronizaation is broken, and hot-fixed together in an
 	// insecure way. What's important is that the parents block line up.
 	if currentStep > len(sh.signatories) {
-		if currentStep == common.QuorumSize {
-			// by waiting common.StepDuration, the new block will be compiled
-			time.Sleep(common.StepDuration)
+		if currentStep == QuorumSize {
+			// by waiting StepDuration, the new block will be compiled
+			time.Sleep(StepDuration)
 			// now continue to rest of function
 		} else {
 			err = hsherrNoSync
@@ -187,7 +186,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	}
 
 	// Check bounds on first signatory
-	if int(sh.signatories[0]) >= common.QuorumSize {
+	if int(sh.signatories[0]) >= QuorumSize {
 		err = hsherrBounds
 		fmt.Println(err)
 		return
@@ -227,7 +226,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	previousSignatories := make(map[byte]bool) // which signatories have already signed
 	for i, signatory := range sh.signatories {
 		// Check bounds on the signatory
-		if int(signatory) >= common.QuorumSize {
+		if int(signatory) >= QuorumSize {
 			err = hsherrBounds
 			fmt.Println(err)
 			return
@@ -362,7 +361,7 @@ func (p *Participant) compile() {
 	siblingOrdering := p.quorum.siblingOrdering()
 
 	// Read heartbeats, process them, then archive them.
-	var newSeed common.Entropy
+	var newSeed Entropy
 	updateList := make(map[Update]bool)
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
@@ -412,11 +411,11 @@ func (p *Participant) tick() {
 	p.ticking = true
 	p.tickingLock.Unlock()
 
-	// Every common.StepDuration, advance the state stage
-	ticker := time.Tick(common.StepDuration)
+	// Every StepDuration, advance the state stage
+	ticker := time.Tick(StepDuration)
 	for _ = range ticker {
 		p.stepLock.Lock()
-		if p.currentStep == common.QuorumSize {
+		if p.currentStep == QuorumSize {
 			fmt.Println("compiling")
 			p.currentStep = 1
 			p.stepLock.Unlock() // compile needs stepLock unlocked

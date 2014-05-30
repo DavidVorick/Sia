@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"common"
 	"encoding/gob"
 	"fmt"
 	"siacrypto"
@@ -67,7 +66,7 @@ func (a AllocateCylinder) process(p *Participant) {
 	}
 
 	// verify that there's enough room on disk for the new cylinder
-	if p.quorum.cylinderTreeHead.weight+weight > common.AtomsPerStack {
+	if p.quorum.cylinderTreeHead.weight+weight > AtomsPerStack {
 		// error
 		return
 	}

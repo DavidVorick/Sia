@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"common"
 	"crypto/ecdsa"
 	"encoding/gob"
 	"fmt"
@@ -28,13 +27,13 @@ type quorum struct {
 	lock sync.RWMutex
 
 	// Network Variables
-	siblings [common.QuorumSize]*Sibling
+	siblings [QuorumSize]*Sibling
 	// meta quorum
 
 	// file proofs stage 1
 
 	// Compile Variables
-	seed common.Entropy // Used to generate random numbers during compilation
+	seed Entropy // Used to generate random numbers during compilation
 
 	// Batch management
 	// A cylinderMap connects a CID to a cylinder within the quorum
@@ -183,7 +182,7 @@ func (q *quorum) randInt(low int, high int) (randInt int, err error) {
 
 	// Convert random number seed to next value
 	truncatedHash, err := siacrypto.CalculateTruncatedHash(q.seed[:])
-	q.seed = common.Entropy(truncatedHash)
+	q.seed = Entropy(truncatedHash)
 	return
 }
 

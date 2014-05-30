@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"common"
 	"encoding/gob"
 	"fmt"
 	"network"
@@ -44,7 +43,7 @@ func (j JoinRequest) process(p *Participant) {
 	// add hopefuls to any available slots
 	// quorum is already locked by compile()
 	i := 0
-	for i < common.QuorumSize {
+	for i < QuorumSize {
 		if p.quorum.siblings[i] == nil {
 			// perhaps there is a better way to do this???
 			// also, there is an attack this opens up where someone submits you as a

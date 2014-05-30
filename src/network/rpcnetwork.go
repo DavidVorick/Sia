@@ -1,7 +1,6 @@
 package network
 
 import (
-	"common"
 	"errors"
 	"net"
 	"net/rpc"
@@ -91,7 +90,7 @@ func (rpcs *RPCServer) SendMessage(m *Message) error {
 	select {
 	case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
 		return call.Error
-	case <-time.After(common.StepDuration / 2):
+	case <-time.After(time.Second * 5):
 		return errors.New("request timed out")
 	}
 }
@@ -116,7 +115,7 @@ func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
 		case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
 			errChan <- call.Error
 			return
-		case <-time.After(common.StepDuration / 2):
+		case <-time.After(time.Second * 5):
 			errChan <- errors.New("request timed out")
 			return
 		}
