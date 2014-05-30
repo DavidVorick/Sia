@@ -5,6 +5,87 @@ import (
 	"testing"
 )
 
+func TestPublicKeyCompare(t *testing.T) {
+	// compare nil public keys
+	var pk0 *PublicKey
+	var pk1 *PublicKey
+	compare := pk0.Compare(pk1)
+	if compare {
+		t.Error("Comparing nil public keys return true")
+	}
+
+	// compare when one public key is nil
+	pk0, _, err := CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare = pk0.Compare(pk1)
+	if compare {
+		t.Error("Comparing a nil public key returns true")
+	}
+	compare = pk1.Compare(pk0)
+	if compare {
+		t.Error("Comparing a nil public key returns true")
+	}
+
+	// compare unequal public keys
+	pk1, _, err = CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare = pk0.Compare(pk1)
+	if compare {
+		t.Error("Arbitray public keys being compared as identical")
+	}
+	compare = pk1.Compare(pk0)
+	if compare {
+		t.Error("Arbitrary public keys being compared as identical")
+	}
+
+	// compare a key to itself
+	compare = pk0.Compare(pk0)
+	if !compare {
+		t.Error("A key returns false when comparing with itself")
+	}
+
+	// compare some manufactured identical keys
+	// compare when nil values are contained within the struct (lower priority)
+}
+
+func TestPublicKeyEncoding(t *testing.T) {
+	// Encode and Decode nil values
+	var pk *PublicKey
+	_, _ = pk.GobEncode() // checking for panics
+	pk = new(PublicKey)
+	_, _ = pk.GobEncode() // checking for panics
+
+	_ = pk.GobDecode(nil) // checking for panics
+
+	// Encode and then Decode, see if the results are identical
+	pubKey, _, err := CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ePubKey, err := pubKey.GobEncode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = pk.GobDecode(ePubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare := pk.Compare(pubKey)
+	if !compare {
+		t.Error("Encoded and then decoded key not equal")
+	}
+	compare = pubKey.Compare(pk)
+	if !compare {
+		t.Error("Encoded and then decoded key not equal")
+	}
+
+	// Decode bad values and wrong values
+}
+
 // Basic testing of key creation, signing, and verification
 // Implicitly tests SignedMessage.CombinedMessage()
 //
@@ -36,7 +117,7 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify empty message when signature is bad
-	msg.Signature.R.Sub(msg.Signature.R, big.NewInt(1))
+	msg.Signature.r.Sub(msg.Signature.r, big.NewInt(1))
 	verified = publicKey.Verify(&msg)
 	if verified {
 		t.Error("Verified a signed empty message with forged signature")
@@ -74,14 +155,14 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify an imposter signature
-	signedMessage.Signature.R.Sub(msg.Signature.R, big.NewInt(1))
+	signedMessage.Signature.r.Sub(msg.Signature.r, big.NewInt(1))
 	verification = publicKey.Verify(&signedMessage)
 	if verification {
 		t.Error("sucessfully verified an invalid message")
 	}
 
 	// restore the signature and fake a message
-	signedMessage.Signature.R.Add(msg.Signature.R, big.NewInt(1))
+	signedMessage.Signature.r.Add(msg.Signature.r, big.NewInt(1))
 	signedMessage.Message[0] = 0
 	verification = publicKey.Verify(&signedMessage)
 	if verification {

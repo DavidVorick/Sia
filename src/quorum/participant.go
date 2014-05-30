@@ -25,8 +25,8 @@ type Participant struct {
 	quorum quorum
 
 	// Variables local to the participant
-	self      *Sibling            // the sibling object for this participant
-	secretKey siacrypto.SecretKey // secret key matching self.publicKey
+	self      *Sibling             // the sibling object for this participant
+	secretKey *siacrypto.SecretKey // secret key matching self.publicKey
 
 	// Network Related Variables
 	messageRouter network.MessageRouter

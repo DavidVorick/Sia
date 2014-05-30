@@ -1,15 +1,105 @@
 package siacrypto
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/gob"
 	"fmt"
+	"math/big"
 )
+
+// The underlying variables to the keys & signatures should not be exported
+type PublicKey struct {
+	key *ecdsa.PublicKey
+}
+type SecretKey struct {
+	key *ecdsa.PrivateKey
+}
+type Signature struct {
+	r, s *big.Int
+}
 
 type SignedMessage struct {
 	Signature Signature
 	Message   []byte
+}
+
+// Compare returns true if the keys are composed of the same integer values
+// Compare returns false if any sub-value is nil
+func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
+	// check for nil values
+	if pk0 == nil || pk1 == nil {
+		return false
+	}
+	if pk0.key == nil || pk1.key == nil {
+		return false
+	}
+	if pk0.key.X == nil || pk0.key.Y == nil || pk1.key.X == nil || pk1.key.Y == nil {
+		return false
+	}
+
+	cmp := pk0.key.X.Cmp(pk1.key.X)
+	if cmp != 0 {
+		return false
+	}
+
+	cmp = pk0.key.Y.Cmp(pk1.key.Y)
+	if cmp != 0 {
+		return false
+	}
+
+	return true
+}
+
+func (pk *PublicKey) GobEncode() (gobPk []byte, err error) {
+	if pk == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if pk.key == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if pk.key.X == nil || pk.key.Y == nil {
+		err = fmt.Errorf("public key not properly initialized")
+		return
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(pk.key.X)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(pk.key.Y)
+	if err != nil {
+		return
+	}
+	gobPk = w.Bytes()
+	return
+}
+
+func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
+	if pk == nil {
+		err = fmt.Errorf("Cannot decode into nil value")
+		return
+	}
+	pk.key = new(ecdsa.PublicKey)
+
+	r := bytes.NewBuffer(gobPk)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&pk.key.X)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&pk.key.Y)
+	if err != nil {
+		return
+	}
+	pk.key.Curve = elliptic.P521() // might there be a way to make this const?
+	return
 }
 
 // Return a []byte containing both the message and the prepended signature
@@ -26,10 +116,16 @@ func (sm *SignedMessage) CombinedMessage() (combinedMessage []byte, err error) {
 }
 
 // CreateKeyPair needs no input, produces a public key and secret key as output
-func CreateKeyPair() (publicKey *PublicKey, secretKey SecretKey, err error) {
+func CreateKeyPair() (publicKey *PublicKey, secretKey *SecretKey, err error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	secretKey.key = *priv
-	publicKey.key = priv.PublicKey
+	if err != nil {
+		return
+	}
+
+	secretKey = new(SecretKey)
+	secretKey.key = priv
+	publicKey = new(PublicKey)
+	publicKey.key = &priv.PublicKey
 	return
 }
 
@@ -46,7 +142,7 @@ func (secKey *SecretKey) Sign(message []byte) (signedMessage SignedMessage, err 
 		return
 	}
 
-	r, s, err := ecdsa.Sign(rand.Reader, &secKey.key, []byte(message))
+	r, s, err := ecdsa.Sign(rand.Reader, secKey.key, []byte(message))
 	signedMessage.Signature.r = r
 	signedMessage.Signature.s = s
 	signedMessage.Message = message
@@ -60,6 +156,6 @@ func (pk *PublicKey) Verify(signedMessage *SignedMessage) (verified bool) {
 		return false
 	}
 
-	verified = ecdsa.Verify(&pk.key, []byte(signedMessage.Message), signedMessage.Signature.r, signedMessage.Signature.s)
+	verified = ecdsa.Verify(pk.key, []byte(signedMessage.Message), signedMessage.Signature.r, signedMessage.Signature.s)
 	return
 }
