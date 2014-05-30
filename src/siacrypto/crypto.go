@@ -18,36 +18,34 @@ const (
 	TruncatedHashSize int = 32
 )
 
-type PublicKey ecdsa.PublicKey
-type SecretKey ecdsa.PrivateKey
-type Signature struct {
-	R, S *big.Int
+// The underlying variables to the keys & signatures should not be exported
+type PublicKey struct {
+	key ecdsa.PublicKey
 }
+type SecretKey struct {
+	key ecdsa.PrivateKey
+}
+type Signature struct {
+	r, s *big.Int
+}
+
 type Hash [HashSize]byte
 type TruncatedHash [TruncatedHashSize]byte
 
 // Compare returns true if the keys are composed of the same integer values
 // Compare returns false if any sub-value is nil
 func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
-	epk0 := (*ecdsa.PublicKey)(pk0)
-	epk1 := (*ecdsa.PublicKey)(pk1)
-
-	// return false if either value is nil
-	if epk0 == nil || epk1 == nil {
-		return false
-	}
-
 	// return false if either sub-value is nil
-	if epk0.X == nil || epk0.Y == nil || epk1.X == nil || epk1.Y == nil {
+	if pk0.key.X == nil || pk0.key.Y == nil || pk1.key.X == nil || pk1.key.Y == nil {
 		return false
 	}
 
-	cmp := epk0.X.Cmp(epk1.X)
+	cmp := pk0.key.X.Cmp(pk1.key.X)
 	if cmp != 0 {
 		return false
 	}
 
-	cmp = epk0.Y.Cmp(epk1.Y)
+	cmp = pk0.key.Y.Cmp(pk1.key.Y)
 	if cmp != 0 {
 		return false
 	}
@@ -55,13 +53,13 @@ func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	return true
 }
 
+// Creates a deterministic hash of the public keys
 func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
-	epk := (*ecdsa.PublicKey)(pk)
-	if epk.X == nil || epk.Y == nil {
+	if pk.key.X == nil || pk.key.Y == nil {
 		return
 	}
 
-	combinedKey := append(epk.X.Bytes(), epk.Y.Bytes()...)
+	combinedKey := append(pk.key.X.Bytes(), pk.key.Y.Bytes()...)
 	hash, err = CalculateTruncatedHash(combinedKey)
 	return
 }
@@ -72,19 +70,18 @@ func (pk *PublicKey) GobEncode() (gobPk []byte, err error) {
 		return
 	}
 
-	epk := (*ecdsa.PublicKey)(pk)
-	if epk.X == nil || epk.Y == nil {
-		err = fmt.Errorf("Cannot encode a nil value")
+	if pk.key.X == nil || pk.key.Y == nil {
+		err = fmt.Errorf("public key not properly initialized")
 		return
 	}
 
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(epk.X)
+	err = encoder.Encode(pk.key.X)
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(epk.Y)
+	err = encoder.Encode(pk.key.Y)
 	if err != nil {
 		return
 	}
@@ -93,17 +90,16 @@ func (pk *PublicKey) GobEncode() (gobPk []byte, err error) {
 }
 
 func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
-	epk := (*ecdsa.PublicKey)(pk)
 	r := bytes.NewBuffer(gobPk)
 	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&epk.X)
+	err = decoder.Decode(&pk.key.X)
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&epk.Y)
+	err = decoder.Decode(&pk.key.Y)
 	if err != nil {
 		return
 	}
-	epk.Curve = elliptic.P521() // might there be a way to make this const?
+	pk.key.Curve = elliptic.P521() // might there be a way to make this const?
 	return
 }

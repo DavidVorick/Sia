@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 )
 
+// returns the sha512 hash of the input []byte
 func CalculateHash(data []byte) (hash Hash, err error) {
 	sha := sha512.New()
 	sha.Write(data)

@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/gob"
 	"fmt"
 	"logger"
@@ -77,15 +76,6 @@ func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	}
 	if s.publicKey == nil {
 		err = fmt.Errorf("Cannot encode nil value s.publicKey")
-		return
-	}
-	epk := (*ecdsa.PublicKey)(s.publicKey)
-	if epk.X == nil {
-		err = fmt.Errorf("Cannot encode nil value s.publicKey.X")
-		return
-	}
-	if epk.Y == nil {
-		err = fmt.Errorf("Cannot encode nil value s.publicKey.Y")
 		return
 	}
 
