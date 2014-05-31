@@ -28,6 +28,8 @@ func TestRandomByteSlice(t *testing.T) {
 	// add a statistical test to verify that the data appears random
 }
 
+// Benchmark function for RandomByteSlice
+
 func TestRandomInt(t *testing.T) {
 	// test 1 as a ceiling in range [0, 1)
 	zero, err := RandomInt(1)
@@ -45,3 +47,5 @@ func TestRandomInt(t *testing.T) {
 
 	// a series of tests that stastically checks for randomness
 }
+
+// Benchmark function for RandomInt

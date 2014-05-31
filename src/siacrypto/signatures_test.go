@@ -170,4 +170,4 @@ func TestSigning(t *testing.T) {
 	}
 }
 
-// There should probably be some benchmarking
+// test CombinedMessage when the message is nil

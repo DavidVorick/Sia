@@ -6,9 +6,8 @@ import (
 	"math/big"
 )
 
-// This function gets its own file because I like to have
-// the flexibility in deciding to change which random number
-// generator to use.
+// RandomByteSlice takes an int as input and returns a []byte of length int that
+// is full of random values
 func RandomByteSlice(numBytes int) (randomBytes []byte, err error) {
 	if numBytes < 0 {
 		err = fmt.Errorf("RandomByteSlice: cannot generate a negative number of bytes")

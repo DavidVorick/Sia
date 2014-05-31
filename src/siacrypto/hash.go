@@ -22,7 +22,7 @@ func CalculateHash(data []byte) (hash Hash, err error) {
 	return
 }
 
-// Calls Hash, and then returns only the first TruncatedHashSize bytes
+// Calls CalculateHash, and then returns only the first TruncatedHashSize bytes
 func CalculateTruncatedHash(data []byte) (tHash TruncatedHash, err error) {
 	hash, err := CalculateHash(data)
 	if err != nil {
