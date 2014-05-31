@@ -1,4 +1,4 @@
-#include "../quorum/erasure/longhair/include/cauchy_256.h"
+#include "longhair/include/cauchy_256.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
