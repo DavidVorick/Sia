@@ -47,9 +47,6 @@ func TestPublicKeyCompare(t *testing.T) {
 	if !compare {
 		t.Error("A key returns false when comparing with itself")
 	}
-
-	// compare some manufactured identical keys
-	// compare when nil values are contained within the struct (lower priority)
 }
 
 func TestPublicKeyEncoding(t *testing.T) {
@@ -82,14 +79,9 @@ func TestPublicKeyEncoding(t *testing.T) {
 	if !compare {
 		t.Error("Encoded and then decoded key not equal")
 	}
-
-	// Decode bad values and wrong values
 }
 
-// Basic testing of key creation, signing, and verification
-// Implicitly tests SignedMessage.CombinedMessage()
-//
-// Test takes .4 seconds to run... why?
+// Test takes .4 seconds to run, which is too long
 func TestSigning(t *testing.T) {
 	// Create a keypair
 	publicKey, secretKey, err := CreateKeyPair()
@@ -170,4 +162,25 @@ func TestSigning(t *testing.T) {
 	}
 }
 
-// test CombinedMessage when the message is nil
+func TestCombinedMessage(t *testing.T) {
+	_, secretKey, err := CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	randomByteSlice, err := RandomByteSlice(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedMessage, err := secretKey.Sign(randomByteSlice)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signedMessage.Message = nil
+
+	_, err = signedMessage.CombinedMessage()
+	if err != nil {
+		t.Error(err)
+	}
+}
