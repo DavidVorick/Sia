@@ -1,19 +1,20 @@
+// none of the functions in this file perform error checking, all that must be
+// done by the calling functions. Insecure use of these functions WILL cause
+// segmentation faults
+
 #include "longhair/include/cauchy_256.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 // encodeRedundancy takes as input a 'k', the number of nonredundant segments
-// and an 'm', the number of redundant segments. k + m must be less than 256.
+// and an 'm', the number of redundant segments. k + m must be less than 255.
 // bytesPerSegment is the size of each segment, and then originalBlock is a pointer
 // to the original data, which is assumed to be of size k * bytesPerSegment
 //
 // The return value is a block of data m * bytesPerSegment which contains all of
 // the redundant data. The data does not get segmented into pieces in this
 // function.
-//
-// encodeRedundancy does not do any error checking, all of that must happen
-// in the calling function.
 static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalBlock) {
 	// verify that correct library is linked
 	if(cauchy_256_init()) {
@@ -143,11 +144,5 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 		exit(1);
 	}
 
-	/* sort memory back into original order */
-	/* because I want to push sooner rather than later, I'm using an n^2 sort */
-	/* eventually, I'll implement something more efficient */
-
-	// allocate space to copy memory into
-	
 	inPlaceSort(segmentInfo, bytesPerSegment, 0, k);
 }

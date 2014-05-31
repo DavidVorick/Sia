@@ -1,8 +1,8 @@
 Each package can include any package in a higher layer.
 
 [logger]
-[network] [siacrypto]
+[network] [siacrypto] [erasure]
 [quorum]
-[quorum/erasure] [quorum/script]
+[quorum/script]
 [participant]
 [client] [server]
