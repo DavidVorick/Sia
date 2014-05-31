@@ -13,17 +13,6 @@ const (
 type Hash [HashSize]byte
 type TruncatedHash [TruncatedHashSize]byte
 
-// Creates a deterministic hash of the public keys
-func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
-	if pk.key.X == nil || pk.key.Y == nil {
-		return
-	}
-
-	combinedKey := append(pk.key.X.Bytes(), pk.key.Y.Bytes()...)
-	hash, err = CalculateTruncatedHash(combinedKey)
-	return
-}
-
 // returns the sha512 hash of the input []byte
 func CalculateHash(data []byte) (hash Hash, err error) {
 	sha := sha512.New()

@@ -5,7 +5,13 @@ import (
 )
 
 func TestRandomByteSlice(t *testing.T) {
-	randomByteSlice, err := RandomByteSlice(400)
+	// run tests with bogus input
+	randomByteSlice, err := RandomByteSlice(-3)
+	if err == nil {
+		t.Error("RandomByteSlice is accepting negative values")
+	}
+
+	randomByteSlice, err = RandomByteSlice(400)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -14,11 +20,12 @@ func TestRandomByteSlice(t *testing.T) {
 		t.Fatal("Incorrect number of bytes generated!")
 	}
 
-	// add a statistical test to verify that the data appears
-	// random
+	randomByteSlice, err = RandomByteSlice(0)
+	if len(randomByteSlice) != 0 {
+		t.Error("unspecified behavoir when calling RandomByteSlice(0)")
+	}
 
-	// there should be a longer test, and perhaps a benchmark
-	// which generates a very large random slice
+	// add a statistical test to verify that the data appears random
 }
 
 func TestRandomInt(t *testing.T) {
@@ -29,6 +36,11 @@ func TestRandomInt(t *testing.T) {
 	}
 	if zero != 0 {
 		t.Fatal("Expecting rng to produce 0!")
+	}
+
+	zero, err = RandomInt(0)
+	if err == nil {
+		t.Error("Expecting RandomInt(0) to produce an error!")
 	}
 
 	// a series of tests that stastically checks for randomness

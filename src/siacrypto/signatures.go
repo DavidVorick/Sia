@@ -21,9 +21,26 @@ type Signature struct {
 	r, s *big.Int
 }
 
+// A SignedMessage contains a message and a signature of the message
 type SignedMessage struct {
 	Signature Signature
 	Message   []byte
+}
+
+// Creates a deterministic hash of a public key
+func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
+	if pk == nil {
+		err = fmt.Errorf("Cannot hash a nil public key")
+		return
+	}
+	if pk.key.X == nil || pk.key.Y == nil {
+		err = fmt.Errorf("Cannot hash an improperly initialized public key")
+		return
+	}
+
+	combinedKey := append(pk.key.X.Bytes(), pk.key.Y.Bytes()...)
+	hash, err = CalculateTruncatedHash(combinedKey)
+	return
 }
 
 // Compare returns true if the keys are composed of the same integer values
@@ -86,6 +103,7 @@ func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
 		err = fmt.Errorf("Cannot decode into nil value")
 		return
 	}
+
 	pk.key = new(ecdsa.PublicKey)
 
 	r := bytes.NewBuffer(gobPk)
@@ -102,16 +120,20 @@ func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
 	return
 }
 
-// Return a []byte containing both the message and the prepended signature
+// Return a []byte containing a signature followed by the signed message
 func (sm *SignedMessage) CombinedMessage() (combinedMessage []byte, err error) {
 	if sm == nil {
 		err = fmt.Errorf("Cannot combine a nil signedMessage")
 		return
 	}
 
+	if sm.Signature.r == nil || sm.Signature.s == nil {
+		err = fmt.Errorf("Signature has been improperly initialized")
+		return
+	}
+
 	combinedMessage = append(sm.Signature.r.Bytes(), sm.Signature.s.Bytes()...)
 	combinedMessage = append(combinedMessage, sm.Message...)
-
 	return
 }
 
@@ -136,13 +158,20 @@ func (secKey *SecretKey) Sign(message []byte) (signedMessage SignedMessage, err 
 		err = fmt.Errorf("Cannot sign using a nil SecretKey")
 		return
 	}
-
+	if secKey.key == nil {
+		err = fmt.Errorf("Secret Key not properly initialized")
+		return
+	}
+	if secKey.key.X == nil || secKey.key.Y == nil {
+		err = fmt.Errorf("Secret Key not properly initialized")
+		return
+	}
 	if message == nil {
 		err = fmt.Errorf("Cannot sign a nil message")
 		return
 	}
 
-	r, s, err := ecdsa.Sign(rand.Reader, secKey.key, []byte(message))
+	r, s, err := ecdsa.Sign(rand.Reader, secKey.key, (message))
 	signedMessage.Signature.r = r
 	signedMessage.Signature.s = s
 	signedMessage.Message = message
@@ -153,7 +182,13 @@ func (secKey *SecretKey) Sign(message []byte) (signedMessage SignedMessage, err 
 // returns whether the signature is valid or not
 func (pk *PublicKey) Verify(signedMessage *SignedMessage) (verified bool) {
 	if pk == nil || signedMessage == nil {
-		return false
+		return
+	}
+	if pk.key == nil {
+		return
+	}
+	if pk.key.X == nil || pk.key.Y == nil {
+		return
 	}
 
 	verified = ecdsa.Verify(pk.key, []byte(signedMessage.Message), signedMessage.Signature.r, signedMessage.Signature.s)
