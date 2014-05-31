@@ -6,8 +6,8 @@ import (
 )
 
 func TestEncodeAndRecover(t *testing.T) {
-	originalData := siacrypto.RandomByteSlice(960)
-	decoded, err := EncodeRedundancy(8, 3, originalData)
+	originalData := siacrypto.RandomByteSlice(1080)
+	decoded, err := EncodeRedundancy(9, 3, originalData)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,7 +18,7 @@ func TestEncodeAndRecover(t *testing.T) {
 		indicies[index] = index+3
 	}
 
-	recoveredData, err := Recover(8, 3, corrupted, indicies)
+	recoveredData, err := Recover(9, 3, corrupted, indicies)
 
 	for i := range recoveredData {
 		if recoveredData[i] != originalData[i] {
