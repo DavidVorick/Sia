@@ -58,6 +58,5 @@ We expect to have a basic demo complete by April 25th, but only of the quorums. 
 Where Can I Learn More?
 =======================
 
-Primary Contact: David Vorick, david.vorick@gmail.com  
-Secondary Contact: Luke Champine, luke.champine@gmail.com  
-Mailing List: sia-dev@googlegroups.com  
+Primary Contact: David Vorick, david@nebulouslabs.com
+Secondary Contact: Luke Champine, luke@nebulouslabs.com
