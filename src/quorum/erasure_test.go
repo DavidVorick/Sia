@@ -1,7 +1,6 @@
-package erasure
+package quorum
 
 import (
-	"quorum"
 	"siacrypto"
 	"testing"
 )
@@ -10,8 +9,8 @@ import (
 // will produce the correct results.
 func TestCoding(t *testing.T) {
 	// set encoding parameters
-	k := quorum.QuorumSize / 2
-	m := quorum.QuorumSize - k
+	k := QuorumSize / 2
+	m := QuorumSize - k
 	b := 1024
 
 	// create sector data
@@ -21,7 +20,7 @@ func TestCoding(t *testing.T) {
 	}
 
 	// create sector
-	sec, err := quorum.NewSector(randomBytes)
+	sec, err := NewSector(randomBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,8 +35,8 @@ func TestCoding(t *testing.T) {
 	}
 
 	// create Ring from subset of encoded segments
-	var newRing []quorum.Segment
-	for i := m; i < quorum.QuorumSize; i++ {
+	var newRing []Segment
+	for i := m; i < QuorumSize; i++ {
 		newRing = append(newRing, ring[i])
 	}
 

@@ -24,7 +24,7 @@ func uploadSector(sec *quorum.Sector) (err error) {
 	}
 
 	// create ring
-	ring, err := erasure.EncodeRing(sec, rh.Params)
+	ring, err := quorum.EncodeRing(sec, rh.Params)
 	if err != nil {
 		return
 	}
@@ -82,7 +82,7 @@ func downloadSector(hash siacrypto.Hash) (sec *quorum.Sector, err error) {
 	}
 
 	// rebuild file
-	sec, err = erasure.RebuildSector(segs, rh.Params)
+	sec, err = quorum.RebuildSector(segs, rh.Params)
 	return
 }
 

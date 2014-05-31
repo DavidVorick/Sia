@@ -79,7 +79,7 @@ func TestRPCuploadSector(t *testing.T) {
 		newRing = append(newRing, shs[i].seg)
 	}
 
-	sec, err = erasure.RebuildSector(newRing, SectorDB[sec.Hash].Params)
+	sec, err = quorum.RebuildSector(newRing, SectorDB[sec.Hash].Params)
 	if err != nil {
 		t.Fatal("Failed to rebuild file:", err)
 	}
@@ -117,7 +117,7 @@ func TestRPCdownloadSector(t *testing.T) {
 	params := sec.CalculateParams(k)
 
 	// encode sector
-	ring, err := erasure.EncodeRing(sec, params)
+	ring, err := quorum.EncodeRing(sec, params)
 	if err != nil {
 		t.Fatal("Failed to encode sector data:", err)
 	}

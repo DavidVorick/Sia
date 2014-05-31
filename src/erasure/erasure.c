@@ -1,4 +1,4 @@
-#include "longhair/include/cauchy_256.h"
+#include "../quorum/erasure/longhair/include/cauchy_256.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,8 +14,6 @@
 //
 // encodeRedundancy does not do any error checking, all of that must happen
 // in the calling function.
-
-
 static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalBlock) {
 	// verify that correct library is linked
 	if(cauchy_256_init()) {
@@ -124,7 +122,7 @@ static void inPlaceSort(Block segmentInfo[], int bytesPerSegment, int start, int
 //
 // The data is edited and sorted in place. Upon returning, 'remainingSegments'
 // will be the original data in order.
-static void recoverData(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndicies) {
+static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndicies) {
 	// verify that correct library is linked
 	if(cauchy_256_init()) {
 		//error
@@ -153,5 +151,3 @@ static void recoverData(int k, int m, int bytesPerSegment, unsigned char *remain
 	
 	inPlaceSort(segmentInfo, bytesPerSegment, 0, k);
 }
-
-
