@@ -11,18 +11,18 @@ func TestSiblingCompare(t *testing.T) {
 	var p1 *Sibling
 
 	// compare nil values
-	compare := p0.compare(p1)
+	compare := p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing any nil participant should return false")
 	}
 
 	// compare when one is nil
 	p0 = new(Sibling)
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing a zero participant to a nil participant should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare == true {
 		t.Error("Comparing a zero participant to a nil participant should return false")
 	}
@@ -38,22 +38,22 @@ func TestSiblingCompare(t *testing.T) {
 	*p0.publicKey = *p1.publicKey
 
 	// compare initialized participants
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if !compare {
 		t.Error("Comparing two zero participants should return true")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if !compare {
 		t.Error("Comparing two zero participants should return true")
 	}
 
 	// compare when address are not equal
 	p1.address.Port = 9987
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare {
 		t.Error("Comparing two participants with different addresses should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare {
 		t.Error("Comparing two zero participants with different addresses should return false")
 	}
@@ -64,11 +64,11 @@ func TestSiblingCompare(t *testing.T) {
 		t.Fatal(err)
 	}
 	p1.publicKey = pubKey
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
 	}
@@ -93,7 +93,11 @@ func TestSiblingEncoding(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.publicKey = pubKey
-	p.address = bootstrapAddress
+	p.address = network.Address{
+		ID:   3,
+		Host: "localhost",
+		Port: 9950,
+	}
 
 	up := new(Sibling)
 	ep, err := p.GobEncode()
@@ -124,14 +128,11 @@ func TestSiblingEncoding(t *testing.T) {
 
 // check general case, check corner cases, and then do some fuzzing
 func TestRandInt(t *testing.T) {
-	p, err := CreateParticipant(network.NewDebugNetwork())
-	if err != nil {
-		t.Fatal(err)
-	}
+	q := new(Quorum)
 
 	// check that it works in the vanilla case
-	previousSeed := p.quorum.seed
-	randInt, err := p.quorum.randInt(0, 5)
+	previousSeed := q.seed
+	randInt, err := q.randInt(0, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,14 +141,14 @@ func TestRandInt(t *testing.T) {
 	}
 
 	// check that s.CurrentEntropy flipped to next value
-	if previousSeed == p.quorum.seed {
+	if previousSeed == q.seed {
 		t.Error(previousSeed)
-		t.Error(p.quorum.seed)
+		t.Error(q.seed)
 		t.Fatal("When calling randInt, s.CurrentEntropy was not changed")
 	}
 
 	// check the zero value
-	randInt, err = p.quorum.randInt(0, 0)
+	randInt, err = q.randInt(0, 0)
 	if err == nil {
 		t.Fatal("Randint(0,0) should return a bounds error")
 	}
@@ -160,7 +161,7 @@ func TestRandInt(t *testing.T) {
 	low := 0
 	high := QuorumSize
 	for i := 0; i < 100000; i++ {
-		randInt, err = p.quorum.randInt(low, high)
+		randInt, err = q.randInt(low, high)
 		if err != nil {
 			t.Fatal("randInt fuzzing error: ", err, " low: ", low, " high: ", high)
 		}
