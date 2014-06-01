@@ -30,8 +30,8 @@ func (s *Sibling) PublicKey() siacrypto.PublicKey {
 
 func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 	return &Sibling{
-		index: 255,
-		address: address,
+		index:     255,
+		address:   address,
 		publicKey: key,
 	}
 }

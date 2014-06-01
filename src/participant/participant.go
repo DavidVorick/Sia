@@ -32,6 +32,14 @@ type Participant struct {
 	tickingLock sync.Mutex
 }
 
+func (p *Participant) Subscribe(a network.Address, arb *struct{}) (err error) {
+	// add the address to listeners
+	p.listenersLock.Lock()
+	p.listeners = append(p.listeners, a)
+	p.listenersLock.Unlock()
+	return
+}
+
 func (p *Participant) TransferQuorum(arb *struct{}, encodedQuorum *[]byte) (err error) {
 	// lock the quorum before making major changes
 	gobQuorum, err := p.quorum.GobEncode()
@@ -39,14 +47,6 @@ func (p *Participant) TransferQuorum(arb *struct{}, encodedQuorum *[]byte) (err 
 		return
 	}
 	*encodedQuorum = gobQuorum
-	return
-}
-
-func (p *Participant) Subscribe(a network.Address, arb *struct{}) (err error) {
-	// add the address to listeners
-	p.listenersLock.Lock()
-	p.listeners = append(p.listeners, a)
-	p.listenersLock.Unlock()
 	return
 }
 
@@ -84,23 +84,26 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 		return
 	}
 
+	// Can this be merged into one step?
+	address := messageRouter.Address()
+	address.ID = messageRouter.RegisterHandler(p)
+
 	// initialize State with default values and keypair
 	p = &Participant{
 		messageRouter: messageRouter,
-		self: quorum.NewSibling(messageRouter.Address(), pubKey),
+		self: quorum.NewSibling(address, pubKey),
 		secretKey:   secKey,
 		currentStep: 1,
 	}
 
-	// register State and store our assigned ID
-	// to-do: write a test for RegisterHandler related functions
-	p.self.address.ID = messageRouter.RegisterHandler(p)
+	// initialize heartbeat maps
+	for i := range p.heartbeats {
+		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+	}
 
 	// if we are the bootstrap participant, initialize a new quorum
-	if p.self.address == bootstrapAddress {
-		p.self.index = 0
-		p.heartbeats[p.self.index] = make(map[siacrypto.TruncatedHash]*heartbeat)
-		p.quorum.siblings[p.self.index] = p.self
+	if p.self.Address() == bootstrapAddress {
+		p.quorum.AddSibling(p.self)
 		p.newSignedHeartbeat()
 		go p.tick()
 		return
@@ -111,7 +114,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.Subscribe",
-		Args: p.self.address,
+		Args: p.self.Address(),
 		Resp: nil,
 	})
 	if err != nil {
@@ -119,17 +122,17 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	}
 
 	// Get the current quorum struct
-	quorum := new(Quorum)
+	q := new(quorum.Quorum)
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.TransferQuorum",
 		Args: nil,
-		Resp: quorum,
+		Resp: q,
 	})
 	if err != nil {
 		return
 	}
-	p.quorum = *quorum
+	p.quorum = *q
 
 	// Synchronize to the current quorum
 	synchronize := new(Synchronize)

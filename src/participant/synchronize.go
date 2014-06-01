@@ -1,6 +1,8 @@
 package participant
 
 import (
+	"bytes"
+	"encoding/gob"
 	"quorum"
 	"siacrypto"
 )
