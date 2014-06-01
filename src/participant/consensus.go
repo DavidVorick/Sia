@@ -12,50 +12,11 @@ import (
 	"time"
 )
 
-type heartbeat struct {
-	entropy quorum.Entropy
-}
-
 type SignedHeartbeat struct {
 	heartbeat     *heartbeat
 	heartbeatHash siacrypto.TruncatedHash
 	signatories   []byte                // a list of everyone who's seen the heartbeat
 	signatures    []siacrypto.Signature // their corresponding signatures
-}
-
-// Convert heartbeat to []byte
-func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
-	// if hb == nil, encode a zero heartbeat
-	if hb == nil {
-		hb = new(heartbeat)
-	}
-
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(hb.entropy)
-	if err != nil {
-		return
-	}
-
-	gobHeartbeat = w.Bytes()
-	return
-}
-
-// Convert []byte to heartbeat
-func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
-	// if hb == nil, make a new heartbeat and decode into that
-	if hb == nil {
-		err = fmt.Errorf("Cannot decode into nil heartbeat")
-		return
-	}
-
-	r := bytes.NewBuffer(gobHeartbeat)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&hb.entropy)
-	if err != nil {
-		return
-	}
-	return
 }
 
 // Takes a signed heartbeat and broadcasts it to the quorum
@@ -321,52 +282,6 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 	err = decoder.Decode(&sh.signatures)
 	if err != nil {
 		return
-	}
-
-	return
-}
-
-// compile() takes the list of heartbeats and uses them to advance the state.
-//
-// Needs updated error handling
-func (p *Participant) compile() {
-	// Lock down s.heartbeats and quorum for editing
-	p.heartbeatsLock.Lock()
-
-	// fetch a sibling ordering
-	siblingOrdering := p.quorum.SiblingOrdering()
-
-	// Read heartbeats, process them, then archive them.
-	for _, i := range siblingOrdering {
-		// each sibling must submit exactly 1 heartbeat
-		if len(p.heartbeats[i]) != 1 {
-			fmt.Println("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
-			p.quorum.TossSibling(i)
-			continue
-		}
-
-		// this is the only way I know to access the only element of a map;
-		// the key is unknown
-		fmt.Println("Confirming Sibling", i)
-		for _, hb := range p.heartbeats[i] {
-			p.quorum.IntegrateSiblingEntropy(hb.entropy)
-		}
-
-		// clear heartbeat list for next block
-		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
-	}
-
-	// copy the new seed into the quorum
-	p.quorum.IntegrateGerm()
-
-	// print the status of the quorum after compiling
-	fmt.Print(p.quorum.Status())
-
-	p.heartbeatsLock.Unlock()
-
-	// create new heartbeat (it gets broadcast automatically), if in quorum
-	if p.self.Index() != 255 {
-		p.newSignedHeartbeat()
 	}
 
 	return

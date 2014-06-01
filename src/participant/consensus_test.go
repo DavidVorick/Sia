@@ -1,8 +1,8 @@
 package participant
 
 import (
-	"encoding/gob"
 	"network"
+	"quorum"
 	"reflect"
 	"siacrypto"
 	"testing"
@@ -10,8 +10,6 @@ import (
 )
 
 func TestHeartbeatEncoding(t *testing.T) {
-	gob.Register(JoinRequest{})
-
 	// encode a nil heartbeat
 	var hb *heartbeat
 	ehb, err := hb.GobEncode()
@@ -21,30 +19,13 @@ func TestHeartbeatEncoding(t *testing.T) {
 
 	// create entropy for the heartbeat
 	hb = new(heartbeat)
-	entropy, err := siacrypto.RandomByteSlice(EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(quorum.EntropyVolume)
 	if err != nil {
 		t.Fatal(err)
 	}
 	copy(hb.entropy[:], entropy)
 
-	// create a public key
-	pubKey, _, err := siacrypto.CreateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// add each type of update to the map
-	// currently there is only one type of update
-	joinRequest := JoinRequest{
-		Sibling: Sibling{
-			index:     255,
-			address:   bootstrapAddress,
-			publicKey: pubKey,
-		},
-	}
-	hb.updates = append(hb.updates, joinRequest)
-
-	// encode and decode the filled out heartbeat
+	// encode the filled out heartbeat
 	ehb, err = hb.GobEncode()
 	if err != nil {
 		t.Fatal(err)
@@ -347,7 +328,7 @@ func TestCompilationTick(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.stepLock.Lock()
-	p.currentStep = QuorumSize
+	p.currentStep = quorum.QuorumSize
 	p.stepLock.Unlock()
 
 	// verify that tick is wrapping around properly
