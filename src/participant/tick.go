@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	StepDuration time.Duration = 3 * time.Second
+	StepDuration time.Duration = 800 * time.Millisecond
 )
 
 // compile() takes the list of heartbeats and uses them to advance the state.
@@ -25,7 +25,7 @@ func (p *Participant) compile() {
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
-			fmt.Println("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
+			fmt.Printf("Tossing sibling %v for %v heartbeats\n", i, len(p.heartbeats[i]))
 			p.quorum.TossSibling(i)
 			continue
 		}

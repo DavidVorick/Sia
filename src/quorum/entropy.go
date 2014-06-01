@@ -42,15 +42,14 @@ func (q *Quorum) randInt(low int, high int) (randInt int, err error) {
 // entropy for the block. siblingOrdering() deterministically picks that
 // order, using entropy from the state.
 func (q *Quorum) SiblingOrdering() (siblingOrdering []byte) {
-	q.lock.RLock()
-	defer q.lock.RUnlock()
-
 	// create an in-order list of siblings, leaving out nil siblings
+	q.lock.RLock()
 	for i, s := range q.siblings {
 		if s != nil {
 			siblingOrdering = append(siblingOrdering, byte(i))
 		}
 	}
+	q.lock.RUnlock()
 
 	// shuffle the list of siblings
 	for i := range siblingOrdering {
@@ -79,7 +78,7 @@ func (q *Quorum) IntegrateSiblingEntropy(e Entropy) {
 		// error
 		return
 	}
-	copy(q.seed[:], th[:])
+	copy(q.germ[:], th[:])
 }
 
 // This will eventually be replaced with functionality that considers external

@@ -34,11 +34,6 @@ var bootstrapAddress = network.Address{
 	Port: 9988,
 }
 
-func (p *Participant) TransferQuorum(arb *struct{}, q *quorum.Quorum) (err error) {
-	*q = p.quorum
-	return
-}
-
 // CreateParticipant initializes a participant, and then either sets itself up
 // as the bootstrap or establishes itself as a sibling on an existing network
 func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err error) {
@@ -96,7 +91,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.TransferQuorum",
-		Args: 0, // why does changing 'nil' to '0' for just this one line stop a panic?
+		Args: false, // can't send nil :(
 		Resp: q,
 	})
 	if err != nil {
@@ -109,12 +104,16 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.Synchronize",
-		Args: nil,
+		Args: false, // can't send nil :(
 		Resp: synchronize,
 	})
 	if err != nil {
 		return
 	}
+
+	// lock not needed as this is the only thread
+	p.currentStep = synchronize.currentStep
+	p.heartbeats = synchronize.heartbeats
 
 	go p.tick()
 

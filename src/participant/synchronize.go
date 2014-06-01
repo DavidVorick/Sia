@@ -14,6 +14,27 @@ type Synchronize struct {
 	heartbeats  [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
 }
 
+func (p *Participant) TransferQuorum(_ bool, q *quorum.Quorum) (err error) {
+	*q = p.quorum
+	return
+}
+
+// Synchronize just sends over participant.currentStep, and is a temporary
+// function. It's not secure or trusted and is highely exploitable.
+//
+// This needs to be changed so that someone requests a synchronize, and a rv
+// is sent
+func (p *Participant) Synchronize(_ bool, s *Synchronize) (err error) {
+	p.stepLock.Lock()
+	s.currentStep = p.currentStep
+	p.stepLock.Unlock()
+
+	p.heartbeatsLock.Lock()
+	s.heartbeats = p.heartbeats
+	p.heartbeatsLock.Unlock()
+	return
+}
+
 func (s *Synchronize) GobEncode() (gobSynchronize []byte, err error) {
 	if s == nil {
 		s = new(Synchronize)
@@ -48,21 +69,5 @@ func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
 	if err != nil {
 		return
 	}
-	return
-}
-
-// Synchronize just sends over participant.currentStep, and is a temporary
-// function. It's not secure or trusted and is highely exploitable.
-//
-// This needs to be changed so that someone requests a synchronize, and a rv
-// is sent
-func (p *Participant) Synchronize(arb struct{}, s *Synchronize) (err error) {
-	p.stepLock.Lock()
-	s.currentStep = p.currentStep
-	p.stepLock.Unlock()
-
-	p.heartbeatsLock.Lock()
-	s.heartbeats = p.heartbeats
-	p.heartbeatsLock.Unlock()
 	return
 }
