@@ -54,17 +54,17 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 		return
 	}
 
-	// Can this be merged into one step?
-	address := messageRouter.Address()
-	address.ID = messageRouter.RegisterHandler(p)
-
 	// initialize State with default values and keypair
 	p = &Participant{
 		messageRouter: messageRouter,
-		self:          quorum.NewSibling(address, pubKey),
 		secretKey:     secKey,
 		currentStep:   1,
 	}
+
+	// Can this be merged into one step?
+	address := messageRouter.Address()
+	address.ID = messageRouter.RegisterHandler(p)
+	p.self = quorum.NewSibling(address, pubKey)
 
 	// initialize heartbeat maps
 	for i := range p.heartbeats {
@@ -96,7 +96,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.TransferQuorum",
-		Args: nil,
+		Args: 0, // why does changing 'nil' to '0' for just this one line stop a panic?
 		Resp: q,
 	})
 	if err != nil {

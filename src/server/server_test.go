@@ -2,6 +2,7 @@ package main
 
 import (
 	"network"
+	"participant"
 	"quorum"
 	"testing"
 	"time"
@@ -19,19 +20,19 @@ func TestNetworkedQuorum(t *testing.T) {
 		println("message sender creation failed")
 	}
 
-	_, err = quorum.CreateParticipant(rpcs)
+	_, err = participant.CreateParticipant(rpcs)
 	if err != nil {
 		println("p0 creation failed")
 	}
-	_, err = quorum.CreateParticipant(rpcs)
+	_, err = participant.CreateParticipant(rpcs)
 	if err != nil {
 		println("p1 creation failed")
 	}
-	_, err = quorum.CreateParticipant(rpcs)
+	_, err = participant.CreateParticipant(rpcs)
 	if err != nil {
 		println("p2 creation failed")
 	}
-	_, err = quorum.CreateParticipant(rpcs)
+	_, err = participant.CreateParticipant(rpcs)
 	if err != nil {
 		println("p3 creation failed")
 	}
@@ -41,7 +42,7 @@ func TestNetworkedQuorum(t *testing.T) {
 		t.Skip()
 	}
 
-	time.Sleep(3 * quorum.StepDuration * time.Duration(quorum.QuorumSize))
+	time.Sleep(3 * participant.StepDuration * time.Duration(quorum.QuorumSize))
 
 	// if no seg faults, no errors
 	// there needs to be a s0.ParticipantStatus() call returning a function with public information about the participant
