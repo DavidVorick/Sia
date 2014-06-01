@@ -3,6 +3,7 @@ package participant
 import (
 	"network"
 	"quorum"
+	"quorum/script"
 	"siacrypto"
 	"sync"
 )
@@ -21,8 +22,10 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
+	scripts        []*script.ScriptInput
 	heartbeats     [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock sync.Mutex
+	scriptsLock    sync.Mutex
 
 	// Consensus Algorithm Status
 	currentStep int

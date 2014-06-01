@@ -42,6 +42,12 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	}
 	copy(hb.entropy[:], entropy)
 
+	// Copy scripts
+	p.scriptsLock.Lock()
+	hb.scripts = p.scripts
+	p.scripts = nil
+	p.scriptsLock.Unlock()
+
 	sh := new(SignedHeartbeat)
 
 	// Place heartbeat into signed heartbeat with hash

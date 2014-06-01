@@ -333,7 +333,7 @@ func TestCompilationTick(t *testing.T) {
 
 	// verify that tick is wrapping around properly
 	time.Sleep(StepDuration)
-	time.Sleep(time.Second)
+	time.Sleep(25 * time.Millisecond)
 	p.stepLock.Lock()
 	if p.currentStep != 1 {
 		t.Error("p.currentStep failed to roll over:", p.currentStep)

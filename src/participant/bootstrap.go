@@ -1,9 +1,12 @@
 package participant
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"network"
 	"quorum"
+	"quorum/script"
 	"siacrypto"
 )
 
@@ -117,7 +120,20 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 
 	go p.tick()
 
-	// join the network as a sibling
+	// encode an address and public key for script input
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	encoder.Encode(p.self.Address())
+	encoder.Encode(pubKey)
+	gobSibling := w.Bytes()
+	var si script.ScriptInput
+	si.Input = gobSibling
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.AddScript",
+		Args: si,
+		Resp: nil,
+	})
 
 	return
 }

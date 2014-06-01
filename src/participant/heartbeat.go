@@ -5,13 +5,25 @@ import (
 	"encoding/gob"
 	"fmt"
 	"quorum"
+	"quorum/script"
 )
 
+// A heartbeat is the object sent by siblings to engage in consensus.
+// Heartbeats contain keepalive information as well as a set of scripts
+// submitted by arbitrary sources.
 type heartbeat struct {
 	entropy quorum.Entropy
+	scripts []*script.ScriptInput
 }
 
-// Convert heartbeat to []byte
+func (p *Participant) AddScript(script script.ScriptInput, _ *struct{}) (err error) {
+	println("GOT SCRIPTINPUT")
+	p.scriptsLock.Lock()
+	p.scripts = append(p.scripts, &script)
+	p.scriptsLock.Unlock()
+	return
+}
+
 func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	// if hb == nil, encode a zero heartbeat
 	if hb == nil {
@@ -24,12 +36,15 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	if err != nil {
 		return
 	}
+	err = encoder.Encode(hb.scripts)
+	if err != nil {
+		return
+	}
 
 	gobHeartbeat = w.Bytes()
 	return
 }
 
-// Convert []byte to heartbeat
 func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	// if hb == nil, make a new heartbeat and decode into that
 	if hb == nil {
@@ -43,5 +58,6 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
+	err = decoder.Decode(&hb.scripts)
 	return
 }

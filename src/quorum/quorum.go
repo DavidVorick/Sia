@@ -8,7 +8,9 @@ import (
 )
 
 const (
-	QuorumSize int = 4 // max siblings per quorum
+	QuorumSize     int = 4        // max siblings per quorum
+	AtomSize       int = 4096     // in bytes
+	AtomsPerQuorum int = 16777216 // 64GB
 )
 
 // A quorum is a set of data that is identical across all participants in the
@@ -26,7 +28,7 @@ type Quorum struct {
 	seed Entropy // Used to generate random numbers during compilation
 
 	// Cylinder management
-	cylinderTreeHead *cylinderNode
+	walletTreeHead *wallet
 }
 
 // Getter for the siblings private variable

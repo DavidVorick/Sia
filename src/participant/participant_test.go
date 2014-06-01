@@ -37,9 +37,6 @@ func TestCreateParticipant(t *testing.T) {
 	if p1.self.Index() != 255 {
 		t.Error("p1.self.index initialized to", p1.self.Index())
 	}
-	if p1.currentStep != 1 {
-		t.Error("p1.currentStep should be initialized to 1!")
-	}
 
 	// test creating another participant that doesn't have the bootstrap address
 }
