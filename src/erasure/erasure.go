@@ -33,13 +33,13 @@ func EncodeRedundancy(k int, m int, decoded []byte) (encoded [][]byte, err error
 		err = fmt.Errorf("EncodeRedundancy: minimum value for k is 1 and for m is 0")
 		return
 	}
-	if k + m > 255 {
+	if k+m > 255 {
 		err = fmt.Errorf("EncodeRedundancy: k + m must be less than 255")
 		return
 	}
 
 	// check for correct padding on decoded []byte
-	if len(decoded) % (k * 8) != 0 {
+	if len(decoded)%(k*8) != 0 {
 		err = fmt.Errorf("EncodeRedundancy: input has not been properly padded!")
 		return
 	}
@@ -82,7 +82,7 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 		err = fmt.Errorf("Recover: minimum value for k is 1 and m is 0")
 		return
 	}
-	if k + m > 255 {
+	if k+m > 255 {
 		err = fmt.Errorf("Recover: k + m must be less than 255")
 		return
 	}
@@ -101,7 +101,7 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 		err = fmt.Errorf("Recover: cannot recover empty data")
 		return
 	}
-	if b % 8 != 0 {
+	if b%8 != 0 {
 		err = fmt.Errorf("Recover: received input that is not modulo 8")
 		return
 	}
@@ -139,7 +139,7 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 	recovered = make([]byte, k*b)
 	remainingIndicies := make([]uint8, k)
 	for i := 0; i < k; i++ {
-		copy(recovered[i*b : (i+1)*b], remaining[i])
+		copy(recovered[i*b:(i+1)*b], remaining[i])
 		remainingIndicies[i] = uint8(indicies[i])
 	}
 

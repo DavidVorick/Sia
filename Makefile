@@ -1,7 +1,7 @@
 gopath = GOPATH=$(CURDIR)
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lstdc++"
 govars = $(gopath) $(cgo_ldflags)
-packages = client logger network quorum server siacrypto
+packages = logger network siacrypto erasure quorum participant client server
 
 all: submodule-update libraries
 
