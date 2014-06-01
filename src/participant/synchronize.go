@@ -7,6 +7,8 @@ import (
 	"siacrypto"
 )
 
+// Contains Synchronization information for the quorum.
+// Eventually this should include an offset.
 type Synchronize struct {
 	currentStep int
 	heartbeats  [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
