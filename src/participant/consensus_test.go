@@ -1,4 +1,4 @@
-package quorum
+package participant
 
 import (
 	"encoding/gob"

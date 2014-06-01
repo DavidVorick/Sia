@@ -1,4 +1,4 @@
-package quorum
+package participant
 
 import (
 	"bytes"
@@ -7,23 +7,15 @@ import (
 	"fmt"
 	"logger"
 	"network"
+	"quorum"
 	"siacrypto"
 	"time"
 )
 
-// All information that needs to be passed between siblings each block
-// This may need to be changed to a slice of updates, or a slice of []bytes (encoded updates)
-// The participant should have a map of updates. Upon copying the map into the heartbeat struct,
-// the participant can do a 'for range' if that makes more sense. I'm not particularly attatched
-// to map[Update]Update in the heartbeat itself. Change it to whatever makes the most sense to you.
-// Thanks!
 type heartbeat struct {
-	entropy Entropy
-	updates []Update
+	entropy quorum.Entropy
 }
 
-// Contains a heartbeat that has been signed iteratively, is a key part of the
-// signed solution to the Byzantine Generals Problem
 type SignedHeartbeat struct {
 	heartbeat     *heartbeat
 	heartbeatHash siacrypto.TruncatedHash
@@ -41,10 +33,6 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 	err = encoder.Encode(hb.entropy)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(hb.updates)
 	if err != nil {
 		return
 	}
@@ -67,10 +55,6 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&hb.updates)
-	if err != nil {
-		return
-	}
 	return
 }
 
@@ -90,19 +74,11 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
-	entropy, err := siacrypto.RandomByteSlice(EntropyVolume)
+	entropy, err := siacrypto.RandomByteSlice(quorum.EntropyVolume)
 	if err != nil {
 		return
 	}
 	copy(hb.entropy[:], entropy)
-
-	// Add updates gathered since last compile and clear the list
-	p.updatesLock.Lock()
-	for _, value := range p.updates {
-		hb.updates = append(hb.updates, value)
-	}
-	p.updates = make(map[Update]Update)
-	p.updatesLock.Unlock()
 
 	sh := new(SignedHeartbeat)
 
@@ -125,7 +101,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	}
 	sh.signatures[0] = hbSignature.Signature
 	sh.signatories = make([]byte, 1)
-	sh.signatories[0] = p.self.index
+	sh.signatories[0] = p.self.Index()
 
 	// Add heartbeat to list of seen heartbeats and announce it
 	p.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
@@ -156,7 +132,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	}
 
 	// check that there are not too many signatures and signatories
-	if len(sh.signatories) > QuorumSize {
+	if len(sh.signatories) > quorum.QuorumSize {
 		err = hsherrOversigned
 		fmt.Println(err)
 		return
@@ -174,7 +150,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	// IMPORTANT: synchronizaation is broken, and hot-fixed together in an
 	// insecure way. What's important is that the parents block line up.
 	if currentStep > len(sh.signatories) {
-		if currentStep == QuorumSize {
+		if currentStep == quorum.QuorumSize {
 			// by waiting StepDuration, the new block will be compiled
 			time.Sleep(StepDuration)
 			// now continue to rest of function
@@ -186,20 +162,20 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	}
 
 	// Check bounds on first signatory
-	if int(sh.signatories[0]) >= QuorumSize {
+	if int(sh.signatories[0]) >= quorum.QuorumSize {
 		err = hsherrBounds
 		fmt.Println(err)
 		return
 	}
 
 	// we are starting to read from memory, initiate locks
-	p.quorum.lock.RLock()
 	p.heartbeatsLock.Lock()
-	defer p.quorum.lock.RUnlock()
 	defer p.heartbeatsLock.Unlock()
 
+	siblings := p.quorum.Siblings()
+
 	// check that first signatory is a sibling
-	if p.quorum.siblings[sh.signatories[0]] == nil {
+	if siblings[sh.signatories[0]] == nil {
 		err = hsherrNonSibling
 		fmt.Println(err)
 		return
@@ -226,14 +202,14 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 	previousSignatories := make(map[byte]bool) // which signatories have already signed
 	for i, signatory := range sh.signatories {
 		// Check bounds on the signatory
-		if int(signatory) >= QuorumSize {
+		if int(signatory) >= quorum.QuorumSize {
 			err = hsherrBounds
 			fmt.Println(err)
 			return
 		}
 
 		// Verify that the signatory is a sibling in the quorum
-		if p.quorum.siblings[signatory] == nil {
+		if siblings[signatory] == nil {
 			err = hsherrNonSibling
 			fmt.Println(err)
 			return
@@ -251,7 +227,8 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 
 		// verify the signature
 		signedMessage.Signature = sh.signatures[i]
-		verification := p.quorum.siblings[signatory].publicKey.Verify(&signedMessage)
+		key := siblings[signatory].PublicKey()
+		verification := key.Verify(&signedMessage)
 
 		// check status of verification
 		if !verification {
@@ -280,7 +257,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (
 
 	// add our signature to the signedHeartbeat
 	sh.signatures = append(sh.signatures, signedMessage.Signature)
-	sh.signatories = append(sh.signatories, p.self.index)
+	sh.signatories = append(sh.signatories, p.self.Index())
 
 	// broadcast the message to the quorum
 	err = p.announceSignedHeartbeat(&sh)
@@ -354,20 +331,17 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 // Needs updated error handling
 func (p *Participant) compile() {
 	// Lock down s.heartbeats and quorum for editing
-	p.quorum.lock.Lock()
 	p.heartbeatsLock.Lock()
 
 	// fetch a sibling ordering
-	siblingOrdering := p.quorum.siblingOrdering()
+	siblingOrdering := p.quorum.SiblingOrdering()
 
 	// Read heartbeats, process them, then archive them.
-	var newSeed Entropy
-	updateList := make(map[Update]bool)
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
 			fmt.Println("Tossing Sibling for %v heartbeats", len(p.heartbeats[i]))
-			p.quorum.tossSibling(i)
+			p.quorum.TossSibling(i)
 			continue
 		}
 
@@ -375,55 +349,25 @@ func (p *Participant) compile() {
 		// the key is unknown
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
-			p.processHeartbeat(hb, &newSeed, updateList)
+			p.quorum.IntegrateSiblingEntropy(hb.entropy)
 		}
-
-		// archive heartbeats (tbi)
 
 		// clear heartbeat list for next block
 		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
 	}
 
 	// copy the new seed into the quorum
-	p.quorum.seed = newSeed
+	p.quorum.IntegrateGerm()
 
 	// print the status of the quorum after compiling
 	fmt.Print(p.quorum.Status())
 
-	p.quorum.lock.Unlock()
 	p.heartbeatsLock.Unlock()
 
 	// create new heartbeat (it gets broadcast automatically), if in quorum
-	if p.self.index != 255 {
+	if p.self.Index() != 255 {
 		p.newSignedHeartbeat()
 	}
 
 	return
-}
-
-// Tick() updates s.CurrentStep, and calls compile() when all steps are complete
-func (p *Participant) tick() {
-	p.tickingLock.Lock()
-	if p.ticking {
-		p.tickingLock.Unlock()
-		return
-	}
-	p.ticking = true
-	p.tickingLock.Unlock()
-
-	// Every StepDuration, advance the state stage
-	ticker := time.Tick(StepDuration)
-	for _ = range ticker {
-		p.stepLock.Lock()
-		if p.currentStep == QuorumSize {
-			fmt.Println("compiling")
-			p.currentStep = 1
-			p.stepLock.Unlock() // compile needs stepLock unlocked
-			p.compile()
-		} else {
-			fmt.Println("stepping")
-			p.currentStep += 1
-			p.stepLock.Unlock()
-		}
-	}
 }

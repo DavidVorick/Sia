@@ -15,7 +15,7 @@ type cylinderNode struct {
 
 // insert takes a cylinder object that is not yet in the cylinderTree and puts it
 // into the cylinderTree
-func (q *quorum) insert(cn *cylinderNode) {
+func (q *Quorum) insert(cn *cylinderNode) {
 	// insert the node into the lightest-weight half of the parent
 	currentNode := q.cylinderTreeHead
 	for currentNode.children > 1 {
@@ -42,7 +42,7 @@ func (q *quorum) insert(cn *cylinderNode) {
 }
 
 // delete takes a node from the cylinderTree and deletes it from the tree
-func (q *quorum) delete(bn *cylinderNode) {
+func (q *Quorum) delete(bn *cylinderNode) {
 	// get a replacement node from the heaviest part of the tree, removing it
 	var replacementNode *cylinderNode
 	currentNode := q.cylinderTreeHead
@@ -120,7 +120,7 @@ func (parent *cylinderNode) insertDelete(insertBN, deleteBN *cylinderNode) {
 
 // randomSector takes a random int between 0 and the total weight of the
 // cylinderTree and picks a sector at random to be used in the proof-of-storage
-func (q *quorum) randomSector() (c *Cylinder, sector int) {
+func (q *Quorum) randomSector() (c *Cylinder, sector int) {
 	// get a random number between 0 and the batch tree weight
 	random, err := q.randInt(0, q.cylinderTreeHead.weight)
 	if err != nil {
