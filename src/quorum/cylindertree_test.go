@@ -21,7 +21,7 @@ func countReachableNodes(bn *cylinderNode) (i int) {
 
 func TestBatchTree(t *testing.T) {
 	// create a parent node and children
-	q := new(quorum)
+	q := new(Quorum)
 	q.cylinderTreeHead = new(cylinderNode)
 	q.cylinderTreeHead.weight = 1
 	child0 := new(cylinderNode)
