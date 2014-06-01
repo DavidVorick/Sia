@@ -16,18 +16,9 @@ type Sibling struct {
 	publicKey *siacrypto.PublicKey
 }
 
-func (s *Sibling) Address() network.Address {
-	return s.address
-}
-
-func (s *Sibling) Index() byte {
-	return s.index
-}
-
-func (s *Sibling) PublicKey() siacrypto.PublicKey {
-	return *s.publicKey
-}
-
+// Sibling variables are kept private because they should not be chaning unless
+// the quorum is making changes to its structure and all siblings have access
+// to the same set of changes.
 func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 	return &Sibling{
 		index:     255,
@@ -36,7 +27,19 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 	}
 }
 
+// Getters for the private variables
+func (s *Sibling) Index() byte {
+	return s.index
+}
+func (s *Sibling) Address() network.Address {
+	return s.address
+}
+func (s *Sibling) PublicKey() siacrypto.PublicKey {
+	return *s.publicKey
+}
+
 // Sibling.compare returns true if the values of each Sibling are equivalent
+// The index field is not considered.
 func (s0 *Sibling) Compare(s1 *Sibling) bool {
 	// false if either sibling is nil
 	if s0 == nil || s1 == nil {
@@ -121,10 +124,6 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
-//
-// I'm not sure if this function is in the right file, but I don't think
-// that all opcodes (like this one) should appear in the quorum file. this one
-// may merit an exeception though.
 func (q *Quorum) AddSibling(s *Sibling) {
 	for i := 0; i < QuorumSize; i++ {
 		if q.siblings[i] == nil {

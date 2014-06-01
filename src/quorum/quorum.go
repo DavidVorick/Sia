@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	QuorumSize int = 4 // number of siblings per quorum
+	QuorumSize int = 4 // max siblings per quorum
 )
 
 // A quorum is a set of data that is identical across all participants in the
@@ -22,13 +22,14 @@ type Quorum struct {
 	siblings [QuorumSize]*Sibling
 
 	// Compile Variables
-	germ Entropy // Is latent,
+	germ Entropy // Where internal entropy is stored before external entropy is applied
 	seed Entropy // Used to generate random numbers during compilation
 
 	// Cylinder management
 	cylinderTreeHead *cylinderNode
 }
 
+// Getter for the siblings private variable
 func (q *Quorum) Siblings() [QuorumSize]*Sibling {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
@@ -57,18 +58,17 @@ func (q *Quorum) Status() (b string) {
 	}
 	b += fmt.Sprintf("\n")
 
-	b += fmt.Sprintf("\tCylinders:\n")
-	/*for cid, cylinder := range q.cylinderMap {
-		// pretty aweful representation...
-		b += fmt.Sprintf("\t\t%v: %v:%v\n", cid, cylinder.Hash[:6], 2*cylinder.RingPairs)
-	}*/
-	b += fmt.Sprintf("\n")
-
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
 }
 
-// Only the siblings and entropy are encoded.
+// Encoded Variables:
+//	non-nil siblings
+//
+//	germ
+//	seed
+//
+//	cylinderTreeHead + entire tree (tbi)
 func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
@@ -95,16 +95,28 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 	}
 
 	// Encode compile variables
+	err = encoder.Encode(q.germ)
+	if err != nil {
+		return
+	}
 	err = encoder.Encode(q.seed)
 	if err != nil {
 		return
 	}
 
+	// cylinderTree
+
 	gobQuorum = w.Bytes()
 	return
 }
 
-// Only the siblings and entropy are decoded.
+// Decoded Variables:
+//	siblings
+//
+//	germ
+//	seed
+//
+//	cylinderTreeHead + entire tree (tbi)
 func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	// if q == nil, make a new quorum and decode into that
 	if q == nil {
@@ -125,10 +137,16 @@ func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	}
 
 	// decode compile variables
+	err = decoder.Decode(&q.germ)
+	if err != nil {
+		return
+	}
 	err = decoder.Decode(&q.seed)
 	if err != nil {
 		return
 	}
+
+	// cylinderTree
 
 	return
 }

@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	EntropyVolume int = 32
+	EntropyVolume int = 32 // in bytes
 )
 
 type Entropy [EntropyVolume]byte
@@ -45,7 +45,7 @@ func (q *Quorum) SiblingOrdering() (siblingOrdering []byte) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
-	// create an in-order list of siblings
+	// create an in-order list of siblings, leaving out nil siblings
 	for i, s := range q.siblings {
 		if s != nil {
 			siblingOrdering = append(siblingOrdering, byte(i))
@@ -56,7 +56,7 @@ func (q *Quorum) SiblingOrdering() (siblingOrdering []byte) {
 	for i := range siblingOrdering {
 		newIndex, err := q.randInt(i, len(siblingOrdering))
 		if err != nil {
-			// error - not sure what to do here
+			// error
 			continue
 		}
 		tmp := siblingOrdering[newIndex]
@@ -67,18 +67,23 @@ func (q *Quorum) SiblingOrdering() (siblingOrdering []byte) {
 	return
 }
 
+// It was a tough decision to move this functionality from the participant to
+// the quorum. But really I don't think that a participant should have access
+// to the field that will eventually become entropy.
 func (q *Quorum) IntegrateSiblingEntropy(e Entropy) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	th, err := siacrypto.CalculateTruncatedHash(append(q.germ[:], e[:]...))
 	if err != nil {
-		// hmm, error
+		// error
 		return
 	}
 	copy(q.seed[:], th[:])
 }
 
+// This will eventually be replaced with functionality that considers external
+// entropy such as Aiza.
 func (q *Quorum) IntegrateGerm() {
 	q.lock.Lock()
 	defer q.lock.Unlock()
