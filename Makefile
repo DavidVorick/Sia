@@ -32,6 +32,9 @@ test-long: libraries
 test-long-verbose: libraries
 	$(govars) go test -v -race $(packages)
 
+test-participant: libraries
+	$(govars) go test -v -race participant
+
 dependencies: submodule-update race-libs
 
 race-libs:

@@ -2,6 +2,7 @@ package participant
 
 import (
 	"quorum"
+	"testing"
 	"time"
 )
 
@@ -35,6 +36,7 @@ func TestCompilationTick(t *testing.T) {
 
 	p := new(Participant)
 	p.currentStep = quorum.QuorumSize
+	p.self = new(quorum.Sibling)
 	go p.tick()
 
 	// verify that tick is wrapping around properly
