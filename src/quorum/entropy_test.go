@@ -7,7 +7,7 @@ import (
 func TestRandInt(t *testing.T) {
 	q := new(Quorum)
 
-	// check that it works in the vanilla case
+	// call randInt under normal conditions
 	previousSeed := q.seed
 	randInt, err := q.randInt(0, 5)
 	if err != nil {
@@ -24,7 +24,7 @@ func TestRandInt(t *testing.T) {
 		t.Fatal("When calling randInt, s.CurrentEntropy was not changed")
 	}
 
-	// check the zero value
+	// trigger an error condition
 	randInt, err = q.randInt(0, 0)
 	if err == nil {
 		t.Fatal("Randint(0,0) should return a bounds error")
