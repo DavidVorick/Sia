@@ -1,23 +1,17 @@
 package participant
 
-import (
+/*import (
 	"network"
 	"quorum"
-	"reflect"
 	"siacrypto"
 	"testing"
 	"time"
 )
 
-/*
-// Test takes .66 seconds to run... why?
+// Test takes .66 seconds to run... try to get below .1
 func TestHandleSignedHeartbeat(t *testing.T) {
-	// create a state and populate it with the signatories as siblings
-	p, err := CreateParticipant(network.NewDebugNetwork())
-	p.self.index = 0
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := new(Participant)
+	p.quorum := new(quorum.Quorum)
 
 	// create keypairs
 	pubKey1, secKey1, err := siacrypto.CreateKeyPair()
@@ -201,42 +195,4 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	p.stepLock.Unlock()
 	time.Sleep(time.Second)
 	time.Sleep(StepDuration)
-}
-
-func TestTossSibling(t *testing.T) {
-	// tbi
-}
-
-// Check that valid heartbeats are accepted and invalid heartbeats are rejected
-func TestProcessHeartbeat(t *testing.T) {
-	// create states and add them to each other
-	p0, err := CreateParticipant(network.NewDebugNetwork())
-	if err != nil {
-		t.Fatal(err)
-	}
-	p1, err := CreateParticipant(network.NewDebugNetwork())
-	if err != nil {
-		t.Fatal(err)
-	}
-	p0.self.index = 0
-	p1.self.index = 1
-	p0.addNewSibling(p1.self)
-	p1.addNewSibling(p0.self)
-
-	// check that a valid heartbeat passes
-	sh0, err := p0.newSignedHeartbeat()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var newSeed Entropy
-	err = p1.processHeartbeat(sh0.heartbeat, &newSeed)
-	if err != nil {
-		t.Error("processHeartbeat threw out a valid heartbeat:", err)
-	}
-}
-
-// TestCompile should probably be reviewed and rehashed
-func TestCompile(t *testing.T) {
-	// tbi
-}
-*/
+}*/

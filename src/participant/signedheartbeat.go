@@ -21,7 +21,6 @@ type SignedHeartbeat struct {
 
 // Takes a signed heartbeat and broadcasts it to the quorum
 func (p *Participant) announceSignedHeartbeat(sh *SignedHeartbeat) (err error) {
-	println("announcing")
 	p.broadcast(&network.Message{
 		Proc: "Participant.HandleSignedHeartbeat",
 		Args: *sh,

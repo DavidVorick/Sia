@@ -2,7 +2,9 @@ package participant
 
 import (
 	"quorum"
+	"reflect"
 	"siacrypto"
+	"testing"
 )
 
 func TestHeartbeatEncoding(t *testing.T) {
