@@ -6,23 +6,56 @@ import (
 	"testing"
 )
 
+// create a sibling with a bunch of non-zero values, and then compare the
+// values the sibling was created with against the values returned by the
+// getters
+func TestGetters(t *testing.T) {
+	index := byte(5)
+	address := network.Address{
+		ID:   network.Identifier(3),
+		Host: "notahost",
+		Port: 4555,
+	}
+	publicKey, _, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sibling := Sibling{
+		index:     index,
+		address:   address,
+		publicKey: publicKey,
+	}
+
+	if sibling.Index() != index {
+		t.Error("Getter for Index is misbehaving")
+	}
+	if sibling.Address() != address {
+		t.Error("Getter for Address is misbehaving")
+	}
+	pk := sibling.PublicKey()
+	if !pk.Compare(publicKey) {
+		t.Error("Getter for publicKey is misbehaving")
+	}
+}
+
 func TestSiblingCompare(t *testing.T) {
 	var p0 *Sibling
 	var p1 *Sibling
 
 	// compare nil values
-	compare := p0.compare(p1)
+	compare := p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing any nil participant should return false")
 	}
 
 	// compare when one is nil
 	p0 = new(Sibling)
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing a zero participant to a nil participant should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare == true {
 		t.Error("Comparing a zero participant to a nil participant should return false")
 	}
@@ -38,22 +71,22 @@ func TestSiblingCompare(t *testing.T) {
 	*p0.publicKey = *p1.publicKey
 
 	// compare initialized participants
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if !compare {
 		t.Error("Comparing two zero participants should return true")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if !compare {
 		t.Error("Comparing two zero participants should return true")
 	}
 
 	// compare when address are not equal
 	p1.address.Port = 9987
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare {
 		t.Error("Comparing two participants with different addresses should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare {
 		t.Error("Comparing two zero participants with different addresses should return false")
 	}
@@ -64,11 +97,11 @@ func TestSiblingCompare(t *testing.T) {
 		t.Fatal(err)
 	}
 	p1.publicKey = pubKey
-	compare = p0.compare(p1)
+	compare = p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
 	}
-	compare = p1.compare(p0)
+	compare = p1.Compare(p0)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
 	}
@@ -93,7 +126,11 @@ func TestSiblingEncoding(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.publicKey = pubKey
-	p.address = bootstrapAddress
+	p.address = network.Address{
+		ID:   3,
+		Host: "localhost",
+		Port: 9950,
+	}
 
 	up := new(Sibling)
 	ep, err := p.GobEncode()
@@ -119,54 +156,5 @@ func TestSiblingEncoding(t *testing.T) {
 	err = up.GobDecode(ep)
 	if err != nil {
 		t.Error("falid to deceode into nil participant")
-	}
-}
-
-// check general case, check corner cases, and then do some fuzzing
-func TestRandInt(t *testing.T) {
-	p, err := CreateParticipant(network.NewDebugNetwork())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// check that it works in the vanilla case
-	previousSeed := p.quorum.seed
-	randInt, err := p.quorum.randInt(0, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if randInt < 0 || randInt >= 5 {
-		t.Fatal("randInt returned but is not between the bounds")
-	}
-
-	// check that s.CurrentEntropy flipped to next value
-	if previousSeed == p.quorum.seed {
-		t.Error(previousSeed)
-		t.Error(p.quorum.seed)
-		t.Fatal("When calling randInt, s.CurrentEntropy was not changed")
-	}
-
-	// check the zero value
-	randInt, err = p.quorum.randInt(0, 0)
-	if err == nil {
-		t.Fatal("Randint(0,0) should return a bounds error")
-	}
-
-	// fuzzing, skip for short tests
-	if testing.Short() {
-		t.Skip()
-	}
-
-	low := 0
-	high := QuorumSize
-	for i := 0; i < 100000; i++ {
-		randInt, err = p.quorum.randInt(low, high)
-		if err != nil {
-			t.Fatal("randInt fuzzing error: ", err, " low: ", low, " high: ", high)
-		}
-
-		if randInt < low || randInt >= high {
-			t.Fatal("randInt fuzzing: ", randInt, " produced, expected number between ", low, " and ", high)
-		}
 	}
 }

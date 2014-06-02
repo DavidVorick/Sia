@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"network"
-	"quorum"
+	"participant"
 )
 
 func establishQuorum() {
@@ -20,7 +20,7 @@ func establishQuorum() {
 	}
 
 	// create a participant
-	_, err = quorum.CreateParticipant(networkServer)
+	_, err = participant.CreateParticipant(networkServer)
 	if err != nil {
 		fmt.Println(err)
 	}

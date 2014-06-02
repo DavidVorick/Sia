@@ -194,3 +194,39 @@ func (pk *PublicKey) Verify(signedMessage *SignedMessage) (verified bool) {
 	verified = ecdsa.Verify(pk.key, []byte(signedMessage.Message), signedMessage.Signature.r, signedMessage.Signature.s)
 	return
 }
+
+func (s *Signature) GobEncode() (gobSig []byte, err error) {
+	if s.r == nil || s.s == nil {
+		err = fmt.Errorf("Cannot encode nil signature - sigature improperly initialized")
+		return
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(s.r)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(s.s)
+	if err != nil {
+		return
+	}
+	gobSig = w.Bytes()
+	return
+}
+
+func (s *Signature) GobDecode(gobSig []byte) (err error) {
+	if s == nil {
+		err = fmt.Errorf("Cannot decode into a nil value")
+		return
+	}
+
+	r := bytes.NewBuffer(gobSig)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&s.r)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&s.s)
+	return
+}

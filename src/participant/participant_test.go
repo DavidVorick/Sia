@@ -1,4 +1,4 @@
-package quorum
+package participant
 
 import (
 	"network"
@@ -22,8 +22,8 @@ func TestCreateParticipant(t *testing.T) {
 	}
 
 	// sanity check the default values for the bootstrap
-	if p0.self.index != 0 {
-		t.Error("p0.self.index initialized to", p0.self.index)
+	if p0.self.Index() != 0 {
+		t.Error("p0.self.index initialized to", p0.self.Index())
 	}
 	if p0.currentStep != 1 {
 		t.Error("p0.currentStep should be initialized to 1!")
@@ -34,36 +34,9 @@ func TestCreateParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p1.self.index != 255 {
-		t.Error("p1.self.index initialized to", p1.self.index)
-	}
-	if p1.currentStep != 1 {
-		t.Error("p1.currentStep should be initialized to 1!")
+	if p1.self.Index() != 255 {
+		t.Error("p1.self.index initialized to", p1.self.Index())
 	}
 
 	// test creating another participant that doesn't have the bootstrap address
-}
-
-func TestAddUpdate(t *testing.T) {
-	// tbi
-}
-
-func TestTransferQuorum(t *testing.T) {
-	// tbi
-}
-
-func TestSynchronize(t *testing.T) {
-	// tbi
-}
-
-func TestAddListener(t *testing.T) {
-	// tbi
-}
-
-func TestProcessHeartbeat(t *testing.T) {
-	// tbi
-}
-
-func TestBroadcast(t *testing.T) {
-	// tbi
 }

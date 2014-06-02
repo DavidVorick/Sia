@@ -5,6 +5,12 @@ import (
 	"siacrypto"
 )
 
+const (
+	// How big a single segment of data is for a host, in bytes
+	MinSegmentSize int = 512
+	MaxSegmentSize int = 1048576 // 1 MB
+)
+
 // A Sector is a logical block of data.
 type Sector struct {
 	Data []byte

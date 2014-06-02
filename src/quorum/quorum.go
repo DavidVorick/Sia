@@ -4,180 +4,45 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"logger"
-	"network"
-	"siacrypto"
 	"sync"
 )
 
-// A Sibling is the public facing information of participants on the quorum.
-// Every quorum contains a list of all siblings.
-type Sibling struct {
-	index     byte
-	address   network.Address
-	publicKey *siacrypto.PublicKey
-}
+const (
+	QuorumSize     int = 4        // max siblings per quorum
+	AtomSize       int = 4096     // in bytes
+	AtomsPerQuorum int = 16777216 // 64GB
+)
 
 // A quorum is a set of data that is identical across all participants in the
 // quorum. Data in the quorum can only be updated during a block, and the
 // update must be deterministic and reversable.
-type quorum struct {
+type Quorum struct {
 	// quorum-wide lock
 	lock sync.RWMutex
 
 	// Network Variables
 	siblings [QuorumSize]*Sibling
-	// meta quorum
-
-	// file proofs stage 1
 
 	// Compile Variables
+	germ Entropy // Where internal entropy is stored before external entropy is applied
 	seed Entropy // Used to generate random numbers during compilation
 
-	// Batch management
-	// A cylinderMap connects a CID to a cylinder within the quorum
-	cylinderMap      map[CID]*Cylinder
-	cylinderTreeHead *cylinderNode
+	// Cylinder management
+	walletTreeHead *wallet
 }
 
-func (s *Sibling) GetAddress() network.Address {
-	return s.address
-}
-
-// Sibling.compare returns true if the values of each Sibling are equivalent
-func (s0 *Sibling) compare(s1 *Sibling) bool {
-	// false if either sibling is nil
-	if s0 == nil || s1 == nil {
-		return false
-	}
-
-	// return false if the addresses are not equal
-	if s0.address != s1.address {
-		return false
-	}
-
-	// return false if the public keys are not equivalent
-	compare := s0.publicKey.Compare(s1.publicKey)
-	if compare != true {
-		return false
-	}
-
-	return true
-}
-
-// the use of ecdsa in this function should be removed
-func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
-	// Error checking for nil values
-	// Because public keys cannot be nil and are not valid as zero-values, a nil
-	// participant cannot be encoded
-	if s == nil {
-		err = fmt.Errorf("Cannot encode nil sibling")
-		return
-	}
-	if s.publicKey == nil {
-		err = fmt.Errorf("Cannot encode nil value s.publicKey")
-		return
-	}
-
-	// Encoding the sibling
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(s.index)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(s.address)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(s.publicKey)
-	if err != nil {
-		return
-	}
-	gobSibling = w.Bytes()
-	return
-}
-
-func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
-	// if nil, make a new sibling object
-	if s == nil {
-		s = new(Sibling)
-	}
-
-	r := bytes.NewBuffer(gobSibling)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&s.index)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&s.address)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&s.publicKey)
-	if err != nil {
-		return
-	}
-	return
-}
-
-// siblings are processed in a random order each block, determined by the
-// entropy for the block. siblingOrdering() deterministically picks that
-// order, using entropy from the state.
-func (q *quorum) siblingOrdering() (siblingOrdering []byte) {
-	// create an in-order list of siblings
-	for i, s := range q.siblings {
-		if s != nil {
-			siblingOrdering = append(siblingOrdering, byte(i))
-		}
-	}
-
-	// shuffle the list of siblings
-	for i := range siblingOrdering {
-		newIndex, err := q.randInt(i, len(siblingOrdering))
-		if err != nil {
-			logger.Fatalln(err)
-		}
-		tmp := siblingOrdering[newIndex]
-		siblingOrdering[newIndex] = siblingOrdering[i]
-		siblingOrdering[i] = tmp
-	}
-
-	return
-}
-
-// Removes a sibling from the list of siblings
-func (q *quorum) tossSibling(pi byte) {
-	println("tossing sibling", pi)
-	q.siblings[pi] = nil
-}
-
-// Use the entropy stored in the state to generate a random integer [low, high)
-// randInt only runs during compile(), when the mutexes are already locked
-func (q *quorum) randInt(low int, high int) (randInt int, err error) {
-	// verify there's a gap between the numbers
-	if low == high {
-		err = fmt.Errorf("low and high cannot be the same number")
-		return
-	}
-
-	// Convert CurrentEntropy into an int
-	rollingInt := 0
-	for i := 0; i < 4; i++ {
-		rollingInt = rollingInt << 8
-		rollingInt += int(q.seed[i])
-	}
-
-	randInt = (rollingInt % (high - low)) + low
-
-	// Convert random number seed to next value
-	truncatedHash, err := siacrypto.CalculateTruncatedHash(q.seed[:])
-	q.seed = Entropy(truncatedHash)
-	return
+// Getter for the siblings private variable
+func (q *Quorum) Siblings() [QuorumSize]*Sibling {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+	return q.siblings
 }
 
 // q.Status() enumerates the variables of the quorum in a human-readable output
-func (q *quorum) Status() (b string) {
+func (q *Quorum) Status() (b string) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+
 	b = "\nQuorum Status:\n"
 
 	b += fmt.Sprintf("\tSiblings:\n")
@@ -195,22 +60,24 @@ func (q *quorum) Status() (b string) {
 	}
 	b += fmt.Sprintf("\n")
 
-	b += fmt.Sprintf("\tCylinders:\n")
-	for cid, cylinder := range q.cylinderMap {
-		// pretty aweful representation...
-		b += fmt.Sprintf("\t\t%v: %v:%v\n", cid, cylinder.Hash[:6], 2*cylinder.RingPairs)
-	}
-	b += fmt.Sprintf("\n")
-
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
 }
 
-// Only the siblings and entropy are encoded.
-func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
+// Encoded Variables:
+//	non-nil siblings
+//
+//	germ
+//	seed
+//
+//	cylinderTreeHead + entire tree (tbi)
+func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+
 	// if q == nil, encode a zero quorum
 	if q == nil {
-		q = new(quorum)
+		q = new(Quorum)
 	}
 
 	w := new(bytes.Buffer)
@@ -230,23 +97,32 @@ func (q *quorum) GobEncode() (gobQuorum []byte, err error) {
 	}
 
 	// Encode compile variables
+	err = encoder.Encode(q.germ)
+	if err != nil {
+		return
+	}
 	err = encoder.Encode(q.seed)
 	if err != nil {
 		return
 	}
 
-	// Encode batch variables
-	// tbi
+	// cylinderTree
 
 	gobQuorum = w.Bytes()
 	return
 }
 
-// Only the siblings and entropy are decoded.
-func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
+// Decoded Variables:
+//	siblings
+//
+//	germ
+//	seed
+//
+//	cylinderTreeHead + entire tree (tbi)
+func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	// if q == nil, make a new quorum and decode into that
 	if q == nil {
-		q = new(quorum)
+		q = new(Quorum)
 	}
 
 	r := bytes.NewBuffer(gobQuorum)
@@ -263,13 +139,16 @@ func (q *quorum) GobDecode(gobQuorum []byte) (err error) {
 	}
 
 	// decode compile variables
+	err = decoder.Decode(&q.germ)
+	if err != nil {
+		return
+	}
 	err = decoder.Decode(&q.seed)
 	if err != nil {
 		return
 	}
 
-	// decode batch variables
-	// tbi
+	// cylinderTree
 
 	return
 }
