@@ -13,6 +13,11 @@ type ScriptInput struct {
 	Input []byte
 }
 
+func (s *ScriptInput) Bytes() (b []byte) {
+	b = s.Input
+	return
+}
+
 func (s *ScriptInput) Interpret(q *quorum.Quorum) {
 	var address network.Address
 	var key siacrypto.PublicKey

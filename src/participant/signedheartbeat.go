@@ -51,11 +51,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 
 	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
-	gobHb, err := hb.GobEncode()
-	if err != nil {
-		return
-	}
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(gobHb)
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hb.Bytes())
 	if err != nil {
 		return
 	}
@@ -71,7 +67,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	sh.signatories[0] = p.self.Index()
 
 	// Add heartbeat to list of seen heartbeats and announce it
-	p.heartbeats[sh.signatories[0]][sh.heartbeatHash] = sh.heartbeat
+	p.heartbeats[p.self.Index()][sh.heartbeatHash] = sh.heartbeat
 	err = p.announceSignedHeartbeat(sh)
 	return
 }
@@ -90,7 +86,7 @@ var hsherrInvalidSignature = errors.New("Received heartbeat with invalid signatu
 // 'incomingSignedHeartbeat' and verifies it according to the specification
 //
 // What sort of input error checking is needed for this function?
-func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, arb *struct{}) (err error) {
+func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (err error) {
 	// Check that the slices of signatures and signatories are of the same length
 	if len(sh.signatures) != len(sh.signatories) {
 		err = hsherrMismatchedSignatures

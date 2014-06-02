@@ -16,6 +16,14 @@ type heartbeat struct {
 	scripts []*script.ScriptInput
 }
 
+func (hb *heartbeat) Bytes() (b []byte) {
+	b = append(b, hb.entropy[:]...)
+	for _, script := range hb.scripts {
+		b = append(b, script.Bytes()...)
+	}
+	return
+}
+
 func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	// if hb == nil, encode a zero heartbeat
 	if hb == nil {
