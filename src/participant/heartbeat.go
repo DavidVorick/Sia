@@ -16,14 +16,6 @@ type heartbeat struct {
 	scripts []*script.ScriptInput
 }
 
-func (p *Participant) AddScript(script script.ScriptInput, _ *struct{}) (err error) {
-	println("GOT SCRIPTINPUT")
-	p.scriptsLock.Lock()
-	p.scripts = append(p.scripts, &script)
-	p.scriptsLock.Unlock()
-	return
-}
-
 func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	// if hb == nil, encode a zero heartbeat
 	if hb == nil {
