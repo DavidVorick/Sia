@@ -1,8 +1,13 @@
 package script
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
+	"network"
+	"quorum"
 	"reflect"
+	"siacrypto"
 )
 
 var opTable = []instruction{
@@ -29,7 +34,8 @@ var opTable = []instruction{
 	instruction{0x14, 1, reflect.ValueOf(op_store), 2},
 	instruction{0x15, 1, reflect.ValueOf(op_load), 2},
 	instruction{0x16, 1, reflect.ValueOf(op_inc), 2},
-	instruction{0x16, 1, reflect.ValueOf(op_dec), 2},
+	instruction{0x17, 1, reflect.ValueOf(op_dec), 2},
+	instruction{0x18, 2, reflect.ValueOf(op_asib), 5},
 }
 
 func op_nop() (err error) {
@@ -257,5 +263,25 @@ func op_inc(reg byte) (err error) {
 
 func op_dec(reg byte) (err error) {
 	registers[reg]--
+	return
+}
+
+func op_asib(loc byte, length byte) (err error) {
+	// read encoded sibling from data block
+	if int(loc+length) > len(script) {
+		return errors.New("invalid data access")
+	}
+	encSibling := script[loc : loc+length]
+
+	// decode sibling
+	var address network.Address
+	var key siacrypto.PublicKey
+	reader := bytes.NewBuffer(encSibling)
+	decoder := gob.NewDecoder(reader)
+	decoder.Decode(&address)
+	decoder.Decode(&key)
+
+	// add sibling
+	q.AddSibling(quorum.NewSibling(address, &key))
 	return
 }

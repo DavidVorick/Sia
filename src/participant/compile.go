@@ -30,7 +30,7 @@ func (p *Participant) compile() {
 		for _, hb := range p.heartbeats[i] {
 			p.quorum.IntegrateSiblingEntropy(hb.entropy)
 			for _, script := range hb.scripts {
-				script.Interpret(&p.quorum)
+				script.Execute(&p.quorum)
 			}
 		}
 

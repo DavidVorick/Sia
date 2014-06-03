@@ -13,7 +13,7 @@ import (
 // submitted by arbitrary sources.
 type heartbeat struct {
 	entropy quorum.Entropy
-	scripts []*script.ScriptInput
+	scripts []*script.Script
 }
 
 func (hb *heartbeat) Bytes() (b []byte) {

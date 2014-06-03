@@ -22,7 +22,7 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scripts        []*script.ScriptInput
+	scripts        []*script.Script
 	heartbeats     [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock sync.Mutex
 	scriptsLock    sync.Mutex
@@ -34,7 +34,7 @@ type Participant struct {
 	tickingLock sync.Mutex
 }
 
-func (p *Participant) AddScript(script script.ScriptInput, _ *struct{}) (err error) {
+func (p *Participant) AddScript(script script.Script, _ *struct{}) (err error) {
 	p.scriptsLock.Lock()
 	p.scripts = append(p.scripts, &script)
 	p.scriptsLock.Unlock()

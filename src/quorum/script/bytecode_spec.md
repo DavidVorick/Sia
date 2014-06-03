@@ -28,4 +28,5 @@ Hex     Name    Args    Description
 0x15    load    1       push arg value onto stack
 0x16    inc     1       increment variable
 0x17    dec     1       decrement variable
-
+0x18    asib    1       adds sibling defined in data block; pushes success value
+0xFF    exit    0       terminates execution

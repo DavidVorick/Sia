@@ -2,10 +2,16 @@ package script
 
 import (
 	"errors"
+	"quorum"
 	"reflect"
 )
 
 const MaxInstructions = 10000
+
+type Script struct {
+	// Wallet quorum.WalletID
+	Input []byte
+}
 
 type instruction struct {
 	opcode   byte
@@ -34,6 +40,8 @@ func (s *stackElem) Print() {
 
 // global vars accessed by the various opcode functions
 var (
+	script    []byte
+	q         *quorum.Quorum
 	stack     *stackElem
 	stackLen  int
 	iptr      int
@@ -41,8 +49,14 @@ var (
 	registers [256]byte
 )
 
-func ExecuteScript(script []byte) (totalCost int, err error) {
+func (s *Script) Bytes() []byte {
+	return s.Input
+}
+
+func (s *Script) Execute(quorum *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
+	script = s.Input
+	q = quorum
 	stack = nil
 	stackLen = 0
 	iptr = 0
