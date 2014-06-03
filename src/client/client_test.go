@@ -11,7 +11,7 @@ type Server struct {
 	seg quorum.Segment
 }
 
-func (s *Server) UploadSegment(seg quorum.Segment, arb *struct{}) error {
+func (s *Server) UploadSegment(seg quorum.Segment, _ *struct{}) error {
 	s.seg = seg
 	return nil
 }

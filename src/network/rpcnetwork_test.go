@@ -10,12 +10,12 @@ type TestStoreHandler struct {
 	message string
 }
 
-func (tsh *TestStoreHandler) StoreMessage(message string, arb *struct{}) error {
+func (tsh *TestStoreHandler) StoreMessage(message string, _ *struct{}) error {
 	tsh.message = message
 	return nil
 }
 
-func (tsh *TestStoreHandler) DoNothing(message string, arb *struct{}) error {
+func (tsh *TestStoreHandler) DoNothing(message string, _ *struct{}) error {
 	select {}
 	return nil
 }

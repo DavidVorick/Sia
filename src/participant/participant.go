@@ -44,7 +44,7 @@ func (p *Participant) AddScript(script script.Script, _ *struct{}) (err error) {
 // Takes an address as input and adds the address to the list of listeners,
 // meaning that the added address will get sent all messages that are broadcast
 // to the quorum.
-func (p *Participant) Subscribe(a network.Address, arb *struct{}) (err error) {
+func (p *Participant) Subscribe(a network.Address, _ *struct{}) (err error) {
 	// add the address to listeners
 	p.listenersLock.Lock()
 	p.listeners = append(p.listeners, a)
