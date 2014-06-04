@@ -20,6 +20,14 @@ func (w *walletNode) isRed() bool {
 }
 
 func (w *walletNode) rotate(direction int) *walletNode {
+	if w.children[not(direction)] != nil {
+		w.weight -= w.children[not(direction)].weight
+		w.children[not(direction)].weight += w.weight
+		if w.children[not(direction)].children[direction] != nil {
+			w.weight += w.children[not(direction)].children[direction].weight
+		}
+	}
+
 	tmp := w.children[not(direction)]
 	w.children[not(direction)] = tmp.children[direction]
 	tmp.children[direction] = w
@@ -61,9 +69,6 @@ func (q *Quorum) insert(w *walletNode) {
 			// insert new node at bottom
 			parent.children[direction] = w
 			current = w
-			if current == nil {
-				return
-			}
 		} else if current.children[0].isRed() && current.children[1].isRed() {
 			// color flip
 			current.red = true
@@ -86,7 +91,7 @@ func (q *Quorum) insert(w *walletNode) {
 			}
 		}
 
-		// stop if wallet already exists
+		// stop at bottom
 		if current.id == w.id {
 			break
 		}
@@ -104,6 +109,8 @@ func (q *Quorum) insert(w *walletNode) {
 		grandparent = parent
 		parent = current
 		current = current.children[direction]
+
+		parent.weight += w.weight
 	}
 
 	q.walletRoot = falseRoot.children[1]
@@ -180,8 +187,6 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 
 	// replace and remove if found
 	if target != nil {
-		target = current
-
 		direction0 := 0
 		direction1 := 0
 		if parent.children[1] == current {
