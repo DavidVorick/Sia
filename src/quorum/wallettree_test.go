@@ -227,7 +227,7 @@ func TestWalletTree(t *testing.T) {
 		var weight int
 		var err error
 		for !found {
-			weight, err = siacrypto.RandomInt(5000)
+			weight, err = siacrypto.RandomInt(10000)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -263,7 +263,7 @@ func TestWalletTree(t *testing.T) {
 			var weight int
 			var err error
 			for !found {
-				weight, err = siacrypto.RandomInt(5000)
+				weight, err = siacrypto.RandomInt(10000)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -283,7 +283,7 @@ func TestWalletTree(t *testing.T) {
 		} else {
 			// delete
 			// turn the weights map into a slice
-			/*var weightSlice []uint64
+			var weightSlice []uint64
 			for key, value := range weights {
 				if value {
 					weightSlice = append(weightSlice, key)
@@ -296,7 +296,7 @@ func TestWalletTree(t *testing.T) {
 			}
 			q.remove(WalletID(weightSlice[i]))
 			checkViolations(5, q.walletRoot, t)
-			weights[weightSlice[i]] = false*/
+			weights[weightSlice[i]] = false
 		}
 	}
 

@@ -214,19 +214,25 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 
 	// replace and remove if found
 	if target != nil {
-		target.id = current.id
-		target.weight = current.weight
-
-		direction0 := 0
-		if parent.children[1] == current {
-			direction0 = 1
+		i := falseRoot
+		targetWeight := target.weight
+		if target.children[0] != nil {
+			targetWeight -= target.children[0].weight
+		}
+		if target.children[1] != nil {
+			targetWeight -= target.children[1].weight
 		}
 
-		parent.children[direction0] = current.children[0]
-		parent.weight -= current.weight
+		for i != nil && i != target {
+			i.weight -= targetWeight
 
-		i := falseRoot.children[1]
-		for i != nil && i != parent {
+			if i.id > current.id {
+				i = i.children[0]
+			} else {
+				i = i.children[1]
+			}
+		}
+		for i != nil && i != current {
 			i.weight -= current.weight
 
 			if i.id > current.id {
@@ -234,6 +240,21 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 			} else {
 				i = i.children[1]
 			}
+		}
+
+		direction0 := 0
+		if parent.children[1] == current {
+			direction0 = 1
+		}
+		parent.children[direction0] = current.children[0]
+
+		target.id = current.id
+		target.weight = current.weight
+		if target.children[0] != nil {
+			target.weight += target.children[0].weight
+		}
+		if target.children[1] != nil {
+			target.weight += target.children[1].weight
 		}
 	}
 
