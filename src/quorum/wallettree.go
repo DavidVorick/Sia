@@ -1,13 +1,26 @@
 package quorum
 
+import (
+	"os"
+)
+
+// A wallet node is the base unit for the WalletTree. The wallet tree is a
+// red-black tree sorted by id. It's used to load balance between quorums and
+// to pick random sectors in logarithmic time. It's also currently used for
+// lookup, but lookup may be moved to a map such that lookup happens in linear
+// time.
 type walletNode struct {
 	red      bool
 	children [2]*walletNode
 
 	id     WalletID
 	weight int
+	wallet os.File
 }
 
+// not Prevents redundant code for symetrical cases. Theres a direction, and then
+// there's the opposite of a direction. This function returns the opposite of
+// that direction.
 func not(direction int) int {
 	if direction == 0 {
 		return 1
@@ -15,10 +28,12 @@ func not(direction int) int {
 	return 0
 }
 
+// isRed returns true if a node is red and false if a node is black or is nil
 func (w *walletNode) isRed() bool {
 	return w != nil && w.red
 }
 
+// Does a rotation within the red-black tree, while keeping all weights correct.
 func (w *walletNode) rotate(direction int) *walletNode {
 	if w.children[not(direction)] != nil {
 		w.weight -= w.children[not(direction)].weight
@@ -110,7 +125,7 @@ func (q *Quorum) insert(w *walletNode) {
 		parent = current
 		current = current.children[direction]
 
-		parent.weight += w.weight
+		parent.weight += w.weight // suspect...
 	}
 
 	q.walletRoot = falseRoot.children[1]
@@ -187,15 +202,27 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 
 	// replace and remove if found
 	if target != nil {
+		target.id = current.id
+		target.weight = current.weight
+
 		direction0 := 0
-		direction1 := 0
 		if parent.children[1] == current {
 			direction0 = 1
 		}
-		if current.children[0] == nil {
-			direction1 = 1
+
+		parent.children[direction0] = current.children[0]
+		parent.weight -= current.weight
+
+		i := falseRoot.children[1]
+		for i != nil && i != parent {
+			i.weight -= current.weight
+
+			if i.id > current.id {
+				i = i.children[0]
+			} else {
+				i = i.children[1]
+			}
 		}
-		parent.children[direction0] = current.children[direction1]
 	}
 
 	// update root and make it black
@@ -205,4 +232,22 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 	}
 
 	return
+}
+
+func (q *Quorum) retrieve(id WalletID) *walletNode {
+	current := q.walletRoot
+
+	for current != nil {
+		if current.id == id {
+			return current
+		}
+
+		if current.id > id {
+			current = current.children[0]
+		} else {
+			current = current.children[1]
+		}
+	}
+
+	return nil
 }
