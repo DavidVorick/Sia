@@ -8,138 +8,60 @@ import (
 	"quorum"
 	"reflect"
 	"siacrypto"
+	"unsafe"
 )
 
 var opTable = []instruction{
 	instruction{0x00, 0, reflect.ValueOf(op_nop), 1},
-	instruction{0x01, 1, reflect.ValueOf(op_push), 2},
-	instruction{0x02, 0, reflect.ValueOf(op_pop), 1},
-	instruction{0x03, 0, reflect.ValueOf(op_dup), 1},
-	instruction{0x04, 0, reflect.ValueOf(op_swap), 2},
-	instruction{0x05, 0, reflect.ValueOf(op_add), 2},
-	instruction{0x06, 0, reflect.ValueOf(op_sub), 2},
-	instruction{0x07, 0, reflect.ValueOf(op_mul), 2},
-	instruction{0x08, 0, reflect.ValueOf(op_div), 2},
-	instruction{0x09, 0, reflect.ValueOf(op_mod), 3},
-	instruction{0x0A, 0, reflect.ValueOf(op_neg), 1},
-	instruction{0x0B, 0, reflect.ValueOf(op_eq), 2},
-	instruction{0x0C, 0, reflect.ValueOf(op_ne), 2},
-	instruction{0x0D, 0, reflect.ValueOf(op_lt), 2},
-	instruction{0x0E, 0, reflect.ValueOf(op_gt), 2},
-	instruction{0x0F, 0, reflect.ValueOf(op_not), 2},
-	instruction{0x10, 0, reflect.ValueOf(op_or), 2},
-	instruction{0x11, 0, reflect.ValueOf(op_and), 2},
-	instruction{0x12, 1, reflect.ValueOf(op_if), 3},
-	instruction{0x13, 0, reflect.ValueOf(op_goto), 2},
-	instruction{0x14, 1, reflect.ValueOf(op_store), 2},
-	instruction{0x15, 1, reflect.ValueOf(op_load), 2},
-	instruction{0x16, 1, reflect.ValueOf(op_inc), 2},
-	instruction{0x17, 1, reflect.ValueOf(op_dec), 2},
-	instruction{0x18, 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x01, 1, reflect.ValueOf(op_pushb), 2},
+	instruction{0x02, 2, reflect.ValueOf(op_pushs), 2},
+	instruction{0x03, 0, reflect.ValueOf(op_pop), 1},
+	instruction{0x04, 0, reflect.ValueOf(op_dup), 2},
+	instruction{0x05, 0, reflect.ValueOf(op_swap), 2},
+	instruction{0x06, 0, reflect.ValueOf(op_addi), 2},
+	instruction{0x07, 0, reflect.ValueOf(op_subi), 2},
+	instruction{0x08, 0, reflect.ValueOf(op_muli), 2},
+	instruction{0x09, 0, reflect.ValueOf(op_divi), 2},
+	instruction{0x0A, 0, reflect.ValueOf(op_modi), 3},
+	instruction{0x0B, 0, reflect.ValueOf(op_negi), 2},
+	instruction{0x0C, 0, reflect.ValueOf(op_bor), 2},
+	instruction{0x0D, 0, reflect.ValueOf(op_band), 2},
+	instruction{0x0E, 0, reflect.ValueOf(op_bxor), 2},
+	instruction{0x0F, 1, reflect.ValueOf(op_shln), 2},
+	instruction{0x10, 1, reflect.ValueOf(op_shrn), 2},
+	instruction{0x11, 0, reflect.ValueOf(op_eq), 2},
+	instruction{0x12, 0, reflect.ValueOf(op_ne), 2},
+	instruction{0x13, 0, reflect.ValueOf(op_lti), 2},
+	instruction{0x14, 0, reflect.ValueOf(op_gti), 2},
+	instruction{0x15, 0, reflect.ValueOf(op_lnot), 2},
+	instruction{0x16, 0, reflect.ValueOf(op_lor), 2},
+	instruction{0x17, 0, reflect.ValueOf(op_land), 2},
+	instruction{0x18, 2, reflect.ValueOf(op_if), 2},
+	instruction{0x19, 2, reflect.ValueOf(op_goto), 1},
+	instruction{0x1A, 1, reflect.ValueOf(op_regs), 2},
+	instruction{0x1B, 1, reflect.ValueOf(op_regl), 2},
+	instruction{0x1C, 1, reflect.ValueOf(op_inci), 2},
+	instruction{0x1D, 1, reflect.ValueOf(op_deci), 2},
+	instruction{0x1E, 2, reflect.ValueOf(op_blks), 2},
+	instruction{0x1F, 2, reflect.ValueOf(op_blkl), 2},
+	instruction{0x20, 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x21, 2, reflect.ValueOf(op_asib), 5},
 }
 
-func op_nop() (err error) {
-	return
+// helper functions
+func y2i(b value) int64 {
+	return *(*int64)(unsafe.Pointer(&b))
 }
 
-func op_push(b byte) (err error) {
-	stack = &stackElem{b, stack}
-	stackLen++
-	return
+func i2y(i int64) value {
+	return *(*value)(unsafe.Pointer(&i))
 }
 
-func op_pop() (err error, b byte) {
-	if stackLen < 1 {
-		err = errors.New("stack empty")
-		return
-	}
-	b = stack.b
-	stack = stack.next
-	stackLen--
-	return
+func s2i(high, low byte) int {
+	return int((high << 8) + low)
 }
 
-func op_dup() (err error) {
-	if stackLen < 1 {
-		return errors.New("stack empty")
-	}
-	op_push(stack.b)
-	return
-}
-
-func op_swap() (err error) {
-	if stackLen < 2 {
-		return errors.New("insufficient stack")
-	}
-	next := stack.next
-	stack.next = stack.next.next
-	next.next = stack
-	stack = next
-	return
-}
-
-func op_add() (err error) {
-	_, a := op_pop()
-	err, b := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(a + b)
-	return
-}
-
-func op_sub() (err error) {
-	_, a := op_pop()
-	err, b := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(a - b)
-	return
-}
-
-func op_mul() (err error) {
-	_, a := op_pop()
-	err, b := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(a * b)
-	return
-}
-
-func op_div() (err error) {
-	_, a := op_pop()
-	err, b := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(a / b)
-	return
-}
-
-func op_mod() (err error) {
-	_, a := op_pop()
-	err, b := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(a % b)
-	return
-}
-
-// doesn't make a lot of sense for bytes...
-func op_neg() (err error) {
-	err, a := op_pop()
-	if err != nil {
-		return
-	}
-	op_push(-a)
-	return
-}
-
-// helper function for booleans
-func btoy(b bool) byte {
+func b2y(b bool) byte {
 	if b {
 		return 0x01
 	} else {
@@ -147,8 +69,163 @@ func btoy(b bool) byte {
 	}
 }
 
-func ytob(b byte) bool {
-	return b != 0x00
+func y2b(b value) bool {
+	return y2i(b) != 0
+}
+
+// opcodes
+
+func op_nop() (err error) {
+	return
+}
+
+func op_pushb(b byte) (err error) {
+	push(value{b})
+	return
+}
+
+func op_pushs(h, l byte) (err error) {
+	push(value{l, h})
+	return
+}
+
+func op_pop() (err error, val value) {
+	if stackLen < 1 {
+		err = errors.New("stack empty")
+		return
+	}
+	val = stack.val
+	stack = stack.next
+	stackLen--
+	return
+}
+
+func op_dup() (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	push(a)
+	push(a)
+	return
+}
+
+func op_swap() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(a)
+	push(b)
+	return
+}
+
+func op_addi() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) + y2i(b)))
+	return
+}
+
+func op_subi() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) - y2i(b)))
+	return
+}
+
+func op_muli() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) * y2i(b)))
+	return
+}
+
+func op_divi() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) / y2i(b)))
+	return
+}
+
+func op_modi() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) % y2i(b)))
+	return
+}
+
+func op_negi() (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(-y2i(a)))
+	return
+}
+
+func op_bor() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) | y2i(b)))
+	return
+}
+
+func op_band() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) & y2i(b)))
+	return
+}
+
+func op_bxor() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) ^ y2i(b)))
+	return
+}
+
+func op_shln(n byte) (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) << n))
+	return
+}
+
+func op_shrn(n byte) (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	push(i2y(y2i(a) >> n))
+	return
 }
 
 func op_eq() (err error) {
@@ -157,7 +234,7 @@ func op_eq() (err error) {
 	if err != nil {
 		return
 	}
-	op_push(btoy(a == b))
+	op_pushb(b2y(a == b))
 	return
 }
 
@@ -167,82 +244,80 @@ func op_ne() (err error) {
 	if err != nil {
 		return
 	}
-	op_push(btoy(a != b))
+	op_pushb(b2y(a != b))
 	return
 }
 
-func op_lt() (err error) {
+func op_lti() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_push(btoy(a < b))
+	op_pushb(b2y(y2i(a) < y2i(b)))
 	return
 }
 
-func op_gt() (err error) {
+func op_gti() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_push(btoy(a > b))
+	op_pushb(b2y(y2i(a) > y2i(b)))
 	return
 }
 
-func op_not() (err error) {
+func op_lnot() (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
-	op_push(btoy(!ytob(a)))
+	op_pushb(b2y(!y2b(a)))
 	return
 }
 
-func op_or() (err error) {
+func op_lor() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_push(btoy(ytob(a) || ytob(b)))
+	op_pushb(b2y(y2b(a) || y2b(b)))
 	return
 }
 
-func op_and() (err error) {
+func op_land() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_push(btoy(ytob(a) && ytob(b)))
+	op_pushb(b2y(y2b(a) && y2b(b)))
 	return
 }
 
-func op_if(offset byte) (err error) {
+func op_if(offh, offl byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
-	if ytob(a) {
-		iptr += int(offset)
-		if iptr < 0 {
-			return errors.New("jumped to invalid index")
-		}
+	if y2b(a) {
+		return op_goto(offh, offl)
 	}
 	return
 }
 
-func op_goto(offset byte) (err error) {
-	iptr += int(offset)
+func op_goto(offh, offl byte) (err error) {
+	iptr += s2i(offh, offl)
 	if iptr < 0 {
 		return errors.New("jumped to invalid index")
 	}
+	// the iptr > len(script) case is handled inside Execute
 	return
 }
 
-func op_store(reg byte) (err error) {
+func op_regs(reg byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -251,19 +326,44 @@ func op_store(reg byte) (err error) {
 	return
 }
 
-func op_load(reg byte) (err error) {
-	op_push(registers[reg])
+func op_regl(reg byte) (err error) {
+	push(registers[reg])
 	return
 }
 
-func op_inc(reg byte) (err error) {
-	registers[reg]++
+func op_inci(reg, n byte) (err error) {
+	registers[reg] = i2y(y2i(registers[reg]) + int64(n))
 	return
 }
 
-func op_dec(reg byte) (err error) {
-	registers[reg]--
+func op_deci(reg, n byte) (err error) {
+	registers[reg] = i2y(y2i(registers[reg]) - int64(n))
 	return
+}
+
+func op_blks(loch, locl byte) (err error) {
+	err, a := op_pop()
+	addr := s2i(loch, locl)
+	if addr < 0 || addr+8 > len(script) {
+		return errors.New("invalid data access")
+	}
+	copy(script[addr:addr+8], a[:])
+	return
+}
+
+func op_blkl(loch, locl byte) (err error) {
+	addr := s2i(loch, locl)
+	if addr < 0 || addr+8 > len(script) {
+		return errors.New("invalid data access")
+	}
+	var a value
+	copy(a[:], script[addr:addr+8])
+	push(a)
+	return
+}
+
+func op_rej() (err error) {
+	return errors.New("rejected input")
 }
 
 func op_asib(loc byte, length byte) (err error) {

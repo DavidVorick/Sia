@@ -10,7 +10,7 @@ const MaxInstructions = 10000
 
 type Script struct {
 	// Wallet quorum.WalletID
-	Input []byte
+	Block []byte
 }
 
 type instruction struct {
@@ -20,9 +20,18 @@ type instruction struct {
 	cost     int
 }
 
+// generic 64-bit value
+type value [8]byte
+
 type stackElem struct {
-	b    byte
+	val  value
 	next *stackElem
+}
+
+func push(b value) {
+	stack = &stackElem{b, stack}
+	stackLen++
+	return
 }
 
 func (s *stackElem) Print() {
@@ -32,7 +41,7 @@ func (s *stackElem) Print() {
 		if p == nil {
 			break
 		}
-		print(p.b, " ")
+		print(y2i(p.val), " ")
 		p = p.next
 	}
 	println("}")
@@ -41,30 +50,32 @@ func (s *stackElem) Print() {
 // global vars accessed by the various opcode functions
 var (
 	script    []byte
-	q         *quorum.Quorum
+	iptr      int
+	input     []byte
+	registers [256]value
 	stack     *stackElem
 	stackLen  int
-	iptr      int
+	q         *quorum.Quorum
 	opCounts  map[byte]int
-	registers [256]byte
 )
 
 func (s *Script) Bytes() []byte {
-	return s.Input
+	return s.Block
 }
 
-func (s *Script) Execute(quorum *quorum.Quorum) (totalCost int, err error) {
+func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
-	script = s.Input
-	q = quorum
+	script = s.Block
+	iptr = 0
+	input = in
+	registers = [256]value{}
 	stack = nil
 	stackLen = 0
-	iptr = 0
+	q = quorum
 	opCounts = make(map[byte]int)
-	registers = [256]byte{}
 
 	for {
-		if iptr > len(script) {
+		if iptr >= len(script) {
 			err = errors.New("script missing terminator")
 			break
 		} else if iptr > MaxInstructions {
@@ -79,7 +90,11 @@ func (s *Script) Execute(quorum *quorum.Quorum) (totalCost int, err error) {
 
 		op := opTable[script[iptr]]
 
-		// place arguments in array, advance instruction pointer
+		// place arguments in array while advancing instruction pointer
+		if iptr+op.argBytes >= len(script) {
+			err = errors.New("too few arguments to opcode")
+			break
+		}
 		var fnArgs []reflect.Value
 		for j := 0; j < op.argBytes; j++ {
 			iptr++
@@ -98,7 +113,7 @@ func (s *Script) Execute(quorum *quorum.Quorum) (totalCost int, err error) {
 		iptr++
 
 		// DEBUG: print stack
-		//stack.Print()
+		stack.Print()
 	}
 
 	// calculate cost
