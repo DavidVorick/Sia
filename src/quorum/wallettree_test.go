@@ -162,7 +162,7 @@ func checkViolations(id int, w *walletNode, t *testing.T) {
 
 	weightViolations := findWeightViolations(w)
 	if weightViolations != 0 {
-		t.Error(id, "- Got weight violations:", weightViolations)
+		t.Fatal(id, "- Got weight violations:", weightViolations)
 	}
 }
 
@@ -221,7 +221,7 @@ func TestWalletTree(t *testing.T) {
 	// insert a bunch of random nodes into the tree, each time verifying that the
 	// tree is still valid.
 	weights := make(map[uint64]bool)
-	n = 10
+	n = 1000
 	for i := 0; i < n; i++ {
 		found := false
 		var weight int
@@ -283,7 +283,7 @@ func TestWalletTree(t *testing.T) {
 		} else {
 			// delete
 			// turn the weights map into a slice
-			var weightSlice []uint64
+			/*var weightSlice []uint64
 			for key, value := range weights {
 				if value {
 					weightSlice = append(weightSlice, key)
@@ -296,7 +296,7 @@ func TestWalletTree(t *testing.T) {
 			}
 			q.remove(WalletID(weightSlice[i]))
 			checkViolations(5, q.walletRoot, t)
-			weights[weightSlice[i]] = false
+			weights[weightSlice[i]] = false*/
 		}
 	}
 

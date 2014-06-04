@@ -77,6 +77,8 @@ func (q *Quorum) insert(w *walletNode) {
 	temp.children[1] = q.walletRoot
 	direction := 0
 	previousDirection := 0
+	tmpWeight := w.weight
+	w.weight = 0
 
 	// search down the tree
 	for {
@@ -124,8 +126,18 @@ func (q *Quorum) insert(w *walletNode) {
 		grandparent = parent
 		parent = current
 		current = current.children[direction]
+	}
 
-		parent.weight += w.weight // suspect...
+	w.weight += tmpWeight
+	i := falseRoot.children[1]
+	for i != nil && i != w {
+		i.weight += tmpWeight
+
+		if i.id > current.id {
+			i = i.children[0]
+		} else {
+			i = i.children[1]
+		}
 	}
 
 	q.walletRoot = falseRoot.children[1]
