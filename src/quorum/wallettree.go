@@ -4,11 +4,19 @@ import (
 	"os"
 )
 
-// A wallet node is the base unit for the WalletTree. The wallet tree is a
+// A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and
 // to pick random sectors in logarithmic time. It's also currently used for
 // lookup, but lookup may be moved to a map such that lookup happens in linear
 // time.
+//
+// walletNode composes a rbw tree, which is a red-black-weighted tree. Each
+// node has a weight, and that weight is it's internal weight plus all of the
+// internal weights of all of its children. These weights are used to pick a
+// random sector in log(n) time. The tree is sorted by the id.
+//
+// A huge thanks goes to the page at EternallyConfuzzled explaining red-black
+// trees. The influence of that page is obvious within this tree.
 type walletNode struct {
 	red      bool
 	children [2]*walletNode
@@ -18,7 +26,7 @@ type walletNode struct {
 	wallet os.File
 }
 
-// not Prevents redundant code for symetrical cases. Theres a direction, and then
+// not prevents redundant code for symetrical cases. Theres a direction, and then
 // there's the opposite of a direction. This function returns the opposite of
 // that direction.
 func not(direction int) int {
@@ -33,7 +41,8 @@ func (w *walletNode) isRed() bool {
 	return w != nil && w.red
 }
 
-// Does a rotation within the red-black tree, while keeping all weights correct.
+// rotate performs a rotation within the red-black tree, while keeping all
+// weights correct.
 func (w *walletNode) rotate(direction int) *walletNode {
 	if w.children[not(direction)] != nil {
 		w.weight -= w.children[not(direction)].weight
@@ -51,17 +60,22 @@ func (w *walletNode) rotate(direction int) *walletNode {
 	return tmp
 }
 
+// doubleRotate performs a double rotation within the tbw tree
 func (w *walletNode) doubleRotate(direction int) *walletNode {
 	w.children[not(direction)] = w.children[not(direction)].rotate(not(direction))
 	return w.rotate(direction)
 }
 
+// insert takes a walletNode and inserts it into the rbw tree held within the
+// quorum.
 func (q *Quorum) insert(w *walletNode) {
+	// exit insertion if given a nil node to insert
 	if w == nil {
 		return
 	}
-	w.red = true
+	w.red = true // all nodes are inserted as red
 
+	// if the root is nil, insert the node at the root and make it black.
 	if q.walletRoot == nil {
 		q.walletRoot = w
 		q.walletRoot.red = false
@@ -77,23 +91,27 @@ func (q *Quorum) insert(w *walletNode) {
 	temp.children[1] = q.walletRoot
 	direction := 0
 	previousDirection := 0
+
+	// nodes are inserted as having 0 weight to cause the least disruption
+	// possible
 	tmpWeight := w.weight
 	w.weight = 0
 
-	// search down the tree
+	// iterate through the tree, looking for an insertion location
 	for {
 		if current == nil {
 			// insert new node at bottom
 			parent.children[direction] = w
 			current = w
 		} else if current.children[0].isRed() && current.children[1].isRed() {
-			// color flip
+			// color flip if both children are red
 			current.red = true
 			current.children[0].red = false
 			current.children[1].red = false
 		}
 
-		// Fix red violation
+		// insertion and/or colorflipping may cause a red violation, this corrects
+		// that violation
 		if current.isRed() && parent.isRed() {
 			direction2 := 0
 			if temp.children[1] == grandparent {
@@ -108,18 +126,19 @@ func (q *Quorum) insert(w *walletNode) {
 			}
 		}
 
-		// stop at bottom
+		// stop if we have reached the node that we inserted
 		if current.id == w.id {
 			break
 		}
 
+		// pick the next direction
 		previousDirection = direction
 		direction = 0
 		if current.id < w.id {
 			direction = 1
 		}
 
-		// update helpers
+		// move the helpers forward one generation
 		if grandparent != nil {
 			temp = grandparent
 		}
@@ -128,6 +147,9 @@ func (q *Quorum) insert(w *walletNode) {
 		current = current.children[direction]
 	}
 
+	// after insertion, restore the inserted node to its original weight. Then
+	// iterate through it's parents (starting from the root and working down) and
+	// add that weight to all of their weight representations.
 	w.weight += tmpWeight
 	i := falseRoot.children[1]
 	for i != nil && i != w {
@@ -140,16 +162,19 @@ func (q *Quorum) insert(w *walletNode) {
 		}
 	}
 
+	// restore the root wallet and set it to black
 	q.walletRoot = falseRoot.children[1]
 	q.walletRoot.red = false
 }
 
+// remove removes the presented key from the wallet tree.
 func (q *Quorum) remove(id WalletID) (target *walletNode) {
+	// if the tree is nil, there is nothing to do
 	if q.walletRoot == nil {
 		return
 	}
 
-	// helpers
+	// initialize helper variables
 	falseRoot := new(walletNode)
 	var grandparent *walletNode
 	var parent *walletNode
@@ -157,11 +182,11 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 	current.children[1] = q.walletRoot
 	direction := 1
 
-	// search and push down a red
+	// search and push down a red node
 	for current.children[direction] != nil {
 		previousDirection := direction
 
-		// update helpers
+		// advance the helpers a generation
 		grandparent = parent
 		parent = current
 		current = current.children[direction]
@@ -214,6 +239,7 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 
 	// replace and remove if found
 	if target != nil {
+		// figure out what the original weight of the target node is.
 		i := falseRoot
 		targetWeight := target.weight
 		if target.children[0] != nil {
@@ -223,6 +249,8 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 			targetWeight -= target.children[1].weight
 		}
 
+		// iterate through every node from the root to the target, subtracting the
+		// target's weight.
 		for i != nil && i != target {
 			i.weight -= targetWeight
 
@@ -232,6 +260,9 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 				i = i.children[1]
 			}
 		}
+
+		// iterate through every node from the target to the current, subtracting
+		// the current's weight.
 		for i != nil && i != current {
 			i.weight -= current.weight
 
@@ -242,14 +273,18 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 			}
 		}
 
+		// remove the current node from the rbw tree
 		direction0 := 0
 		if parent.children[1] == current {
 			direction0 = 1
 		}
 		parent.children[direction0] = current.children[0]
 
+		// mark the current node as the new target, updating the weights and data
+		// to reflect the changed position.
 		target.id = current.id
 		target.weight = current.weight
+		target.wallet = current.wallet
 		if target.children[0] != nil {
 			target.weight += target.children[0].weight
 		}
@@ -267,6 +302,7 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 	return
 }
 
+// Fetches the wallet from the rbw tree that matches the id presented.
 func (q *Quorum) retrieve(id WalletID) *walletNode {
 	current := q.walletRoot
 
