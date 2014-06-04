@@ -35,6 +35,9 @@ test-long-verbose: libraries
 test-participant: libraries
 	$(govars) go test -v -race participant
 
+test-quorum: libraries
+	$(govars) go test -v -race quorum
+
 dependencies: submodule-update race-libs
 
 race-libs:
