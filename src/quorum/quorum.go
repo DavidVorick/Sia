@@ -28,7 +28,7 @@ type Quorum struct {
 	seed Entropy // Used to generate random numbers during compilation
 
 	// Cylinder management
-	walletTreeHead *wallet
+	walletRoot *walletNode
 }
 
 // Getter for the siblings private variable

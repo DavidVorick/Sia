@@ -35,6 +35,9 @@ test-long-verbose: libraries
 test-participant: libraries
 	$(govars) go test -v -race participant
 
+test-quorum: libraries
+	$(govars) go test -v -race quorum
+
 dependencies: submodule-update race-libs
 
 race-libs:
@@ -43,4 +46,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose dependencies race-libs docs
+.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-participant test-quorum dependencies race-libs docs
