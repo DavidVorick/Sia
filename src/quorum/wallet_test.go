@@ -13,9 +13,9 @@ func TestIdEncoding(t *testing.T) {
 
 	var w0 walletHandle
 	copy(w0[:], randomBytes)
-	w0ID := w0.ID()
-	w0Handle := w0ID.Handle()
-	w0Confirm := w0Handle.ID()
+	w0ID := w0.id()
+	w0Handle := w0ID.handle()
+	w0Confirm := w0Handle.id()
 
 	if w0 != w0Handle {
 		t.Error("Encoding Mismatch:", w0, ":", w0Handle)

@@ -17,7 +17,7 @@ type wallet struct {
 	walletHash     siacrypto.Hash //hash of the 4064 bytes
 	upperBalance   uint64
 	lowerBalance   uint64
-	scriptAtoms    uint32
+	scriptAtoms    uint16
 	sectorOverview [256]sectorHeader
 	// above section comes to 564 bytes
 
@@ -25,7 +25,7 @@ type wallet struct {
 	// all together, that's 4kb
 }
 
-func (id WalletID) Handle() (b walletHandle) {
+func (id WalletID) handle() (b walletHandle) {
 	for i := 0; i < 8; i++ {
 		b[i] = byte(id)
 		id = id >> 8
@@ -33,7 +33,7 @@ func (id WalletID) Handle() (b walletHandle) {
 	return
 }
 
-func (h walletHandle) ID() (b WalletID) {
+func (h walletHandle) id() (b WalletID) {
 	var a uint64
 	for i := 7; i > 0; i-- {
 		a += uint64(h[i])
