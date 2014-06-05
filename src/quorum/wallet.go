@@ -87,3 +87,38 @@ func (w *wallet) Bytes() (b [4096]byte) {
 	copy(b[offset:], w.scriptPrimer[:])
 	return
 }
+
+func FillWallet(b [4096]byte) (w *wallet) {
+	w = new(wallet)
+
+	copy(w.walletHash[:], b[:])
+	offset := siacrypto.TruncatedHashSize
+
+	for i := 7; i > 0; i-- {
+		w.upperBalance += uint64(b[offset+i])
+		w.upperBalance = w.upperBalance << 8
+	}
+	w.upperBalance += uint64(b[offset])
+	offset += 8
+
+	for i := 7; i > 0; i-- {
+		w.lowerBalance += uint64(b[offset+i])
+		w.lowerBalance = w.lowerBalance << 8
+	}
+	w.lowerBalance += uint64(b[offset])
+	offset += 8
+
+	w.scriptAtoms += uint16(b[offset+1])
+	w.scriptAtoms = w.scriptAtoms << 8
+	w.scriptAtoms += uint16(b[offset])
+	offset += 2
+
+	for i, sector := range w.sectorOverview {
+		sector.m = b[offset+i*2]
+		sector.numAtoms = b[offset+i*2+1]
+	}
+	offset += 2 * len(w.sectorOverview)
+
+	copy(w.scriptPrimer[:], b[offset:])
+	return
+}
