@@ -202,6 +202,9 @@ func op_divi() (err error) {
 	if err != nil {
 		return
 	}
+	if v2i(b) == 0 {
+		return errors.New("divide by zero")
+	}
 	push(i2v(v2i(a) / v2i(b)))
 	return
 }
@@ -211,6 +214,9 @@ func op_divf() (err error) {
 	err, b := op_pop()
 	if err != nil {
 		return
+	}
+	if v2f(b) == 0.0 {
+		return errors.New("divide by zero")
 	}
 	push(f2v(v2f(a) / v2f(b)))
 	return
