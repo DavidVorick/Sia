@@ -41,7 +41,7 @@ func (s *stackElem) Print() {
 		if p == nil {
 			break
 		}
-		print(y2i(p.val), " ")
+		print(v2i(p.val), " ")
 		p = p.next
 	}
 	println("}")

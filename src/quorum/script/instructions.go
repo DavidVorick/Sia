@@ -56,19 +56,19 @@ var opTable = []instruction{
 }
 
 // helper functions
-func y2i(b value) int64 {
+func v2i(b value) int64 {
 	return *(*int64)(unsafe.Pointer(&b))
 }
 
-func i2y(i int64) value {
+func i2v(i int64) value {
 	return *(*value)(unsafe.Pointer(&i))
 }
 
-func y2f(b value) float64 {
+func v2f(b value) float64 {
 	return *(*float64)(unsafe.Pointer(&b))
 }
 
-func f2y(f float64) value {
+func f2v(f float64) value {
 	return *(*value)(unsafe.Pointer(&f))
 }
 
@@ -85,7 +85,7 @@ func b2y(b bool) byte {
 }
 
 func y2b(b value) bool {
-	return y2i(b) != 0
+	return v2i(b) != 0
 }
 
 // opcodes
@@ -142,7 +142,7 @@ func op_addi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) + y2i(b)))
+	push(i2v(v2i(a) + v2i(b)))
 	return
 }
 
@@ -152,7 +152,7 @@ func op_addf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2y(y2f(a) + y2f(b)))
+	push(f2v(v2f(a) + v2f(b)))
 	return
 }
 
@@ -162,7 +162,7 @@ func op_subi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) - y2i(b)))
+	push(i2v(v2i(a) - v2i(b)))
 	return
 }
 
@@ -172,7 +172,7 @@ func op_subf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2y(y2f(a) - y2f(b)))
+	push(f2v(v2f(a) - v2f(b)))
 	return
 }
 
@@ -182,7 +182,7 @@ func op_muli() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) * y2i(b)))
+	push(i2v(v2i(a) * v2i(b)))
 	return
 }
 
@@ -192,7 +192,7 @@ func op_mulf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2y(y2f(a) * y2f(b)))
+	push(f2v(v2f(a) * v2f(b)))
 	return
 }
 
@@ -202,7 +202,7 @@ func op_divi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) / y2i(b)))
+	push(i2v(v2i(a) / v2i(b)))
 	return
 }
 
@@ -212,7 +212,7 @@ func op_divf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2y(y2f(a) / y2f(b)))
+	push(f2v(v2f(a) / v2f(b)))
 	return
 }
 
@@ -222,7 +222,7 @@ func op_modi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) % y2i(b)))
+	push(i2v(v2i(a) % v2i(b)))
 	return
 }
 
@@ -231,7 +231,7 @@ func op_negi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(-y2i(a)))
+	push(i2v(-v2i(a)))
 	return
 }
 
@@ -240,7 +240,7 @@ func op_negf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2y(-y2f(a)))
+	push(f2v(-v2f(a)))
 	return
 }
 
@@ -250,7 +250,7 @@ func op_bor() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) | y2i(b)))
+	push(i2v(v2i(a) | v2i(b)))
 	return
 }
 
@@ -260,7 +260,7 @@ func op_band() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) & y2i(b)))
+	push(i2v(v2i(a) & v2i(b)))
 	return
 }
 
@@ -270,7 +270,7 @@ func op_bxor() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) ^ y2i(b)))
+	push(i2v(v2i(a) ^ v2i(b)))
 	return
 }
 
@@ -279,7 +279,7 @@ func op_shln(n byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) << n))
+	push(i2v(v2i(a) << n))
 	return
 }
 
@@ -288,7 +288,7 @@ func op_shrn(n byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(i2y(y2i(a) >> n))
+	push(i2v(v2i(a) >> n))
 	return
 }
 
@@ -318,7 +318,7 @@ func op_lti() (err error) {
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2i(a) < y2i(b)))
+	op_pushb(b2y(v2i(a) < v2i(b)))
 	return
 }
 
@@ -328,7 +328,7 @@ func op_ltf() (err error) {
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2f(a) < y2f(b)))
+	op_pushb(b2y(v2f(a) < v2f(b)))
 	return
 }
 
@@ -338,7 +338,7 @@ func op_gti() (err error) {
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2i(a) > y2i(b)))
+	op_pushb(b2y(v2i(a) > v2i(b)))
 	return
 }
 
@@ -348,7 +348,7 @@ func op_gtf() (err error) {
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2f(a) > y2f(b)))
+	op_pushb(b2y(v2f(a) > v2f(b)))
 	return
 }
 
@@ -416,12 +416,12 @@ func op_regl(reg byte) (err error) {
 }
 
 func op_inci(reg, n byte) (err error) {
-	registers[reg] = i2y(y2i(registers[reg]) + int64(n))
+	registers[reg] = i2v(v2i(registers[reg]) + int64(n))
 	return
 }
 
 func op_deci(reg, n byte) (err error) {
-	registers[reg] = i2y(y2i(registers[reg]) - int64(n))
+	registers[reg] = i2v(v2i(registers[reg]) - int64(n))
 	return
 }
 
