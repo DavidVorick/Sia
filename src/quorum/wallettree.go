@@ -26,7 +26,7 @@ type walletNode struct {
 	wallet os.File
 }
 
-// not prevents redundant code for symetrical cases. Theres a direction, and then
+// not prevents redundant code for symmetrical cases. Theres a direction, and then
 // there's the opposite of a direction. This function returns the opposite of
 // that direction.
 func not(direction int) int {
@@ -60,7 +60,7 @@ func (w *walletNode) rotate(direction int) *walletNode {
 	return tmp
 }
 
-// doubleRotate performs a double rotation within the tbw tree
+// doubleRotate performs a double rotation within the rbw tree
 func (w *walletNode) doubleRotate(direction int) *walletNode {
 	w.children[not(direction)] = w.children[not(direction)].rotate(not(direction))
 	return w.rotate(direction)

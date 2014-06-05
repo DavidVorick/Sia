@@ -208,7 +208,7 @@ func TestWalletTree(t *testing.T) {
 
 		w := q.retrieve(WalletID(i))
 		if w != nil {
-			t.Error("Maganed to retreive a removed wallet:", i)
+			t.Error("Maganed to retrieve a removed wallet:", i)
 		}
 		checkViolations(1, q.walletRoot, n-1-i, t)
 	}
