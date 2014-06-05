@@ -102,6 +102,13 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	}
 	p.quorum = *q
 
+	// set the wallet prefix for the quorum
+	pubKeyHash, err := pubKey.Hash()
+	if err != nil {
+		return
+	}
+	p.quorum.SetWalletPrefix(string(pubKeyHash[:]))
+
 	// Synchronize to the current quorum
 	synchronize := new(Synchronize)
 	err = p.messageRouter.SendMessage(&network.Message{
