@@ -6,7 +6,10 @@ import (
 	"reflect"
 )
 
-const MaxInstructions = 10000
+const (
+	MaxInstructions = 10000
+	MaxStackLen     = 1 << 16
+)
 
 type Script struct {
 	// Wallet quorum.WalletID
@@ -28,7 +31,10 @@ type stackElem struct {
 	next *stackElem
 }
 
-func push(b value) {
+func push(b value) (err error) {
+	if stackLen > MaxStackLen {
+		return errors.New("stack overflow")
+	}
 	stack = &stackElem{b, stack}
 	stackLen++
 	return

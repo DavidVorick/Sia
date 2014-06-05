@@ -95,12 +95,12 @@ func op_nop() (err error) {
 }
 
 func op_pushb(b byte) (err error) {
-	push(value{b})
+	err = push(value{b})
 	return
 }
 
 func op_pushs(h, l byte) (err error) {
-	push(value{l, h})
+	err = push(value{l, h})
 	return
 }
 
@@ -121,7 +121,7 @@ func op_dup() (err error) {
 		return
 	}
 	push(a)
-	push(a)
+	err = push(a)
 	return
 }
 
@@ -132,7 +132,7 @@ func op_swap() (err error) {
 		return
 	}
 	push(a)
-	push(b)
+	err = push(b)
 	return
 }
 
@@ -142,7 +142,7 @@ func op_addi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) + v2i(b)))
+	err = push(i2v(v2i(a) + v2i(b)))
 	return
 }
 
@@ -152,7 +152,7 @@ func op_addf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2v(v2f(a) + v2f(b)))
+	err = push(f2v(v2f(a) + v2f(b)))
 	return
 }
 
@@ -162,7 +162,7 @@ func op_subi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) - v2i(b)))
+	err = push(i2v(v2i(a) - v2i(b)))
 	return
 }
 
@@ -172,7 +172,7 @@ func op_subf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2v(v2f(a) - v2f(b)))
+	err = push(f2v(v2f(a) - v2f(b)))
 	return
 }
 
@@ -182,7 +182,7 @@ func op_muli() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) * v2i(b)))
+	err = push(i2v(v2i(a) * v2i(b)))
 	return
 }
 
@@ -192,7 +192,7 @@ func op_mulf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2v(v2f(a) * v2f(b)))
+	err = push(f2v(v2f(a) * v2f(b)))
 	return
 }
 
@@ -205,7 +205,7 @@ func op_divi() (err error) {
 	if v2i(b) == 0 {
 		return errors.New("divide by zero")
 	}
-	push(i2v(v2i(a) / v2i(b)))
+	err = push(i2v(v2i(a) / v2i(b)))
 	return
 }
 
@@ -218,7 +218,7 @@ func op_divf() (err error) {
 	if v2f(b) == 0.0 {
 		return errors.New("divide by zero")
 	}
-	push(f2v(v2f(a) / v2f(b)))
+	err = push(f2v(v2f(a) / v2f(b)))
 	return
 }
 
@@ -228,7 +228,7 @@ func op_modi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) % v2i(b)))
+	err = push(i2v(v2i(a) % v2i(b)))
 	return
 }
 
@@ -237,7 +237,7 @@ func op_negi() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(-v2i(a)))
+	err = push(i2v(-v2i(a)))
 	return
 }
 
@@ -246,7 +246,7 @@ func op_negf() (err error) {
 	if err != nil {
 		return
 	}
-	push(f2v(-v2f(a)))
+	err = push(f2v(-v2f(a)))
 	return
 }
 
@@ -256,7 +256,7 @@ func op_bor() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) | v2i(b)))
+	err = push(i2v(v2i(a) | v2i(b)))
 	return
 }
 
@@ -266,7 +266,7 @@ func op_band() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) & v2i(b)))
+	err = push(i2v(v2i(a) & v2i(b)))
 	return
 }
 
@@ -276,7 +276,7 @@ func op_bxor() (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) ^ v2i(b)))
+	err = push(i2v(v2i(a) ^ v2i(b)))
 	return
 }
 
@@ -285,7 +285,7 @@ func op_shln(n byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) << n))
+	err = push(i2v(v2i(a) << n))
 	return
 }
 
@@ -294,7 +294,7 @@ func op_shrn(n byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(i2v(v2i(a) >> n))
+	err = push(i2v(v2i(a) >> n))
 	return
 }
 
@@ -417,7 +417,7 @@ func op_regs(reg byte) (err error) {
 }
 
 func op_regl(reg byte) (err error) {
-	push(registers[reg])
+	err = push(registers[reg])
 	return
 }
 
@@ -448,7 +448,7 @@ func op_blkl(loch, locl byte) (err error) {
 	}
 	var a value
 	copy(a[:], script[addr:addr+8])
-	push(a)
+	err = push(a)
 	return
 }
 
