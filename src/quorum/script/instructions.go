@@ -19,33 +19,40 @@ var opTable = []instruction{
 	instruction{0x04, 0, reflect.ValueOf(op_dup), 2},
 	instruction{0x05, 0, reflect.ValueOf(op_swap), 2},
 	instruction{0x06, 0, reflect.ValueOf(op_addi), 2},
-	instruction{0x07, 0, reflect.ValueOf(op_subi), 2},
-	instruction{0x08, 0, reflect.ValueOf(op_muli), 2},
-	instruction{0x09, 0, reflect.ValueOf(op_divi), 2},
-	instruction{0x0A, 0, reflect.ValueOf(op_modi), 3},
-	instruction{0x0B, 0, reflect.ValueOf(op_negi), 2},
-	instruction{0x0C, 0, reflect.ValueOf(op_bor), 2},
-	instruction{0x0D, 0, reflect.ValueOf(op_band), 2},
-	instruction{0x0E, 0, reflect.ValueOf(op_bxor), 2},
-	instruction{0x0F, 1, reflect.ValueOf(op_shln), 2},
-	instruction{0x10, 1, reflect.ValueOf(op_shrn), 2},
-	instruction{0x11, 0, reflect.ValueOf(op_eq), 2},
-	instruction{0x12, 0, reflect.ValueOf(op_ne), 2},
-	instruction{0x13, 0, reflect.ValueOf(op_lti), 2},
-	instruction{0x14, 0, reflect.ValueOf(op_gti), 2},
-	instruction{0x15, 0, reflect.ValueOf(op_lnot), 2},
-	instruction{0x16, 0, reflect.ValueOf(op_lor), 2},
-	instruction{0x17, 0, reflect.ValueOf(op_land), 2},
-	instruction{0x18, 2, reflect.ValueOf(op_if), 2},
-	instruction{0x19, 2, reflect.ValueOf(op_goto), 1},
-	instruction{0x1A, 1, reflect.ValueOf(op_regs), 2},
-	instruction{0x1B, 1, reflect.ValueOf(op_regl), 2},
-	instruction{0x1C, 1, reflect.ValueOf(op_inci), 2},
-	instruction{0x1D, 1, reflect.ValueOf(op_deci), 2},
-	instruction{0x1E, 2, reflect.ValueOf(op_blks), 2},
-	instruction{0x1F, 2, reflect.ValueOf(op_blkl), 2},
-	instruction{0x20, 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x21, 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x07, 0, reflect.ValueOf(op_addf), 3},
+	instruction{0x08, 0, reflect.ValueOf(op_subi), 2},
+	instruction{0x09, 0, reflect.ValueOf(op_subf), 3},
+	instruction{0x0A, 0, reflect.ValueOf(op_muli), 2},
+	instruction{0x0B, 0, reflect.ValueOf(op_mulf), 3},
+	instruction{0x0C, 0, reflect.ValueOf(op_divi), 2},
+	instruction{0x0D, 0, reflect.ValueOf(op_divf), 3},
+	instruction{0x0E, 0, reflect.ValueOf(op_modi), 3},
+	instruction{0x0F, 0, reflect.ValueOf(op_negi), 2},
+	instruction{0x10, 0, reflect.ValueOf(op_negf), 3},
+	instruction{0x11, 0, reflect.ValueOf(op_bor), 2},
+	instruction{0x12, 0, reflect.ValueOf(op_band), 2},
+	instruction{0x13, 0, reflect.ValueOf(op_bxor), 2},
+	instruction{0x14, 1, reflect.ValueOf(op_shln), 2},
+	instruction{0x15, 1, reflect.ValueOf(op_shrn), 2},
+	instruction{0x16, 0, reflect.ValueOf(op_eq), 2},
+	instruction{0x17, 0, reflect.ValueOf(op_ne), 2},
+	instruction{0x18, 0, reflect.ValueOf(op_lti), 2},
+	instruction{0x19, 0, reflect.ValueOf(op_ltf), 2},
+	instruction{0x1A, 0, reflect.ValueOf(op_gti), 2},
+	instruction{0x1B, 0, reflect.ValueOf(op_gtf), 2},
+	instruction{0x1C, 0, reflect.ValueOf(op_lnot), 2},
+	instruction{0x1D, 0, reflect.ValueOf(op_lor), 2},
+	instruction{0x1E, 0, reflect.ValueOf(op_land), 2},
+	instruction{0x1F, 2, reflect.ValueOf(op_if), 2},
+	instruction{0x20, 2, reflect.ValueOf(op_goto), 1},
+	instruction{0x21, 1, reflect.ValueOf(op_regs), 2},
+	instruction{0x22, 1, reflect.ValueOf(op_regl), 2},
+	instruction{0x23, 1, reflect.ValueOf(op_inci), 2},
+	instruction{0x24, 1, reflect.ValueOf(op_deci), 2},
+	instruction{0x25, 2, reflect.ValueOf(op_blks), 2},
+	instruction{0x26, 2, reflect.ValueOf(op_blkl), 2},
+	instruction{0x27, 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x28, 2, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
@@ -55,6 +62,14 @@ func y2i(b value) int64 {
 
 func i2y(i int64) value {
 	return *(*value)(unsafe.Pointer(&i))
+}
+
+func y2f(b value) float64 {
+	return *(*float64)(unsafe.Pointer(&b))
+}
+
+func f2y(f float64) value {
+	return *(*value)(unsafe.Pointer(&f))
 }
 
 func s2i(high, low byte) int {
@@ -131,6 +146,16 @@ func op_addi() (err error) {
 	return
 }
 
+func op_addf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(f2y(y2f(a) + y2f(b)))
+	return
+}
+
 func op_subi() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
@@ -138,6 +163,16 @@ func op_subi() (err error) {
 		return
 	}
 	push(i2y(y2i(a) - y2i(b)))
+	return
+}
+
+func op_subf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(f2y(y2f(a) - y2f(b)))
 	return
 }
 
@@ -151,6 +186,16 @@ func op_muli() (err error) {
 	return
 }
 
+func op_mulf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(f2y(y2f(a) * y2f(b)))
+	return
+}
+
 func op_divi() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
@@ -158,6 +203,16 @@ func op_divi() (err error) {
 		return
 	}
 	push(i2y(y2i(a) / y2i(b)))
+	return
+}
+
+func op_divf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	push(f2y(y2f(a) / y2f(b)))
 	return
 }
 
@@ -177,6 +232,15 @@ func op_negi() (err error) {
 		return
 	}
 	push(i2y(-y2i(a)))
+	return
+}
+
+func op_negf() (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	push(f2y(-y2f(a)))
 	return
 }
 
@@ -258,6 +322,16 @@ func op_lti() (err error) {
 	return
 }
 
+func op_ltf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	op_pushb(b2y(y2f(a) < y2f(b)))
+	return
+}
+
 func op_gti() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
@@ -265,6 +339,16 @@ func op_gti() (err error) {
 		return
 	}
 	op_pushb(b2y(y2i(a) > y2i(b)))
+	return
+}
+
+func op_gtf() (err error) {
+	_, a := op_pop()
+	err, b := op_pop()
+	if err != nil {
+		return
+	}
+	op_pushb(b2y(y2f(a) > y2f(b)))
 	return
 }
 
