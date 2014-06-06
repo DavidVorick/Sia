@@ -9,12 +9,13 @@ import (
 )
 
 const (
-	scriptPrimerSize = 3534
+	scriptPrimerSize = 1024
 )
 
 type WalletID uint64
 
 type sectorHeader struct {
+	// 6 byte CRC will go here
 	m        byte
 	numAtoms byte
 }
@@ -28,10 +29,9 @@ type wallet struct {
 	lowerBalance   uint64
 	scriptAtoms    uint16
 	sectorOverview [256]sectorHeader
-	// above section comes to 564 bytes
+	// above section comes to 566 bytes
 
 	scriptPrimer [scriptPrimerSize]byte
-	// all together, that's 4kb
 }
 
 func (q *Quorum) walletString(id WalletID) (s string) {
@@ -193,6 +193,55 @@ func (q *Quorum) saveWallet(w *wallet) {
 	}
 }
 
+func (q *Quorum) loadScript(id WalletID) []byte {
+	w := q.loadWallet(id)
+	if w.scriptAtoms == 0 {
+		return w.scriptPrimer[:]
+	}
+
+	// load script block
+	scriptBody := make([]byte, 4096*w.scriptAtoms)
+	scriptName := q.walletFilename(id)
+	scriptName += "script"
+	file, err := os.Open(scriptName)
+	if err != nil {
+		panic(err) // this will really result in fetching the data
+	}
+	_, err = file.Read(scriptBody)
+	if err != nil {
+		panic(err)
+	}
+
+	return append(w.scriptPrimer[:], scriptBody...)
+}
+
+func (q *Quorum) saveScript(id WalletID, scriptBlock []byte) {
+	// check that scriptBlock is the correct size
+	w := q.loadWallet(id)
+	if len(scriptBlock) != int(1024+4096*w.scriptAtoms) {
+		return
+	}
+	copy(w.scriptPrimer[:], scriptBlock)
+	q.saveWallet(w)
+
+	if len(scriptBlock) <= 1024 {
+		return
+	}
+
+	scriptFilename := q.walletFilename(id)
+	scriptFilename += ".script"
+	file, err := os.Create(scriptFilename)
+	defer file.Close()
+	if err != nil {
+		return
+	}
+
+	_, err = file.Write(scriptBlock[scriptPrimerSize:])
+	if err != nil {
+		return
+	}
+}
+
 // CreateWallet takes an id, a balance, a number of script atom, and an initial
 // script and uses those to create a new wallet that gets stored in stable
 // memory. If a wallet of that id already exists then the process aborts.
@@ -216,23 +265,8 @@ func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uin
 	w.upperBalance = upperBalance
 	w.lowerBalance = lowerBalance
 	w.scriptAtoms = scriptAtoms
-	copy(w.scriptPrimer[:], initialScript)
 
 	q.saveWallet(w)
-
-	// Allocate script atoms
-	/*
-		if scriptAtoms != 0 {
-			scriptBytes := make([]byte, 4096*scriptAtoms)
-			if len(scriptBytes) > scriptPrimerSize {
-				copy(scriptBytes, initialScript[scriptPrimerSize:])
-			}
-			_, err = file.Write(scriptBytes)
-			if err != nil {
-				return
-			}
-		}
-	*/
-
+	q.saveScript(w.id, initialScript) // scripts are handled separately
 	return
 }
