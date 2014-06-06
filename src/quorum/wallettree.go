@@ -1,9 +1,5 @@
 package quorum
 
-import (
-	"os"
-)
-
 // A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and
 // to pick random sectors in logarithmic time. It's also currently used for
@@ -23,7 +19,6 @@ type walletNode struct {
 
 	id     WalletID
 	weight int
-	wallet os.File
 }
 
 // not prevents redundant code for symmetrical cases. Theres a direction, and then
@@ -284,7 +279,6 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 		// to reflect the changed position.
 		target.id = current.id
 		target.weight = current.weight
-		target.wallet = current.wallet
 		if target.children[0] != nil {
 			target.weight += target.children[0].weight
 		}

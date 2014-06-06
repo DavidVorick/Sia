@@ -33,6 +33,7 @@ type wallet struct {
 	// all together, that's 4kb
 }
 
+// converts a WalletID to a walletHandle
 func (id WalletID) handle() (b walletHandle) {
 	for i := 0; i < 8; i++ {
 		b[i] = byte(id)
@@ -41,6 +42,7 @@ func (id WalletID) handle() (b walletHandle) {
 	return
 }
 
+// converts a walletHandle to a WalletID
 func (h walletHandle) id() (b WalletID) {
 	var a uint64
 	for i := 7; i > 0; i-- {
@@ -53,6 +55,8 @@ func (h walletHandle) id() (b WalletID) {
 	return
 }
 
+// Takes a wallet as input and produces a [4096]byte as an output, like an
+// encoding but explicity designed to be stored on a disk.
 func (w *wallet) bytes() (b *[4096]byte) {
 	b = new([4096]byte)
 
@@ -132,12 +136,66 @@ func fillWallet(b *[4096]byte) (w *wallet) {
 	w.scriptAtoms += uint16(b[offset])
 	offset += 2
 
-	for i, sector := range w.sectorOverview {
-		sector.m = b[offset+i*2]
-		sector.numAtoms = b[offset+i*2+1]
+	for i := range w.sectorOverview {
+		w.sectorOverview[i].m = b[offset+i*2]
+		w.sectorOverview[i].numAtoms = b[offset+i*2+1]
 	}
 	offset += 2 * len(w.sectorOverview)
 
 	copy(w.scriptPrimer[:], b[offset:])
+	return
+}
+
+func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (err error) {
+	// check if the wallet already exists
+	walletNode := q.retrieve(id)
+	if walletNode != nil {
+		err = fmt.Errorf("CreateWallet: wallet of that id already exists in quorum.")
+		return
+	}
+
+	// create a wallet node to insert into the walletTree
+	wn := new(walletNode)
+	wn.id = id
+	wn.weight = 1+scriptAtoms
+	q.insert(wn)
+
+	// fill out a basic wallet struct from the inputs
+	var w wallet
+	w.upperBalance = upperBalance
+	w.lowerBalance = lowerBalance
+	w.scriptAtoms = scriptAtoms
+	copy(w.scriptPrimer[:], initialScript)
+
+	// derive the base64 filename for the wallet, converting slashes for filesystem compatibility
+	walletHandleBytes := [8]byte(id.handle())
+	walletFilenameBytes := append([]byte(q.walletPrefix), walletHandleBytes[:]...)
+	walletFilename := base64.StdEncoding.EncodeToString(walletFilenameBytes)
+	walletFilename = strings.Replace(walletFilename, "/", "_", -1)
+
+	// open the file and write the wallets
+	file, err := os.Create(walletFilename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	walletBytes := w.bytes()
+	_, err = file.Write(walletBytes[:])
+	if err != nil {
+		return
+	}
+
+	// Allocate script atoms
+	if scriptAtoms != 0 {
+		scriptBytes := make([]byte, 4096*scriptAtoms)
+		if len(scriptBytes) > scriptPrimerSize {
+			copy(scriptBytes, initialScript[scriptPrimerSize:])
+		}
+		_, err = file.Write(scriptBytes)
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }

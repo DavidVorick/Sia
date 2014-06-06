@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+// TestIdEncoding takes random WalletID, converts it to a walletHandle,
+// converts is back, and then converts it forward again. Then it verifies that
+// in the process of encoding and decoding and then re-encoding the values stay
+// consistent.
 func TestIdEncoding(t *testing.T) {
 	randomBytes, err := siacrypto.RandomByteSlice(8)
 	if err != nil {
@@ -25,6 +29,10 @@ func TestIdEncoding(t *testing.T) {
 	}
 }
 
+// TestWalletCoding creates a wallet, fills it with random values, converts it
+// to bytes, back to a wallet, and then back to bytes, and then compares each
+// against the other to make sure that the process of encoding and decoding
+// does not introduce any errors.
 func TestWalletCoding(t *testing.T) {
 	// Fill out a wallet with completely random values
 	w := new(wallet)
