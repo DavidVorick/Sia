@@ -5,30 +5,6 @@ import (
 	"testing"
 )
 
-// TestIdEncoding takes random WalletID, converts it to a walletHandle,
-// converts is back, and then converts it forward again. Then it verifies that
-// in the process of encoding and decoding and then re-encoding the values stay
-// consistent.
-func TestIdEncoding(t *testing.T) {
-	randomBytes, err := siacrypto.RandomByteSlice(8)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var w0 walletHandle
-	copy(w0[:], randomBytes)
-	w0ID := w0.id()
-	w0Handle := w0ID.handle()
-	w0Confirm := w0Handle.id()
-
-	if w0 != w0Handle {
-		t.Error("Encoding Mismatch:", w0, ":", w0Handle)
-	}
-	if w0ID != w0Confirm {
-		t.Error("Encoding Mismatch:", w0ID, ":", w0Confirm)
-	}
-}
-
 // TestWalletCoding creates a wallet, fills it with random values, converts it
 // to bytes, back to a wallet, and then back to bytes, and then compares each
 // against the other to make sure that the process of encoding and decoding

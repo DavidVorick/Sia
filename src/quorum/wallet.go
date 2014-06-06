@@ -13,7 +13,6 @@ const (
 )
 
 type WalletID uint64
-type walletHandle [8]byte
 
 type sectorHeader struct {
 	m        byte
@@ -22,6 +21,8 @@ type sectorHeader struct {
 
 // A 4kb block of data containing everything about a wallet.
 type wallet struct {
+	id WalletID // not saved to disk
+
 	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes
 	upperBalance   uint64
 	lowerBalance   uint64
@@ -146,56 +147,97 @@ func fillWallet(b *[4096]byte) (w *wallet) {
 	return
 }
 
+// takes a walletID and derives the filename from the quorum. Eventually, this
+// function should also verify that the id is located within the quorum.
+func (q *Quorum) walletFilename(id WalletID) (s string) {
+	// Turn the id into a suffix that will follow the quorum prefix
+	walletSuffix := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		walletSuffix[i] = byte(id)
+		id = id >> 8
+	}
+	safeSuffix := base64.StdEncoding.EncodeToString(walletSuffix)
+	safeSuffix = strings.Replace(safeSuffix, "/", "_", -1)
+	s = q.walletPrefix + safeSuffix
+	return
+}
+
+func (q *Quorum) loadWallet(id WalletID) *wallet {
+	walletFilename := q.walletFilename(id)
+	file, err := os.Open(walletFilename)
+	if err != nil {
+		panic(err)
+	}
+
+	var b [4096]byte
+	n, err := file.Read(b[:])
+	if err != nil {
+		panic(err)
+	}
+	if n != 4096 {
+		return nil
+	}
+
+	return fillWallet(&b)
+}
+
+// takes a wallet as input, then uses the quorum prefix plus the wallet id to
+// determine the filename for the wallet. Then it writes a 4kb block of data to
+// the wallet file and saves it to disk.
+func (q *Quorum) saveWallet(w *wallet) {
+	walletFilename := q.walletFilename(w.id)
+	file, err := os.Create(walletFilename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	walletBytes := w.bytes() // w.bytes() takes care of the hashing
+	_, err = file.Write(walletBytes[:])
+	if err != nil {
+		panic(err)
+	}
+}
+
+// CreateWallet takes an id, a balance, a number of script atom, and an initial
+// script and uses those to create a new wallet that gets stored in stable
+// memory. If a wallet of that id already exists then the process aborts.
 func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (err error) {
 	// check if the wallet already exists
-	walletNode := q.retrieve(id)
-	if walletNode != nil {
+	wn := q.retrieve(id)
+	if wn != nil {
 		err = fmt.Errorf("CreateWallet: wallet of that id already exists in quorum.")
 		return
 	}
 
 	// create a wallet node to insert into the walletTree
-	wn := new(walletNode)
+	wn = new(walletNode)
 	wn.id = id
-	wn.weight = 1+scriptAtoms
+	wn.weight = int(1 + scriptAtoms)
 	q.insert(wn)
 
 	// fill out a basic wallet struct from the inputs
-	var w wallet
+	w := new(wallet)
+	w.id = id
 	w.upperBalance = upperBalance
 	w.lowerBalance = lowerBalance
 	w.scriptAtoms = scriptAtoms
 	copy(w.scriptPrimer[:], initialScript)
 
-	// derive the base64 filename for the wallet, converting slashes for filesystem compatibility
-	walletHandleBytes := [8]byte(id.handle())
-	walletFilenameBytes := append([]byte(q.walletPrefix), walletHandleBytes[:]...)
-	walletFilename := base64.StdEncoding.EncodeToString(walletFilenameBytes)
-	walletFilename = strings.Replace(walletFilename, "/", "_", -1)
-
-	// open the file and write the wallets
-	file, err := os.Create(walletFilename)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	walletBytes := w.bytes()
-	_, err = file.Write(walletBytes[:])
-	if err != nil {
-		return
-	}
+	q.saveWallet(w)
 
 	// Allocate script atoms
-	if scriptAtoms != 0 {
-		scriptBytes := make([]byte, 4096*scriptAtoms)
-		if len(scriptBytes) > scriptPrimerSize {
-			copy(scriptBytes, initialScript[scriptPrimerSize:])
+	/*
+		if scriptAtoms != 0 {
+			scriptBytes := make([]byte, 4096*scriptAtoms)
+			if len(scriptBytes) > scriptPrimerSize {
+				copy(scriptBytes, initialScript[scriptPrimerSize:])
+			}
+			_, err = file.Write(scriptBytes)
+			if err != nil {
+				return
+			}
 		}
-		_, err = file.Write(scriptBytes)
-		if err != nil {
-			return
-		}
-	}
+	*/
 
 	return
 }
