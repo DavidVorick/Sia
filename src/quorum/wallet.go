@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	scriptPrimerSize = 3532
+	scriptPrimerSize = 3534
 )
 
 type WalletID uint64
@@ -53,8 +53,13 @@ func (h walletHandle) id() (b WalletID) {
 	return
 }
 
-func (w *wallet) Bytes() (b [4096]byte) {
-	copy(b[:], w.walletHash[:])
+func (w *wallet) bytes() (b *[4096]byte) {
+	b = new([4096]byte)
+
+	// The hash is calculated before returning the bytes. This allows whomever is
+	// using the wallet to update the values without needing to update the hash
+	// every time. The hash is only calculated when the wallet is being converted
+	// to a string of bytes.
 	offset := siacrypto.TruncatedHashSize
 
 	tmp := w.upperBalance
@@ -74,7 +79,7 @@ func (w *wallet) Bytes() (b [4096]byte) {
 	tmp16 := w.scriptAtoms
 	for i := 0; i < 2; i++ {
 		b[offset+i] = byte(tmp16)
-		tmp = tmp >> 8
+		tmp16 = tmp16 >> 8
 	}
 	offset += 2
 
@@ -85,13 +90,27 @@ func (w *wallet) Bytes() (b [4096]byte) {
 	offset += 2 * len(w.sectorOverview)
 
 	copy(b[offset:], w.scriptPrimer[:])
+
+	hash, err := siacrypto.CalculateTruncatedHash(b[:][32:])
+	if err != nil {
+		return nil
+	}
+	copy(b[:], hash[:])
 	return
 }
 
-func FillWallet(b [4096]byte) (w *wallet) {
+func fillWallet(b *[4096]byte) (w *wallet) {
 	w = new(wallet)
-
 	copy(w.walletHash[:], b[:])
+	// do an integrity check of the wallet, return nil if there are errors during
+	// the check
+	expectedHash, err := siacrypto.CalculateTruncatedHash(b[:][32:])
+	if err != nil || expectedHash != w.walletHash {
+		// if err != nil, there should probably a more severe thing.  maybe
+		// CalculateTruncatedHash shouldn't return an error at all, and instead
+		// call panic or some extreme logging function.
+		return nil
+	}
 	offset := siacrypto.TruncatedHashSize
 
 	for i := 7; i > 0; i-- {
