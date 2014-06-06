@@ -71,6 +71,13 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
+		p.quorum.SetWalletPrefix("/home/david/siatests")
+		// create the bootstrap wallet
+		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
+		if err != nil {
+			return
+		}
+
 		p.quorum.AddSibling(p.self)
 		p.newSignedHeartbeat()
 		go p.tick()

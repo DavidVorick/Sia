@@ -1,5 +1,9 @@
 package quorum
 
+import (
+	"fmt"
+)
+
 // A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and
 // to pick random sectors in logarithmic time. It's also currently used for
@@ -19,6 +23,40 @@ type walletNode struct {
 
 	id     WalletID
 	weight int
+}
+
+// A helper function meant to be used by Quorum.Status() that prints out each
+// wallet in the tree, giving only basic information about the wallets as
+// opposed to the debugging information presented by printTree() in
+// wallettree_test.go
+func (q *Quorum) printWallets(w *walletNode) (s string) {
+	if w == nil {
+		return
+	}
+
+	s = fmt.Sprintf("\t\tWallet %v:\n", w.id)
+	s += q.walletString(w.id)
+
+	/* this informaiton requires opening the wallet files
+	b += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.upperBalance)
+	b += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.lowerBalance)
+	b += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
+
+	// calculate the number of sectors that have been allocated
+	allocatedSectors := 0
+	for _, sectorHeader := range w.sectorOverview {
+		if sectorHeader.numAtoms != 0 {
+			allocatedSectors += 1
+		}
+	}
+	b += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
+	*/
+
+	s += fmt.Sprintf("\n")
+
+	s += q.printWallets(w.children[0])
+	s += q.printWallets(w.children[1])
+	return
 }
 
 // not prevents redundant code for symmetrical cases. Theres a direction, and then

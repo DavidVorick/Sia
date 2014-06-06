@@ -34,25 +34,20 @@ type wallet struct {
 	// all together, that's 4kb
 }
 
-// converts a WalletID to a walletHandle
-func (id WalletID) handle() (b walletHandle) {
-	for i := 0; i < 8; i++ {
-		b[i] = byte(id)
-		id = id >> 8
-	}
-	return
-}
+func (q *Quorum) walletString(id WalletID) (s string) {
+	w := q.loadWallet(id)
+	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.upperBalance)
+	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.lowerBalance)
+	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
 
-// converts a walletHandle to a WalletID
-func (h walletHandle) id() (b WalletID) {
-	var a uint64
-	for i := 7; i > 0; i-- {
-		a += uint64(h[i])
-		a = a << 8
+	// calculate the number of sectors that have been allocated
+	allocatedSectors := 0
+	for _, sectorHeader := range w.sectorOverview {
+		if sectorHeader.numAtoms != 0 {
+			allocatedSectors += 1
+		}
 	}
-	a += uint64(h[0])
-
-	b = WalletID(a)
+	s += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
 	return
 }
 

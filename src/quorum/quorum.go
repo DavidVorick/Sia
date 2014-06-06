@@ -61,6 +61,9 @@ func (q *Quorum) Status() (b string) {
 	}
 	b += fmt.Sprintf("\n")
 
+	b += fmt.Sprintf("\tWallets:\n")
+	b += q.printWallets(q.walletRoot)
+
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
 }
