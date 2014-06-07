@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -30,6 +31,11 @@ type Quorum struct {
 	// wallet management
 	walletPrefix string
 	walletRoot   *walletNode
+
+	// snapshot management
+	snap0Size   int
+	snap1Size   int
+	currentSnap bool // false == snap0, true == snap1
 }
 
 // Getter for the siblings private variable
@@ -116,7 +122,19 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 		return
 	}
 
-	// cylinderTree
+	// Encode snap variables
+	err = encoder.Encode(q.snap0Size)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.snap1Size)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.currentSnap)
+	if err != nil {
+		return
+	}
 
 	gobQuorum = w.Bytes()
 	return
@@ -158,7 +176,60 @@ func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 		return
 	}
 
-	// cylinderTree
+	// Decode snap variables
+	err = decoder.Decode(&q.snap0Size)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.snap1Size)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.currentSnap)
+	if err != nil {
+		return
+	}
 
 	return
+}
+
+func (q *Quorum) saveWalletTree(w *walletNode, file *os.File) (size int) {
+	if w == nil {
+		return
+	}
+
+	size, err := file.Write(q.loadWallet(w.id).bytes()[:])
+	if err != nil {
+		panic(err)
+	}
+
+	size += q.saveWalletTree(w.children[0], file)
+	size += q.saveWalletTree(w.children[1], file)
+	return
+}
+
+func (q *Quorum) SaveSnap() {
+	// open the file in which the snapshot is stored
+	q.currentSnap = !q.currentSnap
+	snapname := q.walletPrefix
+	if q.currentSnap {
+		snapname += ".snap0"
+	} else {
+		snapname += ".snap1"
+	}
+	file, err := os.Create(snapname)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// save quorum to disk
+	gobQuorum, err := q.GobEncode()
+	if err != nil {
+		panic(err)
+	}
+	size, err := file.Write(gobQuorum)
+
+	// get every wallet, and get its bytes
+	size += q.saveWalletTree(q.walletRoot, file)
 }

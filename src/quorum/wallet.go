@@ -244,6 +244,8 @@ func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
 	if err != nil {
 		return
 	}
+
+	// Write the other script atoms too
 }
 
 // CreateWallet takes an id, a balance, a number of script atom, and an initial
