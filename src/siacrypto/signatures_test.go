@@ -108,6 +108,10 @@ func TestSigning(t *testing.T) {
 		t.Error("Signed empty message did not verify!")
 	}
 
+	if testing.Short() {
+		t.Skip()
+	}
+
 	// verify empty message when signature is bad
 	msg.Signature.r.Sub(msg.Signature.r, big.NewInt(1))
 	verified = publicKey.Verify(&msg)

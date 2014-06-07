@@ -19,6 +19,13 @@ func RandomByteSlice(numBytes int) (randomBytes []byte, err error) {
 	return
 }
 
+// Generates and returns a random byte
+func RandomByte() byte {
+	randomByte := make([]byte, 1)
+	rand.Read(randomByte)
+	return randomByte[0]
+}
+
 // RandomInt() generates a random int [0, ceiling)
 func RandomInt(ceiling int) (randInt int, err error) {
 	if ceiling < 1 {
@@ -32,5 +39,16 @@ func RandomInt(ceiling int) (randInt int, err error) {
 		return
 	}
 	randInt = int(randBig.Int64())
+	return
+}
+
+// RandomUInt64() generates a random uint64 [0, ceiling)
+func RandomInt64(ceiling int64) (randInt uint64) {
+	bigInt := big.NewInt(int64(ceiling))
+	randBig, err := rand.Int(rand.Reader, bigInt)
+	if err != nil {
+		return
+	}
+	randInt = uint64(randBig.Int64())
 	return
 }

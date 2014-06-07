@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"network"
+	"os"
 	"quorum"
 	"quorum/script"
 	"siacrypto"
@@ -71,6 +72,19 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
+		var s string
+		s, err = os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		s += "/../../participantStorage/"
+		p.quorum.SetWalletPrefix(s)
+		// create the bootstrap wallet
+		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
+		if err != nil {
+			return
+		}
+
 		p.quorum.AddSibling(p.self)
 		p.newSignedHeartbeat()
 		go p.tick()
@@ -101,6 +115,13 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 		return
 	}
 	p.quorum = *q
+
+	// set the wallet prefix for the quorum
+	pubKeyHash, err := pubKey.Hash()
+	if err != nil {
+		return
+	}
+	p.quorum.SetWalletPrefix(string(pubKeyHash[:]))
 
 	// Synchronize to the current quorum
 	synchronize := new(Synchronize)

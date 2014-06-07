@@ -27,8 +27,9 @@ type Quorum struct {
 	germ Entropy // Where internal entropy is stored before external entropy is applied
 	seed Entropy // Used to generate random numbers during compilation
 
-	// Cylinder management
-	walletRoot *walletNode
+	// wallet management
+	walletPrefix string
+	walletRoot   *walletNode
 }
 
 // Getter for the siblings private variable
@@ -60,8 +61,17 @@ func (q *Quorum) Status() (b string) {
 	}
 	b += fmt.Sprintf("\n")
 
+	b += fmt.Sprintf("\tWallets:\n")
+	b += q.printWallets(q.walletRoot)
+
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
+}
+
+// This is the prefix that the quorum will use when opening wallets as files.
+// There is no getter, because one is not seen as necessary.
+func (q *Quorum) SetWalletPrefix(walletPrefix string) {
+	q.walletPrefix = walletPrefix
 }
 
 // Encoded Variables:
