@@ -8,6 +8,9 @@ all: submodule-update libraries
 submodule-update:
 	git submodule update --init
 
+directories:
+	mkdir participantStorage
+
 fmt:
 	$(govars) go fmt $(packages)
 
@@ -38,7 +41,7 @@ test-participant: libraries
 test-quorum: libraries
 	$(govars) go test -v -race quorum
 
-dependencies: submodule-update race-libs
+dependencies: submodule-update race-libs directories
 
 race-libs:
 	$(govars) go install -race std
@@ -46,4 +49,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-participant test-quorum dependencies race-libs docs
+.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-participant test-quorum dependencies race-libs docs directories
