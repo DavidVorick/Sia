@@ -51,6 +51,11 @@ func TestOpCodes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing argument error")
 	}
+	s.Block = nil
+	_, err = s.Execute(nil, nil)
+	if err == nil {
+		t.Fatal("expected missing terminator error")
+	}
 }
 
 func BenchmarkInterpreter(b *testing.B) {
