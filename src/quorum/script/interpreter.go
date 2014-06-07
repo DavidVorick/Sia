@@ -62,8 +62,20 @@ var (
 	stack     *stackElem
 	stackLen  int
 	q         *quorum.Quorum
-	opCounts  map[byte]int
+	// resource pools
+	costBalance int
 )
+
+// deduct instruction cost from resource pools, and return an error if any pool is exhausted
+func deductResources(op instruction) error {
+	costBalance -= op.cost
+	switch {
+	case costBalance > 0:
+		return errors.New("balance exhausted")
+	default:
+		return nil
+	}
+}
 
 func (s *Script) Bytes() []byte {
 	return s.Block
@@ -78,21 +90,14 @@ func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err e
 	stack = nil
 	stackLen = 0
 	q = quorum
-	opCounts = make(map[byte]int)
 
 	for {
 		if iptr >= len(script) {
 			err = errors.New("script missing terminator")
 			break
-		} else if iptr > MaxInstructions {
-			err = errors.New("max instruction limit reached")
-			break
 		} else if script[iptr] == 0xFF {
 			break
 		}
-
-		// record in map
-		opCounts[script[iptr]]++
 
 		op := opTable[script[iptr]]
 
@@ -107,12 +112,18 @@ func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err e
 			fnArgs = append(fnArgs, reflect.ValueOf(script[iptr]))
 		}
 
+		// deduct resources and check that we can proceed with execution
+		err = deductResources(op)
+		if err != nil {
+			break
+		}
+
 		// call associated opcode function
 		retVals := op.fn.Call(fnArgs)
 		errInter := retVals[0].Interface()
 		if errInter != nil {
 			err = errInter.(error)
-			return
+			break
 		}
 
 		// increment instruction pointer
@@ -122,9 +133,5 @@ func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err e
 		stack.Print()
 	}
 
-	// calculate cost
-	for b, n := range opCounts {
-		totalCost += n * opTable[b].cost
-	}
 	return
 }
