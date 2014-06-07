@@ -77,7 +77,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 		if err != nil {
 			panic(err)
 		}
-		s += "/../../participantStorage/"
+		s += "/../../participantStorage/bootstrap."
 		p.quorum.SetWalletPrefix(s)
 		// create the bootstrap wallet
 		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
