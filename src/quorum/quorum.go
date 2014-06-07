@@ -30,6 +30,7 @@ type Quorum struct {
 
 	// wallet management
 	walletPrefix string
+	numNodes     int
 	walletRoot   *walletNode
 
 	// snapshot management
@@ -146,7 +147,7 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 //	germ
 //	seed
 //
-//	cylinderTreeHead + entire tree (tbi)
+//  snap variables
 func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	// if q == nil, make a new quorum and decode into that
 	if q == nil {
