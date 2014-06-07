@@ -34,8 +34,9 @@ type Quorum struct {
 	walletRoot   *walletNode
 
 	// snapshot management
-	snap0Size   int
-	snap1Size   int
+	snapSize [2]int
+	snapWalletSliceOffset [2]int
+	snapWallets [2]int
 	currentSnap bool // false == snap0, true == snap1
 }
 
