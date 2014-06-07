@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"os"
 	"sync"
 )
 
@@ -34,10 +33,10 @@ type Quorum struct {
 	walletRoot   *walletNode
 
 	// snapshot management
-	snapSize [2]int
+	snapSize              [2]int
 	snapWalletSliceOffset [2]int
-	snapWallets [2]int
-	currentSnap bool // false == snap0, true == snap1
+	snapWallets           [2]int
+	currentSnap           bool // false == snap0, true == snap1
 }
 
 // Getter for the siblings private variable
@@ -125,11 +124,27 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 	}
 
 	// Encode snap variables
-	err = encoder.Encode(q.snap0Size)
+	err = encoder.Encode(q.snapSize[0])
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(q.snap1Size)
+	err = encoder.Encode(q.snapSize[1])
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.snapWalletSliceOffset[0])
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.snapWalletSliceOffset[1])
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.snapWallets[0])
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.snapWallets[1])
 	if err != nil {
 		return
 	}
@@ -179,11 +194,27 @@ func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	}
 
 	// Decode snap variables
-	err = decoder.Decode(&q.snap0Size)
+	err = decoder.Decode(&q.snapSize[0])
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&q.snap1Size)
+	err = decoder.Decode(&q.snapSize[1])
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.snapWalletSliceOffset[0])
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.snapWalletSliceOffset[1])
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.snapWallets[0])
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.snapWallets[1])
 	if err != nil {
 		return
 	}
