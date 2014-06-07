@@ -23,9 +23,9 @@ type Participant struct {
 
 	// Heartbeat Variables
 	scriptInputs     []script.ScriptInput
+	scriptInputsLock sync.Mutex
 	heartbeats       [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock   sync.Mutex
-	scriptInputsLock sync.Mutex
 
 	// Consensus Algorithm Status
 	currentStep int

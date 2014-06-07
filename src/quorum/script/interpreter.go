@@ -72,14 +72,18 @@ var (
 	stackLen  int
 	q         *quorum.Quorum
 	// resource pools
+	instBalance int
 	costBalance int
 )
 
 // deduct instruction cost from resource pools, and return an error if any pool is exhausted
 func deductResources(op instruction) error {
+	instBalance -= 1
 	costBalance -= op.cost
 	switch {
-	case costBalance > 0:
+	case instBalance < 0:
+		return errors.New("instruction limit reached")
+	case costBalance < 0:
 		return errors.New("balance exhausted")
 	default:
 		return nil
@@ -96,6 +100,10 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 	stack = nil
 	stackLen = 0
 	q = q_
+	// resource pools
+	// these values will likely be supplied as arguments in the future
+	instBalance = MaxInstructions
+	costBalance = 10000
 
 	for {
 		if iptr >= len(script) {
