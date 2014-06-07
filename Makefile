@@ -9,7 +9,7 @@ submodule-update:
 	git submodule update --init
 
 directories:
-	mkdir participantStorage
+	mkdir -p participantStorage
 
 fmt:
 	$(govars) go fmt $(packages)
