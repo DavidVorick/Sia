@@ -12,13 +12,13 @@ import (
 // Heartbeats contain keepalive information as well as a set of scripts
 // submitted by arbitrary sources.
 type heartbeat struct {
-	entropy quorum.Entropy
-	scripts []*script.Script
+	entropy      quorum.Entropy
+	scriptInputs []script.ScriptInput
 }
 
 func (hb *heartbeat) Bytes() (b []byte) {
 	b = append(b, hb.entropy[:]...)
-	for _, script := range hb.scripts {
+	for _, script := range hb.scriptInputs {
 		b = append(b, script.Bytes()...)
 	}
 	return
@@ -36,7 +36,7 @@ func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
 	if err != nil {
 		return
 	}
-	err = encoder.Encode(hb.scripts)
+	err = encoder.Encode(hb.scriptInputs)
 	if err != nil {
 		return
 	}
@@ -58,6 +58,6 @@ func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
 	if err != nil {
 		return
 	}
-	err = decoder.Decode(&hb.scripts)
+	err = decoder.Decode(&hb.scriptInputs)
 	return
 }

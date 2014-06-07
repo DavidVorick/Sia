@@ -147,12 +147,12 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	encoder.Encode(p.self.Address())
 	encoder.Encode(pubKey)
 	gobSibling := w.Bytes()
-	var s script.Script
+	var s script.ScriptInput
 	s.Input = []byte{0x18, 0x04, byte(len(gobSibling)), 0xFF}
 	s.Input = append(s.Input, gobSibling...)
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
-		Proc: "Participant.AddScript",
+		Proc: "Participant.AddScriptInput",
 		Args: s,
 		Resp: nil,
 	})
