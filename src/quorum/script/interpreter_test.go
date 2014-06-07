@@ -12,7 +12,7 @@ func TestOpCodes(t *testing.T) {
 		0x01, 0x02, // push 2
 		0x01, 0x03, // push 3
 		// if 2 == 3, jump ahead 10 instructions (causing an error)
-		0x11, 0x18, 0x00, 0x0A,
+		0x16, 0x1F, 0x00, 0x0A,
 		0xFF,
 	}
 	_, err := s.Execute(nil, nil)
@@ -24,10 +24,10 @@ func TestOpCodes(t *testing.T) {
 	s.Block = []byte{
 		0x01, 0x02, // push 2
 		0x04,       // dup 2
-		0x1A, 0x01, // store 2 in register 1
-		0x1B, 0x01, // load 2 from register 1
+		0x21, 0x01, // store 2 in register 1
+		0x22, 0x01, // load 2 from register 1
 		// if 2 != 2, jump ahead 10 instructions (causing an error)
-		0x12, 0x18, 0x00, 0x0A,
+		0x17, 0x1F, 0x00, 0x0A,
 		0xFF,
 	}
 	_, err = s.Execute(nil, nil)
