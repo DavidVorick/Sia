@@ -12,8 +12,16 @@ const (
 )
 
 type Script struct {
-	// Wallet quorum.WalletID
 	Block []byte
+}
+
+type ScriptInput struct {
+	WalletID quorum.WalletID
+	Input    []byte
+}
+
+func (s *ScriptInput) Bytes() []byte {
+	return s.Input
 }
 
 type instruction struct {
@@ -54,6 +62,7 @@ func (s *stackElem) Print() {
 }
 
 // global vars accessed by the various opcode functions
+// TODO: replace with env struct
 var (
 	script    []byte
 	iptr      int
@@ -77,11 +86,8 @@ func deductResources(op instruction) error {
 	}
 }
 
-func (s *Script) Bytes() []byte {
-	return s.Block
-}
-
-func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err error) {
+// Execute interprets a script on a set of inputs and returns the execution cost.
+func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
 	script = s.Block
 	iptr = 0
@@ -89,7 +95,7 @@ func (s *Script) Execute(in []byte, quorum *quorum.Quorum) (totalCost int, err e
 	registers = [256]value{}
 	stack = nil
 	stackLen = 0
-	q = quorum
+	q = q_
 
 	for {
 		if iptr >= len(script) {
