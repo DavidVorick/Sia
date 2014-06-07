@@ -43,5 +43,5 @@ List of bytecodes
 | 0x25 |  blks  |  2   |  store a value in data block at address ($1 << 8) + $2 |
 | 0x26 |  blkl  |  2   |  load a value from data block |
 | 0x27 |  rej   |  0   |  reject input, terminating execution | 
-| 0x28 |  asib  |  1   |  adds sibling defined in data block; pushes success value |
+| 0x28 |  asib  |  2   |  adds sibling defined in data block; pushes success value |
 | 0xFF |  exit  |  0   |  terminates execution |
