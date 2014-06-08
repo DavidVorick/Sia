@@ -19,7 +19,7 @@ type block struct {
 	hash       siacrypto.TruncatedHash
 	height     int
 	parent     siacrypto.TruncatedHash
-	heartbeats [quorum.QuorumSize]heartbeat
+	heartbeats [quorum.QuorumSize]*heartbeat
 }
 
 type blockHistoryHeader struct {
@@ -76,22 +76,47 @@ func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
 	return
 }
 
+// The GobEncode for a block does not include the hash, that must be encoded
+// separately.
 func (b *block) GobEncode() (gobBlock []byte, err error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(b.height)
-	if err != nil {
-		return
+	intb := siaencoding.IntToByte(b.height)
+	var encodedHeartbeats [quorum.QuorumSize][]byte
+	for i, heartbeat := range b.heartbeats {
+		if heartbeat == nil {
+			encodedHeartbeats[i] = nil
+		} else {
+			var encodedHeartbeat []byte
+			encodedHeartbeat, err = heartbeat.GobEncode()
+			if err != nil {
+				return
+			}
+			encodedHeartbeats[i] = encodedHeartbeat
+		}
 	}
-	err = encoder.Encode(b.parent)
-	if err != nil {
-		return
+
+	// calculate total size
+	size := len(intb)     // height
+	size += len(b.parent) // parent hash
+	for i := range encodedHeartbeats {
+		size += len(encodedHeartbeats[i]) // all the heartbeats
 	}
-	err = encoder.Encode(b.heartbeats)
-	if err != nil {
-		return
+	size += 4 * quorum.QuorumSize // an offset for each heartbeat
+
+	// encode height, then parent, then heartbeats
+	gobBlock = make([]byte, size)
+	copy(gobBlock, intb[:])
+	offset := len(intb)
+	copy(gobBlock[offset:], b.parent[:])
+	offset += siacrypto.TruncatedHashSize
+	heartbeatOffset := offset + len(intb)*quorum.QuorumSize
+	for i := range encodedHeartbeats {
+		intb = siaencoding.IntToByte(len(encodedHeartbeats[i]))
+		copy(gobBlock[offset:], intb[:])
+		copy(gobBlock[heartbeatOffset:], encodedHeartbeats[i])
+		offset += len(intb)
+		heartbeatOffset += len(encodedHeartbeats[i])
 	}
-	gobBlock = w.Bytes()
+
 	return
 }
 
@@ -101,20 +126,6 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 		return
 	}
 
-	r := bytes.NewBuffer(gobBlock)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&b.height)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&b.parent)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&b.heartbeats)
-	if err != nil {
-		return
-	}
 	return
 }
 
