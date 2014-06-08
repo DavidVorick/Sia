@@ -11,13 +11,14 @@ import (
 //
 // Needs updated error handling
 func (p *Participant) compile() {
-	// Lock down s.heartbeats and quorum for editing
+	// Lock down s.heartbeats for editing
 	p.heartbeatsLock.Lock()
 
-	// fetch a sibling ordering
-	siblingOrdering := p.quorum.SiblingOrdering()
+	// each heartbeat that gets processed needs to go into a block
+	block := make([]*heartbeat, quorum.QuorumSize)
 
-	// Read heartbeats, process them, then archive them.
+	// Process each sibling's contribution according to the siblingOrdering
+	siblingOrdering := p.quorum.SiblingOrdering()
 	for _, i := range siblingOrdering {
 		// each sibling must submit exactly 1 heartbeat
 		if len(p.heartbeats[i]) != 1 {
@@ -28,7 +29,7 @@ func (p *Participant) compile() {
 
 		// this is the only way I know to access the only element of a map; the key
 		// is unknown
-		fmt.Println("Confirming Sibling", i)
+		fmt.Printf("Confirming Sibling %v", i)
 		for _, hb := range p.heartbeats[i] {
 			p.quorum.IntegrateSiblingEntropy(hb.entropy)
 			for _, si := range hb.scriptInputs {
@@ -36,6 +37,7 @@ func (p *Participant) compile() {
 				s := script.Script{block}
 				s.Execute(si.Input, &p.quorum)
 			}
+			block[i] = hb
 		}
 
 		// clear heartbeat list for next block

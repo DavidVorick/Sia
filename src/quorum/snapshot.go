@@ -41,6 +41,11 @@ func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset
 	return
 }
 
+// Things saved in a Snap:
+//
+// 1. The quorum struct
+// 2. A list of the wallets and their offsets
+// 3 A list of the wallets and their scripts
 func (q *Quorum) SaveSnap() {
 	// open the file in which the snapshot is stored
 	q.currentSnap = !q.currentSnap
