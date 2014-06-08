@@ -12,6 +12,10 @@ const (
 	scriptPrimerSize = 1024
 )
 
+// the default script for all wallets; simply transfers control to input
+// eventually this will be modified to verify a public key before executing
+var genesisScript = []byte{0x28}
+
 type WalletID uint64
 
 type sectorHeader struct {
@@ -193,7 +197,7 @@ func (q *Quorum) saveWallet(w *wallet) {
 	}
 }
 
-func (q *Quorum) loadScript(id WalletID) []byte {
+func (q *Quorum) LoadScript(id WalletID) []byte {
 	w := q.loadWallet(id)
 	if w.scriptAtoms == 0 {
 		return w.scriptPrimer[:]
@@ -215,7 +219,7 @@ func (q *Quorum) loadScript(id WalletID) []byte {
 	return append(w.scriptPrimer[:], scriptBody...)
 }
 
-func (q *Quorum) saveScript(id WalletID, scriptBlock []byte) {
+func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
 	// check that scriptBlock is the correct size
 	w := q.loadWallet(id)
 	if len(scriptBlock) != int(1024+4096*w.scriptAtoms) {
@@ -267,6 +271,6 @@ func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uin
 	w.scriptAtoms = scriptAtoms
 
 	q.saveWallet(w)
-	q.saveScript(w.id, initialScript) // scripts are handled separately
+	q.SaveScript(w.id, initialScript) // scripts are handled separately
 	return
 }

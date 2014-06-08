@@ -108,7 +108,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.TransferQuorum",
-		Args: false, // can't send nil :(
+		Args: struct{}{},
 		Resp: q,
 	})
 	if err != nil {
@@ -128,7 +128,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.Synchronize",
-		Args: false, // can't send nil :(
+		Args: struct{}{},
 		Resp: synchronize,
 	})
 	if err != nil {
@@ -147,12 +147,15 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	encoder.Encode(p.self.Address())
 	encoder.Encode(pubKey)
 	gobSibling := w.Bytes()
-	var si script.ScriptInput
-	si.Input = gobSibling
+
+	// simple script that calls AddSibling
+	var s script.ScriptInput
+	s.Input = []byte{0x29, 0x04, byte(len(gobSibling)), 0xFF}
+	s.Input = append(s.Input, gobSibling...)
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
-		Proc: "Participant.AddScript",
-		Args: si,
+		Proc: "Participant.AddScriptInput",
+		Args: s,
 		Resp: nil,
 	})
 

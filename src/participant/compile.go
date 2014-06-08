@@ -2,6 +2,7 @@ package participant
 
 import (
 	"fmt"
+	"quorum/script"
 	"siacrypto"
 )
 
@@ -29,8 +30,10 @@ func (p *Participant) compile() {
 		fmt.Println("Confirming Sibling", i)
 		for _, hb := range p.heartbeats[i] {
 			p.quorum.IntegrateSiblingEntropy(hb.entropy)
-			for _, script := range hb.scripts {
-				script.Interpret(&p.quorum)
+			for _, si := range hb.scriptInputs {
+				block := p.quorum.LoadScript(si.WalletID)
+				s := script.Script{block}
+				s.Execute(si.Input, &p.quorum)
 			}
 		}
 

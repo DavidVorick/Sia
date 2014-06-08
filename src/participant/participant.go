@@ -22,10 +22,10 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scripts        []*script.ScriptInput
-	heartbeats     [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
-	heartbeatsLock sync.Mutex
-	scriptsLock    sync.Mutex
+	scriptInputs     []script.ScriptInput
+	scriptInputsLock sync.Mutex
+	heartbeats       [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
+	heartbeatsLock   sync.Mutex
 
 	// Consensus Algorithm Status
 	currentStep int
@@ -34,17 +34,17 @@ type Participant struct {
 	tickingLock sync.Mutex
 }
 
-func (p *Participant) AddScript(script script.ScriptInput, _ *struct{}) (err error) {
-	p.scriptsLock.Lock()
-	p.scripts = append(p.scripts, &script)
-	p.scriptsLock.Unlock()
+func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
+	p.scriptInputsLock.Lock()
+	p.scriptInputs = append(p.scriptInputs, si)
+	p.scriptInputsLock.Unlock()
 	return
 }
 
 // Takes an address as input and adds the address to the list of listeners,
 // meaning that the added address will get sent all messages that are broadcast
 // to the quorum.
-func (p *Participant) Subscribe(a network.Address, arb *struct{}) (err error) {
+func (p *Participant) Subscribe(a network.Address, _ *struct{}) (err error) {
 	// add the address to listeners
 	p.listenersLock.Lock()
 	p.listeners = append(p.listeners, a)
