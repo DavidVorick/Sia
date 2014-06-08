@@ -52,7 +52,8 @@ var opTable = []instruction{
 	instruction{0x25, 2, reflect.ValueOf(op_blks), 2},
 	instruction{0x26, 2, reflect.ValueOf(op_blkl), 2},
 	instruction{0x27, 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x28, 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x28, 0, reflect.ValueOf(op_xfer), 1},
+	instruction{0x29, 2, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
@@ -454,6 +455,12 @@ func op_blkl(loch, locl byte) (err error) {
 
 func op_rej() (err error) {
 	return errors.New("rejected input")
+}
+
+func op_xfer() (err error) {
+	script = input
+	iptr = 0
+	return
 }
 
 func op_asib(loc byte, length byte) (err error) {

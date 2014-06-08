@@ -150,7 +150,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 
 	// simple script that calls AddSibling
 	var s script.ScriptInput
-	s.Input = []byte{0x28, 0x04, byte(len(gobSibling)), 0xFF}
+	s.Input = []byte{0x29, 0x04, byte(len(gobSibling)), 0xFF}
 	s.Input = append(s.Input, gobSibling...)
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
