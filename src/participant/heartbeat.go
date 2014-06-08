@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"quorum"
 	"quorum/script"
+	"siaencoding"
 )
 
 // A heartbeat is the object sent by siblings to engage in consensus.
@@ -16,48 +17,53 @@ type heartbeat struct {
 	scriptInputs []script.ScriptInput
 }
 
-func (hb *heartbeat) Bytes() (b []byte) {
-	b = append(b, hb.entropy[:]...)
-	for _, script := range hb.scriptInputs {
-		b = append(b, script.Bytes()...)
-	}
-	return
-}
-
 func (hb *heartbeat) GobEncode() (gobHeartbeat []byte, err error) {
-	// if hb == nil, encode a zero heartbeat
 	if hb == nil {
-		hb = new(heartbeat)
+		err = fmt.Errorf("Cannot encode a nil heartbeat")
 	}
 
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(hb.entropy)
-	if err != nil {
-		return
+	// calculate the size of the encoded heartbeat
+	encodedHeartbeatLen := quorum.EntropyVolume + 4
+	for i, scriptInput := range hb.scriptInputs {
+		encodedHeartbeatLen += 12
+		encodedHeartbeatLen += len(scriptInput.Input)
 	}
-	err = encoder.Encode(hb.scriptInputs)
-	if err != nil {
-		return
+	gobHeartbeat = make([]byte, encodedHeartbeatLen)
+
+	// copy the entropy over
+	copy(gobHeartbeat, hb.entropy[:])
+	offset := quorum.EntropyVolume
+
+	// copy in the number of ScriptInputs
+	intb := siaencoding.IntToByte(len(hb.scriptInputs))
+	copy(gobHeartbeat[offset:], intb[:])
+	offset += 4
+
+	// copy in each scriptInput, while also copying in the offset for each
+	// scriptInput
+	scriptInputOffset := offset + len(hb.scriptInputs)*4
+	for i, scriptInput := range hb.scriptInputs {
+		// copy over the offset
+		intb := siaencoding.IntToByte(scriptInputOffset)
+		copy(gobHeartbeat[offset:], intb[:])
+		offset += 4
+
+		// copy over the ScriptInput
+		id := scriptInput.WalletID.Bytes()
+		copy(gobHeartbeat[scriptInputOffset:], id[:])
+		scriptInputOffset += quorum.WalletIDSize
+		n := copy(gobHeartbeat[scriptInputOffset:], scriptInput.Input)
+		scriptInputOffset += n
 	}
 
-	gobHeartbeat = w.Bytes()
 	return
 }
 
 func (hb *heartbeat) GobDecode(gobHeartbeat []byte) (err error) {
-	// if hb == nil, make a new heartbeat and decode into that
 	if hb == nil {
 		err = fmt.Errorf("Cannot decode into nil heartbeat")
 		return
 	}
 
-	r := bytes.NewBuffer(gobHeartbeat)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&hb.entropy)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&hb.scriptInputs)
 	return
 }
