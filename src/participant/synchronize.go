@@ -14,7 +14,7 @@ type Synchronize struct {
 	heartbeats  [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
 }
 
-func (p *Participant) TransferQuorum(_ bool, q *quorum.Quorum) (err error) {
+func (p *Participant) TransferQuorum(_ struct{}, q *quorum.Quorum) (err error) {
 	*q = p.quorum
 	return
 }
@@ -24,7 +24,7 @@ func (p *Participant) TransferQuorum(_ bool, q *quorum.Quorum) (err error) {
 //
 // This needs to be changed so that someone requests a synchronize, and a rv
 // is sent
-func (p *Participant) Synchronize(_ bool, s *Synchronize) (err error) {
+func (p *Participant) Synchronize(_ struct{}, s *Synchronize) (err error) {
 	p.stepLock.Lock()
 	s.currentStep = p.currentStep
 	p.stepLock.Unlock()

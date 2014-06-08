@@ -108,7 +108,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.TransferQuorum",
-		Args: false, // can't send nil :(
+		Args: struct{}{},
 		Resp: q,
 	})
 	if err != nil {
@@ -128,7 +128,7 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.Synchronize",
-		Args: false, // can't send nil :(
+		Args: struct{}{},
 		Resp: synchronize,
 	})
 	if err != nil {
