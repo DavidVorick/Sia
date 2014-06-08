@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	SnapshotLen            int = 100
-	BlockHistoryHeaderSize int = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
+	SnapshotLen            = 100
+	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
 )
 
 type block struct {
@@ -40,7 +40,7 @@ func (bhh *blockHistoryHeader) GobEncode() (gobBHH []byte, err error) {
 	return
 }
 
-func (bhh *blockHistoryHeader) GobDecode(gobBHH []byte, err error) {
+func (bhh *blockHistoryHeader) GobDecode(gobBHH []byte) (err error) {
 	if len(gobBHH) != BlockHistoryHeaderSize {
 		err = fmt.Errorf("gobBHH has wrong size, cannot decode!")
 	}
@@ -186,7 +186,35 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 }
 
 func (p *Participant) SaveBlock(b *block) (err error) {
-	file, err := os.OpenFile(p.activeHistory, os.O_RDWR, 0666)
+	var file *os.File
+	if p.activeHistoryStep == SnapshotLen {
+		p.activeHistoryStep = 0
+		os.Remove(p.recentHistory)
+		p.recentHistory = p.activeHistory
+		p.activeHistory = p.quorum.GetWalletPrefix()
+		p.activeHistory += fmt.Sprintf(".blockHistory.%v", b.height)
+		file, err = os.Create(p.activeHistory)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+	} else {
+		p.activeHistoryStep += 1
+		file, err = os.OpenFile(p.activeHistory, os.O_RDWR, 0666)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+	}
+
+	blockHistoryHeaderBytes := make([]byte, BlockHistoryHeaderSize)
+	n, err := file.Read(blockHistoryHeaderBytes)
+	if err != nil || n != BlockHistoryHeaderSize {
+		panic(err)
+	}
+
+	var bhh blockHistoryHeader
+	err = bhh.GobDecode(blockHistoryHeaderBytes)
 	if err != nil {
 		panic(err)
 	}
@@ -196,9 +224,39 @@ func (p *Participant) SaveBlock(b *block) (err error) {
 		return
 	}
 
-	n, err := file.Write(gobBlock)
+	if bhh.latestBlock == 0 {
+		bhh.blockOffsets[0] = uint32(BlockHistoryHeaderSize)
+		bhh.blockOffsets[1] = uint32(BlockHistoryHeaderSize)
+	}
+
+	if bhh.latestBlock != SnapshotLen-1 {
+		bhh.blockOffsets[bhh.latestBlock+1] += uint32(len(gobBlock))
+	}
+
+	_, err = file.Seek(int64(bhh.blockOffsets[bhh.latestBlock]), 0)
+	if err != nil {
+		panic(err)
+	}
+
+	n, err = file.Write(gobBlock)
 	if err != nil || n != len(gobBlock) {
 
 	}
+
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	encodeBHH, err := bhh.GobEncode()
+	if err != nil {
+		panic(err)
+	}
+
+	n, err = file.Write(encodeBHH)
+	if err != nil || n != len(encodeBHH) {
+		panic(err)
+	}
+
 	return
 }

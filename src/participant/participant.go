@@ -34,10 +34,11 @@ type Participant struct {
 	stepLock    sync.RWMutex // prevents a benign race condition
 
 	// Block history variables
-	activeHistory string // file currently being appended with new blocks
-	recentHistory string // file containing SnapshotLen blocks
-	currentBlock  int
-	blockLock     sync.Mutex
+	activeHistoryStep int
+	activeHistory     string // file currently being appended with new blocks
+	recentHistory     string // file containing SnapshotLen blocks
+	currentBlock      int
+	blockLock         sync.Mutex
 }
 
 func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {

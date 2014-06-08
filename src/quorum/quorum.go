@@ -81,6 +81,10 @@ func (q *Quorum) SetWalletPrefix(walletPrefix string) {
 	q.walletPrefix = walletPrefix
 }
 
+func (q *Quorum) GetWalletPrefix() string {
+	return q.walletPrefix
+}
+
 // Encoded Variables:
 //	non-nil siblings
 //
