@@ -50,11 +50,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// create sector
-	secData, err := siacrypto.RandomByteSlice(70000)
-	if err != nil {
-		t.Fatal("Could not generate test data:", err)
-	}
-
+	secData := siacrypto.RandomByteSlice(70000)
 	sec, err := quorum.NewSector(secData)
 	if err != nil {
 		t.Fatal("Failed to create sector:", err)
@@ -103,11 +99,7 @@ func TestRPCdownloadSector(t *testing.T) {
 	SectorDB = make(map[siacrypto.Hash]*quorum.RingHeader)
 
 	// create sector
-	secData, err := siacrypto.RandomByteSlice(70000)
-	if err != nil {
-		t.Fatal("Could not generate test data:", err)
-	}
-
+	secData := siacrypto.RandomByteSlice(70000)
 	sec, err := quorum.NewSector(secData)
 	if err != nil {
 		t.Fatal("Failed to create sector:", err)

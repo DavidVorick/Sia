@@ -6,29 +6,19 @@ import (
 
 func TestRandomByteSlice(t *testing.T) {
 	// run tests with bogus input
-	randomByteSlice, err := RandomByteSlice(-3)
-	if err == nil {
-		t.Error("RandomByteSlice is accepting negative values")
+	randomByteSlice := RandomByteSlice(-3)
+	if len(randomByteSlice) != 0 {
+		t.Error("RandomByteSlice input with a negative number should return a len 0 byte slice")
 	}
-
-	randomByteSlice, err = RandomByteSlice(400)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	randomByteSlice = RandomByteSlice(400)
 	if len(randomByteSlice) != 400 {
-		t.Fatal("Incorrect number of bytes generated!")
+		t.Error("Incorrect number of bytes generated!")
 	}
-
-	randomByteSlice, err = RandomByteSlice(0)
+	randomByteSlice = RandomByteSlice(0)
 	if len(randomByteSlice) != 0 {
 		t.Error("unspecified behavoir when calling RandomByteSlice(0)")
 	}
-
-	// add a statistical test to verify that the data appears random
 }
-
-// Benchmark function for RandomByteSlice
 
 func TestRandomInt(t *testing.T) {
 	// test 1 as a ceiling in range [0, 1)

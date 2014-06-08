@@ -207,16 +207,17 @@ func (p *Participant) SaveBlock(b *block) (err error) {
 		defer file.Close()
 	}
 
-	blockHistoryHeaderBytes := make([]byte, BlockHistoryHeaderSize)
-	n, err := file.Read(blockHistoryHeaderBytes)
-	if err != nil || n != BlockHistoryHeaderSize {
-		panic(err)
-	}
-
 	var bhh blockHistoryHeader
-	err = bhh.GobDecode(blockHistoryHeaderBytes)
-	if err != nil {
-		panic(err)
+	if p.activeHistoryStep != 0 {
+		blockHistoryHeaderBytes := make([]byte, BlockHistoryHeaderSize)
+		n, err := file.Read(blockHistoryHeaderBytes)
+		if err != nil || n != BlockHistoryHeaderSize {
+			panic(err)
+		}
+		err = bhh.GobDecode(blockHistoryHeaderBytes)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	gobBlock, err := b.GobEncode()
@@ -238,7 +239,7 @@ func (p *Participant) SaveBlock(b *block) (err error) {
 		panic(err)
 	}
 
-	n, err = file.Write(gobBlock)
+	n, err := file.Write(gobBlock)
 	if err != nil || n != len(gobBlock) {
 
 	}

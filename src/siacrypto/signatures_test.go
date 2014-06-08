@@ -132,14 +132,8 @@ func TestSigning(t *testing.T) {
 		t.Error("Verified a nil signature...")
 	}
 
-	// create arbitrary message
-	randomMessage, err := RandomByteSlice(20)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// sign the message
-	signedMessage, err := secretKey.Sign(randomMessage)
+	signedMessage, err := secretKey.Sign(RandomByteSlice(20))
 	if err != nil {
 		return
 	}
@@ -172,11 +166,7 @@ func TestCombinedMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	randomByteSlice, err := RandomByteSlice(0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	signedMessage, err := secretKey.Sign(randomByteSlice)
+	signedMessage, err := secretKey.Sign(RandomByteSlice(0))
 	if err != nil {
 		t.Fatal(err)
 	}

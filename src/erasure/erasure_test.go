@@ -6,11 +6,7 @@ import (
 )
 
 func TestEncodeAndRecover(t *testing.T) {
-	originalData, err := siacrypto.RandomByteSlice(1080)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	originalData := siacrypto.RandomByteSlice(1080)
 	decoded, err := EncodeRedundancy(9, 3, originalData)
 	if err != nil {
 		t.Fatal(err)

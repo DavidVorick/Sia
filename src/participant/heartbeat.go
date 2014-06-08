@@ -79,8 +79,6 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	offset := uint32(quorum.EntropyVolume)
 
 	// get the number of ScriptInputs
-	println(len(gobHB))
-	println(offset)
 	var intb [4]byte
 	copy(intb[:], gobHB[offset:])
 	numScriptInputs := siaencoding.UInt32FromByte(intb)

@@ -35,7 +35,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
-	entropy, err := siacrypto.RandomByteSlice(quorum.EntropyVolume)
+	entropy := siacrypto.RandomByteSlice(quorum.EntropyVolume)
 	if err != nil {
 		return
 	}

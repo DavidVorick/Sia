@@ -101,11 +101,7 @@ func generateSector(q [quorum.QuorumSize]network.Address) (s *quorum.Sector, err
 		err = fmt.Errorf("you must connect to a quorum first")
 		return
 	}
-	data, err := siacrypto.RandomByteSlice(70000)
-	if err != nil {
-		return
-	}
-	s, err = quorum.NewSector(data)
+	s, err = quorum.NewSector(siacrypto.RandomByteSlice(70000))
 	if err != nil {
 		return
 	}

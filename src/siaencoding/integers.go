@@ -30,7 +30,7 @@ func UInt64ToByte(i uint64) (b [8]byte) {
 }
 
 func UInt64FromByte(b [8]byte) (i uint64) {
-	for x := 7; x > 0; x++ {
+	for x := 7; x > 0; x-- {
 		i += uint64(b[x])
 		i = i << 8
 	}
