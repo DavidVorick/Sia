@@ -51,7 +51,8 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 
 	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hb.Bytes())
+	hbb, _ := hb.GobEncode()
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hbb)
 	if err != nil {
 		return
 	}

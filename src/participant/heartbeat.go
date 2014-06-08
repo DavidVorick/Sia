@@ -18,11 +18,12 @@ type heartbeat struct {
 func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	if hb == nil {
 		err = fmt.Errorf("Cannot encode a nil heartbeat")
+		return
 	}
 
 	// calculate the size of the encoded heartbeat
 	encodedHeartbeatLen := quorum.EntropyVolume + 4
-	for i, scriptInput := range hb.scriptInputs {
+	for _, scriptInput := range hb.scriptInputs {
 		encodedHeartbeatLen += 12
 		encodedHeartbeatLen += len(scriptInput.Input)
 	}
@@ -40,7 +41,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	// copy in each scriptInput, while also copying in the offset for each
 	// scriptInput
 	scriptInputOffset := offset + len(hb.scriptInputs)*4
-	for i, scriptInput := range hb.scriptInputs {
+	for _, scriptInput := range hb.scriptInputs {
 		// copy over the offset
 		intb := siaencoding.IntToByte(scriptInputOffset)
 		copy(gobHB[offset:], intb[:])
@@ -74,6 +75,8 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	offset := quorum.EntropyVolume
 
 	// get the number of ScriptInputs
+	println(len(gobHB))
+	println(offset)
 	var intb [4]byte
 	copy(intb[:], gobHB[offset:])
 	numScriptInputs := siaencoding.IntFromByte(intb)

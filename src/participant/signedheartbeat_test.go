@@ -70,7 +70,8 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	hb := new(heartbeat)
 	sh := new(SignedHeartbeat)
 	sh.heartbeat = hb
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hb.Bytes())
+	hbb, _ := hb.GobEncode()
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hbb)
 	sh.signatories = make([]byte, 2)
 	sh.signatures = make([]siacrypto.Signature, 2)
 	sh.signatories[0] = sibling1.Index()

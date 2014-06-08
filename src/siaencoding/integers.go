@@ -12,7 +12,7 @@ func IntToByte(i int) (b [4]byte) {
 
 // Takes as input a [4]byte encoded int, and returns an int
 func IntFromByte(b [4]byte) (i int) {
-	for x := 3; x > 0; x++ {
+	for x := 3; x > 0; x-- {
 		i += int(b[x])
 		i = i << 8
 	}

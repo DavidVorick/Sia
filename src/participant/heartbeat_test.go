@@ -11,8 +11,8 @@ func TestHeartbeatEncoding(t *testing.T) {
 	// encode a nil heartbeat
 	var hb *heartbeat
 	ehb, err := hb.GobEncode()
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatal("no error produced when encoding a nil heartbeat")
 	}
 
 	// create entropy for the heartbeat
