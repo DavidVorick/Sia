@@ -1,7 +1,7 @@
 package siaencoding
 
 // Takes an int as input, and returns an equivalent [4]byte
-func IntToByte(i int) (b [4]byte) {
+func UInt32ToByte(i uint32) (b [4]byte) {
 	for x := 0; x < 3; x++ {
 		b[x] = byte(i)
 		i = i >> 8
@@ -11,12 +11,12 @@ func IntToByte(i int) (b [4]byte) {
 }
 
 // Takes as input a [4]byte encoded int, and returns an int
-func IntFromByte(b [4]byte) (i int) {
+func UInt32FromByte(b [4]byte) (i uint32) {
 	for x := 3; x > 0; x-- {
-		i += int(b[x])
+		i += uint32(b[x])
 		i = i << 8
 	}
-	i += int(b[0])
+	i += uint32(b[0])
 	return
 }
 
