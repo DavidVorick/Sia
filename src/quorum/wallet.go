@@ -16,8 +16,6 @@ const (
 // eventually this will be modified to verify a public key before executing
 var genesisScript = []byte{0x28}
 
-type WalletID uint64
-
 type sectorHeader struct {
 	// 6 byte CRC will go here
 	m        byte
