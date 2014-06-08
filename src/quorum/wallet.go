@@ -28,7 +28,7 @@ type sectorHeader struct {
 type wallet struct {
 	id WalletID // not saved to disk
 
-	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes
+	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes, need to be specification-based
 	upperBalance   uint64
 	lowerBalance   uint64
 	scriptAtoms    uint16

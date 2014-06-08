@@ -2,6 +2,7 @@ package participant
 
 import (
 	"fmt"
+	"quorum"
 	"quorum/script"
 	"siacrypto"
 )
