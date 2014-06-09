@@ -77,7 +77,10 @@ func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
 // The GobEncode for a block does not include the hash, that must be encoded
 // separately.
 func (b *block) GobEncode() (gobBlock []byte, err error) {
+	// get the height as a [4]byte
 	intb := siaencoding.UInt32ToByte(b.height)
+
+	// get all of the heartbeats in their encoded form
 	var encodedHeartbeats [quorum.QuorumSize][]byte
 	for i, heartbeat := range b.heartbeats {
 		if heartbeat == nil {
@@ -106,19 +109,21 @@ func (b *block) GobEncode() (gobBlock []byte, err error) {
 	offset := len(intb)
 	copy(gobBlock[offset:], b.parent[:])
 	offset += siacrypto.TruncatedHashSize
+
+	// get the offset for the first heartbeat
 	heartbeatOffset := offset + len(intb)*quorum.QuorumSize
 	for i := range encodedHeartbeats {
+		// encode nil heartbeats as -1, or all 1's for uint
 		if encodedHeartbeats[i] == nil {
 			intb = siaencoding.UInt32ToByte(^uint32(0))
 			copy(gobBlock[offset:], intb[:])
-			offset += len(intb)
 		} else {
-			intb = siaencoding.UInt32ToByte(uint32(len(encodedHeartbeats[i])))
+			intb = siaencoding.UInt32ToByte(uint32(heartbeatOffset))
 			copy(gobBlock[offset:], intb[:])
 			copy(gobBlock[heartbeatOffset:], encodedHeartbeats[i])
-			offset += len(intb)
 			heartbeatOffset += len(encodedHeartbeats[i])
 		}
+		offset += len(intb)
 	}
 
 	return
@@ -151,6 +156,7 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 	var heartbeatOffset uint32
 	var i int
 	for i = 0; i < quorum.QuorumSize-1; i++ {
+		// get the offset for the current heartbeat
 		copy(intb[:], gobBlock[offset:])
 		heartbeatOffset = siaencoding.UInt32FromByte(intb)
 		offset += 4
@@ -158,11 +164,16 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 			b.heartbeats[i] = nil
 			continue
 		}
+
+		// get the offset for the next heartbeat (to know the length of this
+		// heartbeat)
 		copy(intb[:], gobBlock[offset:])
 		nextOffset = siaencoding.UInt32FromByte(intb)
 
+		// in the loop, the +1 is derived from the fact that offset has already
+		// been advanced after 'i'
 		j := 1
-		for nextOffset == ^uint32(0) && j+i < quorum.QuorumSize {
+		for nextOffset == ^uint32(0) && j+i+1 < quorum.QuorumSize {
 			copy(intb[:], gobBlock[offset+4*j:])
 			nextOffset = siaencoding.UInt32FromByte(intb)
 			j++
@@ -174,11 +185,24 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 		}
 
 		if heartbeatOffset > nextOffset || int(nextOffset)+MinHeartbeatSize > len(gobBlock) {
-			err = fmt.Errorf("Received invalid block")
+			err = fmt.Errorf("got invalid gob block")
 			return
 		}
 
-		b.heartbeats[i].GobDecode(gobBlock[heartbeatOffset:nextOffset])
+		b.heartbeats[i] = new(heartbeat)
+		err = b.heartbeats[i].GobDecode(gobBlock[heartbeatOffset:nextOffset])
+		if err != nil {
+			return
+		}
+	}
+
+	// if nextOffset is nil, then the program broke because the last heartbeat
+	// has been loaded. If nextOffset is not nil, then the program broke because
+	// the for loop expired, but there's still a heartbeat dangling at the end
+	b.heartbeats[i] = new(heartbeat)
+	if nextOffset != ^uint32(0) {
+		copy(intb[:], gobBlock[offset:])
+		heartbeatOffset = siaencoding.UInt32FromByte(intb)
 	}
 	b.heartbeats[i].GobDecode(gobBlock[heartbeatOffset:])
 

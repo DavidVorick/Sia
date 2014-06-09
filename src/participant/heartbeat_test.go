@@ -29,6 +29,10 @@ func TestHeartbeatEncoding(t *testing.T) {
 		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
 		Input:    siacrypto.RandomByteSlice(15),
 	}
+	hb.scriptInputs[2] = script.ScriptInput{
+		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
+		Input:    siacrypto.RandomByteSlice(7),
+	}
 
 	// encode the filled out heartbeat
 	ehb, err = hb.GobEncode()
