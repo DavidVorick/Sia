@@ -6,9 +6,50 @@ import (
 	"siaencoding"
 )
 
+const (
+	SnapHeaderSize = 8
+)
+
 type walletLookup struct {
 	id     WalletID
 	offset uint32
+}
+
+type snapHeader struct {
+	walletLookupOffset uint32
+	wallets            uint32
+}
+
+func (s *snapHeader) GobEncode() (b []byte, err error) {
+	if s == nil {
+		err = fmt.Errorf("cannot encode nil snapHeader")
+		return
+	}
+
+	b = make([]byte, SnapHeaderSize)
+	intb := siaencoding.UInt32ToByte(s.walletLookupOffset)
+	copy(b, intb[:])
+	intb = siaencoding.UInt32ToByte(s.wallets)
+	copy(b[4:], intb[:])
+	return
+}
+
+func (s *snapHeader) GobDecode(b []byte, err error) {
+	if s == nil {
+		err = fmt.Errorf("cannode decode into nil snapHeader")
+		return
+	}
+	if len(b) != SnapHeaderSize {
+		err = fmt.Errorf("received invalid snap header")
+		return
+	}
+
+	var intb [4]byte
+	copy(intb[:], b)
+	s.walletLookupOffset = siaencoding.UInt32FromByte(intb)
+	copy(intb[:], b[4:])
+	s.wallets = siaencoding.UInt32FromByte(intb)
+	return
 }
 
 // saveWalletTree goes through in sorted order and saves the wallets to disk.
@@ -67,23 +108,37 @@ func (q *Quorum) SaveSnap() {
 	}
 	defer file.Close()
 
-	// save quorum to disk starting at position 0
 	gobQuorum, err := q.GobEncode()
 	if err != nil {
 		panic(err)
 	}
-	size, err := file.Write(gobQuorum)
-	if err != nil || size != len(gobQuorum) {
+
+	// create the snapshot header and write it to disk
+	header := snapHeader{
+		walletLookupOffset: uint32(len(gobQuorum)),
+		wallets:            q.numNodes,
+	}
+	headerBytes, err := header.GobEncode()
+	if err != nil {
+		panic(err)
+	}
+	size, err := file.Write(headerBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	// write the encoded quorum to disk
+	_, err = file.Write(gobQuorum)
+	if err != nil {
 		panic(err)
 	}
 	offset := uint32(size)
-	q.snapWalletSliceOffset[snap] = offset
 
 	// save an array indicating each wallet and its offset in the file. The
 	// offsets are left blank for the time being and will be filled out when the
 	// wallets are saved to disk.
 	walletSliceBytes := make([]byte, q.numNodes*12)
-	size, err = file.Write(walletSliceBytes)
+	_, err = file.Write(walletSliceBytes)
 	offset += uint32(size)
 
 	// save every wallet to disk, recording the offset and id in the wallet lookup
@@ -101,17 +156,18 @@ func (q *Quorum) SaveSnap() {
 	}
 
 	// seek to the offset where the wallet lookup table is kept and save the table
-	_, err = file.Seek(int64(q.snapWalletSliceOffset[snap]), 0)
+	_, err = file.Seek(int64(header.walletLookupOffset), 0)
 	if err != nil {
 		panic(err)
 	}
-	size, err = file.Write(walletSliceBytes)
-
-	q.snapSize[snap] = offset
+	_, err = file.Write(walletSliceBytes)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // loads and transfers the quorum componenet from the most recent snapshot
-func (self *Quorum) FetchSnapQuorum(_ bool, q *Quorum) (err error) {
+func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 	snapname := self.walletPrefix
 	var snap int
 	if self.currentSnap {
@@ -135,6 +191,7 @@ func (self *Quorum) FetchSnapQuorum(_ bool, q *Quorum) (err error) {
 		return
 	}
 
+	q = new(Quorum)
 	err = q.GobDecode(quorumBytes)
 	return
 }
