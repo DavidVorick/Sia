@@ -29,7 +29,7 @@ func (p *Participant) compile() {
 
 		// this is the only way I know to access the only element of a map; the key
 		// is unknown
-		fmt.Printf("Confirming Sibling %v", i)
+		fmt.Printf("Confirming Sibling %v\n", i)
 		for _, hb := range p.heartbeats[i] {
 			b.heartbeats[i] = hb // add heartbeat to block
 			p.quorum.IntegrateSiblingEntropy(hb.entropy)

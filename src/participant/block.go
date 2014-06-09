@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	SnapshotLen            = 5 // number of blocks separating each snapshot
+	SnapshotLen            = 3 // number of blocks separating each snapshot
 	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
 )
 
@@ -238,7 +238,6 @@ func (p *Participant) saveBlock(b *block) (err error) {
 		defer file.Close()
 	} else {
 		// increase the active step and open the existing file for writing.
-		p.activeHistoryStep += 1
 		file, err = os.OpenFile(p.activeHistory, os.O_RDWR, 0666)
 		if err != nil {
 			panic(p.activeHistory)
@@ -277,6 +276,7 @@ func (p *Participant) saveBlock(b *block) (err error) {
 	if bhh.latestBlock != SnapshotLen-1 {
 		bhh.blockOffsets[bhh.latestBlock+1] += uint32(len(gobBlock)) + bhh.blockOffsets[bhh.latestBlock]
 	}
+	bhh.latestBlock += 1
 
 	// seek back to 0 to write the updated bhh struct to disk
 	_, err = file.Seek(0, 0)
@@ -293,14 +293,15 @@ func (p *Participant) saveBlock(b *block) (err error) {
 	}
 
 	// seek to the offset location in the file to write the block to disk
-	_, err = file.Seek(int64(bhh.blockOffsets[bhh.latestBlock]), 0)
+	_, err = file.Seek(int64(bhh.blockOffsets[bhh.latestBlock-1]), 0)
 	if err != nil {
 		panic(err)
 	}
 	n, err = file.Write(gobBlock)
 	if err != nil || n != len(gobBlock) {
-
+		panic(err)
 	}
+	p.activeHistoryStep += 1
 
 	return
 }
