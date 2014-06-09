@@ -3,53 +3,53 @@ package quorum
 import (
 	"fmt"
 	"os"
+	"siaencoding"
 )
 
 type walletLookup struct {
 	id     WalletID
-	offset int
-}
-
-type WalletFetch struct {
-	snap bool
-	ids  []WalletID
+	offset uint32
 }
 
 // saveWalletTree goes through in sorted order and saves the wallets to disk.
 // upon saving the wallets, an element is appended to the wallet index, which
 // contains a list of all wallets and their offset in the snapshot. This only
 // exists to enable linear lookup of individual wallets within the snapshot.
-func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset *int, walletSlice []walletLookup) {
+func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset *uint32, walletSlice []walletLookup) {
 	if w == nil {
 		return
 	}
 
+	// save all wallets that are less than the current wallet
 	q.saveWalletTree(w.children[0], file, index, offset, walletSlice)
-	q.saveWalletTree(w.children[1], file, index, offset, walletSlice)
 
+	// save the current wallet
 	size, err := file.Write(q.loadWallet(w.id).bytes()[:])
 	if err != nil {
 		panic(err)
 	}
-
 	walletSlice[*offset] = walletLookup{
 		id:     w.id,
 		offset: *offset,
 	}
 	*index += 1
-	*offset += size
+	*offset += uint32(size)
+
+	// save all wallets greater than the current wallet
+	q.saveWalletTree(w.children[1], file, index, offset, walletSlice)
 	return
 }
 
-// Things saved in a Snap:
-//
-// 1. The quorum struct
-// 2. A list of the wallets and their offsets
-// 3 A list of the wallets and their scripts
+// SaveSnap takes all of the variables in quorum and stores them to disk, such
+// that anyone downloading the quorum and the blocks that follow the quorum can
+// maintain a consistent state. First the quorum is saved, then a list of
+// wallets, and then the actual wallets.
 func (q *Quorum) SaveSnap() {
-	// open the file in which the snapshot is stored
-	q.currentSnap = !q.currentSnap
+	// q.currentSnap is used to determine whether the current snapshot is snap0
+	// or snap1. Each time SaveSnap is called, the snapshot is cycled to the
+	// other one, meaning that there are 2 snaps at all times.
 	var snap int
+	q.currentSnap = !q.currentSnap
 	snapname := q.walletPrefix
 	if q.currentSnap {
 		snapname += ".snap0"
@@ -58,54 +58,49 @@ func (q *Quorum) SaveSnap() {
 		snapname += ".snap1"
 		snap = 1
 	}
+
+	// create a new snapshot of the filename, obliterating the old snapshot of the
+	// same filename
 	file, err := os.Create(snapname)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
-	var offset int
-	var index int
-	walletSlice := make([]walletLookup, q.numNodes)
-
-	// save quorum to disk
+	// save quorum to disk starting at position 0
 	gobQuorum, err := q.GobEncode()
 	if err != nil {
 		panic(err)
 	}
 	size, err := file.Write(gobQuorum)
-	if err != nil {
+	if err != nil || size != len(gobQuorum) {
 		panic(err)
 	}
-	offset += size
-
+	offset := uint32(size)
 	q.snapWalletSliceOffset[snap] = offset
 
+	// save an array indicating each wallet and its offset in the file. The
+	// offsets are left blank for the time being and will be filled out when the
+	// wallets are saved to disk.
 	walletSliceBytes := make([]byte, q.numNodes*12)
-	size, err = file.Write(walletSliceBytes) // create a placeholder in the file
-	_, err = file.Seek(int64(len(walletSlice)), 1)
-	if err != nil {
-		panic(err)
-	}
-	offset += len(walletSlice)
+	size, err = file.Write(walletSliceBytes)
+	offset += uint32(size)
 
-	// get every wallet, and get its bytes
+	// save every wallet to disk, recording the offset and id in the wallet lookup
+	// array at the beginning of the file
+	var index int
+	walletSlice := make([]walletLookup, q.numNodes)
 	q.saveWalletTree(q.walletRoot, file, &index, &offset, walletSlice)
 
+	// fill out walletSliceBytes with the wallet lookup table
 	for i := range walletSlice {
-		tmp64 := uint64(walletSlice[i].id)
-		for j := 0; j < 8; j++ {
-			walletSliceBytes[i*12+j] = byte(tmp64)
-			tmp64 = tmp64 >> 8
-		}
-
-		tmp := walletSlice[i].offset
-		for j := 8; j < 12; j++ {
-			walletSliceBytes[i*12+j] = byte(tmp)
-			tmp = tmp >> 8
-		}
+		intb := siaencoding.UInt64ToByte(uint64(walletSlice[i].id))
+		copy(walletSliceBytes[i*12:], intb[:])
+		int32b := siaencoding.UInt32ToByte(walletSlice[i].offset)
+		copy(walletSliceBytes[i*12+8:], int32b[:])
 	}
 
+	// seek to the offset where the wallet lookup table is kept and save the table
 	_, err = file.Seek(int64(q.snapWalletSliceOffset[snap]), 0)
 	if err != nil {
 		panic(err)

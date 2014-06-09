@@ -29,13 +29,13 @@ type Quorum struct {
 
 	// wallet management
 	walletPrefix string
-	numNodes     int
+	numNodes     uint32
 	walletRoot   *walletNode
 
 	// snapshot management
-	snapSize              [2]int
-	snapWalletSliceOffset [2]int
-	snapWallets           [2]int
+	snapSize              [2]uint32
+	snapWalletSliceOffset [2]uint32
+	snapWallets           [2]uint32
 	currentSnap           bool // false == snap0, true == snap1
 }
 
