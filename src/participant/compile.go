@@ -46,7 +46,7 @@ func (p *Participant) compile() {
 	}
 
 	// save the block
-	p.SaveBlock(&b)
+	p.saveBlock(&b)
 
 	p.quorum.IntegrateGerm()     // cycles the entropy
 	fmt.Print(p.quorum.Status()) // helps with debugging

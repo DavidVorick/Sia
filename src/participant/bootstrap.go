@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"network"
-	"os"
 	"quorum"
 	"quorum/script"
 	"siacrypto"
@@ -40,7 +39,7 @@ var bootstrapAddress = network.Address{
 
 // CreateParticipant initializes a participant, and then either sets itself up
 // as the bootstrap or establishes itself as a sibling on an existing network
-func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err error) {
+func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string) (p *Participant, err error) {
 	// check for non-nil messageRouter
 	if messageRouter == nil {
 		err = fmt.Errorf("Cannot initialize with a nil messageRouter")
@@ -72,13 +71,8 @@ func CreateParticipant(messageRouter network.MessageRouter) (p *Participant, err
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
-		var s string
-		s, err = os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		s += "/../../participantStorage/bootstrap."
-		p.quorum.SetWalletPrefix(s)
+		p.quorum.SetWalletPrefix(participantPrefix)
+		p.activeHistoryStep = SnapshotLen // trigger cylcing on the history during the first save
 		// create the bootstrap wallet
 		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
 		if err != nil {

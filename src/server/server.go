@@ -19,8 +19,12 @@ func establishQuorum() {
 		return
 	}
 
+	var directory string
+	print("participant directory: ")
+	fmt.Scanf("%s", &directory)
+
 	// create a participant
-	_, err = participant.CreateParticipant(networkServer)
+	_, err = participant.CreateParticipant(networkServer, directory)
 	if err != nil {
 		fmt.Println(err)
 	}

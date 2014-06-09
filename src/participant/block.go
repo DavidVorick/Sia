@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	SnapshotLen            = 100 // number of blocks separating each snapshot
+	SnapshotLen            = 5 // number of blocks separating each snapshot
 	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
 )
 
@@ -216,7 +216,7 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 // Two chains total are kept around, one complete chain and one yet-incomplete
 // chain. These chains are purely so other hosts have large windows to download
 // the quorum and synchronize with their siblings.
-func (p *Participant) SaveBlock(b *block) (err error) {
+func (p *Participant) saveBlock(b *block) (err error) {
 	// if p.activHistoryStep == SnapshotLen, it's time to cycle the histories by
 	// deleting the oldest one and create a new one. Otherwise you just append to
 	// the existing and yet-incomplete history.
@@ -230,7 +230,7 @@ func (p *Participant) SaveBlock(b *block) (err error) {
 
 		// find a name for the new history and create a file for it
 		p.activeHistory = p.quorum.GetWalletPrefix()
-		p.activeHistory += fmt.Sprintf(".blockHistory.%v", b.height)
+		p.activeHistory += fmt.Sprintf("blockHistory.%v", b.height)
 		file, err = os.Create(p.activeHistory)
 		if err != nil {
 			panic(err)
@@ -241,7 +241,7 @@ func (p *Participant) SaveBlock(b *block) (err error) {
 		p.activeHistoryStep += 1
 		file, err = os.OpenFile(p.activeHistory, os.O_RDWR, 0666)
 		if err != nil {
-			panic(err)
+			panic(p.activeHistory)
 		}
 		defer file.Close()
 	}

@@ -16,7 +16,7 @@ func TestSynchronizeEncoding(t *testing.T) {
 func TestCreateParticipant(t *testing.T) {
 	zn := network.NewDebugNetwork()
 	// make sure CreateState does not cause errors
-	p0, err := CreateParticipant(zn)
+	p0, err := CreateParticipant(zn, "../../participantStorage/TestCreateParticipant0.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestCreateParticipant(t *testing.T) {
 	}
 
 	// check a non-bootstrap
-	p1, err := CreateParticipant(zn)
+	p1, err := CreateParticipant(zn, "../../participantStorage/TestCreateParticipant1.")
 	if err != nil {
 		t.Fatal(err)
 	}
