@@ -298,9 +298,55 @@ func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][
 		lookup[i].offset = siaencoding.UInt32FromByte(int32b)
 	}
 
+	fileStat, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	fileSize := fileStat.Size()
+
 	// find each wallet and add it to the list of encoded wallets
-	for _, id := range ids {
-		//
+	encodedWallets = make([][]byte, len(ids))
+	for i, id := range ids {
+		// wallet lookup is sorted; can do a binary search
+		low := 0
+		high := len(lookup) - 1
+		mid := 0
+		for high >= low {
+			mid = (low + high) / 2
+			if lookup[mid].id == id {
+				break
+			}
+			if id > lookup[mid].id {
+				low = mid + 1
+			} else {
+				high = mid - 1
+			}
+		}
+
+		if lookup[mid].id != id {
+			encodedWallets[i] = nil
+			continue
+		}
+
+		// fetch the wallet from disk
+		_, err = file.Seek(int64(lookup[mid].offset), 0)
+		if err != nil {
+			panic(err)
+		}
+
+		var walletSize int64
+		if mid == len(lookup)-1 {
+			walletSize = fileSize - int64(lookup[mid].offset)
+		} else {
+			walletSize = int64(lookup[mid+1].offset - lookup[mid].offset)
+		}
+		encodedWallet := make([]byte, walletSize)
+		_, err := file.Read(encodedWallet)
+		if err != nil {
+			panic(err)
+		}
+		encodedWallets[i] = encodedWallet
 	}
 
 	return
