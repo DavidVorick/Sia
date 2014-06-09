@@ -37,7 +37,8 @@ type Participant struct {
 	activeHistoryStep int
 	activeHistory     string // file currently being appended with new blocks
 	recentHistory     string // file containing SnapshotLen blocks
-	currentBlock      int
+	currentBlock      uint32
+	previousBlock     siacrypto.TruncatedHash
 	blockLock         sync.Mutex
 }
 

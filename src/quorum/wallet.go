@@ -195,7 +195,7 @@ func (q *Quorum) saveWallet(w *wallet) {
 	}
 }
 
-func (q *Quorum) LoadScript(id WalletID) []byte {
+func (q *Quorum) LoadScriptBlock(id WalletID) []byte {
 	w := q.loadWallet(id)
 	if w.scriptAtoms == 0 {
 		return w.scriptPrimer[:]
