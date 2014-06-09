@@ -29,7 +29,7 @@ type Quorum struct {
 
 	// wallet management
 	walletPrefix string
-	numNodes     uint32
+	wallets      uint32
 	walletRoot   *walletNode
 
 	// snapshot management

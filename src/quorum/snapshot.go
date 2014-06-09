@@ -69,7 +69,8 @@ func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset
 	if err != nil {
 		panic(err)
 	}
-	walletSlice[*offset] = walletLookup{
+	println(*index)
+	walletSlice[*index] = walletLookup{
 		id:     w.id,
 		offset: *offset,
 	}
@@ -92,9 +93,9 @@ func (q *Quorum) SaveSnap() {
 	q.currentSnap = !q.currentSnap
 	snapname := q.walletPrefix
 	if q.currentSnap {
-		snapname += ".snap0"
+		snapname += "snapshot0"
 	} else {
-		snapname += ".snap1"
+		snapname += "snapshot1"
 	}
 
 	// create a new snapshot of the filename, obliterating the old snapshot of the
@@ -113,7 +114,7 @@ func (q *Quorum) SaveSnap() {
 	// create the snapshot header and write it to disk
 	header := snapHeader{
 		walletLookupOffset: uint32(len(gobQuorum)),
-		wallets:            q.numNodes,
+		wallets:            q.wallets,
 	}
 	headerBytes, err := header.GobEncode()
 	if err != nil {
@@ -134,14 +135,15 @@ func (q *Quorum) SaveSnap() {
 	// save an array indicating each wallet and its offset in the file. The
 	// offsets are left blank for the time being and will be filled out when the
 	// wallets are saved to disk.
-	walletSliceBytes := make([]byte, q.numNodes*12)
+	walletSliceBytes := make([]byte, q.wallets*12)
 	_, err = file.Write(walletSliceBytes)
 	offset += uint32(size)
 
 	// save every wallet to disk, recording the offset and id in the wallet lookup
 	// array at the beginning of the file
 	var index int
-	walletSlice := make([]walletLookup, q.numNodes)
+	println(q.wallets)
+	walletSlice := make([]walletLookup, q.wallets)
 	q.saveWalletTree(q.walletRoot, file, &index, &offset, walletSlice)
 
 	// fill out walletSliceBytes with the wallet lookup table
@@ -167,9 +169,9 @@ func (q *Quorum) SaveSnap() {
 func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 	snapname := self.walletPrefix
 	if self.currentSnap {
-		snapname += ".snap0"
+		snapname += "snapshot0"
 	} else {
-		snapname += ".snap1"
+		snapname += "snapshot1"
 	}
 
 	file, err := os.Open(snapname)
@@ -205,9 +207,9 @@ func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 func (q *Quorum) FetchSnapWalletList(snap bool) (ids []WalletID) {
 	snapname := q.walletPrefix
 	if snap {
-		snapname += ".snap0"
+		snapname += "snapshot0"
 	} else {
-		snapname += ".snap1"
+		snapname += "snapshot1"
 	}
 
 	file, err := os.Open(snapname)
@@ -252,9 +254,9 @@ func (q *Quorum) FetchSnapWalletList(snap bool) (ids []WalletID) {
 func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][]byte) {
 	snapname := q.walletPrefix
 	if snap {
-		snapname += ".snap0"
+		snapname += "snapshot0"
 	} else {
-		snapname += ".snap1"
+		snapname += "snapshot1"
 	}
 
 	file, err := os.Open(snapname)

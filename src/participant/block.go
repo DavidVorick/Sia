@@ -224,6 +224,7 @@ func (p *Participant) saveBlock(b *block) (err error) {
 	if p.activeHistoryStep == SnapshotLen {
 		// reset history step, delete old history, migrate recently-completed
 		// history.
+		p.quorum.SaveSnap()
 		p.activeHistoryStep = 0
 		os.Remove(p.recentHistory)
 		p.recentHistory = p.activeHistory
