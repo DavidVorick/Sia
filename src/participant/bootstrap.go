@@ -66,7 +66,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// initialize heartbeat maps
 	for i := range p.heartbeats {
-		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 
 	// initialize disk variables
@@ -157,8 +157,8 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// this is pretty dirty and doesn't do ANY verifications like signatures
 	for i := range blockList {
 		for i, hb := range blockList[i].heartbeats {
-			var a siacrypto.TruncatedHash
-			p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+			var a siacrypto.Hash
+			p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 			p.heartbeats[i][a] = hb
 		}
 		p.compile()

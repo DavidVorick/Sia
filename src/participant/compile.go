@@ -45,7 +45,7 @@ func (p *Participant) compile() {
 			}
 		}
 
-		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 
 	// save the block

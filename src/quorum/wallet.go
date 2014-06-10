@@ -26,7 +26,7 @@ type sectorHeader struct {
 type wallet struct {
 	id WalletID // not saved to disk
 
-	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes, need to be specification-based
+	walletHash     siacrypto.Hash //hash of the 4064 bytes, need to be specification-based
 	upperBalance   uint64
 	lowerBalance   uint64
 	scriptAtoms    uint16
@@ -62,7 +62,7 @@ func (w *wallet) bytes() (b *[4096]byte) {
 	// using the wallet to update the values without needing to update the hash
 	// every time. The hash is only calculated when the wallet is being converted
 	// to a string of bytes.
-	offset := siacrypto.TruncatedHashSize
+	offset := siacrypto.HashSize
 
 	tmp := w.upperBalance
 	for i := 0; i < 8; i++ {
@@ -93,7 +93,7 @@ func (w *wallet) bytes() (b *[4096]byte) {
 
 	copy(b[offset:], w.scriptPrimer[:])
 
-	hash, err := siacrypto.CalculateTruncatedHash(b[:][32:])
+	hash, err := siacrypto.CalculateHash(b[:][32:])
 	if err != nil {
 		return nil
 	}
@@ -106,14 +106,14 @@ func fillWallet(b *[4096]byte) (w *wallet) {
 	copy(w.walletHash[:], b[:])
 	// do an integrity check of the wallet, return nil if there are errors during
 	// the check
-	expectedHash, err := siacrypto.CalculateTruncatedHash(b[:][32:])
+	expectedHash, err := siacrypto.CalculateHash(b[:][32:])
 	if err != nil || expectedHash != w.walletHash {
 		// if err != nil, there should probably a more severe thing.  maybe
-		// CalculateTruncatedHash shouldn't return an error at all, and instead
+		// CalculateHash shouldn't return an error at all, and instead
 		// call panic or some extreme logging function.
 		return nil
 	}
-	offset := siacrypto.TruncatedHashSize
+	offset := siacrypto.HashSize
 
 	for i := 7; i > 0; i-- {
 		w.upperBalance += uint64(b[offset+i])

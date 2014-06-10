@@ -68,7 +68,7 @@ func TestBlockEncoding(t *testing.T) {
 	// create the block and fill it with random values
 	var b block
 	b.height = uint32(siacrypto.RandomUInt64())
-	copy(b.parent[:], siacrypto.RandomByteSlice(siacrypto.TruncatedHashSize))
+	copy(b.parent[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
 	b.heartbeats[1] = &hb0
 	b.heartbeats[3] = &hb1
 

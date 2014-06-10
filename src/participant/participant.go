@@ -24,7 +24,7 @@ type Participant struct {
 	// Heartbeat Variables
 	scriptInputs     []script.ScriptInput
 	scriptInputsLock sync.Mutex
-	heartbeats       [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
+	heartbeats       [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock   sync.Mutex
 
 	// Consensus Algorithm Status
@@ -38,7 +38,7 @@ type Participant struct {
 	activeHistory     string // file currently being appended with new blocks
 	recentHistory     string // file containing SnapshotLen blocks
 	currentBlock      uint32
-	previousBlock     siacrypto.TruncatedHash
+	previousBlock     siacrypto.Hash
 	blockLock         sync.Mutex
 }
 

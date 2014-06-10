@@ -10,14 +10,14 @@ import (
 
 const (
 	SnapshotLen            = 3 // number of blocks separating each snapshot
-	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
+	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.HashSize*SnapshotLen
 )
 
 // A block is just a collection of heartbeats, along with information about
 // which block it is and which block was it's parent.
 type block struct {
 	height     uint32
-	parent     siacrypto.TruncatedHash
+	parent     siacrypto.Hash
 	heartbeats [quorum.QuorumSize]*heartbeat
 }
 
@@ -64,7 +64,7 @@ func (bhh *blockHistoryHeader) GobDecode(gobBHH []byte) (err error) {
 }
 
 // Takes a hash of the height, parent, and heartbeats field of a block
-func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
+func (b *block) Hash() (hash siacrypto.Hash, err error) {
 	if b == nil {
 		err = fmt.Errorf("Cannot hash a nil block")
 		return
@@ -74,7 +74,7 @@ func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
 	if err != nil {
 		return
 	}
-	hash, err = siacrypto.CalculateTruncatedHash(gobBlock)
+	hash, err = siacrypto.CalculateHash(gobBlock)
 	return
 }
 
@@ -110,7 +110,7 @@ func (b *block) GobEncode() (gobBlock []byte, err error) {
 	copy(gobBlock, intb[:])
 	offset := len(intb)
 	copy(gobBlock[offset:], b.parent[:])
-	offset += siacrypto.TruncatedHashSize
+	offset += siacrypto.HashSize
 
 	// get the offset for the first heartbeat
 	heartbeatOffset := offset + len(intb)*quorum.QuorumSize
@@ -139,7 +139,7 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 
 	// minimum size for a block is the height, parent hash, and offsets for each
 	// of quorum.QuorumSize heartbeats
-	if len(gobBlock) < siacrypto.TruncatedHashSize+quorum.QuorumSize*4+4 {
+	if len(gobBlock) < siacrypto.HashSize+quorum.QuorumSize*4+4 {
 		err = fmt.Errorf("invalid gob block")
 		return
 	}
@@ -149,8 +149,8 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 	copy(intb[:], gobBlock)
 	b.height = siaencoding.UInt32FromByte(intb)
 	offset := 4
-	copy(b.parent[:], gobBlock[offset:offset+siacrypto.TruncatedHashSize])
-	offset += siacrypto.TruncatedHashSize
+	copy(b.parent[:], gobBlock[offset:offset+siacrypto.HashSize])
+	offset += siacrypto.HashSize
 
 	// decode each heartbeat
 	var nextOffset uint32
