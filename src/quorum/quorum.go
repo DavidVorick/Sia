@@ -54,6 +54,7 @@ func (q *Quorum) Status() (b string) {
 
 	b = "\nQuorum Status:\n"
 
+	b += fmt.Sprintf("\tPrefix: %v\n\n", q.walletPrefix)
 	b += fmt.Sprintf("\tSiblings:\n")
 	for _, s := range q.siblings {
 		if s != nil {

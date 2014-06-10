@@ -32,8 +32,11 @@ func (p *Participant) SnapshotWalletList(snapshot bool, ids *[]quorum.WalletID) 
 
 func (p *Participant) SnapshotWallets(swi SnapshotWalletsInput, wallets *[][]byte) (err error) {
 	*wallets = p.quorum.SnapshotWallets(swi.Snapshot, swi.Ids)
-	println("LENGTH!")
-	println(len((*wallets)[0]))
+	return
+}
+
+func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]block) (err error) {
+	*blockList = p.loadBlocks(snapshot)
 	return
 }
 

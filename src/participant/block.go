@@ -306,3 +306,57 @@ func (p *Participant) saveBlock(b *block) (err error) {
 
 	return
 }
+
+func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
+	var file *os.File
+	var err error
+	if snapshot == p.quorum.CurrentSnapshot() {
+		file, err = os.Open(p.activeHistory)
+	} else {
+		file, err = os.Open(p.recentHistory)
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	var bhh blockHistoryHeader
+	bhhBytes := make([]byte, BlockHistoryHeaderSize)
+	n, err := file.Read(bhhBytes)
+	if err != nil || n != BlockHistoryHeaderSize {
+		panic(err)
+	}
+	err = bhh.GobDecode(bhhBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+	fileSize := fileInfo.Size()
+
+	bs = make([]block, bhh.latestBlock)
+	for i := uint32(0); i < bhh.latestBlock; i++ {
+		var byteCount uint32
+		if i == SnapshotLen-1 {
+			byteCount = uint32(fileSize) - bhh.blockOffsets[i]
+		} else {
+			byteCount = bhh.blockOffsets[i+1] - bhh.blockOffsets[i]
+		}
+		blockBytes := make([]byte, byteCount)
+
+		n, err = file.Read(blockBytes)
+		if err != nil || n != int(byteCount) {
+			println(n)
+			panic(err)
+		}
+
+		err = bs[i].GobDecode(blockBytes)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return
+}

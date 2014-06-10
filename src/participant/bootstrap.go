@@ -94,18 +94,16 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 1. Subscribe and start building blocks
 
 	// 2. Download the quorum
-	q := new(quorum.Quorum)
 	fmt.Println("Getting Quorum Snapshot From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.RecentSnapshot",
 		Args: struct{}{},
-		Resp: q,
+		Resp: &p.quorum,
 	})
 	if err != nil {
 		return
 	}
-	p.quorum = *q
 
 	// 3. Download the wallet list
 	var walletList []quorum.WalletID
@@ -113,7 +111,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
 		Proc: "Participant.SnapshotWalletList",
-		Args: q.CurrentSnapshot(),
+		Args: p.quorum.CurrentSnapshot(),
 		Resp: &walletList,
 	})
 
@@ -124,7 +122,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		Dest: bootstrapAddress,
 		Proc: "Participant.SnapshotWallets",
 		Args: SnapshotWalletsInput{
-			Snapshot: q.CurrentSnapshot(),
+			Snapshot: p.quorum.CurrentSnapshot(),
 			Ids:      walletList,
 		},
 		Resp: &encodedWallets,
@@ -133,12 +131,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
-	println("ASGARD!")
-	println(len(encodedWallets))
-
 	for i, encodedWallet := range encodedWallets {
-		println("JUST GO WITH IT")
-		println(len(encodedWallet))
 		err = p.quorum.LoadWallet(encodedWallet, walletList[i])
 		if err != nil {
 			return
@@ -146,10 +139,30 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	// 5. Download the blocks
+	var blockList []block
+	fmt.Println("Getting Blocks Since Snapshot")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.SnapshotBlocks",
+		Args: p.quorum.CurrentSnapshot(),
+		Resp: &blockList,
+	})
+	if err != nil {
+		return
+	}
 
-	// 6. Fast forward the quorum from step 2
+	// 6. Integrate with step 1 blocks, fast forward to immediate.
 
-	// 7. Integrate with step 1 blocks, fast forward to immediate.
+	// 7. Fast forward the quorum from step 2
+	// this is pretty dirty and doesn't do ANY verifications like signatures
+	for i := range blockList {
+		for i, hb := range blockList[i].heartbeats {
+			var a siacrypto.TruncatedHash
+			p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+			p.heartbeats[i][a] = hb
+		}
+		p.compile()
+	}
 
 	// 7a Synchronize the participants - timing, step, currentSnapshot
 
