@@ -35,6 +35,9 @@ func (p *Participant) compile() {
 			p.quorum.IntegrateSiblingEntropy(hb.entropy)
 			for _, si := range hb.scriptInputs {
 				scriptBlock := p.quorum.LoadScriptBlock(si.WalletID)
+				if scriptBlock == nil {
+					continue
+				}
 				s := script.Script{scriptBlock}
 				s.Execute(si.Input, &p.quorum)
 

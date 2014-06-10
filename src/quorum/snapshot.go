@@ -15,14 +15,14 @@ type walletLookup struct {
 	offset uint32
 }
 
-type snapHeader struct {
+type snapshotHeader struct {
 	walletLookupOffset uint32
 	wallets            uint32
 }
 
-func (s *snapHeader) GobEncode() (b []byte, err error) {
+func (s *snapshotHeader) GobEncode() (b []byte, err error) {
 	if s == nil {
-		err = fmt.Errorf("cannot encode nil snapHeader")
+		err = fmt.Errorf("cannot encode nil snapshotHeader")
 		return
 	}
 
@@ -34,9 +34,9 @@ func (s *snapHeader) GobEncode() (b []byte, err error) {
 	return
 }
 
-func (s *snapHeader) GobDecode(b []byte) (err error) {
+func (s *snapshotHeader) GobDecode(b []byte) (err error) {
 	if s == nil {
-		err = fmt.Errorf("cannode decode into nil snapHeader")
+		err = fmt.Errorf("cannode decode into nil snapshotHeader")
 		return
 	}
 	if len(b) != SnapHeaderSize {
@@ -69,7 +69,6 @@ func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset
 	if err != nil {
 		panic(err)
 	}
-	println(*index)
 	walletSlice[*index] = walletLookup{
 		id:     w.id,
 		offset: *offset,
@@ -90,9 +89,9 @@ func (q *Quorum) SaveSnap() {
 	// q.currentSnap is used to determine whether the current snapshot is snap0
 	// or snap1. Each time SaveSnap is called, the snapshot is cycled to the
 	// other one, meaning that there are 2 snaps at all times.
-	q.currentSnap = !q.currentSnap
+	q.currentSnapshot = !q.currentSnapshot
 	snapname := q.walletPrefix
-	if q.currentSnap {
+	if q.currentSnapshot {
 		snapname += "snapshot0"
 	} else {
 		snapname += "snapshot1"
@@ -112,8 +111,8 @@ func (q *Quorum) SaveSnap() {
 	}
 
 	// create the snapshot header and write it to disk
-	header := snapHeader{
-		walletLookupOffset: uint32(len(gobQuorum)),
+	header := snapshotHeader{
+		walletLookupOffset: uint32(len(gobQuorum) + SnapHeaderSize),
 		wallets:            q.wallets,
 	}
 	headerBytes, err := header.GobEncode()
@@ -124,25 +123,25 @@ func (q *Quorum) SaveSnap() {
 	if err != nil {
 		panic(err)
 	}
+	offset := uint32(size)
 
 	// write the encoded quorum to disk
-	_, err = file.Write(gobQuorum)
+	size, err = file.Write(gobQuorum)
 	if err != nil {
 		panic(err)
 	}
-	offset := uint32(size)
+	offset += uint32(size)
 
 	// save an array indicating each wallet and its offset in the file. The
 	// offsets are left blank for the time being and will be filled out when the
 	// wallets are saved to disk.
 	walletSliceBytes := make([]byte, q.wallets*12)
-	_, err = file.Write(walletSliceBytes)
+	size, err = file.Write(walletSliceBytes)
 	offset += uint32(size)
 
 	// save every wallet to disk, recording the offset and id in the wallet lookup
 	// array at the beginning of the file
 	var index int
-	println(q.wallets)
 	walletSlice := make([]walletLookup, q.wallets)
 	q.saveWalletTree(q.walletRoot, file, &index, &offset, walletSlice)
 
@@ -166,9 +165,9 @@ func (q *Quorum) SaveSnap() {
 }
 
 // loads and transfers the quorum componenet from the most recent snapshot
-func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
+func (self *Quorum) RecentSnapshot() (q *Quorum, err error) {
 	snapname := self.walletPrefix
-	if self.currentSnap {
+	if self.currentSnapshot {
 		snapname += "snapshot0"
 	} else {
 		snapname += "snapshot1"
@@ -176,11 +175,11 @@ func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 
 	file, err := os.Open(snapname)
 	if err != nil {
-		return
+		panic(err)
 	}
 	defer file.Close()
 
-	var header snapHeader
+	var header snapshotHeader
 	headerBytes := make([]byte, SnapHeaderSize)
 	n, err := file.Read(headerBytes)
 	if n != len(headerBytes) || err != nil {
@@ -193,6 +192,7 @@ func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 
 	q = new(Quorum)
 	quorumBytes := make([]byte, header.walletLookupOffset-SnapHeaderSize)
+	println(len(quorumBytes))
 	n, err = file.Read(quorumBytes)
 	if err != nil || n != len(quorumBytes) {
 		err = fmt.Errorf("error reading snapshot into memory")
@@ -200,11 +200,14 @@ func (self *Quorum) FetchSnapQuorum() (q *Quorum, err error) {
 	}
 
 	err = q.GobDecode(quorumBytes)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
 // returns the list of all wallets in a given snapshot
-func (q *Quorum) FetchSnapWalletList(snap bool) (ids []WalletID) {
+func (q *Quorum) SnapshotWalletList(snap bool) (ids []WalletID) {
 	snapname := q.walletPrefix
 	if snap {
 		snapname += "snapshot0"
@@ -218,7 +221,7 @@ func (q *Quorum) FetchSnapWalletList(snap bool) (ids []WalletID) {
 		panic(err)
 	}
 
-	var header snapHeader
+	var header snapshotHeader
 	headerBytes := make([]byte, SnapHeaderSize)
 	n, err := file.Read(headerBytes)
 	if n != len(headerBytes) || err != nil {
@@ -251,7 +254,7 @@ func (q *Quorum) FetchSnapWalletList(snap bool) (ids []WalletID) {
 	return
 }
 
-func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][]byte) {
+func (q *Quorum) SnapshotWallets(snap bool, ids []WalletID) (encodedWallets [][]byte) {
 	snapname := q.walletPrefix
 	if snap {
 		snapname += "snapshot0"
@@ -267,7 +270,7 @@ func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][
 
 	// This is the third time this set of code appears in the file, should
 	// probably be a getHeader(file) function.
-	var header snapHeader
+	var header snapshotHeader
 	headerBytes := make([]byte, SnapHeaderSize)
 	n, err := file.Read(headerBytes)
 	if n != len(headerBytes) || err != nil {
@@ -300,13 +303,6 @@ func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][
 		lookup[i].offset = siaencoding.UInt32FromByte(int32b)
 	}
 
-	fileStat, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-
-	fileSize := fileStat.Size()
-
 	// find each wallet and add it to the list of encoded wallets
 	encodedWallets = make([][]byte, len(ids))
 	for i, id := range ids {
@@ -337,14 +333,22 @@ func (q *Quorum) FetchSnapWallets(snap bool, ids []WalletID) (encodedWallets [][
 			panic(err)
 		}
 
+		fileInfo, err := file.Stat()
+		if err != nil {
+			panic(err)
+		}
+		fileSize := fileInfo.Size()
+
 		var walletSize int64
 		if mid == len(lookup)-1 {
 			walletSize = fileSize - int64(lookup[mid].offset)
+			println("WALLET SIZE:")
+			println(walletSize)
 		} else {
 			walletSize = int64(lookup[mid+1].offset - lookup[mid].offset)
 		}
 		encodedWallet := make([]byte, walletSize)
-		_, err := file.Read(encodedWallet)
+		_, err = file.Read(encodedWallet)
 		if err != nil {
 			panic(err)
 		}

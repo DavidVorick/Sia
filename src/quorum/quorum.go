@@ -33,7 +33,11 @@ type Quorum struct {
 	walletRoot   *walletNode
 
 	// snapshot management
-	currentSnap bool // false == snap0, true == snap1
+	currentSnapshot bool // false == snap0, true == snap1
+}
+
+func (q *Quorum) CurrentSnapshot() bool {
+	return q.currentSnapshot
 }
 
 // Getter for the siblings private variable
@@ -125,12 +129,13 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 	}
 
 	// Encode snap variables
-	err = encoder.Encode(q.currentSnap)
+	err = encoder.Encode(q.currentSnapshot)
 	if err != nil {
 		return
 	}
 
 	gobQuorum = w.Bytes()
+	println(len(gobQuorum))
 	return
 }
 
@@ -171,7 +176,7 @@ func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 	}
 
 	// Decode snap variables
-	err = decoder.Decode(&q.currentSnap)
+	err = decoder.Decode(&q.currentSnapshot)
 	if err != nil {
 		return
 	}

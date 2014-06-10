@@ -69,10 +69,12 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
 	}
 
+	// initialize disk variables
+	p.quorum.SetWalletPrefix(participantPrefix)
+	p.activeHistoryStep = SnapshotLen // trigger cylcing on the history during the first save
+
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
-		p.quorum.SetWalletPrefix(participantPrefix)
-		p.activeHistoryStep = SnapshotLen // trigger cylcing on the history during the first save
 		// create the bootstrap wallet
 		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
 		if err != nil {
@@ -85,6 +87,76 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
+	////////////////////////////
+	// Bootstrap As A Hopeful //
+	////////////////////////////
+
+	// 1. Subscribe and start building blocks
+
+	// 2. Download the quorum
+	q := new(quorum.Quorum)
+	fmt.Println("Getting Quorum Snapshot From Bootstrap")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.RecentSnapshot",
+		Args: struct{}{},
+		Resp: q,
+	})
+	if err != nil {
+		return
+	}
+	p.quorum = *q
+
+	// 3. Download the wallet list
+	var walletList []quorum.WalletID
+	fmt.Println("Getting List of Wallets From Bootstrap")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.SnapshotWalletList",
+		Args: q.CurrentSnapshot(),
+		Resp: &walletList,
+	})
+
+	// 4. Download the wallets
+	var encodedWallets [][]byte
+	fmt.Println("Getting all of the Wallets")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.SnapshotWallets",
+		Args: SnapshotWalletsInput{
+			Snapshot: q.CurrentSnapshot(),
+			Ids:      walletList,
+		},
+		Resp: &encodedWallets,
+	})
+	if err != nil {
+		return
+	}
+
+	println("ASGARD!")
+	println(len(encodedWallets))
+
+	for i, encodedWallet := range encodedWallets {
+		println("JUST GO WITH IT")
+		println(len(encodedWallet))
+		err = p.quorum.LoadWallet(encodedWallet, walletList[i])
+		if err != nil {
+			return
+		}
+	}
+
+	// 5. Download the blocks
+
+	// 6. Fast forward the quorum from step 2
+
+	// 7. Integrate with step 1 blocks, fast forward to immediate.
+
+	// 7a Synchronize the participants - timing, step, currentSnapshot
+
+	// 8. Submit a join quorum request
+
+	// 9. The existing compile will handle the rest.
+
 	// send a listener request to the bootstrap to become a listener on the quorum
 	fmt.Println("Synchronizing to Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -96,26 +168,6 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	if err != nil {
 		return
 	}
-
-	// Get the current quorum struct
-	q := new(quorum.Quorum)
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
-		Proc: "Participant.TransferQuorum",
-		Args: struct{}{},
-		Resp: q,
-	})
-	if err != nil {
-		return
-	}
-	p.quorum = *q
-
-	// set the wallet prefix for the quorum
-	pubKeyHash, err := pubKey.Hash()
-	if err != nil {
-		return
-	}
-	p.quorum.SetWalletPrefix(string(pubKeyHash[:]))
 
 	// Synchronize to the current quorum
 	synchronize := new(Synchronize)

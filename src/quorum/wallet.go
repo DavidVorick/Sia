@@ -144,6 +144,24 @@ func fillWallet(b *[4096]byte) (w *wallet) {
 	return
 }
 
+func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
+	if len(encodedWallet) != 4096 {
+		err = fmt.Errorf("LoadWallet: Not a wallet!")
+		return
+	}
+
+	var b [4096]byte
+	copy(b[:], encodedWallet)
+	w := fillWallet(&b)
+	if w == nil {
+		err = fmt.Errorf("Did not get a valid wallet")
+		return
+	}
+
+	err = q.CreateWallet(id, w.upperBalance, w.lowerBalance, w.scriptAtoms, w.scriptPrimer[:])
+	return
+}
+
 // takes a walletID and derives the filename from the quorum. Eventually, this
 // function should also verify that the id is located within the quorum.
 func (q *Quorum) walletFilename(id WalletID) (s string) {
@@ -163,7 +181,7 @@ func (q *Quorum) loadWallet(id WalletID) *wallet {
 	walletFilename := q.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 
 	var b [4096]byte
@@ -197,6 +215,10 @@ func (q *Quorum) saveWallet(w *wallet) {
 
 func (q *Quorum) LoadScriptBlock(id WalletID) []byte {
 	w := q.loadWallet(id)
+	if w == nil {
+		return nil
+	}
+
 	if w.scriptAtoms == 0 {
 		return w.scriptPrimer[:]
 	}
