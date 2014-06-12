@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	scriptPrimerSize    = 1024
+	walletBaseSize      = siacrypto.HashSize + 16 + 2 + 256*8
 	CreateWalletMaxCost = 8
 )
 
@@ -18,23 +18,19 @@ const (
 var genesisScript = []byte{0x28}
 
 type sectorHeader struct {
-	// 6 byte CRC will go here
-	m        byte
-	numAtoms byte
+	crc   [6]byte
+	m     byte
+	atoms byte
 }
 
-// A 4kb block of data containing everything about a wallet.
 type wallet struct {
-	id WalletID // not saved to disk
+	id WalletID
 
-	walletHash     siacrypto.Hash //hash of the 4064 bytes, need to be specification-based
-	upperBalance   uint64
-	lowerBalance   uint64
+	walletHash     siacrypto.Hash // a hash of the encoded wallet
+	balance        balance
 	scriptAtoms    uint16
 	sectorOverview [256]sectorHeader
-	// above section comes to 566 bytes
-
-	scriptPrimer [scriptPrimerSize]byte
+	script         []byte
 }
 
 func (q *Quorum) walletString(id WalletID) (s string) {
@@ -54,94 +50,84 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	return
 }
 
-// Takes a wallet as input and produces a [4096]byte as an output, like an
-// encoding but explicity designed to be stored on a disk.
-func (w *wallet) bytes() (b *[4096]byte) {
-	b = new([4096]byte)
+// takes a wallet and converts it to a byte slice. Considering changing the
+// name to GobEncode but not sure if that's needed. The hash is calculated
+// after encoding the rest of the wallet - it is this function alone that is
+// responsible for creating a hash that verifies the integrity of the wallet.
+func (w *wallet) GobEncode() (b []byte, err error) {
+	if w == nil {
+		err = fmt.Errorf("Cannot encode nil wallet")
+		return
+	}
 
-	// The hash is calculated before returning the bytes. This allows whomever is
-	// using the wallet to update the values without needing to update the hash
-	// every time. The hash is only calculated when the wallet is being converted
-	// to a string of bytes.
+	b = make([]byte, walletBaseSize+len(w.script))
+
+	// leave room for Hash, encode balance and scriptAtoms
 	offset := siacrypto.HashSize
-
-	tmp := w.upperBalance
-	for i := 0; i < 8; i++ {
-		b[offset+i] = byte(tmp)
-		tmp = tmp >> 8
+	balanceBytes, err := w.balance.GobEncode()
+	if err != nil {
+		return
 	}
-	offset += 8
-
-	tmp = w.lowerBalance
-	for i := 0; i < 8; i++ {
-		b[offset+i] = byte(tmp)
-		tmp = tmp >> 8
-	}
-	offset += 8
-
-	tmp16 := w.scriptAtoms
-	for i := 0; i < 2; i++ {
-		b[offset+i] = byte(tmp16)
-		tmp16 = tmp16 >> 8
-	}
+	copy(b[offset:], balanceBytes)
+	offset += 16
+	copy(b[offset:], EncUint16(w.scriptAtoms))
 	offset += 2
 
+	// encode sectorOverivew
 	for i, sector := range w.sectorOverview {
-		b[offset+i*2] = sector.m
-		b[offset+i*2+1] = sector.numAtoms
+		copy(b[offset+i*8:], sector.secorHeader)
+		b[offset+i*8+6] = sector.m
+		b[offset+i*8+7] = sector.atoms
 	}
-	offset += 2 * len(w.sectorOverview)
+	offset += 8 * len(w.sectorOverview)
 
-	copy(b[offset:], w.scriptPrimer[:])
+	// encode script
+	copy(b[offset:], w.script)
 
-	hash, err := siacrypto.CalculateHash(b[:][32:])
+	// calculate hash and place at beginning
+	hash, err := siacrypto.CalculateHash(b[siacrypto.HashSize:])
 	if err != nil {
 		return nil
 	}
-	copy(b[:], hash[:])
+	copy(b, hash[:])
+
 	return
 }
 
-func fillWallet(b *[4096]byte) (w *wallet) {
-	w = new(wallet)
-	copy(w.walletHash[:], b[:])
-	// do an integrity check of the wallet, return nil if there are errors during
-	// the check
-	expectedHash, err := siacrypto.CalculateHash(b[:][32:])
+// upon decoding, the hash is checked to make sure that wallet integrity was
+// maintained.
+func (w *wallet) GobDecode(b []byte) (err error) {
+	if w == nil {
+		err = fmt.Errorf("Cannot decode into nil wallet")
+		return
+	}
+
+	// verify the integrity of the wallet
+	copy(w.walletHash[:], b)
+	expectedHash, err := siacrypto.CalculateHash(b[siacrypto.HashSize:])
 	if err != nil || expectedHash != w.walletHash {
-		// if err != nil, there should probably a more severe thing.  maybe
-		// CalculateHash shouldn't return an error at all, and instead
-		// call panic or some extreme logging function.
-		return nil
+		err = fmt.Errorf("Wallet Gob Decode: hash does not match wallet!")
+		return
 	}
 	offset := siacrypto.HashSize
 
-	for i := 7; i > 0; i-- {
-		w.upperBalance += uint64(b[offset+i])
-		w.upperBalance = w.upperBalance << 8
+	err = w.balance.GobDecode(b[offset : offset+16])
+	if err != nil {
+		return
 	}
-	w.upperBalance += uint64(b[offset])
-	offset += 8
+	offset += 16
 
-	for i := 7; i > 0; i-- {
-		w.lowerBalance += uint64(b[offset+i])
-		w.lowerBalance = w.lowerBalance << 8
-	}
-	w.lowerBalance += uint64(b[offset])
-	offset += 8
-
-	w.scriptAtoms += uint16(b[offset+1])
-	w.scriptAtoms = w.scriptAtoms << 8
-	w.scriptAtoms += uint16(b[offset])
+	w.scriptAtoms = DecUint16(b[offset : offset+2])
 	offset += 2
 
 	for i := range w.sectorOverview {
-		w.sectorOverview[i].m = b[offset+i*2]
-		w.sectorOverview[i].numAtoms = b[offset+i*2+1]
+		w.sectorOverview[i].crc = b[offset+i*8 : offset+i*8+6]
+		w.sectorOverview[i].m = b[offset+i*8+6]
+		w.sectorOverview[i].numAtoms = b[offset+i*8+7]
 	}
-	offset += 2 * len(w.sectorOverview)
+	offset += 8 * len(w.sectorOverview)
 
-	copy(w.scriptPrimer[:], b[offset:])
+	copy(w.script, b[offset:])
 	return
 }
 

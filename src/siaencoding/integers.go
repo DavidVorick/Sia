@@ -4,6 +4,12 @@ import (
 	"encoding/binary"
 )
 
+func EncUint16(i uint16) (b []byte) {
+	b = make([]byte, 2)
+	binary.LittleEndian.PutUint16(b, i)
+	return
+}
+
 func EncUint32(i uint32) (b []byte) {
 	b = make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, i)
