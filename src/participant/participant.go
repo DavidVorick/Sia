@@ -44,8 +44,6 @@ type Participant struct {
 }
 
 func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
-	println("ADDING SCRIPT INPUT")
-	println("I REPEAT, ADDING SCRIPT INPUT")
 	p.scriptInputsLock.Lock()
 	p.scriptInputs = append(p.scriptInputs, si)
 	p.scriptInputsLock.Unlock()

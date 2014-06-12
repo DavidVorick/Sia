@@ -360,7 +360,6 @@ func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
 		panic(err)
 	}
 	fileSize := fileInfo.Size()
-
 	bs = make([]block, bhh.latestBlock)
 	for i := uint32(0); i < bhh.latestBlock; i++ {
 		var byteCount uint32
@@ -373,7 +372,6 @@ func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
 
 		n, err = file.Read(blockBytes)
 		if err != nil || n != int(byteCount) {
-			println(n)
 			panic(err)
 		}
 

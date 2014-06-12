@@ -31,9 +31,9 @@ func (p *Participant) compile(b *block) {
 		}
 	}
 	p.quorum.IntegrateGerm()
-	fmt.Print(p.quorum.Status())
 	p.quorum.AdvanceBlock(b.parent)
 	p.saveBlock(b)
+	fmt.Print(p.quorum.Status())
 
 	// if not a sibling, check to see if you've been added as a sibling. This is
 	// a crude way of doing it but it gets the job done.

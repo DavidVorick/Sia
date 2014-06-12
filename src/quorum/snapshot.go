@@ -342,8 +342,6 @@ func (q *Quorum) SnapshotWallets(snap bool, ids []WalletID) (encodedWallets [][]
 		var walletSize int64
 		if mid == len(lookup)-1 {
 			walletSize = fileSize - int64(lookup[mid].offset)
-			println("WALLET SIZE:")
-			println(walletSize)
 		} else {
 			walletSize = int64(lookup[mid+1].offset - lookup[mid].offset)
 		}

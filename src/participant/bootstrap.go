@@ -191,18 +191,13 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.appendBlock(&blockList[i])
 	}
 
-	currentHeight := p.quorum.Height() + 1
+	currentHeight := p.quorum.Height()
 	for p.recentBlocks[currentHeight] != nil {
 		fmt.Println("Fast forwarding a block:")
 		p.compile(p.recentBlocks[currentHeight])
-		fmt.Println(p.quorum.Status())
 		currentHeight += 1
 	}
 	p.synchronized = true
-
-	// 8. Submit a join quorum request
-
-	// 9. The existing compile will handle the rest.
 
 	// encode an address and public key for script input
 	w := new(bytes.Buffer)
@@ -213,7 +208,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// simple script that calls AddSibling
 	var s script.ScriptInput
-	s.WalletID = 1
+	//s.WalletID = 1
 	s.Input = []byte{0x29, 0x04, byte(len(gobSibling)), 0xFF}
 	s.Input = append(s.Input, gobSibling...)
 	err = p.messageRouter.SendMessage(&network.Message{

@@ -103,6 +103,9 @@ func (q *Quorum) Status() (b string) {
 	b += q.printWallets(q.walletRoot)
 
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
+
+	b += fmt.Sprintf("\tParent: %x\n", q.parent)
+	b += fmt.Sprintf("\tHeight: %x\n\n", q.height)
 	return
 }
 
@@ -154,6 +157,16 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 		return
 	}
 
+	// Encode block tracking variables
+	err = encoder.Encode(q.parent)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(q.height)
+	if err != nil {
+		return
+	}
+
 	gobQuorum = w.Bytes()
 	println(len(gobQuorum))
 	return
@@ -197,6 +210,16 @@ func (q *Quorum) GobDecode(gobQuorum []byte) (err error) {
 
 	// Decode snap variables
 	err = decoder.Decode(&q.currentSnapshot)
+	if err != nil {
+		return
+	}
+
+	// Decode block tracking variables
+	err = decoder.Decode(&q.parent)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&q.height)
 	if err != nil {
 		return
 	}
