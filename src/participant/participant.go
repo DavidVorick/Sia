@@ -33,16 +33,19 @@ type Participant struct {
 	currentStep int
 	stepLock    sync.RWMutex // prevents a benign race condition
 
+	// Bootstrap variables
+	synchronized bool
+	recentBlocks map[uint32]*block
+
 	// Block history variables
 	activeHistoryStep int
 	activeHistory     string // file currently being appended with new blocks
 	recentHistory     string // file containing SnapshotLen blocks
-	currentBlock      uint32
-	previousBlock     siacrypto.Hash
-	blockLock         sync.Mutex
 }
 
 func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
+	println("ADDING SCRIPT INPUT")
+	println("I REPEAT, ADDING SCRIPT INPUT")
 	p.scriptInputsLock.Lock()
 	p.scriptInputs = append(p.scriptInputs, si)
 	p.scriptInputsLock.Unlock()
