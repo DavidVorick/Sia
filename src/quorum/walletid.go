@@ -10,7 +10,7 @@ const (
 
 type WalletID uint64
 
-func (id WalletID) Bytes() [8]byte {
+func (id WalletID) Bytes() []byte {
 	// replace with siaencoding.EncWalletID(id) ?
 	return siaencoding.EncUint64(uint64(id))
 }

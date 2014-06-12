@@ -5,8 +5,9 @@ import (
 	"math"
 )
 
-func EncFloat32(f float32) (b [4]byte) {
-	binary.LittleEndian.PutUint32(b[:], math.Float32bits(f))
+func EncFloat32(f float32) (b []byte) {
+	b = make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, math.Float32bits(f))
 	return
 }
 
@@ -15,8 +16,9 @@ func DecFloat32(b []byte) (f float32) {
 	return
 }
 
-func EncFloat64(f float64) (b [4]byte) {
-	binary.LittleEndian.PutUint64(b[:], math.Float64bits(f))
+func EncFloat64(f float64) (b []byte) {
+	b = make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, math.Float64bits(f))
 	return
 }
 
