@@ -4,6 +4,7 @@ import (
 	"errors"
 	"quorum"
 	"reflect"
+	"runtime" // for debugging
 )
 
 const (
@@ -27,6 +28,14 @@ type instruction struct {
 	cost     int
 }
 
+func (i *instruction) print(args []reflect.Value) {
+	fnName := runtime.FuncForPC(i.fn.Pointer()).Name()
+	print(fnName[14:])
+	for i := range args {
+		print(" ", args[i].Uint())
+	}
+}
+
 // generic 64-bit value
 type value [8]byte
 
@@ -44,7 +53,7 @@ func push(b value) (err error) {
 	return
 }
 
-func (s *stackElem) Print() {
+func (s *stackElem) print() {
 	print("{ ")
 	p := s
 	for {
@@ -136,11 +145,13 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 			break
 		}
 
+		// DEBUG: print op and stack
+		//op.print(fnArgs)
+		//print("\n    -> ")
+		//stack.print()
+
 		// increment instruction pointer
 		iptr++
-
-		// DEBUG: print stack
-		stack.Print()
 	}
 
 	return
