@@ -4,8 +4,8 @@ List of bytecodes
 | Hex  |  Name  | Args |  Description 
 |------|--------|------|--------------
 | 0x00 |  nop   |  0   |  do nothing |
-| 0x01 |  pushb |  1   |  push a byte onto the stack |
-| 0x02 |  pushs |  2   |  push a short onto the stack |
+| 0x01 |  pushb |  1   |  push a byte ($1) onto the stack |
+| 0x02 |  pushs |  2   |  push a short ($1$2) onto the stack |
 | 0x03 |  pop   |  0   |  pop a value, discarding it |
 | 0x04 |  dup   |  0   |  duplicate a value |
 | 0x05 |  swap  |  0   |  swap two values |
@@ -18,7 +18,7 @@ List of bytecodes
 | 0x0C |  divi  |  0   |  integer division |
 | 0x0D |  divf  |  0   |  floating point division |
 | 0x0E |  modi  |  0   |  integer modulus |
-| 0x0F |  negi  |  0   |  integer negatation |
+| 0x0F |  negi  |  0   |  integer negation |
 | 0x10 |  negf  |  0   |  floating point negatation |
 | 0x11 |  bor   |  0   |  integer binary or |
 | 0x12 |  band  |  0   |  integer binary and |
@@ -34,15 +34,19 @@ List of bytecodes
 | 0x1C |  lnot  |  0   |  logical negation |
 | 0x1D |  lor   |  0   |  logical or |
 | 0x1E |  land  |  0   |  logical and |
-| 0x1F |  if    |  2   |  if true, jump to instruction at offset formed by ($1 << 8) + $2 |
-| 0x20 |  goto  |  2   |  jump to instruction |
+| 0x1F |  if    |  2   |  if true, jump to instruction at offset formed by $1$2 |
+| 0x20 |  goto  |  2   |  unconditional jump |
 | 0x21 |  regs  |  1   |  store a value in register $1 |
 | 0x22 |  regl  |  1   |  load a value from register $1 |
 | 0x23 |  inci  |  1   |  increment integer in register $1 |
 | 0x24 |  deci  |  1   |  decrement integer in register $1 |
-| 0x25 |  blks  |  2   |  store a value in data block at address ($1 << 8) + $2 |
-| 0x26 |  blkl  |  2   |  load a value from data block |
-| 0x27 |  rej   |  0   |  reject input, terminating execution | 
-| 0x28 |  xfer  |  0   |  transfer control to input | 
-| 0x29 |  asib  |  2   |  adds sibling defined in data block; pushes success value |
+| 0x25 |  dmov  |  2   |  move data pointer by offset $1$2 |
+| 0x26 |  dgoto |  2   |  move data pointer to address $1$2 |
+| 0x27 |  repb  |  0   |  pop stack value into byte at data pointer |
+| 0x28 |  reps  |  0   |  pop stack value into short at data pointer |
+| 0x29 |  bufc  |  2   |  copy $1$2 bytes (zero-padded) into buffer, starting at data pointer. |
+| 0x2A |  bufp  |  2   |  paste $1$2 bytes (zero-padded) from buffer at data pointer, overwriting existing bytes |
+| 0x2B |  xfer  |  0   |  move instruction pointer to data pointer |
+| 0x2C |  rej   |  0   |  reject input, terminating execution |
+| 0x2D |  asib  |  2   |  adds sibling of length $1$2 defined at data pointer; pushes success value |
 | 0xFF |  exit  |  0   |  terminates execution |

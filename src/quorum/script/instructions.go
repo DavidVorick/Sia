@@ -49,11 +49,15 @@ var opTable = []instruction{
 	instruction{0x22, 1, reflect.ValueOf(op_regl), 2},
 	instruction{0x23, 1, reflect.ValueOf(op_inci), 2},
 	instruction{0x24, 1, reflect.ValueOf(op_deci), 2},
-	instruction{0x25, 2, reflect.ValueOf(op_blks), 2},
-	instruction{0x26, 2, reflect.ValueOf(op_blkl), 2},
-	instruction{0x27, 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x28, 0, reflect.ValueOf(op_xfer), 1},
-	instruction{0x29, 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x25, 2, reflect.ValueOf(op_dmov), 1},
+	instruction{0x26, 2, reflect.ValueOf(op_dgoto), 1},
+	instruction{0x27, 2, reflect.ValueOf(op_repb), 2},
+	instruction{0x28, 2, reflect.ValueOf(op_reps), 2},
+	instruction{0x29, 2, reflect.ValueOf(op_bufc), 2},
+	instruction{0x2A, 2, reflect.ValueOf(op_bufp), 2},
+	instruction{0x2B, 0, reflect.ValueOf(op_xfer), 1},
+	instruction{0x2C, 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x2D, 2, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
@@ -398,7 +402,7 @@ func op_if(offh, offl byte) (err error) {
 		return
 	}
 	if y2b(a) {
-		return op_goto(offh, offl)
+		err = op_goto(offh, offl)
 	}
 	return
 }
@@ -406,7 +410,7 @@ func op_if(offh, offl byte) (err error) {
 func op_goto(offh, offl byte) (err error) {
 	iptr += s2i(offh, offl)
 	if iptr < 0 {
-		return errors.New("jumped to invalid index")
+		err = errors.New("jumped to invalid index")
 	}
 	// the iptr > len(script) case is handled inside Execute
 	return
@@ -436,35 +440,62 @@ func op_deci(reg, n byte) (err error) {
 	return
 }
 
-func op_blks(loch, locl byte) (err error) {
-	err, a := op_pop()
-	addr := s2i(loch, locl)
-	if addr < 0 || addr+8 > len(script) {
-		return errors.New("invalid data access")
+func op_dmov(loch, locl byte) (err error) {
+	dptr += s2i(loch, locl)
+	if dptr < 0 || dptr > len(script) {
+		err = errors.New("invalid data access")
 	}
-	copy(script[addr:addr+8], a[:])
 	return
 }
 
-func op_blkl(loch, locl byte) (err error) {
-	addr := s2i(loch, locl)
-	if addr < 0 || addr+8 > len(script) {
-		return errors.New("invalid data access")
+func op_dgoto(loch, locl byte) (err error) {
+	dptr = s2i(loch, locl)
+	if dptr < 0 || dptr > len(script) {
+		err = errors.New("invalid data access")
 	}
-	var a value
-	copy(a[:], script[addr:addr+8])
-	err = push(a)
+	return
+}
+
+func op_repb() (err error) {
+	err, a := op_pop()
+	script[iptr] = a[0]
+	return
+}
+
+func op_reps() (err error) {
+	err, a := op_pop()
+	script[iptr] = a[0]
+	script[iptr+1] = a[1]
+	return
+}
+
+func op_bufc(lenh, lenl byte) (err error) {
+	length := s2i(lenh, lenl)
+	buffer = make([]byte, length)
+	copy(buffer, script[dptr:])
+	return
+}
+
+func op_bufp(lenh, lenl byte) (err error) {
+	length := s2i(lenh, lenl)
+	// extend script if necessary
+	if dptr+length > len(script) {
+		ext := make([]byte, dptr+length-len(script))
+		script = append(script, ext...)
+	}
+	zeros := make([]byte, length)
+	copy(script[dptr:], zeros)
+	copy(script[dptr:], buffer)
+	return
+}
+
+func op_xfer() (err error) {
+	iptr = dptr
 	return
 }
 
 func op_rej() (err error) {
 	return errors.New("rejected input")
-}
-
-func op_xfer() (err error) {
-	script = input
-	iptr = 0
-	return
 }
 
 func op_asib(loc byte, length byte) (err error) {

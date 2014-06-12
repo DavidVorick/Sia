@@ -71,8 +71,9 @@ func (s *stackElem) print() {
 var (
 	script    []byte
 	iptr      int
-	input     []byte
+	dptr      int
 	registers [256]value
+	buffer    []byte
 	stack     *stackElem
 	stackLen  int
 	q         *quorum.Quorum
@@ -98,10 +99,11 @@ func deductResources(op instruction) error {
 // Execute interprets a script on a set of inputs and returns the execution cost.
 func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
-	script = s.Block
+	script = append(s.Block, in...)
 	iptr = 0
-	input = in
+	dptr = len(s.Block)
 	registers = [256]value{}
+	buffer = nil
 	stack = nil
 	stackLen = 0
 	q = q_
