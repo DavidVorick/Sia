@@ -1,7 +1,42 @@
 package quorum
 
-func (w *wallet) Send(upper uint64, lower uint64, destination WalletID) {
-	// the behavior is undefined if the wallet does not exist.
-	// and it's even more curious if the wallet does not exist on another quorum.
-	// I guess that if there's enough funding in the send, it just gets bounced.
+const (
+	SendMaxCost = 6
+)
+
+func (q *Quorum) Send(w *wallet, upper uint64, lower uint64, destID WalletID) (cost int) {
+	cost += 1
+	if w.upperBalance < upper {
+		return
+	}
+	if w.upperBalance == upper && w.lowerBalance < lower {
+		return
+	}
+	cost += 2
+	destWallet := q.loadWallet(destID)
+	if destWallet == nil {
+		return
+	}
+
+	cost += 3
+	if lower > w.lowerBalance {
+		w.upperBalance -= 1
+		w.lowerBalance = ^uint64(0) - (lower - w.lowerBalance)
+	} else {
+		w.lowerBalance -= lower
+	}
+	w.upperBalance -= upper
+
+	destWallet.upperBalance += upper
+	if ^uint64(0)-destWallet.lowerBalance > lower {
+		destWallet.lowerBalance += lower
+	} else {
+		destWallet.upperBalance += 1
+
+		// get lowerBalance to the correct value without ever causing an overflow
+		destWallet.lowerBalance = ^uint64(0) - (destWallet.lowerBalance)
+		destWallet.lowerBalance += lower
+		destWallet.lowerBalance -= ^uint64(0) - (destWallet.lowerBalance)
+	}
+	return
 }
