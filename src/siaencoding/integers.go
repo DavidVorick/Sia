@@ -9,8 +9,8 @@ func UInt32ToByte(i uint32) (b [4]byte) {
 	return
 }
 
-func UInt32FromByte(b [4]byte) (i uint32) {
-	i = binary.LittleEndian.Uint32(b[:])
+func UInt32FromByte(b []byte) (i uint32) {
+	i = binary.LittleEndian.Uint32(b)
 	return
 }
 
@@ -19,7 +19,7 @@ func UInt64ToByte(i uint64) (b [8]byte) {
 	return
 }
 
-func UInt64FromByte(b [8]byte) (i uint64) {
-	i = binary.LittleEndian.Uint64(b[:])
+func UInt64FromByte(b []byte) (i uint64) {
+	i = binary.LittleEndian.Uint64(b)
 	return
 }

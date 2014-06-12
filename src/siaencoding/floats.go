@@ -10,8 +10,8 @@ func Float32ToByte(f float32) (b [4]byte) {
 	return
 }
 
-func Float32FromByte(b [4]byte) (f float32) {
-	f = math.Float32frombits(binary.LittleEndian.Uint32(b[:]))
+func Float32FromByte(b []byte) (f float32) {
+	f = math.Float32frombits(binary.LittleEndian.Uint32(b))
 	return
 }
 
@@ -20,7 +20,7 @@ func Float64ToByte(f float64) (b [4]byte) {
 	return
 }
 
-func Float64FromByte(b [4]byte) (f float64) {
-	f = math.Float64frombits(binary.LittleEndian.Uint64(b[:]))
+func Float64FromByte(b []byte) (f float64) {
+	f = math.Float64frombits(binary.LittleEndian.Uint64(b))
 	return
 }
