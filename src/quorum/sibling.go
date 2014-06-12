@@ -32,9 +32,9 @@ func (s *Sibling) PublicKey() siacrypto.PublicKey {
 	return *s.publicKey
 }
 
-// Sibling variables are kept private because they should not be chaning unless
-// the quorum is making changes to its structure and all siblings have access
-// to the same set of changes.
+// Sibling variables are kept private because they should not be changing
+// unless the quorum is making changes to its structure and all siblings have
+// access to the same set of changes.
 func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 	return &Sibling{
 		index:     255,
@@ -53,9 +53,6 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
 func (q *Quorum) AddSibling(w *wallet, s *Sibling) (cost int) {
-	println("ADD SIBLING CALLED")
-	println("I REPEAT, ADD SIBLING CALLED")
-
 	cost = 50
 	for i := 0; i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
