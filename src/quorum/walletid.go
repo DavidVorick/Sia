@@ -11,5 +11,6 @@ const (
 type WalletID uint64
 
 func (id WalletID) Bytes() [8]byte {
-	return siaencoding.UInt64ToByte(uint64(id))
+	// replace with siaencoding.EncWalletID(id) ?
+	return siaencoding.EncUint64(uint64(id))
 }

@@ -27,9 +27,9 @@ func (s *snapshotHeader) GobEncode() (b []byte, err error) {
 	}
 
 	b = make([]byte, SnapHeaderSize)
-	intb := siaencoding.UInt32ToByte(s.walletLookupOffset)
+	intb := siaencoding.EncUint32(s.walletLookupOffset)
 	copy(b, intb[:])
-	intb = siaencoding.UInt32ToByte(s.wallets)
+	intb = siaencoding.EncUint32(s.wallets)
 	copy(b[4:], intb[:])
 	return
 }
@@ -44,8 +44,8 @@ func (s *snapshotHeader) GobDecode(b []byte) (err error) {
 		return
 	}
 
-	s.walletLookupOffset = siaencoding.UInt32FromByte(b[:4])
-	s.wallets = siaencoding.UInt32FromByte(b[4:])
+	s.walletLookupOffset = siaencoding.DecUint32(b[:4])
+	s.wallets = siaencoding.DecUint32(b[4:])
 	return
 }
 
@@ -144,9 +144,9 @@ func (q *Quorum) SaveSnap() {
 
 	// fill out walletSliceBytes with the wallet lookup table
 	for i := range walletSlice {
-		intb := siaencoding.UInt64ToByte(uint64(walletSlice[i].id))
+		intb := siaencoding.EncUint64(uint64(walletSlice[i].id))
 		copy(walletSliceBytes[i*12:], intb[:])
-		int32b := siaencoding.UInt32ToByte(walletSlice[i].offset)
+		int32b := siaencoding.EncUint32(walletSlice[i].offset)
 		copy(walletSliceBytes[i*12+8:], int32b[:])
 	}
 
@@ -243,7 +243,7 @@ func (q *Quorum) SnapshotWalletList(snap bool) (ids []WalletID) {
 
 	ids = make([]WalletID, header.wallets)
 	for i := uint32(0); i < header.wallets; i++ {
-		ids[i] = WalletID(siaencoding.UInt64FromByte(lookupBytes[i*12 : i*12+8]))
+		ids[i] = WalletID(siaencoding.DecUint64(lookupBytes[i*12 : i*12+8]))
 	}
 
 	return
@@ -290,8 +290,8 @@ func (q *Quorum) SnapshotWallets(snap bool, ids []WalletID) (encodedWallets [][]
 
 	lookup := make([]walletLookup, header.wallets)
 	for i := uint32(0); i < header.wallets; i++ {
-		lookup[i].id = WalletID(siaencoding.UInt64FromByte(lookupBytes[i*12 : i*12+8]))
-		lookup[i].offset = siaencoding.UInt32FromByte(lookupBytes[i*12+8 : i*12+12])
+		lookup[i].id = WalletID(siaencoding.DecUint64(lookupBytes[i*12 : i*12+8]))
+		lookup[i].offset = siaencoding.DecUint32(lookupBytes[i*12+8 : i*12+12])
 	}
 
 	// find each wallet and add it to the list of encoded wallets
