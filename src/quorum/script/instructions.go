@@ -8,7 +8,7 @@ import (
 	"quorum"
 	"reflect"
 	"siacrypto"
-	"unsafe"
+	"siaencoding"
 )
 
 var opTable = []instruction{
@@ -58,19 +58,23 @@ var opTable = []instruction{
 
 // helper functions
 func v2i(b value) int64 {
-	return *(*int64)(unsafe.Pointer(&b))
+	return siaencoding.DecInt64(b[:])
 }
 
-func i2v(i int64) value {
-	return *(*value)(unsafe.Pointer(&i))
+func i2v(i int64) (v value) {
+	b := siaencoding.EncInt64(i)
+	copy(v[:], b)
+	return
 }
 
 func v2f(b value) float64 {
-	return *(*float64)(unsafe.Pointer(&b))
+	return siaencoding.DecFloat64(b[:])
 }
 
-func f2v(f float64) value {
-	return *(*value)(unsafe.Pointer(&f))
+func f2v(f float64) (v value) {
+	b := siaencoding.EncFloat64(f)
+	copy(v[:], b)
+	return
 }
 
 func s2i(high, low byte) int {
