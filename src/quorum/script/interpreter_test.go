@@ -56,6 +56,14 @@ func TestOpCodes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing terminator error")
 	}
+	s.Block = []byte{
+		0x25, 0xFF, 0xF6,
+		0xFF,
+	}
+	_, err = s.Execute(nil, nil)
+	if err == nil {
+		t.Fatal("expected out of bounds error")
+	}
 }
 
 func BenchmarkInterpreter(b *testing.B) {
