@@ -38,7 +38,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	offset := uint32(quorum.EntropyVolume)
 
 	// copy in the number of ScriptInputs
-	intb := siaencoding.UInt32ToByte(uint32(len(hb.scriptInputs)))
+	intb := siaencoding.EncUint32(uint32(len(hb.scriptInputs)))
 	copy(gobHB[offset:], intb[:])
 	offset += 4
 
@@ -47,7 +47,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	scriptInputOffset := offset + uint32(len(hb.scriptInputs)*4)
 	for _, scriptInput := range hb.scriptInputs {
 		// copy over the offset
-		intb := siaencoding.UInt32ToByte(scriptInputOffset)
+		intb := siaencoding.EncUint32(scriptInputOffset)
 		copy(gobHB[offset:], intb[:])
 		offset += 4
 
@@ -79,9 +79,7 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	offset := uint32(quorum.EntropyVolume)
 
 	// get the number of ScriptInputs
-	var intb [4]byte
-	copy(intb[:], gobHB[offset:])
-	numScriptInputs := siaencoding.UInt32FromByte(intb)
+	numScriptInputs := siaencoding.DecUint32(gobHB[offset : offset+4])
 	if numScriptInputs == 0 {
 		return
 	}
@@ -95,13 +93,10 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 
 	// decode each script input
 	var nextOffset uint32
-	var uint64b [8]byte
 	hb.scriptInputs = make([]script.ScriptInput, numScriptInputs)
 	for i := 0; i < int(numScriptInputs-1); i++ {
-		copy(intb[:], gobHB[offset:])
-		siOffset := siaencoding.UInt32FromByte(intb)
-		copy(intb[:], gobHB[offset+4:])
-		nextOffset = siaencoding.UInt32FromByte(intb)
+		siOffset := siaencoding.DecUint32(gobHB[offset : offset+4])
+		nextOffset = siaencoding.DecUint32(gobHB[offset+4 : offset+8])
 
 		if siOffset > nextOffset-quorum.WalletIDSize || nextOffset+quorum.WalletIDSize > uint32(len(gobHB)) {
 			err = fmt.Errorf("Received invalid encoded heartbeat")
@@ -109,16 +104,14 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 		}
 
 		// decode the WalletID
-		copy(uint64b[:], gobHB[siOffset:])
-		hb.scriptInputs[i].WalletID = quorum.WalletID(siaencoding.UInt64FromByte(uint64b))
+		hb.scriptInputs[i].WalletID = quorum.WalletID(siaencoding.DecUint64(gobHB[siOffset : siOffset+8]))
 		siOffset += quorum.WalletIDSize
 		hb.scriptInputs[i].Input = gobHB[siOffset:nextOffset]
 
 		offset += 4
 	}
 
-	copy(uint64b[:], gobHB[nextOffset:])
-	hb.scriptInputs[numScriptInputs-1].WalletID = quorum.WalletID(siaencoding.UInt64FromByte(uint64b))
+	hb.scriptInputs[numScriptInputs-1].WalletID = quorum.WalletID(siaencoding.DecUint64(gobHB[nextOffset : nextOffset+8]))
 	nextOffset += quorum.WalletIDSize
 	hb.scriptInputs[numScriptInputs-1].Input = gobHB[nextOffset:]
 
