@@ -81,8 +81,9 @@ func f2v(f float64) (v value) {
 	return
 }
 
+// convert two bytes to signed short
 func s2i(high, low byte) int {
-	return int((high << 8) + low)
+	return int(int16(high)<<8 + int16(low))
 }
 
 func b2y(b bool) byte {
