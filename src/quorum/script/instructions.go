@@ -459,14 +459,14 @@ func op_dgoto(loch, locl byte) (err error) {
 
 func op_repb() (err error) {
 	err, a := op_pop()
-	script[iptr] = a[0]
+	script[dptr] = a[0]
 	return
 }
 
 func op_reps() (err error) {
 	err, a := op_pop()
-	script[iptr] = a[0]
-	script[iptr+1] = a[1]
+	script[dptr] = a[0]
+	script[dptr+1] = a[1]
 	return
 }
 
@@ -484,9 +484,9 @@ func op_bufp(lenh, lenl byte) (err error) {
 		ext := make([]byte, dptr+length-len(script))
 		script = append(script, ext...)
 	}
-	zeros := make([]byte, length)
-	copy(script[dptr:], zeros)
-	copy(script[dptr:], buffer)
+	b := make([]byte, length)
+	copy(b, buffer)
+	copy(script[dptr:], b)
 	return
 }
 
