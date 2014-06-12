@@ -63,8 +63,11 @@ func (bhh *blockHistoryHeader) GobDecode(gobBHH []byte) (err error) {
 	return
 }
 
+// commented out because nothing uses it. Not sure if that will change, so it's
+// not being deleted.
+//
 // Takes a hash of the height, parent, and heartbeats field of a block
-func (b *block) Hash() (hash siacrypto.Hash, err error) {
+/*func (b *block) Hash() (hash siacrypto.Hash, err error) {
 	if b == nil {
 		err = fmt.Errorf("Cannot hash a nil block")
 		return
@@ -75,6 +78,28 @@ func (b *block) Hash() (hash siacrypto.Hash, err error) {
 		return
 	}
 	hash, err = siacrypto.CalculateHash(gobBlock)
+	return
+}*/
+
+// condenseBlock assumes that a heartbeat has a valid signature and that the
+// parent is the correct parent.
+func (p *Participant) condenseBlock() (b *block) {
+	b = new(block)
+	b.height = p.quorum.Height()
+	b.parent = p.quorum.Parent()
+
+	p.heartbeatsLock.Lock()
+	for i := range p.heartbeats {
+		fmt.Printf("Sibling %v: %v heartbeats\n", i, len(p.heartbeats[i]))
+		if len(p.heartbeats[i]) == 1 {
+			// the map has only one element, but the key is unknown
+			for _, hb := range p.heartbeats[i] {
+				b.heartbeats[i] = hb // place heartbeat into block, if valid
+			}
+		}
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat) // clear map for next cycle
+	}
+	p.heartbeatsLock.Unlock()
 	return
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"siacrypto"
 	"sync"
 )
 
@@ -34,6 +35,21 @@ type Quorum struct {
 
 	// snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
+
+	// Block tracking
+	parent siacrypto.Hash
+	height uint32
+}
+
+// This is the prefix that the quorum will use when opening wallets as files.
+// Eventually, logic will be implemented to move all of the wallets and files
+// if the prefex is changed.
+func (q *Quorum) SetWalletPrefix(walletPrefix string) {
+	q.walletPrefix = walletPrefix
+}
+
+func (q *Quorum) GetWalletPrefix() string {
+	return q.walletPrefix
 }
 
 func (q *Quorum) CurrentSnapshot() bool {
@@ -45,6 +61,19 @@ func (q *Quorum) Siblings() [QuorumSize]*Sibling {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 	return q.siblings
+}
+
+func (q *Quorum) Height() uint32 {
+	return q.height
+}
+
+func (q *Quorum) Parent() siacrypto.Hash {
+	return q.parent
+}
+
+func (q *Quorum) AdvanceBlock(h siacrypto.Hash) {
+	q.parent = h
+	q.height += 1
 }
 
 // q.Status() enumerates the variables of the quorum in a human-readable output
@@ -75,16 +104,6 @@ func (q *Quorum) Status() (b string) {
 
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 	return
-}
-
-// This is the prefix that the quorum will use when opening wallets as files.
-// There is no getter, because one is not seen as necessary.
-func (q *Quorum) SetWalletPrefix(walletPrefix string) {
-	q.walletPrefix = walletPrefix
-}
-
-func (q *Quorum) GetWalletPrefix() string {
-	return q.walletPrefix
 }
 
 // Encoded Variables:
