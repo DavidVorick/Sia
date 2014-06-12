@@ -13,14 +13,8 @@ func TestCoding(t *testing.T) {
 	m := QuorumSize - k
 	b := 1024
 
-	// create sector data
-	randomBytes, err := siacrypto.RandomByteSlice(b * k)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// create sector
-	sec, err := NewSector(randomBytes)
+	sec, err := NewSector(siacrypto.RandomByteSlice(b * k))
 	if err != nil {
 		t.Fatal(err)
 	}

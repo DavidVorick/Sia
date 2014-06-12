@@ -16,8 +16,6 @@ const (
 // eventually this will be modified to verify a public key before executing
 var genesisScript = []byte{0x28}
 
-type WalletID uint64
-
 type sectorHeader struct {
 	// 6 byte CRC will go here
 	m        byte
@@ -28,7 +26,7 @@ type sectorHeader struct {
 type wallet struct {
 	id WalletID // not saved to disk
 
-	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes
+	walletHash     siacrypto.TruncatedHash //hash of the 4064 bytes, need to be specification-based
 	upperBalance   uint64
 	lowerBalance   uint64
 	scriptAtoms    uint16
@@ -146,6 +144,24 @@ func fillWallet(b *[4096]byte) (w *wallet) {
 	return
 }
 
+func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
+	if len(encodedWallet) != 4096 {
+		err = fmt.Errorf("LoadWallet: Not a wallet!")
+		return
+	}
+
+	var b [4096]byte
+	copy(b[:], encodedWallet)
+	w := fillWallet(&b)
+	if w == nil {
+		err = fmt.Errorf("Did not get a valid wallet")
+		return
+	}
+
+	err = q.CreateWallet(id, w.upperBalance, w.lowerBalance, w.scriptAtoms, w.scriptPrimer[:])
+	return
+}
+
 // takes a walletID and derives the filename from the quorum. Eventually, this
 // function should also verify that the id is located within the quorum.
 func (q *Quorum) walletFilename(id WalletID) (s string) {
@@ -165,7 +181,7 @@ func (q *Quorum) loadWallet(id WalletID) *wallet {
 	walletFilename := q.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 
 	var b [4096]byte
@@ -197,8 +213,12 @@ func (q *Quorum) saveWallet(w *wallet) {
 	}
 }
 
-func (q *Quorum) LoadScript(id WalletID) []byte {
+func (q *Quorum) LoadScriptBlock(id WalletID) []byte {
 	w := q.loadWallet(id)
+	if w == nil {
+		return nil
+	}
+
 	if w.scriptAtoms == 0 {
 		return w.scriptPrimer[:]
 	}
@@ -244,6 +264,8 @@ func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
 	if err != nil {
 		return
 	}
+
+	// Write the other script atoms too
 }
 
 // CreateWallet takes an id, a balance, a number of script atom, and an initial

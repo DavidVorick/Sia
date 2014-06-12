@@ -7,6 +7,11 @@ import (
 	"siacrypto"
 )
 
+type SnapshotWalletsInput struct {
+	Snapshot bool
+	Ids      []quorum.WalletID
+}
+
 // Contains Synchronization information for the quorum.
 // Eventually this should include an offset.
 type Synchronize struct {
@@ -14,8 +19,24 @@ type Synchronize struct {
 	heartbeats  [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
 }
 
-func (p *Participant) TransferQuorum(_ struct{}, q *quorum.Quorum) (err error) {
-	*q = p.quorum
+func (p *Participant) RecentSnapshot(_ struct{}, q *quorum.Quorum) (err error) {
+	quorum, err := p.quorum.RecentSnapshot()
+	*q = *quorum
+	return
+}
+
+func (p *Participant) SnapshotWalletList(snapshot bool, ids *[]quorum.WalletID) (err error) {
+	*ids = p.quorum.SnapshotWalletList(snapshot)
+	return
+}
+
+func (p *Participant) SnapshotWallets(swi SnapshotWalletsInput, wallets *[][]byte) (err error) {
+	*wallets = p.quorum.SnapshotWallets(swi.Snapshot, swi.Ids)
+	return
+}
+
+func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]block) (err error) {
+	*blockList = p.loadBlocks(snapshot)
 	return
 }
 

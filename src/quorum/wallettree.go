@@ -112,6 +112,7 @@ func (q *Quorum) insert(w *walletNode) {
 	if q.walletRoot == nil {
 		q.walletRoot = w
 		q.walletRoot.red = false
+		q.wallets += 1
 		return
 	}
 
@@ -198,6 +199,7 @@ func (q *Quorum) insert(w *walletNode) {
 	// restore the root wallet and set it to black
 	q.walletRoot = falseRoot.children[1]
 	q.walletRoot.red = false
+	q.wallets += 1
 }
 
 // remove removes the presented key from the wallet tree.
@@ -330,6 +332,7 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 	if q.walletRoot != nil {
 		q.walletRoot.red = false
 	}
+	q.wallets -= 1
 
 	return
 }

@@ -20,10 +20,6 @@ type ScriptInput struct {
 	Input    []byte
 }
 
-func (s *ScriptInput) Bytes() []byte {
-	return s.Input
-}
-
 type instruction struct {
 	opcode   byte
 	argBytes int

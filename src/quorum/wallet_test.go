@@ -12,16 +12,14 @@ import (
 func TestWalletCoding(t *testing.T) {
 	// Fill out a wallet with completely random values
 	w := new(wallet)
-	max := int64(^uint64(0) >> 1)
-	maxu16 := int64(^uint16(0))
-	w.upperBalance = siacrypto.RandomInt64(max)
-	w.lowerBalance = siacrypto.RandomInt64(max)
-	w.scriptAtoms = uint16(siacrypto.RandomInt64(maxu16))
+	w.upperBalance = siacrypto.RandomUInt64()
+	w.lowerBalance = siacrypto.RandomUInt64()
+	w.scriptAtoms = uint16(siacrypto.RandomUInt64())
 	for i := range w.sectorOverview {
 		w.sectorOverview[i].m = siacrypto.RandomByte()
 		w.sectorOverview[i].numAtoms = siacrypto.RandomByte()
 	}
-	randomBytes, _ := siacrypto.RandomByteSlice(scriptPrimerSize)
+	randomBytes := siacrypto.RandomByteSlice(scriptPrimerSize)
 	copy(w.scriptPrimer[:], randomBytes)
 
 	wBytes := w.bytes()

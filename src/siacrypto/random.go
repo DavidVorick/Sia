@@ -8,9 +8,9 @@ import (
 
 // RandomByteSlice takes an int as input and returns a []byte of length int that
 // is full of random values
-func RandomByteSlice(numBytes int) (randomBytes []byte, err error) {
+func RandomByteSlice(numBytes int) (randomBytes []byte) {
 	if numBytes < 0 {
-		err = fmt.Errorf("RandomByteSlice: cannot generate a negative number of bytes")
+		randomBytes = make([]byte, 0)
 		return
 	}
 
@@ -42,13 +42,19 @@ func RandomInt(ceiling int) (randInt int, err error) {
 	return
 }
 
-// RandomUInt64() generates a random uint64 [0, ceiling)
-func RandomInt64(ceiling int64) (randInt uint64) {
-	bigInt := big.NewInt(int64(ceiling))
+// RandomUInt64() generates a random uint64 of any value
+func RandomUInt64() (randInt uint64) {
+	maxint64 := int64(^uint64(0) >> 1)
+	bigInt := big.NewInt(maxint64)
 	randBig, err := rand.Int(rand.Reader, bigInt)
 	if err != nil {
 		return
 	}
 	randInt = uint64(randBig.Int64())
+	randBig, err = rand.Int(rand.Reader, bigInt)
+	if err != nil {
+		return
+	}
+	randInt += uint64(randBig.Int64())
 	return
 }

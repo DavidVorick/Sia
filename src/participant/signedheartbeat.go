@@ -35,7 +35,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb := new(heartbeat)
 
 	// Generate Entropy
-	entropy, err := siacrypto.RandomByteSlice(quorum.EntropyVolume)
+	entropy := siacrypto.RandomByteSlice(quorum.EntropyVolume)
 	if err != nil {
 		return
 	}
@@ -51,7 +51,8 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 
 	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hb.Bytes())
+	hbb, _ := hb.GobEncode()
+	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hbb)
 	if err != nil {
 		return
 	}
