@@ -4,7 +4,6 @@ import (
 	"errors"
 	"quorum"
 	"reflect"
-	"runtime" // for debugging
 )
 
 const (
@@ -23,14 +22,15 @@ type ScriptInput struct {
 
 type instruction struct {
 	opcode   byte
+	name     string
 	argBytes int
 	fn       reflect.Value
 	cost     int
 }
 
-func (i *instruction) print(args []reflect.Value) {
-	fnName := runtime.FuncForPC(i.fn.Pointer()).Name()
-	print(fnName[14:])
+func (in *instruction) print(args []reflect.Value) {
+	print(iptr-len(args), ": ")
+	print(in.name)
 	for i := range args {
 		print(" ", args[i].Uint())
 	}
@@ -63,7 +63,7 @@ func (s *stackElem) print() {
 		print(v2i(p.val), " ")
 		p = p.next
 	}
-	println("}")
+	print("}")
 }
 
 // global vars accessed by the various opcode functions
@@ -124,7 +124,7 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 
 		// place arguments in array while advancing instruction pointer
 		if iptr+op.argBytes >= len(script) {
-			err = errors.New("too few arguments to opcode")
+			err = errors.New("too few arguments to opcode " + op.name)
 			break
 		}
 		var fnArgs []reflect.Value
@@ -148,9 +148,14 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 		}
 
 		// DEBUG: print op and stack
-		//op.print(fnArgs)
-		//print("\n    -> ")
-		//stack.print()
+		op.print(fnArgs)
+		print("\n    stack:  ")
+		stack.print()
+		print("\n    buffer: {")
+		for _, b := range buffer {
+			print(" ", b)
+		}
+		print(" }\n")
 
 		// increment instruction pointer
 		iptr++
