@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	scriptPrimerSize = 1024
+	scriptPrimerSize    = 1024
 	CreateWalletMaxCost = 8
 )
 
@@ -159,7 +159,7 @@ func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
 		return
 	}
 
-	err = q.CreateWallet(id, w.upperBalance, w.lowerBalance, w.scriptAtoms, w.scriptPrimer[:])
+	err = q.NewWallet(id, w.upperBalance, w.lowerBalance, w.scriptAtoms, w.scriptPrimer[:])
 	return
 }
 
@@ -271,6 +271,32 @@ func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
 	// Write the other script atoms too
 }
 
+func (q *Quorum) NewWallet(id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (err error) {
+	// check if the new wallet already exists
+	wn := q.retrieve(id)
+	if wn != nil {
+		err = fmt.Errorf("NewWallet: wallet of that id already exists in quorum.")
+		return
+	}
+
+	// create a wallet node to insert into the walletTree
+	wn = new(walletNode)
+	wn.id = id
+	wn.weight = int(1 + scriptAtoms)
+	q.insert(wn)
+
+	// fill out a basic wallet struct from the inputs
+	nw := new(wallet)
+	nw.id = id
+	nw.upperBalance = upperBalance
+	nw.lowerBalance = lowerBalance
+	nw.scriptAtoms = scriptAtoms
+	copy(nw.scriptPrimer[:], initialScript)
+	q.saveWallet(nw)
+
+	return
+}
+
 // CreateWallet takes an id, a balance, a number of script atom, and an initial
 // script and uses those to create a new wallet that gets stored in stable
 // memory. If a wallet of that id already exists then the process aborts.
@@ -279,7 +305,7 @@ func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lower
 	if w.upperBalance < upperBalance {
 		return
 	}
-	if w.upperBalance == upperBalance && w.lowerBalance < lower {
+	if w.upperBalance == upperBalance && w.lowerBalance < lowerBalance {
 		return
 	}
 
@@ -287,7 +313,6 @@ func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lower
 	cost += 2
 	wn := q.retrieve(id)
 	if wn != nil {
-		err = fmt.Errorf("CreateWallet: wallet of that id already exists in quorum.")
 		return
 	}
 
@@ -304,7 +329,7 @@ func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lower
 	nw.upperBalance = upperBalance
 	nw.lowerBalance = lowerBalance
 	nw.scriptAtoms = scriptAtoms
-	nw.scriptPrimer = initialScript
+	copy(nw.scriptPrimer[:], initialScript)
 	q.saveWallet(nw)
 
 	w.upperBalance -= upperBalance

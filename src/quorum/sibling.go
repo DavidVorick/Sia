@@ -18,7 +18,7 @@ type Sibling struct {
 	index     byte
 	address   network.Address
 	publicKey *siacrypto.PublicKey
-	wallet WalletID
+	wallet    WalletID
 }
 
 // Getters for the private variables
@@ -121,6 +121,11 @@ func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	if err != nil {
 		return
 	}
+	err = encoder.Encode(s.wallet)
+	if err != nil {
+		return
+	}
+
 	gobSibling = w.Bytes()
 	return
 }
@@ -145,5 +150,10 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 	if err != nil {
 		return
 	}
+	err = decoder.Decode(&s.wallet)
+	if err != nil {
+		return
+	}
+
 	return
 }
