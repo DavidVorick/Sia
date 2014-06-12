@@ -10,6 +10,7 @@ import (
 
 const (
 	scriptPrimerSize = 1024
+	CreateWalletMaxCost = 8
 )
 
 // the default script for all wallets; simply transfers control to input
@@ -177,7 +178,7 @@ func (q *Quorum) walletFilename(id WalletID) (s string) {
 	return
 }
 
-func (q *Quorum) loadWallet(id WalletID) *wallet {
+func (q *Quorum) loadWallet(id WalletID) (w *wallet) {
 	walletFilename := q.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
@@ -193,7 +194,9 @@ func (q *Quorum) loadWallet(id WalletID) *wallet {
 		return nil
 	}
 
-	return fillWallet(&b)
+	w = fillWallet(&b)
+	w.id = id
+	return
 }
 
 // takes a wallet as input, then uses the quorum prefix plus the wallet id to
@@ -271,8 +274,17 @@ func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
 // CreateWallet takes an id, a balance, a number of script atom, and an initial
 // script and uses those to create a new wallet that gets stored in stable
 // memory. If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (err error) {
-	// check if the wallet already exists
+func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (cost int) {
+	cost += 1
+	if w.upperBalance < upperBalance {
+		return
+	}
+	if w.upperBalance == upperBalance && w.lowerBalance < lower {
+		return
+	}
+
+	// check if the new wallet already exists
+	cost += 2
 	wn := q.retrieve(id)
 	if wn != nil {
 		err = fmt.Errorf("CreateWallet: wallet of that id already exists in quorum.")
@@ -280,19 +292,28 @@ func (q *Quorum) CreateWallet(id WalletID, upperBalance uint64, lowerBalance uin
 	}
 
 	// create a wallet node to insert into the walletTree
+	cost += 5
 	wn = new(walletNode)
 	wn.id = id
 	wn.weight = int(1 + scriptAtoms)
 	q.insert(wn)
 
 	// fill out a basic wallet struct from the inputs
-	w := new(wallet)
-	w.id = id
-	w.upperBalance = upperBalance
-	w.lowerBalance = lowerBalance
-	w.scriptAtoms = scriptAtoms
+	nw := new(wallet)
+	nw.id = id
+	nw.upperBalance = upperBalance
+	nw.lowerBalance = lowerBalance
+	nw.scriptAtoms = scriptAtoms
+	nw.scriptPrimer = initialScript
+	q.saveWallet(nw)
 
-	q.saveWallet(w)
-	q.SaveScript(w.id, initialScript) // scripts are handled separately
+	w.upperBalance -= upperBalance
+	if lowerBalance > w.lowerBalance {
+		w.upperBalance -= 1
+		w.lowerBalance = ^uint64(0) - (lowerBalance - w.lowerBalance)
+	} else {
+		w.lowerBalance -= lowerBalance
+	}
+
 	return
 }
