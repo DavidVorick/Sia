@@ -48,6 +48,8 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
 func (q *Quorum) AddSibling(s *Sibling) {
+	println("ADD SIBLING CALLED")
+	println("I REPEAT, ADD SIBLING CALLED")
 	for i := 0; i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
 			s.index = byte(i)

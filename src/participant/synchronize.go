@@ -16,7 +16,7 @@ type SnapshotWalletsInput struct {
 // Eventually this should include an offset.
 type Synchronize struct {
 	currentStep int
-	heartbeats  [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat
+	heartbeats  [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat
 }
 
 func (p *Participant) RecentSnapshot(_ struct{}, q *quorum.Quorum) (err error) {

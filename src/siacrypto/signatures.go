@@ -28,7 +28,7 @@ type SignedMessage struct {
 }
 
 // Creates a deterministic hash of a public key
-func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
+func (pk *PublicKey) Hash() (hash Hash, err error) {
 	if pk == nil {
 		err = fmt.Errorf("Cannot hash a nil public key")
 		return
@@ -39,7 +39,7 @@ func (pk *PublicKey) Hash() (hash TruncatedHash, err error) {
 	}
 
 	combinedKey := append(pk.key.X.Bytes(), pk.key.Y.Bytes()...)
-	hash, err = CalculateTruncatedHash(combinedKey)
+	hash, err = CalculateHash(combinedKey)
 	return
 }
 

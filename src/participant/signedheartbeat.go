@@ -14,7 +14,7 @@ import (
 
 type SignedHeartbeat struct {
 	heartbeat     *heartbeat
-	heartbeatHash siacrypto.TruncatedHash
+	heartbeatHash siacrypto.Hash
 	signatories   []byte                // a list of everyone who's seen the heartbeat
 	signatures    []siacrypto.Signature // their corresponding signatures
 }
@@ -52,7 +52,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
 	hbb, _ := hb.GobEncode()
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hbb)
+	sh.heartbeatHash, err = siacrypto.CalculateHash(hbb)
 	if err != nil {
 		return
 	}

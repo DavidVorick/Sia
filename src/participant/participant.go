@@ -24,7 +24,7 @@ type Participant struct {
 	// Heartbeat Variables
 	scriptInputs     []script.ScriptInput
 	scriptInputsLock sync.Mutex
-	heartbeats       [quorum.QuorumSize]map[siacrypto.TruncatedHash]*heartbeat // list of heartbeats received from siblings
+	heartbeats       [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
 	heartbeatsLock   sync.Mutex
 
 	// Consensus Algorithm Status
@@ -33,13 +33,14 @@ type Participant struct {
 	currentStep int
 	stepLock    sync.RWMutex // prevents a benign race condition
 
+	// Bootstrap variables
+	synchronized bool
+	recentBlocks map[uint32]*block
+
 	// Block history variables
 	activeHistoryStep int
 	activeHistory     string // file currently being appended with new blocks
 	recentHistory     string // file containing SnapshotLen blocks
-	currentBlock      uint32
-	previousBlock     siacrypto.TruncatedHash
-	blockLock         sync.Mutex
 }
 
 func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {

@@ -66,17 +66,19 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// initialize heartbeat maps
 	for i := range p.heartbeats {
-		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 
 	// initialize disk variables
+	p.recentBlocks = make(map[uint32]*block)
 	p.quorum.SetWalletPrefix(participantPrefix)
 	p.activeHistoryStep = SnapshotLen // trigger cylcing on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
+		p.synchronized = true
 		// create the bootstrap wallet
-		err = p.quorum.CreateWallet(1, 4000, 0, 0, nil)
+		err = p.quorum.CreateWallet(1, 15000, 0, 0, nil)
 		if err != nil {
 			return
 		}
@@ -91,9 +93,39 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// Bootstrap As A Hopeful //
 	////////////////////////////
 
-	// 1. Subscribe and start building blocks
+	// 1. Synchronize to the current quorum to correctly produce blocks from
+	// heartbeats
+	synchronize := new(Synchronize)
+	fmt.Println("Synchronizeing to the Bootstrap")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.Synchronize",
+		Args: struct{}{},
+		Resp: synchronize,
+	})
+	if err != nil {
+		return
+	}
+	// lock not needed as this is the only thread
+	p.currentStep = synchronize.currentStep
+	p.heartbeats = synchronize.heartbeats
 
-	// 2. Download the quorum
+	// 2. Subscribe to the current quorum and receive all heartbeats
+	fmt.Println("Subscribing to the Bootstrap")
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.Subscribe",
+		Args: p.self.Address(),
+		Resp: nil,
+	})
+	if err != nil {
+		return
+	}
+
+	// begin processing heartbeats
+	go p.tick()
+
+	// 2. Download a recent quorum snapshot
 	fmt.Println("Getting Quorum Snapshot From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
@@ -138,6 +170,9 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		}
 	}
 
+	fmt.Println("Untouched Snapshot Status():")
+	fmt.Println(p.quorum.Status())
+
 	// 5. Download the blocks
 	var blockList []block
 	fmt.Println("Getting Blocks Since Snapshot")
@@ -151,54 +186,18 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
-	// 6. Integrate with step 1 blocks, fast forward to immediate.
-
-	// 7. Fast forward the quorum from step 2
-	// this is pretty dirty and doesn't do ANY verifications like signatures
+	// 6. Integrate with blocks built while listening, compile all blocks
 	for i := range blockList {
-		for i, hb := range blockList[i].heartbeats {
-			var a siacrypto.TruncatedHash
-			p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
-			p.heartbeats[i][a] = hb
-		}
-		p.compile()
+		p.appendBlock(&blockList[i])
 	}
 
-	// 7a Synchronize the participants - timing, step, currentSnapshot
-
-	// 8. Submit a join quorum request
-
-	// 9. The existing compile will handle the rest.
-
-	// send a listener request to the bootstrap to become a listener on the quorum
-	fmt.Println("Synchronizing to Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
-		Proc: "Participant.Subscribe",
-		Args: p.self.Address(),
-		Resp: nil,
-	})
-	if err != nil {
-		return
+	currentHeight := p.quorum.Height()
+	for p.recentBlocks[currentHeight] != nil {
+		fmt.Println("Fast forwarding a block:")
+		p.compile(p.recentBlocks[currentHeight])
+		currentHeight += 1
 	}
-
-	// Synchronize to the current quorum
-	synchronize := new(Synchronize)
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
-		Proc: "Participant.Synchronize",
-		Args: struct{}{},
-		Resp: synchronize,
-	})
-	if err != nil {
-		return
-	}
-
-	// lock not needed as this is the only thread
-	p.currentStep = synchronize.currentStep
-	p.heartbeats = synchronize.heartbeats
-
-	go p.tick()
+	p.synchronized = true
 
 	// encode an address and public key for script input
 	w := new(bytes.Buffer)
@@ -209,6 +208,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// simple script that calls AddSibling
 	var s script.ScriptInput
+	//s.WalletID = 1
 	s.Input = []byte{0x29, 0x04, byte(len(gobSibling)), 0xFF}
 	s.Input = append(s.Input, gobSibling...)
 	err = p.messageRouter.SendMessage(&network.Message{

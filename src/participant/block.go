@@ -10,14 +10,14 @@ import (
 
 const (
 	SnapshotLen            = 3 // number of blocks separating each snapshot
-	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.TruncatedHashSize*SnapshotLen
+	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.HashSize*SnapshotLen
 )
 
 // A block is just a collection of heartbeats, along with information about
 // which block it is and which block was it's parent.
 type block struct {
 	height     uint32
-	parent     siacrypto.TruncatedHash
+	parent     siacrypto.Hash
 	heartbeats [quorum.QuorumSize]*heartbeat
 }
 
@@ -60,8 +60,11 @@ func (bhh *blockHistoryHeader) GobDecode(gobBHH []byte) (err error) {
 	return
 }
 
+// commented out because nothing uses it. Not sure if that will change, so it's
+// not being deleted.
+//
 // Takes a hash of the height, parent, and heartbeats field of a block
-func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
+/*func (b *block) Hash() (hash siacrypto.Hash, err error) {
 	if b == nil {
 		err = fmt.Errorf("Cannot hash a nil block")
 		return
@@ -71,7 +74,29 @@ func (b *block) Hash() (hash siacrypto.TruncatedHash, err error) {
 	if err != nil {
 		return
 	}
-	hash, err = siacrypto.CalculateTruncatedHash(gobBlock)
+	hash, err = siacrypto.CalculateHash(gobBlock)
+	return
+}*/
+
+// condenseBlock assumes that a heartbeat has a valid signature and that the
+// parent is the correct parent.
+func (p *Participant) condenseBlock() (b *block) {
+	b = new(block)
+	b.height = p.quorum.Height()
+	b.parent = p.quorum.Parent()
+
+	p.heartbeatsLock.Lock()
+	for i := range p.heartbeats {
+		fmt.Printf("Sibling %v: %v heartbeats\n", i, len(p.heartbeats[i]))
+		if len(p.heartbeats[i]) == 1 {
+			// the map has only one element, but the key is unknown
+			for _, hb := range p.heartbeats[i] {
+				b.heartbeats[i] = hb // place heartbeat into block, if valid
+			}
+		}
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat) // clear map for next cycle
+	}
+	p.heartbeatsLock.Unlock()
 	return
 }
 
@@ -107,7 +132,7 @@ func (b *block) GobEncode() (gobBlock []byte, err error) {
 	copy(gobBlock, intb[:])
 	offset := len(intb)
 	copy(gobBlock[offset:], b.parent[:])
-	offset += siacrypto.TruncatedHashSize
+	offset += siacrypto.HashSize
 
 	// get the offset for the first heartbeat
 	heartbeatOffset := offset + len(intb)*quorum.QuorumSize
@@ -136,7 +161,7 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 
 	// minimum size for a block is the height, parent hash, and offsets for each
 	// of quorum.QuorumSize heartbeats
-	if len(gobBlock) < siacrypto.TruncatedHashSize+quorum.QuorumSize*4+4 {
+	if len(gobBlock) < siacrypto.HashSize+quorum.QuorumSize*4+4 {
 		err = fmt.Errorf("invalid gob block")
 		return
 	}
@@ -144,8 +169,8 @@ func (b *block) GobDecode(gobBlock []byte) (err error) {
 	// decode height and parent
 	b.height = siaencoding.DecUint32(gobBlock[:4])
 	offset := 4
-	copy(b.parent[:], gobBlock[offset:offset+siacrypto.TruncatedHashSize])
-	offset += siacrypto.TruncatedHashSize
+	copy(b.parent[:], gobBlock[offset:offset+siacrypto.HashSize])
+	offset += siacrypto.HashSize
 
 	// decode each heartbeat
 	var nextOffset uint32
@@ -326,7 +351,6 @@ func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
 		panic(err)
 	}
 	fileSize := fileInfo.Size()
-
 	bs = make([]block, bhh.latestBlock)
 	for i := uint32(0); i < bhh.latestBlock; i++ {
 		var byteCount uint32
@@ -339,7 +363,6 @@ func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
 
 		n, err = file.Read(blockBytes)
 		if err != nil || n != int(byteCount) {
-			println(n)
 			panic(err)
 		}
 

@@ -12,7 +12,7 @@ import (
 func TestNewSignedHeartbeat(t *testing.T) {
 	p := new(Participant)
 	p.self = new(quorum.Sibling)
-	p.heartbeats[p.self.Index()] = make(map[siacrypto.TruncatedHash]*heartbeat)
+	p.heartbeats[p.self.Index()] = make(map[siacrypto.Hash]*heartbeat)
 	_, key, err := siacrypto.CreateKeyPair()
 	p.secretKey = key
 	if err != nil {
@@ -36,7 +36,7 @@ func TestNewSignedHeartbeat(t *testing.T) {
 func TestHandleSignedHeartbeat(t *testing.T) {
 	p := new(Participant)
 	for i := range p.heartbeats {
-		p.heartbeats[i] = make(map[siacrypto.TruncatedHash]*heartbeat)
+		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 	p.messageRouter = new(network.DebugNetwork)
 	p.quorum = *new(quorum.Quorum)
@@ -71,7 +71,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh := new(SignedHeartbeat)
 	sh.heartbeat = hb
 	hbb, _ := hb.GobEncode()
-	sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(hbb)
+	sh.heartbeatHash, err = siacrypto.CalculateHash(hbb)
 	sh.signatories = make([]byte, 2)
 	sh.signatures = make([]siacrypto.Signature, 2)
 	sh.signatories[0] = sibling1.Index()
@@ -122,7 +122,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sh.heartbeatHash, err = siacrypto.CalculateTruncatedHash(ehb)
+		sh.heartbeatHash, err = siacrypto.CalculateHash(ehb)
 		if err != nil {
 			t.Fatal(err)
 		}
