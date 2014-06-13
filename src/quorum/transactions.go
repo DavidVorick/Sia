@@ -4,7 +4,7 @@ const (
 	SendMaxCost = 6
 )
 
-func (q *Quorum) Send(w *wallet, amount Balance, destID WalletID) (cost int) {
+func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int) {
 	cost += 1
 	if !w.balance.Compare(amount) {
 		return
