@@ -26,15 +26,19 @@ type Wallet struct {
 	id WalletID
 
 	walletHash     siacrypto.Hash // a hash of the encoded wallet
-	balance        Balance
+	Balance        Balance
 	sectorOverview [256]sectorHeader
 	script         []byte
 }
 
+func (w *Wallet) Script() []byte {
+	return w.script
+}
+
 func (q *Quorum) walletString(id WalletID) (s string) {
 	w := q.LoadWallet(id)
-	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.balance.upperBalance)
-	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.balance.lowerBalance)
+	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.Balance.upperBalance)
+	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.Balance.lowerBalance)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
 
 	// calculate the number of sectors that have been allocated
@@ -62,7 +66,7 @@ func (w *Wallet) GobEncode() (b []byte, err error) {
 
 	// leave room for Hash, encode balance and scriptAtoms
 	offset := siacrypto.HashSize
-	balanceBytes, err := w.balance.GobEncode()
+	balanceBytes, err := w.Balance.GobEncode()
 	if err != nil {
 		return
 	}
@@ -104,7 +108,7 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	}
 	offset := siacrypto.HashSize
 
-	err = w.balance.GobDecode(b[offset : offset+16])
+	err = w.Balance.GobDecode(b[offset : offset+16])
 	if err != nil {
 		return
 	}
