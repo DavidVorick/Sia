@@ -2,6 +2,7 @@ package participant
 
 import (
 	"network"
+	"os"
 	"testing"
 )
 
@@ -16,7 +17,12 @@ func TestSynchronizeEncoding(t *testing.T) {
 func TestCreateParticipant(t *testing.T) {
 	zn := network.NewDebugNetwork()
 	// make sure CreateState does not cause errors
-	p0, err := CreateParticipant(zn, "../../participantStorage/TestCreateParticipant0.")
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wd = wd + "/../../participantStorage/TestCreateParticipant1."
+	p0, err := CreateParticipant(zn, wd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +36,7 @@ func TestCreateParticipant(t *testing.T) {
 	}
 
 	// check a non-bootstrap
-	p1, err := CreateParticipant(zn, "../../participantStorage/TestCreateParticipant1.")
+	p1, err := CreateParticipant(zn, wd)
 	if err != nil {
 		t.Fatal(err)
 	}

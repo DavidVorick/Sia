@@ -1,3 +1,7 @@
+// A List of Calls Available To Script:
+// 1. Send
+// 2. AddNewSibling
+// 3. CreateWallet
 package quorum
 
 import (

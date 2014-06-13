@@ -72,18 +72,35 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// initialize disk variables
 	p.recentBlocks = make(map[uint32]*block)
 	p.quorum.SetWalletPrefix(participantPrefix)
-	p.activeHistoryStep = SnapshotLen // trigger cylcing on the history during the first save
+	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
 		p.synchronized = true
-		// create the bootstrap wallet
-		err = p.quorum.CreateWallet(1, 15000, 0, 0, nil)
+		// create the bootstrapping script
+		var encSibling []byte
+		encSibling, err = p.self.GobEncode()
 		if err != nil {
 			return
 		}
+		s := []byte{
+			0x2B, 0x00, byte(len(encSibling)), // copy encoded sibling into buffer
+			0x2F, // call addSibling on buffer
+			0xFF,
+		}
 
-		p.quorum.AddSibling(p.self)
+		// create the bootstrap wallet
+		p.quorum.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), s)
+
+		// execute the bootstrapping script
+		si := &script.ScriptInput{
+			WalletID: 1,
+			Input:    encSibling,
+		}
+		si.Execute(&p.quorum)
+
+		siblings := p.quorum.Siblings()
+		p.self = siblings[0]
 		p.newSignedHeartbeat()
 		go p.tick()
 		return
@@ -164,7 +181,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	for i, encodedWallet := range encodedWallets {
-		err = p.quorum.LoadWallet(encodedWallet, walletList[i])
+		err = p.quorum.InsertWallet(encodedWallet, walletList[i])
 		if err != nil {
 			return
 		}

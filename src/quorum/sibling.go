@@ -14,6 +14,7 @@ type Sibling struct {
 	index     byte
 	address   network.Address
 	publicKey *siacrypto.PublicKey
+	wallet    WalletID
 }
 
 // Getters for the private variables
@@ -27,36 +28,14 @@ func (s *Sibling) PublicKey() siacrypto.PublicKey {
 	return *s.publicKey
 }
 
-// Sibling variables are kept private because they should not be chaning unless
-// the quorum is making changes to its structure and all siblings have access
-// to the same set of changes.
+// Sibling variables are kept private because they should not be changing
+// unless the quorum is making changes to its structure and all siblings have
+// access to the same set of changes.
 func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 	return &Sibling{
 		index:     255,
 		address:   address,
 		publicKey: key,
-	}
-}
-
-// JoinSia is a request that a wallet can submit to make itself a sibling in
-// the quorum.
-//
-// The input is a sibling, a wallet (have to make sure that the wallet used
-// as input is the sponsoring wallet...)
-//
-// Currently, AddSibling tries to add the new sibling to the existing quorum
-// and throws the sibling out if there's no space. Once quorums are
-// communicating, the AddSibling routine will always succeed.
-func (q *Quorum) AddSibling(s *Sibling) {
-	println("ADD SIBLING CALLED")
-	println("I REPEAT, ADD SIBLING CALLED")
-	for i := 0; i < QuorumSize; i++ {
-		if q.siblings[i] == nil {
-			s.index = byte(i)
-			q.siblings[i] = s
-			println("placed hopeful at index", i)
-			break
-		}
 	}
 }
 
@@ -115,6 +94,11 @@ func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	if err != nil {
 		return
 	}
+	err = encoder.Encode(s.wallet)
+	if err != nil {
+		return
+	}
+
 	gobSibling = w.Bytes()
 	return
 }
@@ -139,5 +123,10 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 	if err != nil {
 		return
 	}
+	err = decoder.Decode(&s.wallet)
+	if err != nil {
+		return
+	}
+
 	return
 }

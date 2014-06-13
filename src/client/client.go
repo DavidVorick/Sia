@@ -31,10 +31,7 @@ func uploadSector(sec *quorum.Sector) (err error) {
 
 	// calculate and store segment hashes
 	for i := range ring {
-		rh.SegHashes[i], err = siacrypto.CalculateHash(ring[i].Data)
-		if err != nil {
-			return
-		}
+		rh.SegHashes[i] = siacrypto.CalculateHash(ring[i].Data)
 	}
 
 	// for now we just send segment i to host i
@@ -161,11 +158,7 @@ func main() {
 				fmt.Println("download failed")
 				break
 			}
-			rh, err := siacrypto.CalculateHash(rs.Data)
-			if err != nil {
-				fmt.Println("error:", err)
-				break
-			}
+			rh := siacrypto.CalculateHash(rs.Data)
 			fmt.Println("download successful")
 			fmt.Println("hash:", rh[:10])
 		case "q":

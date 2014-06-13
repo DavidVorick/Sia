@@ -2,7 +2,6 @@ package participant
 
 import (
 	"fmt"
-	"quorum/script"
 )
 
 // compile() is a messy, messy function that takes the quorum from one point to
@@ -22,12 +21,7 @@ func (p *Participant) compile(b *block) {
 		fmt.Printf("Confirming Sibling %v\n", i)
 		p.quorum.IntegrateSiblingEntropy(b.heartbeats[i].entropy)
 		for _, si := range b.heartbeats[i].scriptInputs {
-			scriptBlock := p.quorum.LoadScriptBlock(si.WalletID)
-			if scriptBlock == nil {
-				continue
-			}
-			s := script.Script{scriptBlock}
-			s.Execute(si.Input, &p.quorum)
+			si.Execute(&p.quorum)
 		}
 	}
 	p.quorum.IntegrateGerm()
