@@ -26,7 +26,6 @@ func TestOpCodes(t *testing.T) {
 		0x01, 0x03, // push 3
 		// if 2 == 3, jump ahead 10 instructions (causing an error)
 		0x16, 0x1F, 0x00, 0x0A,
-		0xFF,
 	}
 	_, err = si.Execute(q)
 	if err != nil {
@@ -41,7 +40,6 @@ func TestOpCodes(t *testing.T) {
 		0x22, 0x01, // load 2 from register 1
 		// if 2 != 2, jump ahead 10 instructions (causing an error)
 		0x17, 0x1F, 0x00, 0x0A,
-		0xFF,
 	}
 	_, err = si.Execute(q)
 	if err != nil {
@@ -50,8 +48,7 @@ func TestOpCodes(t *testing.T) {
 
 	// test invalid scripts
 	si.Input = []byte{
-		0x01, 0xAA,
-		0x06, 0xFF,
+		0x01, 0xAA, 0x06,
 	}
 	_, err = si.Execute(q)
 	if err == nil {
@@ -64,14 +61,8 @@ func TestOpCodes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing argument error")
 	}
-	si.Input = nil
-	_, err = si.Execute(q)
-	if err == nil {
-		t.Fatal("expected missing terminator error")
-	}
 	si.Input = []byte{
 		0x25, 0xFF, 0xF6,
-		0xFF,
 	}
 	_, err = si.Execute(q)
 	if err == nil {

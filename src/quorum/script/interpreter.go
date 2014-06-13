@@ -112,10 +112,7 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	costBalance = 10000
 
 	for {
-		if iptr >= len(script) {
-			err = errors.New("script missing terminator")
-			break
-		} else if script[iptr] == 0xFF {
+		if iptr >= len(script) || script[iptr] == 0xFF {
 			break
 		}
 
