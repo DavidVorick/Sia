@@ -62,7 +62,7 @@ func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset
 	q.saveWalletTree(w.children[0], file, index, offset, walletSlice)
 
 	// save the current wallet
-	wBytes, err := q.loadWallet(w.id).GobEncode()
+	wBytes, err := q.LoadWallet(w.id).GobEncode()
 	if err != nil {
 		panic(err)
 	}

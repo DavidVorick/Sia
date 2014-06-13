@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	walletBaseSize      = siacrypto.HashSize + 16 + 2 + 256*8
-	CreateWalletMaxCost = 8
+	walletBaseSize = siacrypto.HashSize + 16 + 2 + 256*8
 )
 
 // the default script for all wallets; simply transfers control to input
@@ -33,7 +32,7 @@ type Wallet struct {
 }
 
 func (q *Quorum) walletString(id WalletID) (s string) {
-	w := q.loadWallet(id)
+	w := q.LoadWallet(id)
 	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.balance.upperBalance)
 	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.balance.lowerBalance)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
@@ -122,7 +121,7 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	return
 }
 
-func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
+func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 	w := new(Wallet)
 	err = w.GobDecode(encodedWallet)
 	if err != nil {
@@ -131,7 +130,7 @@ func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
 
 	wn := q.retrieve(id)
 	if wn != nil {
-		err = fmt.Errorf("LoadWallet: wallet of that id already exists in quorum")
+		err = fmt.Errorf("InsertWallet: wallet of that id already exists in quorum")
 		return
 	}
 
@@ -153,7 +152,7 @@ func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
 	wn.weight = int(weight)
 	q.insert(wn)
 
-	q.saveWallet(w)
+	q.SaveWallet(w)
 	return
 }
 
@@ -172,7 +171,7 @@ func (q *Quorum) walletFilename(id WalletID) (s string) {
 	return
 }
 
-func (q *Quorum) loadWallet(id WalletID) (w *Wallet) {
+func (q *Quorum) LoadWallet(id WalletID) (w *Wallet) {
 	walletFilename := q.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
@@ -201,7 +200,7 @@ func (q *Quorum) loadWallet(id WalletID) (w *Wallet) {
 // takes a wallet as input, then uses the quorum prefix plus the wallet id to
 // determine the filename for the wallet. Then it writes a 4kb block of data to
 // the wallet file and saves it to disk.
-func (q *Quorum) saveWallet(w *Wallet) {
+func (q *Quorum) SaveWallet(w *Wallet) {
 	walletFilename := q.walletFilename(w.id)
 	file, err := os.Create(walletFilename)
 	if err != nil {
@@ -216,39 +215,4 @@ func (q *Quorum) saveWallet(w *Wallet) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-// CreateWallet takes an id, a balance, a number of script atom, and an initial
-// script and uses those to create a new wallet that gets stored in stable
-// memory. If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, scriptAtoms uint16, initialScript []byte) (cost int) {
-	cost += 1
-	if !w.balance.Compare(balance) {
-		return
-	}
-
-	// check if the new wallet already exists
-	cost += 2
-	wn := q.retrieve(id)
-	if wn != nil {
-		return
-	}
-
-	// create a wallet node to insert into the walletTree
-	cost += 5
-	wn = new(walletNode)
-	wn.id = id
-	wn.weight = int(1 + scriptAtoms)
-	q.insert(wn)
-
-	// fill out a basic wallet struct from the inputs
-	nw := new(Wallet)
-	nw.id = id
-	nw.balance = balance
-	copy(nw.script, initialScript)
-	q.saveWallet(nw)
-
-	w.balance.Subtract(balance)
-
-	return
 }
