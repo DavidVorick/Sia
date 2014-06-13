@@ -56,6 +56,8 @@ var opTable = []instruction{
 	instruction{0x2D, "xfer", 0, reflect.ValueOf(op_xfer), 1},
 	instruction{0x2E, "rej", 0, reflect.ValueOf(op_rej), 0},
 	instruction{0x2F, "asib", 0, reflect.ValueOf(op_asib), 5},
+	instruction{0x30, "awall", 0, reflect.ValueOf(op_awall), 5},
+	instruction{0x31, "send", 0, reflect.ValueOf(op_send), 5},
 }
 
 // helper functions
