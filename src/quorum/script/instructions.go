@@ -464,7 +464,7 @@ func op_dpush(n byte) (err error) {
 	b := make([]byte, n)
 	copy(b, script[dptr:])
 	copy(v[:], b)
-	err = op_push(v)
+	err = push(v)
 	return
 }
 
@@ -519,46 +519,60 @@ func op_rej() (err error) {
 	return errors.New("rejected input")
 }
 
-func op_asib(loc byte, length byte) (err error) {
-	// read encoded sibling from data block
-	if int(loc+length) > len(script) {
-		return errors.New("invalid data access")
-	}
-	encSibling := script[loc : loc+length]
+func op_asib() (err error) {
+	encSibling := buffer
 
 	// decode sibling
 	var address network.Address
-	var key siacrypto.PublicKey
+	key := new(siacrypto.PublicKey)
 	reader := bytes.NewBuffer(encSibling)
 	decoder := gob.NewDecoder(reader)
 	decoder.Decode(&address)
-	decoder.Decode(&key)
+	err = decoder.Decode(key)
+	if err != nil {
+		return
+	}
 
 	// add sibling
-	q.AddSibling(quorum.NewSibling(address, &key))
+	q.AddSibling(wallet, quorum.NewSibling(address, key))
 	return
 }
 
 func op_awall() (err error) {
-	_, id := op_pop()
-	_, lbal := op_pop()
-	err, ubal := op_pop()
+	_, idv := op_pop()
+	_, lbalv := op_pop()
+	err, ubalv := op_pop()
 	if err != nil {
 		return
 	}
+
+	// convert values to proper types
+	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+	lbal := siaencoding.DecUint64(lbalv[:])
+	ubal := siaencoding.DecUint64(ubalv[:])
+	bal := quorum.NewBalance(ubal, lbal)
+
+	// create wallet
 	newscript := buffer
-	atoms := len(newscript)/4096 + 1
-	q.CreateWallet(wallet, id, ubal, lbal, atoms, newscript)
+	q.CreateWallet(wallet, id, bal, newscript)
 	return
 }
 
 func op_send() (err error) {
-	_, id := op_pop()
-	_, lbal := op_pop()
-	err, ubal := op_pop()
+	_, idv := op_pop()
+	_, lbalv := op_pop()
+	err, ubalv := op_pop()
 	if err != nil {
 		return
 	}
-	q.Send(wallet, ubal, lbal, id)
+
+	// convert values to proper types
+	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+	lbal := siaencoding.DecUint64(lbalv[:])
+	ubal := siaencoding.DecUint64(ubalv[:])
+	bal := quorum.NewBalance(ubal, lbal)
+
+	// send
+	q.Send(wallet, bal, id)
 	return
 }

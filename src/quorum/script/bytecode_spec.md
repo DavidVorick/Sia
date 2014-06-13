@@ -50,5 +50,7 @@ List of bytecodes
 | 0x2C |  bufp  |  2   |  paste $1$2 bytes (zero-padded) from buffer to data pointer, overwriting existing bytes |
 | 0x2D |  xfer  |  0   |  move instruction pointer to data pointer |
 | 0x2E |  rej   |  0   |  reject input, terminating execution |
-| 0x2F |  asib  |  2   |  adds sibling of length $1$2 defined at data pointer; pushes success value |
+| 0x2F |  asib  |  0   |  adds sibling; pushes success value |
+| 0x30 |  awall |  0   |  adds a wallet with an initial balance and script |
+| 0x31 |  send  |  0   |  sends siacoins from host wallet to recipient |
 | 0xFF |  exit  |  0   |  terminates execution |
