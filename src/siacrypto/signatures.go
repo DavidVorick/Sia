@@ -39,7 +39,7 @@ func (pk *PublicKey) Hash() (hash Hash, err error) {
 	}
 
 	combinedKey := append(pk.key.X.Bytes(), pk.key.Y.Bytes()...)
-	hash, err = CalculateHash(combinedKey)
+	hash = CalculateHash(combinedKey)
 	return
 }
 

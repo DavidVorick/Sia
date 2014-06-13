@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"siacrypto"
+	"siaencoding"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ type wallet struct {
 	id WalletID
 
 	walletHash     siacrypto.Hash // a hash of the encoded wallet
-	balance        balance
+	balance        Balance
 	scriptAtoms    uint16
 	sectorOverview [256]sectorHeader
 	script         []byte
@@ -35,14 +36,14 @@ type wallet struct {
 
 func (q *Quorum) walletString(id WalletID) (s string) {
 	w := q.loadWallet(id)
-	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.upperBalance)
-	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.lowerBalance)
+	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.balance.upperBalance)
+	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.balance.lowerBalance)
 	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
 
 	// calculate the number of sectors that have been allocated
 	allocatedSectors := 0
 	for _, sectorHeader := range w.sectorOverview {
-		if sectorHeader.numAtoms != 0 {
+		if sectorHeader.atoms != 0 {
 			allocatedSectors += 1
 		}
 	}
@@ -70,12 +71,12 @@ func (w *wallet) GobEncode() (b []byte, err error) {
 	}
 	copy(b[offset:], balanceBytes)
 	offset += 16
-	copy(b[offset:], EncUint16(w.scriptAtoms))
+	copy(b[offset:], siaencoding.EncUint16(w.scriptAtoms))
 	offset += 2
 
 	// encode sectorOverivew
 	for i, sector := range w.sectorOverview {
-		copy(b[offset+i*8:], sector.secorHeader)
+		copy(b[offset+i*8:], sector.crc[:])
 		b[offset+i*8+6] = sector.m
 		b[offset+i*8+7] = sector.atoms
 	}
@@ -85,10 +86,7 @@ func (w *wallet) GobEncode() (b []byte, err error) {
 	copy(b[offset:], w.script)
 
 	// calculate hash and place at beginning
-	hash, err := siacrypto.CalculateHash(b[siacrypto.HashSize:])
-	if err != nil {
-		return nil
-	}
+	hash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
 	copy(b, hash[:])
 
 	return
@@ -104,8 +102,8 @@ func (w *wallet) GobDecode(b []byte) (err error) {
 
 	// verify the integrity of the wallet
 	copy(w.walletHash[:], b)
-	expectedHash, err := siacrypto.CalculateHash(b[siacrypto.HashSize:])
-	if err != nil || expectedHash != w.walletHash {
+	expectedHash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
+	if expectedHash != w.walletHash {
 		err = fmt.Errorf("Wallet Gob Decode: hash does not match wallet!")
 		return
 	}
@@ -117,13 +115,13 @@ func (w *wallet) GobDecode(b []byte) (err error) {
 	}
 	offset += 16
 
-	w.scriptAtoms = DecUint16(b[offset : offset+2])
+	w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
 	offset += 2
 
 	for i := range w.sectorOverview {
-		w.sectorOverview[i].crc = b[offset+i*8 : offset+i*8+6]
+		copy(w.sectorOverview[i].crc[:], b[offset+i*8:offset+i*8+6])
 		w.sectorOverview[i].m = b[offset+i*8+6]
-		w.sectorOverview[i].numAtoms = b[offset+i*8+7]
+		w.sectorOverview[i].atoms = b[offset+i*8+7]
 	}
 	offset += 8 * len(w.sectorOverview)
 
@@ -132,20 +130,29 @@ func (w *wallet) GobDecode(b []byte) (err error) {
 }
 
 func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
-	if len(encodedWallet) != 4096 {
-		err = fmt.Errorf("LoadWallet: Not a wallet!")
+	w := new(wallet)
+	err = w.GobDecode(encodedWallet)
+	if err != nil {
 		return
 	}
 
-	var b [4096]byte
-	copy(b[:], encodedWallet)
-	w := fillWallet(&b)
-	if w == nil {
-		err = fmt.Errorf("Did not get a valid wallet")
+	wn := q.retrieve(id)
+	if wn != nil {
+		err = fmt.Errorf("LoadWallet: wallet of that id already exists in quorum")
 		return
 	}
 
-	err = q.NewWallet(id, w.upperBalance, w.lowerBalance, w.scriptAtoms, w.scriptPrimer[:])
+	weight := 1 + w.scriptAtoms
+	for _, sector := range w.sectorOverview {
+		weight += uint16(sector.atoms)
+	}
+
+	wn = new(walletNode)
+	wn.id = id
+	wn.weight = int(weight)
+	q.insert(wn)
+
+	q.saveWallet(w)
 	return
 }
 
@@ -171,16 +178,21 @@ func (q *Quorum) loadWallet(id WalletID) (w *wallet) {
 		return nil
 	}
 
-	var b [4096]byte
-	n, err := file.Read(b[:])
+	fileInfo, err := file.Stat()
 	if err != nil {
 		panic(err)
 	}
-	if n != 4096 {
-		return nil
+	b := make([]byte, fileInfo.Size())
+
+	_, err = file.Read(b)
+	if err != nil {
+		panic(err)
 	}
 
-	w = fillWallet(&b)
+	err = w.GobDecode(b)
+	if err != nil {
+		panic(err)
+	}
 	w.id = id
 	return
 }
@@ -195,103 +207,22 @@ func (q *Quorum) saveWallet(w *wallet) {
 		panic(err)
 	}
 	defer file.Close()
-	walletBytes := w.bytes() // w.bytes() takes care of the hashing
+	walletBytes, err := w.GobEncode()
+	if err != nil {
+		panic(err)
+	}
 	_, err = file.Write(walletBytes[:])
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (q *Quorum) LoadScriptBlock(id WalletID) []byte {
-	w := q.loadWallet(id)
-	if w == nil {
-		return nil
-	}
-
-	if w.scriptAtoms == 0 {
-		return w.scriptPrimer[:]
-	}
-
-	// load script block
-	scriptBody := make([]byte, 4096*w.scriptAtoms)
-	scriptName := q.walletFilename(id)
-	scriptName += "script"
-	file, err := os.Open(scriptName)
-	if err != nil {
-		panic(err) // this will really result in fetching the data
-	}
-	_, err = file.Read(scriptBody)
-	if err != nil {
-		panic(err)
-	}
-
-	return append(w.scriptPrimer[:], scriptBody...)
-}
-
-func (q *Quorum) SaveScript(id WalletID, scriptBlock []byte) {
-	// check that scriptBlock is the correct size
-	w := q.loadWallet(id)
-	if len(scriptBlock) != int(1024+4096*w.scriptAtoms) {
-		return
-	}
-	copy(w.scriptPrimer[:], scriptBlock)
-	q.saveWallet(w)
-
-	if len(scriptBlock) <= 1024 {
-		return
-	}
-
-	scriptFilename := q.walletFilename(id)
-	scriptFilename += ".script"
-	file, err := os.Create(scriptFilename)
-	defer file.Close()
-	if err != nil {
-		return
-	}
-
-	_, err = file.Write(scriptBlock[scriptPrimerSize:])
-	if err != nil {
-		return
-	}
-
-	// Write the other script atoms too
-}
-
-func (q *Quorum) NewWallet(id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (err error) {
-	// check if the new wallet already exists
-	wn := q.retrieve(id)
-	if wn != nil {
-		err = fmt.Errorf("NewWallet: wallet of that id already exists in quorum.")
-		return
-	}
-
-	// create a wallet node to insert into the walletTree
-	wn = new(walletNode)
-	wn.id = id
-	wn.weight = int(1 + scriptAtoms)
-	q.insert(wn)
-
-	// fill out a basic wallet struct from the inputs
-	nw := new(wallet)
-	nw.id = id
-	nw.upperBalance = upperBalance
-	nw.lowerBalance = lowerBalance
-	nw.scriptAtoms = scriptAtoms
-	copy(nw.scriptPrimer[:], initialScript)
-	q.saveWallet(nw)
-
-	return
-}
-
 // CreateWallet takes an id, a balance, a number of script atom, and an initial
 // script and uses those to create a new wallet that gets stored in stable
 // memory. If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lowerBalance uint64, scriptAtoms uint16, initialScript []byte) (cost int) {
+func (q *Quorum) CreateWallet(w *wallet, id WalletID, balance Balance, scriptAtoms uint16, initialScript []byte) (cost int) {
 	cost += 1
-	if w.upperBalance < upperBalance {
-		return
-	}
-	if w.upperBalance == upperBalance && w.lowerBalance < lowerBalance {
+	if !w.balance.Compare(balance) {
 		return
 	}
 
@@ -312,19 +243,12 @@ func (q *Quorum) CreateWallet(w *wallet, id WalletID, upperBalance uint64, lower
 	// fill out a basic wallet struct from the inputs
 	nw := new(wallet)
 	nw.id = id
-	nw.upperBalance = upperBalance
-	nw.lowerBalance = lowerBalance
+	nw.balance = balance
 	nw.scriptAtoms = scriptAtoms
-	copy(nw.scriptPrimer[:], initialScript)
+	copy(nw.script, initialScript)
 	q.saveWallet(nw)
 
-	w.upperBalance -= upperBalance
-	if lowerBalance > w.lowerBalance {
-		w.upperBalance -= 1
-		w.lowerBalance = ^uint64(0) - (lowerBalance - w.lowerBalance)
-	} else {
-		w.lowerBalance -= lowerBalance
-	}
+	w.balance.Subtract(balance)
 
 	return
 }

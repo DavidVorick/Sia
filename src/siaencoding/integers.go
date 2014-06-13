@@ -10,6 +10,11 @@ func EncUint16(i uint16) (b []byte) {
 	return
 }
 
+func DecUint16(b []byte) (i uint16) {
+	i = binary.LittleEndian.Uint16(b)
+	return
+}
+
 func EncUint32(i uint32) (b []byte) {
 	b = make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, i)

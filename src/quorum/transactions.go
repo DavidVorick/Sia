@@ -4,12 +4,9 @@ const (
 	SendMaxCost = 6
 )
 
-func (q *Quorum) Send(w *wallet, upper uint64, lower uint64, destID WalletID) (cost int) {
+func (q *Quorum) Send(w *wallet, amount Balance, destID WalletID) (cost int) {
 	cost += 1
-	if w.upperBalance < upper {
-		return
-	}
-	if w.upperBalance == upper && w.lowerBalance < lower {
+	if !w.balance.Compare(amount) {
 		return
 	}
 	cost += 2
@@ -19,24 +16,8 @@ func (q *Quorum) Send(w *wallet, upper uint64, lower uint64, destID WalletID) (c
 	}
 
 	cost += 3
-	if lower > w.lowerBalance {
-		w.upperBalance -= 1
-		w.lowerBalance = ^uint64(0) - (lower - w.lowerBalance)
-	} else {
-		w.lowerBalance -= lower
-	}
-	w.upperBalance -= upper
-
-	destWallet.upperBalance += upper
-	if ^uint64(0)-destWallet.lowerBalance > lower {
-		destWallet.lowerBalance += lower
-	} else {
-		destWallet.upperBalance += 1
-
-		// get lowerBalance to the correct value without ever causing an overflow
-		destWallet.lowerBalance = ^uint64(0) - (destWallet.lowerBalance)
-		destWallet.lowerBalance += lower
-		destWallet.lowerBalance -= ^uint64(0) - (destWallet.lowerBalance)
-	}
+	w.balance.Subtract(amount)
+	destWallet.balance.Add(amount)
+	q.saveWallet(destWallet)
 	return
 }
