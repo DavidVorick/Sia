@@ -2,6 +2,7 @@ package script
 
 import (
 	"errors"
+	"fmt"
 	"quorum"
 	"reflect"
 )
@@ -24,12 +25,12 @@ type instruction struct {
 	cost     int
 }
 
-func (in *instruction) print(args []reflect.Value) {
-	print(iptr-len(args), ": ")
-	print(in.name)
+func (in *instruction) print(args []reflect.Value) string {
+	s := in.name
 	for i := range args {
-		print(" ", args[i].Uint())
+		s += fmt.Sprint(" ", args[i].Uint())
 	}
+	return s
 }
 
 // generic 64-bit value
@@ -141,11 +142,12 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		retVals := op.fn.Call(fnArgs)
 		errInter := retVals[0].Interface()
 		if errInter != nil {
-			err = errInter.(error)
+			err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + errInter.(error).Error())
 			break
 		}
 
 		// DEBUG: print op and stack
+		// print(op.print(fnArgs))
 		// print("\n    stack:  ")
 		// stack.print()
 		// print("\n    buffer: {")
