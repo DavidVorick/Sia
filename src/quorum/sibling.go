@@ -8,10 +8,6 @@ import (
 	"siacrypto"
 )
 
-const (
-	AddSiblingMaxCost = 50
-)
-
 // A Sibling is the public facing information of participants on the quorum.
 // Every quorum contains a list of all siblings.
 type Sibling struct {
@@ -41,29 +37,6 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 		address:   address,
 		publicKey: key,
 	}
-}
-
-// JoinSia is a request that a wallet can submit to make itself a sibling in
-// the quorum.
-//
-// The input is a sibling, a wallet (have to make sure that the wallet used
-// as input is the sponsoring wallet...)
-//
-// Currently, AddSibling tries to add the new sibling to the existing quorum
-// and throws the sibling out if there's no space. Once quorums are
-// communicating, the AddSibling routine will always succeed.
-func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
-	cost = 50
-	for i := 0; i < QuorumSize; i++ {
-		if q.siblings[i] == nil {
-			s.index = byte(i)
-			s.wallet = w.id
-			q.siblings[i] = s
-			println("placed hopeful at index", i)
-			break
-		}
-	}
-	return
 }
 
 // Removes a sibling from the list of siblings
