@@ -77,27 +77,51 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
 		p.synchronized = true
+
+		// the bootstrapping script
+		// accepts two types of input:
+		// - run script: 0 followed by key
+		// - create wallet: non-zero followed by script body
+		bScript := []byte{
+			0x27, 0x01, //       load first byte of input
+			0x1F, 0x00, 0x02, // if byte == 0
+			0x2E, //                 move instruction pointer to input
+			//                   else
+			0x01, 0x01, //           push 0
+			0x01, 0x64, //           push 100
+			0x27, 0x08, //           push 8 bytes of input
+			0x2D, //                 read rest of input into buffer
+			0x30, //                 call create wallet
+		}
+
+		// create the bootstrap wallet
+		p.quorum.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), bScript)
+
 		// create the bootstrapping script
 		var encSibling []byte
 		encSibling, err = p.self.GobEncode()
 		if err != nil {
 			return
 		}
-		s := []byte{
-			0x2B, 0x00, byte(len(encSibling)), // copy encoded sibling into buffer
-			0x2F, // call addSibling on buffer
+		fmt.Println(encSibling)
+		slenh, slenl := byte(len(encSibling)<<8), byte(len(encSibling))
+		sibScript := append([]byte{
+			0x00,             //   zero byte indicates this is a run script request
+			0x25, 0x00, 0x08, //   move data pointer to start of encSibling
+			0x2B, slenh, slenl, // copy encoded sibling into buffer
+			0x30, //               call addSibling on buffer
 			0xFF,
-		}
-
-		// create the bootstrap wallet
-		p.quorum.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), s)
+		}, encSibling...)
 
 		// execute the bootstrapping script
 		si := &script.ScriptInput{
 			WalletID: 1,
-			Input:    encSibling,
+			Input:    sibScript,
 		}
-		si.Execute(&p.quorum)
+		_, err = si.Execute(&p.quorum)
+		if err != nil {
+			return
+		}
 
 		siblings := p.quorum.Siblings()
 		p.self = siblings[0]
