@@ -42,15 +42,16 @@ List of bytecodes
 | 0x24 |  deci  |  1   |  decrement integer in register $1 |
 | 0x25 |  dmov  |  2   |  move data pointer by offset $1$2 |
 | 0x26 |  dgoto |  2   |  move data pointer to address $1$2 |
-| 0x27 |  dpush |  1   |  push $1 bytes (zero-padded) from data pointer onto stack |
-| 0x28 |  dregs |  2   |  store $1 bytes (zero-padded) from data pointer in register $2 |
+| 0x27 |  dpush |  1   |  push (and move dptr) $1 bytes (zero-padded) from data pointer onto stack |
+| 0x28 |  dregs |  2   |  store (and move dptr) $1 bytes (zero-padded) from data pointer in register $2 |
 | 0x29 |  repb  |  0   |  pop stack value into byte at data pointer |
 | 0x2A |  reps  |  0   |  pop stack value into short at data pointer |
-| 0x2B |  bufc  |  2   |  copy $1$2 bytes (zero-padded) from data pointer to buffer |
+| 0x2B |  bufc  |  2   |  copy (and move dptr) $1$2 bytes (zero-padded) from data pointer to buffer |
 | 0x2C |  bufp  |  2   |  paste $1$2 bytes (zero-padded) from buffer to data pointer, overwriting existing bytes |
-| 0x2D |  xfer  |  0   |  move instruction pointer to data pointer |
-| 0x2E |  rej   |  0   |  reject input, terminating execution |
-| 0x2F |  asib  |  0   |  adds sibling; pushes success value |
-| 0x30 |  awall |  0   |  adds a wallet with an initial balance and script |
-| 0x31 |  send  |  0   |  sends siacoins from host wallet to recipient |
+| 0x2D |  bufr  |  0   |  copy from data pointer to end of script into buffer |
+| 0x2E |  xfer  |  0   |  move instruction pointer to data pointer |
+| 0x2F |  rej   |  0   |  reject input, terminating execution |
+| 0x30 |  asib  |  0   |  adds sibling; pushes success value |
+| 0x31 |  awall |  0   |  adds a wallet with an initial balance and script |
+| 0x32 |  send  |  0   |  sends siacoins from host wallet to recipient |
 | 0xFF |  exit  |  0   |  terminates execution |

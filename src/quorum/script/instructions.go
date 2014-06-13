@@ -53,11 +53,12 @@ var opTable = []instruction{
 	instruction{0x2A, "reps", 0, reflect.ValueOf(op_reps), 2},
 	instruction{0x2B, "bufc", 2, reflect.ValueOf(op_bufc), 2},
 	instruction{0x2C, "bufp", 2, reflect.ValueOf(op_bufp), 2},
-	instruction{0x2D, "xfer", 0, reflect.ValueOf(op_xfer), 1},
-	instruction{0x2E, "rej", 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x2F, "asib", 0, reflect.ValueOf(op_asib), 5},
-	instruction{0x30, "awall", 0, reflect.ValueOf(op_awall), 5},
-	instruction{0x31, "send", 0, reflect.ValueOf(op_send), 5},
+	instruction{0x2D, "bufr", 0, reflect.ValueOf(op_bufr), 2},
+	instruction{0x2E, "xfer", 0, reflect.ValueOf(op_xfer), 1},
+	instruction{0x2F, "rej", 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x30, "asib", 0, reflect.ValueOf(op_asib), 5},
+	instruction{0x31, "awall", 0, reflect.ValueOf(op_awall), 5},
+	instruction{0x32, "send", 0, reflect.ValueOf(op_send), 5},
 }
 
 // helper functions
@@ -463,6 +464,7 @@ func op_dpush(n byte) (err error) {
 	copy(b, script[dptr:])
 	copy(v[:], b)
 	err = push(v)
+	dptr += int(n)
 	return
 }
 
@@ -472,6 +474,7 @@ func op_dregs(n, reg byte) (err error) {
 	copy(b, script[dptr:])
 	copy(v[:], b)
 	registers[reg] = v
+	dptr += int(n)
 	return
 }
 
@@ -492,6 +495,7 @@ func op_bufc(lenh, lenl byte) (err error) {
 	length := s2i(lenh, lenl)
 	buffer = make([]byte, length)
 	copy(buffer, script[dptr:])
+	dptr += length
 	return
 }
 
@@ -505,6 +509,13 @@ func op_bufp(lenh, lenl byte) (err error) {
 	b := make([]byte, length)
 	copy(b, buffer)
 	copy(script[dptr:], b)
+	return
+}
+
+func op_bufr() (err error) {
+	buffer = make([]byte, len(script[dptr:]))
+	copy(buffer, script[dptr:])
+	dptr += len(buffer)
 	return
 }
 
