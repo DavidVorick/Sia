@@ -51,13 +51,15 @@ var opTable = []instruction{
 	instruction{0x24, "deci", 1, reflect.ValueOf(op_deci), 2},
 	instruction{0x25, "dmov", 2, reflect.ValueOf(op_dmov), 1},
 	instruction{0x26, "dgoto", 2, reflect.ValueOf(op_dgoto), 1},
-	instruction{0x27, "repb", 0, reflect.ValueOf(op_repb), 2},
-	instruction{0x28, "reps", 0, reflect.ValueOf(op_reps), 2},
-	instruction{0x29, "bufc", 2, reflect.ValueOf(op_bufc), 2},
-	instruction{0x2A, "bufp", 2, reflect.ValueOf(op_bufp), 2},
-	instruction{0x2B, "xfer", 0, reflect.ValueOf(op_xfer), 1},
-	instruction{0x2C, "rej", 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x2D, "asib", 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x27, "dpush", 1, reflect.ValueOf(op_dpush), 2},
+	instruction{0x28, "dregs", 2, reflect.ValueOf(op_dregs), 2},
+	instruction{0x29, "repb", 0, reflect.ValueOf(op_repb), 2},
+	instruction{0x2A, "reps", 0, reflect.ValueOf(op_reps), 2},
+	instruction{0x2B, "bufc", 2, reflect.ValueOf(op_bufc), 2},
+	instruction{0x2C, "bufp", 2, reflect.ValueOf(op_bufp), 2},
+	instruction{0x2D, "xfer", 0, reflect.ValueOf(op_xfer), 1},
+	instruction{0x2E, "rej", 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x2F, "asib", 2, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
@@ -457,6 +459,24 @@ func op_dgoto(loch, locl byte) (err error) {
 	return
 }
 
+func op_dpush(n byte) (err error) {
+	var v value
+	b := make([]byte, n)
+	copy(b, script[dptr:])
+	copy(v[:], b)
+	err = op_push(v)
+	return
+}
+
+func op_dregs(n, reg byte) (err error) {
+	var v value
+	b := make([]byte, n)
+	copy(b, script[dptr:])
+	copy(v[:], b)
+	registers[reg] = v
+	return
+}
+
 func op_repb() (err error) {
 	err, a := op_pop()
 	script[dptr] = a[0]
@@ -516,5 +536,29 @@ func op_asib(loc byte, length byte) (err error) {
 
 	// add sibling
 	q.AddSibling(quorum.NewSibling(address, &key))
+	return
+}
+
+func op_awall() (err error) {
+	_, id := op_pop()
+	_, lbal := op_pop()
+	err, ubal := op_pop()
+	if err != nil {
+		return
+	}
+	newscript := buffer
+	atoms := len(newscript)/4096 + 1
+	q.CreateWallet(wallet, id, ubal, lbal, atoms, newscript)
+	return
+}
+
+func op_send() (err error) {
+	_, id := op_pop()
+	_, lbal := op_pop()
+	err, ubal := op_pop()
+	if err != nil {
+		return
+	}
+	q.Send(wallet, ubal, lbal, id)
 	return
 }

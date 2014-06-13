@@ -42,11 +42,13 @@ List of bytecodes
 | 0x24 |  deci  |  1   |  decrement integer in register $1 |
 | 0x25 |  dmov  |  2   |  move data pointer by offset $1$2 |
 | 0x26 |  dgoto |  2   |  move data pointer to address $1$2 |
-| 0x27 |  repb  |  0   |  pop stack value into byte at data pointer |
-| 0x28 |  reps  |  0   |  pop stack value into short at data pointer |
-| 0x29 |  bufc  |  2   |  copy $1$2 bytes (zero-padded) into buffer, starting at data pointer. |
-| 0x2A |  bufp  |  2   |  paste $1$2 bytes (zero-padded) from buffer at data pointer, overwriting existing bytes |
-| 0x2B |  xfer  |  0   |  move instruction pointer to data pointer |
-| 0x2C |  rej   |  0   |  reject input, terminating execution |
-| 0x2D |  asib  |  2   |  adds sibling of length $1$2 defined at data pointer; pushes success value |
+| 0x27 |  dpush |  1   |  push $1 bytes (zero-padded) from data pointer onto stack |
+| 0x28 |  dregs |  2   |  store $1 bytes (zero-padded) from data pointer in register $2 |
+| 0x29 |  repb  |  0   |  pop stack value into byte at data pointer |
+| 0x2A |  reps  |  0   |  pop stack value into short at data pointer |
+| 0x2B |  bufc  |  2   |  copy $1$2 bytes (zero-padded) from data pointer to buffer |
+| 0x2C |  bufp  |  2   |  paste $1$2 bytes (zero-padded) from buffer to data pointer, overwriting existing bytes |
+| 0x2D |  xfer  |  0   |  move instruction pointer to data pointer |
+| 0x2E |  rej   |  0   |  reject input, terminating execution |
+| 0x2F |  asib  |  2   |  adds sibling of length $1$2 defined at data pointer; pushes success value |
 | 0xFF |  exit  |  0   |  terminates execution |
