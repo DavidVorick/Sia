@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"siacrypto"
-	"siaencoding"
 	"strings"
 )
 
@@ -29,7 +28,6 @@ type wallet struct {
 
 	walletHash     siacrypto.Hash // a hash of the encoded wallet
 	balance        Balance
-	scriptAtoms    uint16
 	sectorOverview [256]sectorHeader
 	script         []byte
 }
@@ -38,7 +36,7 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	w := q.loadWallet(id)
 	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.balance.upperBalance)
 	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.balance.lowerBalance)
-	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
+	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
 
 	// calculate the number of sectors that have been allocated
 	allocatedSectors := 0
@@ -71,8 +69,6 @@ func (w *wallet) GobEncode() (b []byte, err error) {
 	}
 	copy(b[offset:], balanceBytes)
 	offset += 16
-	copy(b[offset:], siaencoding.EncUint16(w.scriptAtoms))
-	offset += 2
 
 	// encode sectorOverivew
 	for i, sector := range w.sectorOverview {
@@ -115,9 +111,6 @@ func (w *wallet) GobDecode(b []byte) (err error) {
 	}
 	offset += 16
 
-	w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
-	offset += 2
-
 	for i := range w.sectorOverview {
 		copy(w.sectorOverview[i].crc[:], b[offset+i*8:offset+i*8+6])
 		w.sectorOverview[i].m = b[offset+i*8+6]
@@ -142,9 +135,17 @@ func (q *Quorum) LoadWallet(encodedWallet []byte, id WalletID) (err error) {
 		return
 	}
 
-	weight := 1 + w.scriptAtoms
+	weight := 1
+	if len(w.script) > 1024 {
+		tmp := len(w.script) - 1024
+		for tmp > 0 {
+			weight += 1
+			tmp -= 4096
+		}
+	}
+
 	for _, sector := range w.sectorOverview {
-		weight += uint16(sector.atoms)
+		weight += int(sector.atoms)
 	}
 
 	wn = new(walletNode)
@@ -244,7 +245,6 @@ func (q *Quorum) CreateWallet(w *wallet, id WalletID, balance Balance, scriptAto
 	nw := new(wallet)
 	nw.id = id
 	nw.balance = balance
-	nw.scriptAtoms = scriptAtoms
 	copy(nw.script, initialScript)
 	q.saveWallet(nw)
 
