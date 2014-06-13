@@ -81,11 +81,7 @@ func TestRPCuploadSector(t *testing.T) {
 	}
 
 	// check hash
-	rebuiltHash, err := siacrypto.CalculateHash(sec.Data)
-	if err != nil {
-		t.Fatal("Failed to calculate hash:", err)
-	}
-
+	rebuiltHash := siacrypto.CalculateHash(sec.Data)
 	if sec.Hash != rebuiltHash {
 		t.Fatal("Failed to recover file: hashes do not match")
 	}
@@ -147,11 +143,7 @@ func TestRPCdownloadSector(t *testing.T) {
 	}
 
 	// check hash
-	rebuiltHash, err := siacrypto.CalculateHash(sec.Data)
-	if err != nil {
-		t.Fatal("Failed to calculate hash:", err)
-	}
-
+	rebuiltHash := siacrypto.CalculateHash(sec.Data)
 	if sec.Hash != rebuiltHash {
 		t.Fatal("Failed to recover file: hashes do not match")
 	}

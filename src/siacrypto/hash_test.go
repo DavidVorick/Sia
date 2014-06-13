@@ -11,13 +11,11 @@ func TestHashing(t *testing.T) {
 	referenceHash := Hash{247, 251, 186, 110, 6, 54, 248, 144, 229, 111, 187, 243, 40, 62, 82, 76, 111, 163, 32, 74, 226, 152, 56, 45, 98, 71, 65, 208, 220, 102, 56, 50} // in bytes, the truncated hash of string "foo"
 
 	// compute hash and compare to reference
-	hash, err := CalculateHash([]byte("foo"))
-	if err != nil {
-		t.Fatal(err)
-	} else if hash != referenceHash {
+	hash := CalculateHash([]byte("foo"))
+	if hash != referenceHash {
 		t.Fatal("Hash producing unexpected value")
 	}
 
 	// calculate nil hashes, should not cause a panic
-	hash, err = CalculateHash(nil)
+	hash = CalculateHash(nil)
 }

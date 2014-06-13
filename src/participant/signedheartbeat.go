@@ -52,10 +52,7 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	// Place heartbeat into signed heartbeat with hash
 	sh.heartbeat = hb
 	hbb, _ := hb.GobEncode()
-	sh.heartbeatHash, err = siacrypto.CalculateHash(hbb)
-	if err != nil {
-		return
-	}
+	sh.heartbeatHash = siacrypto.CalculateHash(hbb)
 
 	// fill out signatures
 	sh.signatures = make([]siacrypto.Signature, 1)

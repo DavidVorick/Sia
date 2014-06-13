@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"bytes"
 	"siacrypto"
 	"testing"
 )
@@ -11,42 +12,44 @@ import (
 // does not introduce any errors.
 func TestWalletCoding(t *testing.T) {
 	// Fill out a wallet with completely random values
-	w := new(wallet)
-	w.upperBalance = siacrypto.RandomUInt64()
-	w.lowerBalance = siacrypto.RandomUInt64()
-	w.scriptAtoms = uint16(siacrypto.RandomUInt64())
+	w := new(Wallet)
+	w.Balance = NewBalance(siacrypto.RandomUInt64(), siacrypto.RandomUInt64())
 	for i := range w.sectorOverview {
 		w.sectorOverview[i].m = siacrypto.RandomByte()
-		w.sectorOverview[i].numAtoms = siacrypto.RandomByte()
+		w.sectorOverview[i].atoms = siacrypto.RandomByte()
 	}
-	randomBytes := siacrypto.RandomByteSlice(scriptPrimerSize)
-	copy(w.scriptPrimer[:], randomBytes)
+	randomBytes := siacrypto.RandomByteSlice(400)
+	copy(w.script, randomBytes)
 
-	wBytes := w.bytes()
-	wObj := fillWallet(wBytes)
-	wConfirm := wObj.bytes()
+	wBytes, err := w.GobEncode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wObj Wallet
+	err = wObj.GobDecode(wBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wConfirm, err := wObj.GobEncode()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if *wBytes != *wConfirm {
+	if bytes.Compare(wBytes, wConfirm) != 0 {
 		t.Error("wBytes mismatches wConfirm")
 	}
-	if w.upperBalance != wObj.upperBalance {
+	if w.Balance != wObj.Balance {
 		t.Error("Error with upperBalance")
-	}
-	if w.lowerBalance != wObj.lowerBalance {
-		t.Error("Error with lowerBalance")
-	}
-	if w.scriptAtoms != wObj.scriptAtoms {
-		t.Error("Error with scriptAtoms")
 	}
 	for i := range w.sectorOverview {
 		if w.sectorOverview[i].m != wObj.sectorOverview[i].m {
 			t.Error("Error with sectorOverview:", i)
 		}
-		if w.sectorOverview[i].numAtoms != wObj.sectorOverview[i].numAtoms {
+		if w.sectorOverview[i].atoms != wObj.sectorOverview[i].atoms {
 			t.Error("Error with sectorOverview:", i)
 		}
 	}
-	if w.scriptPrimer != wObj.scriptPrimer {
-		t.Error("Error with scriptPrimer")
+	if bytes.Compare(w.script, wObj.script) != 0 {
+		t.Error("Script mismatch")
 	}
 }
