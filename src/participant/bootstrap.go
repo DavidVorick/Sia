@@ -164,7 +164,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	for i, encodedWallet := range encodedWallets {
-		err = p.quorum.LoadWallet(encodedWallet, walletList[i])
+		err = p.quorum.InsertWallet(encodedWallet, walletList[i])
 		if err != nil {
 			return
 		}
