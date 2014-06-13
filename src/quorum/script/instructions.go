@@ -1,13 +1,9 @@
 package script
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
-	"network"
 	"quorum"
 	"reflect"
-	"siacrypto"
 	"siaencoding"
 )
 
@@ -59,7 +55,7 @@ var opTable = []instruction{
 	instruction{0x2C, "bufp", 2, reflect.ValueOf(op_bufp), 2},
 	instruction{0x2D, "xfer", 0, reflect.ValueOf(op_xfer), 1},
 	instruction{0x2E, "rej", 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x2F, "asib", 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x2F, "asib", 0, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
@@ -411,7 +407,7 @@ func op_if(offh, offl byte) (err error) {
 }
 
 func op_goto(offh, offl byte) (err error) {
-	iptr += s2i(offh, offl)
+	iptr += s2i(offh, offl) - 1
 	if iptr < 0 {
 		err = errors.New("jumped to invalid index")
 	}
@@ -511,7 +507,7 @@ func op_bufp(lenh, lenl byte) (err error) {
 }
 
 func op_xfer() (err error) {
-	iptr = dptr
+	iptr = dptr - 1
 	return
 }
 
@@ -523,18 +519,14 @@ func op_asib() (err error) {
 	encSibling := buffer
 
 	// decode sibling
-	var address network.Address
-	key := new(siacrypto.PublicKey)
-	reader := bytes.NewBuffer(encSibling)
-	decoder := gob.NewDecoder(reader)
-	decoder.Decode(&address)
-	err = decoder.Decode(key)
+	sib := new(quorum.Sibling)
+	err = sib.GobDecode(encSibling)
 	if err != nil {
 		return
 	}
 
 	// add sibling
-	q.AddSibling(wallet, quorum.NewSibling(address, key))
+	q.AddSibling(wallet, sib)
 	return
 }
 

@@ -146,14 +146,13 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		}
 
 		// DEBUG: print op and stack
-		//op.print(fnArgs)
-		//print("\n    stack:  ")
-		//stack.print()
-		//print("\n    buffer: {")
-		//for _, b := range buffer {
-		//	print(" ", b)
-		//}
-		//print(" }\n")
+		print("\n    stack:  ")
+		stack.print()
+		print("\n    buffer: {")
+		for _, b := range buffer {
+			print(" ", b)
+		}
+		print(" }\n")
 
 		// increment instruction pointer
 		iptr++

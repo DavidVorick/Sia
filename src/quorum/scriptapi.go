@@ -1,5 +1,10 @@
 package quorum
 
+import (
+	"os"
+	"siaencoding"
+)
+
 const (
 	CreateWalletMaxCost = 8
 	SendMaxCost         = 6
@@ -71,7 +76,7 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 	nw := new(Wallet)
 	nw.id = id
 	nw.Balance = Balance
-	copy(nw.script, initialScript)
+	nw.script = initialScript
 	q.SaveWallet(nw)
 }
 
@@ -103,6 +108,7 @@ func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int) {
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
 func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
+	println("adding new sibling")
 	cost = 50
 	for i := 0; i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
@@ -113,5 +119,37 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 			break
 		}
 	}
+	return
+}
+
+func (q *Quorum) AllocateSector(w *Wallet, sector byte, atoms byte, m byte) (cost int) {
+	weightDelta := int(atoms)
+	weightDelta -= int(w.sectorOverview[sector].atoms)
+
+	// derive the name of the file housing the sector
+	walletName := q.walletFilename(w.id)
+	sectorSlice := make([]byte, 1)
+	sectorSlice[0] = sector
+	sectorName := walletName + ".sector" + siaencoding.EncFilename(sectorSlice)
+
+	// delete old file associated with the sector
+	file, err := os.Create(sectorName)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// write all the bytes to here
+	emptySlice := make([]byte, int(atoms)*AtomSize)
+	n, err := file.Write(emptySlice)
+	if n != int(atoms)*AtomSize || err != nil {
+		panic(err)
+	}
+
+	w.sectorOverview[sector].m = m
+	w.sectorOverview[sector].atoms = atoms
+
+	// update the weights in the wallet tree
+
 	return
 }

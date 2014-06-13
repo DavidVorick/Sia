@@ -1,26 +1,20 @@
 package quorum
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"siacrypto"
-	"strings"
+	"siaencoding"
 )
 
 const (
-	walletBaseSize = siacrypto.HashSize + 16 + 2 + 256*8
+	walletBaseSize       = siacrypto.HashSize + 16 + 256*8
+	walletAtomMultiplier = 3
 )
 
 // the default script for all wallets; simply transfers control to input
 // eventually this will be modified to verify a public key before executing
 var genesisScript = []byte{0x28}
-
-type sectorHeader struct {
-	crc   [6]byte
-	m     byte
-	atoms byte
-}
 
 type Wallet struct {
 	id WalletID
@@ -33,6 +27,16 @@ type Wallet struct {
 
 func (w *Wallet) Script() []byte {
 	return w.script
+}
+
+// takes a walletID and derives the filename from the quorum. Eventually, this
+// function should also verify that the id is located within the quorum.
+func (q *Quorum) walletFilename(id WalletID) (s string) {
+	// Turn the id into a suffix that will follow the quorum prefix
+	suffixBytes := siaencoding.EncUint64(uint64(id))
+	suffix := siaencoding.EncFilename(suffixBytes)
+	s = q.walletPrefix + suffix
+	return
 }
 
 func (q *Quorum) walletString(id WalletID) (s string) {
@@ -51,6 +55,8 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	s += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
 	return
 }
+
+// UpdateWeight goes here
 
 // takes a wallet and converts it to a byte slice. Considering changing the
 // name to GobEncode but not sure if that's needed. The hash is calculated
@@ -121,6 +127,7 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	}
 	offset += 8 * len(w.sectorOverview)
 
+	w.script = make([]byte, len(b)-offset)
 	copy(w.script, b[offset:])
 	return
 }
@@ -138,11 +145,11 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 		return
 	}
 
-	weight := 1
+	weight := walletAtomMultiplier
 	if len(w.script) > 1024 {
 		tmp := len(w.script) - 1024
 		for tmp > 0 {
-			weight += 1
+			weight += walletAtomMultiplier
 			tmp -= 4096
 		}
 	}
@@ -157,21 +164,6 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 	q.insert(wn)
 
 	q.SaveWallet(w)
-	return
-}
-
-// takes a walletID and derives the filename from the quorum. Eventually, this
-// function should also verify that the id is located within the quorum.
-func (q *Quorum) walletFilename(id WalletID) (s string) {
-	// Turn the id into a suffix that will follow the quorum prefix
-	walletSuffix := make([]byte, 8)
-	for i := 0; i < 8; i++ {
-		walletSuffix[i] = byte(id)
-		id = id >> 8
-	}
-	safeSuffix := base64.StdEncoding.EncodeToString(walletSuffix)
-	safeSuffix = strings.Replace(safeSuffix, "/", "_", -1)
-	s = q.walletPrefix + safeSuffix
 	return
 }
 

@@ -99,6 +99,8 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		}
 		si.Execute(&p.quorum)
 
+		siblings := p.quorum.Siblings()
+		p.self = siblings[0]
 		p.newSignedHeartbeat()
 		go p.tick()
 		return
