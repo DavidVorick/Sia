@@ -96,6 +96,7 @@ func deductResources(op instruction) error {
 // Execute interprets a script on a set of inputs and returns the execution cost.
 func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
+	q = q_
 	wallet = q.LoadWallet(si.WalletID)
 	script = append(wallet.Script(), si.Input...)
 	iptr = 0
@@ -104,7 +105,6 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	buffer = nil
 	stack = nil
 	stackLen = 0
-	q = q_
 	// resource pools
 	// these values will likely be supplied as arguments in the future
 	instBalance = MaxInstructions
