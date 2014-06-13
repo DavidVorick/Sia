@@ -77,13 +77,28 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// if we are the bootstrap participant, initialize a new quorum
 	if p.self.Address() == bootstrapAddress {
 		p.synchronized = true
-		// create the bootstrap wallet
-		err = p.quorum.CreateWallet(1, 15000, 0, 0, nil)
+		// create the bootstrapping script
+		var encSibling []byte
+		encSibling, err = p.self.GobEncode()
 		if err != nil {
 			return
 		}
+		s := []byte{
+			0x2B, 0x00, byte(len(encSibling)), // copy encoded sibling into buffer
+			0x2F, // call addSibling on buffer
+			0xFF,
+		}
 
-		p.quorum.AddSibling(p.self)
+		// create the bootstrap wallet
+		p.quorum.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), s)
+
+		// execute the bootstrapping script
+		si := &script.ScriptInput{
+			WalletID: 1,
+			Input:    encSibling,
+		}
+		si.Execute(&p.quorum)
+
 		p.newSignedHeartbeat()
 		go p.tick()
 		return

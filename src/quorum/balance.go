@@ -10,6 +10,10 @@ type Balance struct {
 	lowerBalance uint64
 }
 
+func NewBalance(upper, lower uint64) Balance {
+	return Balance{upper, lower}
+}
+
 func (a *Balance) Add(b Balance) {
 	a.upperBalance += b.upperBalance
 	if ^uint64(0)-a.lowerBalance >= b.lowerBalance {

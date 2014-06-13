@@ -193,6 +193,7 @@ func (q *Quorum) LoadWallet(id WalletID) (w *Wallet) {
 		panic(err)
 	}
 
+	w = new(Wallet)
 	err = w.GobDecode(b)
 	if err != nil {
 		panic(err)

@@ -55,12 +55,16 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create dummy wallet
+	p.quorum.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), nil)
+	wallet := p.quorum.LoadWallet(1)
+
 	// create siblings and add them to the quorum
 	sibling := quorum.NewSibling(bootstrapAddress, pubKey)
 	sibling1 := quorum.NewSibling(bootstrapAddress, pubKey1)
 	sibling2 := quorum.NewSibling(bootstrapAddress, pubKey2)
-	p.quorum.AddSibling(sibling1)
-	p.quorum.AddSibling(sibling2)
+	p.quorum.AddSibling(wallet, sibling1)
+	p.quorum.AddSibling(wallet, sibling2)
 
 	// populate participant with a self and a secret key
 	p.self = sibling
@@ -71,7 +75,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	sh := new(SignedHeartbeat)
 	sh.heartbeat = hb
 	hbb, _ := hb.GobEncode()
-	sh.heartbeatHash, err = siacrypto.CalculateHash(hbb)
+	sh.heartbeatHash = siacrypto.CalculateHash(hbb)
 	sh.signatories = make([]byte, 2)
 	sh.signatures = make([]siacrypto.Signature, 2)
 	sh.signatories[0] = sibling1.Index()

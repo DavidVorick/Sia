@@ -6,9 +6,9 @@ const (
 	AddSiblingMaxCost   = 50
 )
 
-// CreateWallet takes an id, a Balance, a number of script atom, and an initial
-// script and uses those to create a new wallet that gets stored in stable
-// memory. If a wallet of that id already exists then the process aborts.
+// CreateWallet takes an id, a Balance, and an initial script and uses
+// those to create a new wallet that gets stored in stable memory.
+// If a wallet of that id already exists then the process aborts.
 func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialScript []byte) (cost int) {
 	cost += 1
 	if !w.Balance.Compare(Balance) {
@@ -45,6 +45,34 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialSc
 	w.Balance.Subtract(Balance)
 
 	return
+}
+
+// "Cheat" function for initializing a bootstrap wallet
+func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScript []byte) {
+	// check if the new wallet already exists
+	wn := q.retrieve(id)
+	if wn != nil {
+		panic("bootstrap wallet already exists")
+	}
+
+	// create a wallet node to insert into the walletTree
+	wn = new(walletNode)
+	wn.id = id
+	wn.weight = 1
+	tmp := len(initialScript)
+	tmp -= 1024
+	for tmp > 0 {
+		wn.weight += 1
+		tmp -= 4096
+	}
+	q.insert(wn)
+
+	// fill out a basic wallet struct from the inputs
+	nw := new(Wallet)
+	nw.id = id
+	nw.Balance = Balance
+	copy(nw.script, initialScript)
+	q.SaveWallet(nw)
 }
 
 func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int) {

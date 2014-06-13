@@ -8,73 +8,84 @@ import (
 	"quorum"
 	"reflect"
 	"siacrypto"
-	"unsafe"
+	"siaencoding"
 )
 
 var opTable = []instruction{
-	instruction{0x00, 0, reflect.ValueOf(op_nop), 1},
-	instruction{0x01, 1, reflect.ValueOf(op_pushb), 2},
-	instruction{0x02, 2, reflect.ValueOf(op_pushs), 2},
-	instruction{0x03, 0, reflect.ValueOf(op_pop), 1},
-	instruction{0x04, 0, reflect.ValueOf(op_dup), 2},
-	instruction{0x05, 0, reflect.ValueOf(op_swap), 2},
-	instruction{0x06, 0, reflect.ValueOf(op_addi), 2},
-	instruction{0x07, 0, reflect.ValueOf(op_addf), 3},
-	instruction{0x08, 0, reflect.ValueOf(op_subi), 2},
-	instruction{0x09, 0, reflect.ValueOf(op_subf), 3},
-	instruction{0x0A, 0, reflect.ValueOf(op_muli), 2},
-	instruction{0x0B, 0, reflect.ValueOf(op_mulf), 3},
-	instruction{0x0C, 0, reflect.ValueOf(op_divi), 2},
-	instruction{0x0D, 0, reflect.ValueOf(op_divf), 3},
-	instruction{0x0E, 0, reflect.ValueOf(op_modi), 3},
-	instruction{0x0F, 0, reflect.ValueOf(op_negi), 2},
-	instruction{0x10, 0, reflect.ValueOf(op_negf), 3},
-	instruction{0x11, 0, reflect.ValueOf(op_bor), 2},
-	instruction{0x12, 0, reflect.ValueOf(op_band), 2},
-	instruction{0x13, 0, reflect.ValueOf(op_bxor), 2},
-	instruction{0x14, 1, reflect.ValueOf(op_shln), 2},
-	instruction{0x15, 1, reflect.ValueOf(op_shrn), 2},
-	instruction{0x16, 0, reflect.ValueOf(op_eq), 2},
-	instruction{0x17, 0, reflect.ValueOf(op_ne), 2},
-	instruction{0x18, 0, reflect.ValueOf(op_lti), 2},
-	instruction{0x19, 0, reflect.ValueOf(op_ltf), 2},
-	instruction{0x1A, 0, reflect.ValueOf(op_gti), 2},
-	instruction{0x1B, 0, reflect.ValueOf(op_gtf), 2},
-	instruction{0x1C, 0, reflect.ValueOf(op_lnot), 2},
-	instruction{0x1D, 0, reflect.ValueOf(op_lor), 2},
-	instruction{0x1E, 0, reflect.ValueOf(op_land), 2},
-	instruction{0x1F, 2, reflect.ValueOf(op_if), 2},
-	instruction{0x20, 2, reflect.ValueOf(op_goto), 1},
-	instruction{0x21, 1, reflect.ValueOf(op_regs), 2},
-	instruction{0x22, 1, reflect.ValueOf(op_regl), 2},
-	instruction{0x23, 1, reflect.ValueOf(op_inci), 2},
-	instruction{0x24, 1, reflect.ValueOf(op_deci), 2},
-	instruction{0x25, 2, reflect.ValueOf(op_blks), 2},
-	instruction{0x26, 2, reflect.ValueOf(op_blkl), 2},
-	instruction{0x27, 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x28, 0, reflect.ValueOf(op_xfer), 1},
-	instruction{0x29, 2, reflect.ValueOf(op_asib), 5},
+	instruction{0x00, "nop", 0, reflect.ValueOf(op_nop), 1},
+	instruction{0x01, "pushb", 1, reflect.ValueOf(op_pushb), 2},
+	instruction{0x02, "pushs", 2, reflect.ValueOf(op_pushs), 2},
+	instruction{0x03, "pop", 0, reflect.ValueOf(op_pop), 1},
+	instruction{0x04, "dup", 0, reflect.ValueOf(op_dup), 2},
+	instruction{0x05, "swap", 0, reflect.ValueOf(op_swap), 2},
+	instruction{0x06, "addi", 0, reflect.ValueOf(op_addi), 2},
+	instruction{0x07, "addf", 0, reflect.ValueOf(op_addf), 3},
+	instruction{0x08, "subi", 0, reflect.ValueOf(op_subi), 2},
+	instruction{0x09, "subf", 0, reflect.ValueOf(op_subf), 3},
+	instruction{0x0A, "muli", 0, reflect.ValueOf(op_muli), 2},
+	instruction{0x0B, "mulf", 0, reflect.ValueOf(op_mulf), 3},
+	instruction{0x0C, "divi", 0, reflect.ValueOf(op_divi), 2},
+	instruction{0x0D, "divf", 0, reflect.ValueOf(op_divf), 3},
+	instruction{0x0E, "modi", 0, reflect.ValueOf(op_modi), 3},
+	instruction{0x0F, "negi", 0, reflect.ValueOf(op_negi), 2},
+	instruction{0x10, "negf", 0, reflect.ValueOf(op_negf), 3},
+	instruction{0x11, "bor", 0, reflect.ValueOf(op_bor), 2},
+	instruction{0x12, "band", 0, reflect.ValueOf(op_band), 2},
+	instruction{0x13, "bxor", 0, reflect.ValueOf(op_bxor), 2},
+	instruction{0x14, "shln", 1, reflect.ValueOf(op_shln), 2},
+	instruction{0x15, "shrn", 1, reflect.ValueOf(op_shrn), 2},
+	instruction{0x16, "eq", 0, reflect.ValueOf(op_eq), 2},
+	instruction{0x17, "ne", 0, reflect.ValueOf(op_ne), 2},
+	instruction{0x18, "lti", 0, reflect.ValueOf(op_lti), 2},
+	instruction{0x19, "ltf", 0, reflect.ValueOf(op_ltf), 2},
+	instruction{0x1A, "gti", 0, reflect.ValueOf(op_gti), 2},
+	instruction{0x1B, "gtf", 0, reflect.ValueOf(op_gtf), 2},
+	instruction{0x1C, "lnot", 0, reflect.ValueOf(op_lnot), 2},
+	instruction{0x1D, "lor", 0, reflect.ValueOf(op_lor), 2},
+	instruction{0x1E, "land", 0, reflect.ValueOf(op_land), 2},
+	instruction{0x1F, "if", 2, reflect.ValueOf(op_if), 2},
+	instruction{0x20, "goto", 2, reflect.ValueOf(op_goto), 1},
+	instruction{0x21, "regs", 1, reflect.ValueOf(op_regs), 2},
+	instruction{0x22, "regl", 1, reflect.ValueOf(op_regl), 2},
+	instruction{0x23, "inci", 1, reflect.ValueOf(op_inci), 2},
+	instruction{0x24, "deci", 1, reflect.ValueOf(op_deci), 2},
+	instruction{0x25, "dmov", 2, reflect.ValueOf(op_dmov), 1},
+	instruction{0x26, "dgoto", 2, reflect.ValueOf(op_dgoto), 1},
+	instruction{0x27, "dpush", 1, reflect.ValueOf(op_dpush), 2},
+	instruction{0x28, "dregs", 2, reflect.ValueOf(op_dregs), 2},
+	instruction{0x29, "repb", 0, reflect.ValueOf(op_repb), 2},
+	instruction{0x2A, "reps", 0, reflect.ValueOf(op_reps), 2},
+	instruction{0x2B, "bufc", 2, reflect.ValueOf(op_bufc), 2},
+	instruction{0x2C, "bufp", 2, reflect.ValueOf(op_bufp), 2},
+	instruction{0x2D, "xfer", 0, reflect.ValueOf(op_xfer), 1},
+	instruction{0x2E, "rej", 0, reflect.ValueOf(op_rej), 0},
+	instruction{0x2F, "asib", 2, reflect.ValueOf(op_asib), 5},
 }
 
 // helper functions
 func v2i(b value) int64 {
-	return *(*int64)(unsafe.Pointer(&b))
+	return siaencoding.DecInt64(b[:])
 }
 
-func i2v(i int64) value {
-	return *(*value)(unsafe.Pointer(&i))
+func i2v(i int64) (v value) {
+	b := siaencoding.EncInt64(i)
+	copy(v[:], b)
+	return
 }
 
 func v2f(b value) float64 {
-	return *(*float64)(unsafe.Pointer(&b))
+	return siaencoding.DecFloat64(b[:])
 }
 
-func f2v(f float64) value {
-	return *(*value)(unsafe.Pointer(&f))
+func f2v(f float64) (v value) {
+	b := siaencoding.EncFloat64(f)
+	copy(v[:], b)
+	return
 }
 
+// convert two bytes to signed short
 func s2i(high, low byte) int {
-	return int((high << 8) + low)
+	return int(int16(high)<<8 + int16(low))
 }
 
 func b2y(b bool) byte {
@@ -394,7 +405,7 @@ func op_if(offh, offl byte) (err error) {
 		return
 	}
 	if y2b(a) {
-		return op_goto(offh, offl)
+		err = op_goto(offh, offl)
 	}
 	return
 }
@@ -402,7 +413,7 @@ func op_if(offh, offl byte) (err error) {
 func op_goto(offh, offl byte) (err error) {
 	iptr += s2i(offh, offl)
 	if iptr < 0 {
-		return errors.New("jumped to invalid index")
+		err = errors.New("jumped to invalid index")
 	}
 	// the iptr > len(script) case is handled inside Execute
 	return
@@ -432,24 +443,75 @@ func op_deci(reg, n byte) (err error) {
 	return
 }
 
-func op_blks(loch, locl byte) (err error) {
-	err, a := op_pop()
-	addr := s2i(loch, locl)
-	if addr < 0 || addr+8 > len(script) {
-		return errors.New("invalid data access")
+func op_dmov(loch, locl byte) (err error) {
+	dptr += s2i(loch, locl)
+	if dptr < 0 || dptr > len(script) {
+		err = errors.New("invalid data access")
 	}
-	copy(script[addr:addr+8], a[:])
 	return
 }
 
-func op_blkl(loch, locl byte) (err error) {
-	addr := s2i(loch, locl)
-	if addr < 0 || addr+8 > len(script) {
-		return errors.New("invalid data access")
+func op_dgoto(loch, locl byte) (err error) {
+	dptr = s2i(loch, locl)
+	if dptr < 0 || dptr > len(script) {
+		err = errors.New("invalid data access")
 	}
-	var a value
-	copy(a[:], script[addr:addr+8])
-	err = push(a)
+	return
+}
+
+func op_dpush(n byte) (err error) {
+	var v value
+	b := make([]byte, n)
+	copy(b, script[dptr:])
+	copy(v[:], b)
+	err = push(v)
+	return
+}
+
+func op_dregs(n, reg byte) (err error) {
+	var v value
+	b := make([]byte, n)
+	copy(b, script[dptr:])
+	copy(v[:], b)
+	registers[reg] = v
+	return
+}
+
+func op_repb() (err error) {
+	err, a := op_pop()
+	script[dptr] = a[0]
+	return
+}
+
+func op_reps() (err error) {
+	err, a := op_pop()
+	script[dptr] = a[0]
+	script[dptr+1] = a[1]
+	return
+}
+
+func op_bufc(lenh, lenl byte) (err error) {
+	length := s2i(lenh, lenl)
+	buffer = make([]byte, length)
+	copy(buffer, script[dptr:])
+	return
+}
+
+func op_bufp(lenh, lenl byte) (err error) {
+	length := s2i(lenh, lenl)
+	// extend script if necessary
+	if dptr+length > len(script) {
+		ext := make([]byte, dptr+length-len(script))
+		script = append(script, ext...)
+	}
+	b := make([]byte, length)
+	copy(b, buffer)
+	copy(script[dptr:], b)
+	return
+}
+
+func op_xfer() (err error) {
+	iptr = dptr
 	return
 }
 
@@ -457,28 +519,60 @@ func op_rej() (err error) {
 	return errors.New("rejected input")
 }
 
-func op_xfer() (err error) {
-	script = input
-	iptr = 0
-	return
-}
-
-func op_asib(loc byte, length byte) (err error) {
-	// read encoded sibling from data block
-	if int(loc+length) > len(script) {
-		return errors.New("invalid data access")
-	}
-	encSibling := script[loc : loc+length]
+func op_asib() (err error) {
+	encSibling := buffer
 
 	// decode sibling
 	var address network.Address
-	var key siacrypto.PublicKey
+	key := new(siacrypto.PublicKey)
 	reader := bytes.NewBuffer(encSibling)
 	decoder := gob.NewDecoder(reader)
 	decoder.Decode(&address)
-	decoder.Decode(&key)
+	err = decoder.Decode(key)
+	if err != nil {
+		return
+	}
 
 	// add sibling
-	q.AddSibling(quorum.NewSibling(address, &key))
+	q.AddSibling(wallet, quorum.NewSibling(address, key))
+	return
+}
+
+func op_awall() (err error) {
+	_, idv := op_pop()
+	_, lbalv := op_pop()
+	err, ubalv := op_pop()
+	if err != nil {
+		return
+	}
+
+	// convert values to proper types
+	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+	lbal := siaencoding.DecUint64(lbalv[:])
+	ubal := siaencoding.DecUint64(ubalv[:])
+	bal := quorum.NewBalance(ubal, lbal)
+
+	// create wallet
+	newscript := buffer
+	q.CreateWallet(wallet, id, bal, newscript)
+	return
+}
+
+func op_send() (err error) {
+	_, idv := op_pop()
+	_, lbalv := op_pop()
+	err, ubalv := op_pop()
+	if err != nil {
+		return
+	}
+
+	// convert values to proper types
+	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+	lbal := siaencoding.DecUint64(lbalv[:])
+	ubal := siaencoding.DecUint64(ubalv[:])
+	bal := quorum.NewBalance(ubal, lbal)
+
+	// send
+	q.Send(wallet, bal, id)
 	return
 }

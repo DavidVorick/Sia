@@ -41,10 +41,8 @@ func TestCoding(t *testing.T) {
 	}
 
 	// compare to hash of data when first generated
-	recoveredDataHash, err := siacrypto.CalculateHash(newSec.Data)
-	if err != nil {
-		t.Fatal(err)
-	} else if recoveredDataHash != sec.Hash {
+	recoveredDataHash := siacrypto.CalculateHash(newSec.Data)
+	if recoveredDataHash != sec.Hash {
 		t.Fatal("recovered data is different from original data")
 	}
 

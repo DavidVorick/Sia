@@ -11,10 +11,6 @@ const (
 	MaxStackLen     = 1 << 16
 )
 
-type Script struct {
-	Block []byte
-}
-
 type ScriptInput struct {
 	WalletID quorum.WalletID
 	Input    []byte
@@ -22,9 +18,18 @@ type ScriptInput struct {
 
 type instruction struct {
 	opcode   byte
+	name     string
 	argBytes int
 	fn       reflect.Value
 	cost     int
+}
+
+func (in *instruction) print(args []reflect.Value) {
+	print(iptr-len(args), ": ")
+	print(in.name)
+	for i := range args {
+		print(" ", args[i].Uint())
+	}
 }
 
 // generic 64-bit value
@@ -44,7 +49,7 @@ func push(b value) (err error) {
 	return
 }
 
-func (s *stackElem) Print() {
+func (s *stackElem) print() {
 	print("{ ")
 	p := s
 	for {
@@ -54,7 +59,7 @@ func (s *stackElem) Print() {
 		print(v2i(p.val), " ")
 		p = p.next
 	}
-	println("}")
+	print("}")
 }
 
 // global vars accessed by the various opcode functions
@@ -62,10 +67,12 @@ func (s *stackElem) Print() {
 var (
 	script    []byte
 	iptr      int
-	input     []byte
+	dptr      int
 	registers [256]value
+	buffer    []byte
 	stack     *stackElem
 	stackLen  int
+	wallet    *quorum.Wallet
 	q         *quorum.Quorum
 	// resource pools
 	instBalance int
@@ -87,15 +94,17 @@ func deductResources(op instruction) error {
 }
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
-func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error) {
+func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
-	script = s.Block
+	q = q_
+	wallet = q.LoadWallet(si.WalletID)
+	script = append(wallet.Script(), si.Input...)
 	iptr = 0
-	input = in
+	dptr = len(wallet.Script())
 	registers = [256]value{}
+	buffer = nil
 	stack = nil
 	stackLen = 0
-	q = q_
 	// resource pools
 	// these values will likely be supplied as arguments in the future
 	instBalance = MaxInstructions
@@ -113,7 +122,7 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 
 		// place arguments in array while advancing instruction pointer
 		if iptr+op.argBytes >= len(script) {
-			err = errors.New("too few arguments to opcode")
+			err = errors.New("too few arguments to opcode " + op.name)
 			break
 		}
 		var fnArgs []reflect.Value
@@ -136,12 +145,20 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 			break
 		}
 
+		// DEBUG: print op and stack
+		//op.print(fnArgs)
+		//print("\n    stack:  ")
+		//stack.print()
+		//print("\n    buffer: {")
+		//for _, b := range buffer {
+		//	print(" ", b)
+		//}
+		//print(" }\n")
+
 		// increment instruction pointer
 		iptr++
-
-		// DEBUG: print stack
-		stack.Print()
 	}
 
+	q.SaveWallet(wallet)
 	return
 }
