@@ -11,10 +11,6 @@ const (
 	MaxStackLen     = 1 << 16
 )
 
-type Script struct {
-	Block []byte
-}
-
 type ScriptInput struct {
 	WalletID quorum.WalletID
 	Input    []byte
@@ -76,6 +72,7 @@ var (
 	buffer    []byte
 	stack     *stackElem
 	stackLen  int
+	wallet    *quorum.Wallet
 	q         *quorum.Quorum
 	// resource pools
 	instBalance int
@@ -97,11 +94,12 @@ func deductResources(op instruction) error {
 }
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
-func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error) {
+func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	// initialize execution environment
-	script = append(s.Block, in...)
+	wallet = q.LoadWallet(si.WalletID)
+	script = append(wallet.Script(), si.Input...)
 	iptr = 0
-	dptr = len(s.Block)
+	dptr = len(wallet.Script())
 	registers = [256]value{}
 	buffer = nil
 	stack = nil
@@ -148,18 +146,19 @@ func (s *Script) Execute(in []byte, q_ *quorum.Quorum) (totalCost int, err error
 		}
 
 		// DEBUG: print op and stack
-		op.print(fnArgs)
-		print("\n    stack:  ")
-		stack.print()
-		print("\n    buffer: {")
-		for _, b := range buffer {
-			print(" ", b)
-		}
-		print(" }\n")
+		//op.print(fnArgs)
+		//print("\n    stack:  ")
+		//stack.print()
+		//print("\n    buffer: {")
+		//for _, b := range buffer {
+		//	print(" ", b)
+		//}
+		//print(" }\n")
 
 		// increment instruction pointer
 		iptr++
 	}
 
+	q.SaveWallet(wallet)
 	return
 }
