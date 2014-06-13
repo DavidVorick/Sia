@@ -10,8 +10,8 @@ const (
 
 type Hash [HashSize]byte
 
-// returns the sha512 hash of the input []byte
-func CalculateHash(data []byte) (hash Hash, err error) {
+// returns the first 256 bytes of the sha512 hash of the input []byte
+func CalculateHash(data []byte) (hash Hash) {
 	sha := sha512.New()
 	sha.Write(data)
 	hashSlice := sha.Sum(nil)

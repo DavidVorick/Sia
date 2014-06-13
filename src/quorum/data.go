@@ -20,7 +20,7 @@ type Sector struct {
 // NewSector creates a Sector from data.
 func NewSector(data []byte) (s *Sector, err error) {
 	// calculate hash
-	hash, err := siacrypto.CalculateHash(data)
+	hash := siacrypto.CalculateHash(data)
 
 	s = &Sector{data, hash}
 	return

@@ -33,7 +33,7 @@ func (q *Quorum) randInt(low int, high int) (randInt int, err error) {
 	randInt = (rollingInt % (high - low)) + low
 
 	// Convert random number seed to next value
-	truncatedHash, err := siacrypto.CalculateHash(q.seed[:])
+	truncatedHash := siacrypto.CalculateHash(q.seed[:])
 	q.seed = Entropy(truncatedHash)
 	return
 }
@@ -73,11 +73,7 @@ func (q *Quorum) IntegrateSiblingEntropy(e Entropy) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	th, err := siacrypto.CalculateHash(append(q.germ[:], e[:]...))
-	if err != nil {
-		// error
-		return
-	}
+	th := siacrypto.CalculateHash(append(q.germ[:], e[:]...))
 	copy(q.germ[:], th[:])
 }
 

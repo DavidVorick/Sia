@@ -52,7 +52,7 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
-func (q *Quorum) AddSibling(w *wallet, s *Sibling) (cost int) {
+func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	cost = 50
 	for i := 0; i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
