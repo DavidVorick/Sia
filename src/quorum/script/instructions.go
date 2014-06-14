@@ -8,56 +8,56 @@ import (
 )
 
 var opTable = []instruction{
-	instruction{0x00, "nop", 0, reflect.ValueOf(op_nop), 1},
-	instruction{0x01, "pushb", 1, reflect.ValueOf(op_pushb), 2},
-	instruction{0x02, "pushs", 2, reflect.ValueOf(op_pushs), 2},
+	instruction{0x00, "no_op", 0, reflect.ValueOf(op_no_op), 1},
+	instruction{0x01, "push_byte", 1, reflect.ValueOf(op_push_byte), 2},
+	instruction{0x02, "push_short", 2, reflect.ValueOf(op_push_short), 2},
 	instruction{0x03, "pop", 0, reflect.ValueOf(op_pop), 1},
 	instruction{0x04, "dup", 0, reflect.ValueOf(op_dup), 2},
 	instruction{0x05, "swap", 0, reflect.ValueOf(op_swap), 2},
-	instruction{0x06, "addi", 0, reflect.ValueOf(op_addi), 2},
-	instruction{0x07, "addf", 0, reflect.ValueOf(op_addf), 3},
-	instruction{0x08, "subi", 0, reflect.ValueOf(op_subi), 2},
-	instruction{0x09, "subf", 0, reflect.ValueOf(op_subf), 3},
-	instruction{0x0A, "muli", 0, reflect.ValueOf(op_muli), 2},
-	instruction{0x0B, "mulf", 0, reflect.ValueOf(op_mulf), 3},
-	instruction{0x0C, "divi", 0, reflect.ValueOf(op_divi), 2},
-	instruction{0x0D, "divf", 0, reflect.ValueOf(op_divf), 3},
-	instruction{0x0E, "modi", 0, reflect.ValueOf(op_modi), 3},
-	instruction{0x0F, "negi", 0, reflect.ValueOf(op_negi), 2},
-	instruction{0x10, "negf", 0, reflect.ValueOf(op_negf), 3},
-	instruction{0x11, "bor", 0, reflect.ValueOf(op_bor), 2},
-	instruction{0x12, "band", 0, reflect.ValueOf(op_band), 2},
-	instruction{0x13, "bxor", 0, reflect.ValueOf(op_bxor), 2},
-	instruction{0x14, "shln", 1, reflect.ValueOf(op_shln), 2},
-	instruction{0x15, "shrn", 1, reflect.ValueOf(op_shrn), 2},
-	instruction{0x16, "eq", 0, reflect.ValueOf(op_eq), 2},
-	instruction{0x17, "ne", 0, reflect.ValueOf(op_ne), 2},
-	instruction{0x18, "lti", 0, reflect.ValueOf(op_lti), 2},
-	instruction{0x19, "ltf", 0, reflect.ValueOf(op_ltf), 2},
-	instruction{0x1A, "gti", 0, reflect.ValueOf(op_gti), 2},
-	instruction{0x1B, "gtf", 0, reflect.ValueOf(op_gtf), 2},
-	instruction{0x1C, "lnot", 0, reflect.ValueOf(op_lnot), 2},
-	instruction{0x1D, "lor", 0, reflect.ValueOf(op_lor), 2},
-	instruction{0x1E, "land", 0, reflect.ValueOf(op_land), 2},
+	instruction{0x06, "add_int", 0, reflect.ValueOf(op_add_int), 2},
+	instruction{0x07, "add_float", 0, reflect.ValueOf(op_add_float), 3},
+	instruction{0x08, "sub_int", 0, reflect.ValueOf(op_sub_int), 2},
+	instruction{0x09, "sub_float", 0, reflect.ValueOf(op_sub_float), 3},
+	instruction{0x0A, "mul_int", 0, reflect.ValueOf(op_mul_int), 2},
+	instruction{0x0B, "mul_float", 0, reflect.ValueOf(op_mul_float), 3},
+	instruction{0x0C, "div_int", 0, reflect.ValueOf(op_div_int), 2},
+	instruction{0x0D, "div_float", 0, reflect.ValueOf(op_div_float), 3},
+	instruction{0x0E, "mod_int", 0, reflect.ValueOf(op_mod_int), 3},
+	instruction{0x0F, "neg_int", 0, reflect.ValueOf(op_neg_int), 2},
+	instruction{0x10, "neg_float", 0, reflect.ValueOf(op_neg_float), 3},
+	instruction{0x11, "binary_or", 0, reflect.ValueOf(op_binary_or), 2},
+	instruction{0x12, "binary_and", 0, reflect.ValueOf(op_binary_and), 2},
+	instruction{0x13, "binary_xor", 0, reflect.ValueOf(op_binary_xor), 2},
+	instruction{0x14, "shift_left", 1, reflect.ValueOf(op_shift_left), 2},
+	instruction{0x15, "shift_right", 1, reflect.ValueOf(op_shift_right), 2},
+	instruction{0x16, "equal", 0, reflect.ValueOf(op_equal), 2},
+	instruction{0x17, "not_equal", 0, reflect.ValueOf(op_not_equal), 2},
+	instruction{0x18, "less_int", 0, reflect.ValueOf(op_less_int), 2},
+	instruction{0x19, "less_float", 0, reflect.ValueOf(op_less_float), 2},
+	instruction{0x1A, "greater_int", 0, reflect.ValueOf(op_greater_int), 2},
+	instruction{0x1B, "greater_float", 0, reflect.ValueOf(op_greater_float), 2},
+	instruction{0x1C, "logical_not", 0, reflect.ValueOf(op_logical_not), 2},
+	instruction{0x1D, "logical_or", 0, reflect.ValueOf(op_logical_or), 2},
+	instruction{0x1E, "logical_and", 0, reflect.ValueOf(op_logical_and), 2},
 	instruction{0x1F, "if", 2, reflect.ValueOf(op_if), 2},
 	instruction{0x20, "goto", 2, reflect.ValueOf(op_goto), 1},
-	instruction{0x21, "regs", 1, reflect.ValueOf(op_regs), 2},
-	instruction{0x22, "regl", 1, reflect.ValueOf(op_regl), 2},
-	instruction{0x23, "inci", 1, reflect.ValueOf(op_inci), 2},
-	instruction{0x24, "deci", 1, reflect.ValueOf(op_deci), 2},
-	instruction{0x25, "dmov", 2, reflect.ValueOf(op_dmov), 1},
-	instruction{0x26, "dgoto", 2, reflect.ValueOf(op_dgoto), 1},
-	instruction{0x27, "dpush", 1, reflect.ValueOf(op_dpush), 2},
-	instruction{0x28, "dregs", 2, reflect.ValueOf(op_dregs), 2},
-	instruction{0x29, "repb", 0, reflect.ValueOf(op_repb), 2},
-	instruction{0x2A, "reps", 0, reflect.ValueOf(op_reps), 2},
-	instruction{0x2B, "bufc", 2, reflect.ValueOf(op_bufc), 2},
-	instruction{0x2C, "bufp", 2, reflect.ValueOf(op_bufp), 2},
-	instruction{0x2D, "bufr", 0, reflect.ValueOf(op_bufr), 2},
-	instruction{0x2E, "xfer", 0, reflect.ValueOf(op_xfer), 1},
-	instruction{0x2F, "rej", 0, reflect.ValueOf(op_rej), 0},
-	instruction{0x30, "asib", 0, reflect.ValueOf(op_asib), 5},
-	instruction{0x31, "awall", 0, reflect.ValueOf(op_awall), 5},
+	instruction{0x21, "reg_store", 1, reflect.ValueOf(op_reg_store), 2},
+	instruction{0x22, "reg_load", 1, reflect.ValueOf(op_reg_load), 2},
+	instruction{0x23, "reg_inc", 1, reflect.ValueOf(op_reg_inc), 2},
+	instruction{0x24, "reg_dec", 1, reflect.ValueOf(op_reg_dec), 2},
+	instruction{0x25, "data_move", 2, reflect.ValueOf(op_data_move), 1},
+	instruction{0x26, "data_goto", 2, reflect.ValueOf(op_data_goto), 1},
+	instruction{0x27, "data_push", 1, reflect.ValueOf(op_data_push), 2},
+	instruction{0x28, "data_reg", 2, reflect.ValueOf(op_data_reg), 2},
+	instruction{0x29, "replace_byte", 0, reflect.ValueOf(op_replace_byte), 2},
+	instruction{0x2A, "replace_short", 0, reflect.ValueOf(op_replace_short), 2},
+	instruction{0x2B, "buffer_copy", 2, reflect.ValueOf(op_buffer_copy), 2},
+	instruction{0x2C, "buffer_paste", 2, reflect.ValueOf(op_buffer_paste), 2},
+	instruction{0x2D, "buffer_rest", 0, reflect.ValueOf(op_buffer_rest), 2},
+	instruction{0x2E, "transfer", 0, reflect.ValueOf(op_transfer), 1},
+	instruction{0x2F, "reject", 0, reflect.ValueOf(op_reject), 0},
+	instruction{0x30, "add_sibling", 0, reflect.ValueOf(op_add_sibling), 5},
+	instruction{0x31, "add_wallet", 0, reflect.ValueOf(op_add_wallet), 5},
 	instruction{0x32, "send", 0, reflect.ValueOf(op_send), 5},
 }
 
@@ -101,16 +101,16 @@ func y2b(b value) bool {
 
 // opcodes
 
-func op_nop() (err error) {
+func op_no_op() (err error) {
 	return
 }
 
-func op_pushb(b byte) (err error) {
+func op_push_byte(b byte) (err error) {
 	err = push(value{b})
 	return
 }
 
-func op_pushs(h, l byte) (err error) {
+func op_push_short(h, l byte) (err error) {
 	err = push(value{l, h})
 	return
 }
@@ -147,7 +147,7 @@ func op_swap() (err error) {
 	return
 }
 
-func op_addi() (err error) {
+func op_add_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -157,7 +157,7 @@ func op_addi() (err error) {
 	return
 }
 
-func op_addf() (err error) {
+func op_add_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -167,7 +167,7 @@ func op_addf() (err error) {
 	return
 }
 
-func op_subi() (err error) {
+func op_sub_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -177,7 +177,7 @@ func op_subi() (err error) {
 	return
 }
 
-func op_subf() (err error) {
+func op_sub_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -187,7 +187,7 @@ func op_subf() (err error) {
 	return
 }
 
-func op_muli() (err error) {
+func op_mul_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -197,7 +197,7 @@ func op_muli() (err error) {
 	return
 }
 
-func op_mulf() (err error) {
+func op_mul_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -207,7 +207,7 @@ func op_mulf() (err error) {
 	return
 }
 
-func op_divi() (err error) {
+func op_div_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -220,7 +220,7 @@ func op_divi() (err error) {
 	return
 }
 
-func op_divf() (err error) {
+func op_div_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -233,7 +233,7 @@ func op_divf() (err error) {
 	return
 }
 
-func op_modi() (err error) {
+func op_mod_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -243,7 +243,7 @@ func op_modi() (err error) {
 	return
 }
 
-func op_negi() (err error) {
+func op_neg_int() (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -252,7 +252,7 @@ func op_negi() (err error) {
 	return
 }
 
-func op_negf() (err error) {
+func op_neg_float() (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -261,7 +261,7 @@ func op_negf() (err error) {
 	return
 }
 
-func op_bor() (err error) {
+func op_binary_or() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -271,7 +271,7 @@ func op_bor() (err error) {
 	return
 }
 
-func op_band() (err error) {
+func op_binary_and() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -281,7 +281,7 @@ func op_band() (err error) {
 	return
 }
 
-func op_bxor() (err error) {
+func op_binary_xor() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
@@ -291,7 +291,7 @@ func op_bxor() (err error) {
 	return
 }
 
-func op_shln(n byte) (err error) {
+func op_shift_left(n byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -300,7 +300,7 @@ func op_shln(n byte) (err error) {
 	return
 }
 
-func op_shrn(n byte) (err error) {
+func op_shift_right(n byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -309,92 +309,92 @@ func op_shrn(n byte) (err error) {
 	return
 }
 
-func op_eq() (err error) {
+func op_equal() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(a == b))
+	op_push_byte(b2y(a == b))
 	return
 }
 
-func op_ne() (err error) {
+func op_not_equal() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(a != b))
+	op_push_byte(b2y(a != b))
 	return
 }
 
-func op_lti() (err error) {
+func op_less_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(v2i(a) < v2i(b)))
+	op_push_byte(b2y(v2i(a) < v2i(b)))
 	return
 }
 
-func op_ltf() (err error) {
+func op_less_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(v2f(a) < v2f(b)))
+	op_push_byte(b2y(v2f(a) < v2f(b)))
 	return
 }
 
-func op_gti() (err error) {
+func op_greater_int() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(v2i(a) > v2i(b)))
+	op_push_byte(b2y(v2i(a) > v2i(b)))
 	return
 }
 
-func op_gtf() (err error) {
+func op_greater_float() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(v2f(a) > v2f(b)))
+	op_push_byte(b2y(v2f(a) > v2f(b)))
 	return
 }
 
-func op_lnot() (err error) {
+func op_logical_not() (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(!y2b(a)))
+	op_push_byte(b2y(!y2b(a)))
 	return
 }
 
-func op_lor() (err error) {
+func op_logical_or() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2b(a) || y2b(b)))
+	op_push_byte(b2y(y2b(a) || y2b(b)))
 	return
 }
 
-func op_land() (err error) {
+func op_logical_and() (err error) {
 	_, a := op_pop()
 	err, b := op_pop()
 	if err != nil {
 		return
 	}
-	op_pushb(b2y(y2b(a) && y2b(b)))
+	op_push_byte(b2y(y2b(a) && y2b(b)))
 	return
 }
 
@@ -411,14 +411,13 @@ func op_if(offh, offl byte) (err error) {
 
 func op_goto(offh, offl byte) (err error) {
 	iptr += s2i(offh, offl) - 1
-	if iptr < 0 {
+	if iptr < 0 || iptr > len(script) {
 		err = errors.New("jumped to invalid index")
 	}
-	// the iptr > len(script) case is handled inside Execute
 	return
 }
 
-func op_regs(reg byte) (err error) {
+func op_reg_store(reg byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -427,22 +426,22 @@ func op_regs(reg byte) (err error) {
 	return
 }
 
-func op_regl(reg byte) (err error) {
+func op_reg_load(reg byte) (err error) {
 	err = push(registers[reg])
 	return
 }
 
-func op_inci(reg, n byte) (err error) {
+func op_reg_inc(reg, n byte) (err error) {
 	registers[reg] = i2v(v2i(registers[reg]) + int64(n))
 	return
 }
 
-func op_deci(reg, n byte) (err error) {
+func op_reg_dec(reg, n byte) (err error) {
 	registers[reg] = i2v(v2i(registers[reg]) - int64(n))
 	return
 }
 
-func op_dmov(loch, locl byte) (err error) {
+func op_data_move(loch, locl byte) (err error) {
 	dptr += s2i(loch, locl)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
@@ -450,7 +449,7 @@ func op_dmov(loch, locl byte) (err error) {
 	return
 }
 
-func op_dgoto(loch, locl byte) (err error) {
+func op_data_goto(loch, locl byte) (err error) {
 	dptr = s2i(loch, locl)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
@@ -458,7 +457,7 @@ func op_dgoto(loch, locl byte) (err error) {
 	return
 }
 
-func op_dpush(n byte) (err error) {
+func op_data_push(n byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	copy(b, script[dptr:])
@@ -468,7 +467,7 @@ func op_dpush(n byte) (err error) {
 	return
 }
 
-func op_dregs(n, reg byte) (err error) {
+func op_data_reg(n, reg byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	copy(b, script[dptr:])
@@ -478,20 +477,20 @@ func op_dregs(n, reg byte) (err error) {
 	return
 }
 
-func op_repb() (err error) {
+func op_replace_byte() (err error) {
 	err, a := op_pop()
 	script[dptr] = a[0]
 	return
 }
 
-func op_reps() (err error) {
+func op_replace_short() (err error) {
 	err, a := op_pop()
 	script[dptr] = a[0]
 	script[dptr+1] = a[1]
 	return
 }
 
-func op_bufc(lenh, lenl byte) (err error) {
+func op_buffer_copy(lenh, lenl byte) (err error) {
 	length := s2i(lenh, lenl)
 	buffer = make([]byte, length)
 	copy(buffer, script[dptr:])
@@ -499,7 +498,7 @@ func op_bufc(lenh, lenl byte) (err error) {
 	return
 }
 
-func op_bufp(lenh, lenl byte) (err error) {
+func op_buffer_paste(lenh, lenl byte) (err error) {
 	length := s2i(lenh, lenl)
 	// extend script if necessary
 	if dptr+length > len(script) {
@@ -512,23 +511,23 @@ func op_bufp(lenh, lenl byte) (err error) {
 	return
 }
 
-func op_bufr() (err error) {
+func op_buffer_rest() (err error) {
 	buffer = make([]byte, len(script[dptr:]))
 	copy(buffer, script[dptr:])
 	dptr += len(buffer)
 	return
 }
 
-func op_xfer() (err error) {
+func op_transfer() (err error) {
 	iptr = dptr - 1
 	return
 }
 
-func op_rej() (err error) {
-	return errors.New("rejected input")
+func op_reject() (err error) {
+	return errors.New("rejectected input")
 }
 
-func op_asib() (err error) {
+func op_add_sibling() (err error) {
 	encSibling := buffer
 
 	// decode sibling
@@ -543,7 +542,7 @@ func op_asib() (err error) {
 	return
 }
 
-func op_awall() (err error) {
+func op_add_wallet() (err error) {
 	_, idv := op_pop()
 	_, lbalv := op_pop()
 	err, ubalv := op_pop()
