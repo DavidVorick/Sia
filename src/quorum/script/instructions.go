@@ -598,7 +598,7 @@ func op_send() (err error) {
 	return
 }
 
-func op_verify(pkey_buf, message_buf, signature_buf byte) (err error) {
+func op_verify(pkey_buf, sm_buf byte) (err error) {
 	// decode public key
 	pk := new(siacrypto.PublicKey)
 	err = pk.GobDecode(buffers[pkey_buf])
@@ -608,8 +608,7 @@ func op_verify(pkey_buf, message_buf, signature_buf byte) (err error) {
 	// decode signed message
 	// TODO: pack message and signature into one buffer?
 	sm := new(siacrypto.SignedMessage)
-	sm.Message = buffers[message_buf]
-	err = sm.Signature.GobDecode(buffers[signature_buf])
+	err = sm.GobDecode(buffers[sm_buf])
 	if err != nil {
 		return
 	}

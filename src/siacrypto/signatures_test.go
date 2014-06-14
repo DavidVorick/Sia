@@ -160,8 +160,8 @@ func TestSigning(t *testing.T) {
 	}
 }
 
-func TestCombinedMessage(t *testing.T) {
-	_, secretKey, err := CreateKeyPair()
+func TestMessageEncoding(t *testing.T) {
+	publicKey, secretKey, err := CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,8 +173,18 @@ func TestCombinedMessage(t *testing.T) {
 
 	signedMessage.Message = nil
 
-	_, err = signedMessage.CombinedMessage()
+	gobSm, err := signedMessage.GobEncode()
 	if err != nil {
 		t.Error(err)
+	}
+
+	var decSm SignedMessage
+	err = decSm.GobDecode(gobSm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified := publicKey.Verify(&decSm)
+	if !verified {
+		t.Fatal("signed message corrupted during encode/decode")
 	}
 }
