@@ -46,12 +46,13 @@ List of bytecodes
 | 0x28 | data_reg      | 2    | store (and move dptr) $1 bytes (zero-padded) from data pointer in register $2          |
 | 0x29 | replace_byte  | 0    | pop stack value into byte at data pointer                                              |
 | 0x2A | replace_short | 0    | pop stack value into short at data pointer                                             |
-| 0x2B | buffer_copy   | 2    | copy (and move dptr) $1$2 bytes (zero-padded) from data pointer to buffer              |
-| 0x2C | buffer_paste  | 2    | paste $1$2 bytes (zero-padded) from buffer to data pointer, overwriting existing bytes |
-| 0x2D | buffer_rest   | 0    | copy from data pointer to end of script into buffer                                    |
-| 0x2E | transfer      | 0    | move instruction pointer to data pointer                                               |
-| 0x2F | reject        | 0    | reject input, terminating execution                                                    |
-| 0x30 | add_sibling   | 0    | adds sibling; pushes success value                                                     |
-| 0x31 | make_wallet   | 0    | adds a wallet with an initial balance and script                                       |
-| 0x32 | send          | 0    | sends siacoins from host wallet to recipient                                           |
+| 0x2B | buf_copy      | 1    | copy (and move dptr) popped number of bytes (zero-padded) into buffer $1               |
+| 0x2C | buf_paste     | 1    | paste popped number of bytes (zero-padded) from buffer $1, overwriting existing bytes  |
+| 0x2D | buf_prefix    | 1    | same as buffer_copy, but using the first two bytes to determine the length             |
+| 0x2E | buf_rest      | 1    | copy from data pointer to end of script into buffer $1                                 |
+| 0x2F | transfer      | 0    | move instruction pointer to data pointer                                               |
+| 0x30 | reject        | 0    | reject input, terminating execution                                                    |
+| 0x31 | add_sibling   | 1    | adds sibling; pushes success value                                                     |
+| 0x32 | make_wallet   | 1    | adds a wallet with an initial balance and script                                       |
+| 0x33 | send          | 0    | sends siacoins from host wallet to recipient                                           |
 | 0xFF | exit          | 0    | terminates execution                                                                   |

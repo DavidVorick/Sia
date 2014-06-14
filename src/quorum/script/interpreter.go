@@ -70,7 +70,7 @@ var (
 	iptr      int
 	dptr      int
 	registers [256]value
-	buffer    []byte
+	buffers   [256][]byte
 	stack     *stackElem
 	stackLen  int
 	wallet    *quorum.Wallet
@@ -103,7 +103,7 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	iptr = 0
 	dptr = len(wallet.Script())
 	registers = [256]value{}
-	buffer = nil
+	buffers = [256][]byte{}
 	stack = nil
 	stackLen = 0
 	// resource pools
@@ -151,11 +151,7 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		// print(op.print(fnArgs))
 		// print("\n    stack:  ")
 		// stack.print()
-		// print("\n    buffer: {")
-		// for _, b := range buffer {
-		// 	print(" ", b)
-		// }
-		// print(" }\n")
+		// print("\n")
 
 		// increment instruction pointer
 		iptr++

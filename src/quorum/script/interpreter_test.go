@@ -15,7 +15,7 @@ func TestOpCodes(t *testing.T) {
 	}
 	wd = wd + "/../../../participantStorage/TestOpCodes."
 	q.SetWalletPrefix(wd)
-	q.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), []byte{0x2D})
+	q.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), []byte{0x2F})
 	si := &ScriptInput{
 		WalletID: 1,
 	}
@@ -29,7 +29,7 @@ func TestOpCodes(t *testing.T) {
 	}
 	_, err = si.Execute(q)
 	if err != nil {
-		t.Fatal("wrong execution path taken:", err)
+		t.Fatal(err)
 	}
 
 	// test store/load
@@ -43,7 +43,7 @@ func TestOpCodes(t *testing.T) {
 	}
 	_, err = si.Execute(q)
 	if err != nil {
-		t.Fatal("wrong execution path taken:", err)
+		t.Fatal(err)
 	}
 
 	// test invalid scripts

@@ -51,14 +51,15 @@ var opTable = []instruction{
 	instruction{0x28, "data_reg", 2, reflect.ValueOf(op_data_reg), 2},
 	instruction{0x29, "replace_byte", 0, reflect.ValueOf(op_replace_byte), 2},
 	instruction{0x2A, "replace_short", 0, reflect.ValueOf(op_replace_short), 2},
-	instruction{0x2B, "buffer_copy", 2, reflect.ValueOf(op_buffer_copy), 2},
-	instruction{0x2C, "buffer_paste", 2, reflect.ValueOf(op_buffer_paste), 2},
-	instruction{0x2D, "buffer_rest", 0, reflect.ValueOf(op_buffer_rest), 2},
-	instruction{0x2E, "transfer", 0, reflect.ValueOf(op_transfer), 1},
-	instruction{0x2F, "reject", 0, reflect.ValueOf(op_reject), 0},
-	instruction{0x30, "add_sibling", 0, reflect.ValueOf(op_add_sibling), 5},
-	instruction{0x31, "add_wallet", 0, reflect.ValueOf(op_add_wallet), 5},
-	instruction{0x32, "send", 0, reflect.ValueOf(op_send), 5},
+	instruction{0x2B, "buf_copy", 1, reflect.ValueOf(op_buf_copy), 2},
+	instruction{0x2C, "buf_paste", 1, reflect.ValueOf(op_buf_paste), 2},
+	instruction{0x2D, "buf_prefix", 1, reflect.ValueOf(op_buf_prefix), 2},
+	instruction{0x2E, "buf_rest", 1, reflect.ValueOf(op_buf_rest), 2},
+	instruction{0x2F, "transfer", 0, reflect.ValueOf(op_transfer), 1},
+	instruction{0x30, "reject", 0, reflect.ValueOf(op_reject), 0},
+	instruction{0x31, "add_sibling", 1, reflect.ValueOf(op_add_sibling), 5},
+	instruction{0x32, "add_wallet", 1, reflect.ValueOf(op_add_wallet), 5},
+	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
 }
 
 // helper functions
@@ -460,20 +461,18 @@ func op_data_goto(loch, locl byte) (err error) {
 func op_data_push(n byte) (err error) {
 	var v value
 	b := make([]byte, n)
-	copy(b, script[dptr:])
+	dptr += copy(b, script[dptr:])
 	copy(v[:], b)
 	err = push(v)
-	dptr += int(n)
 	return
 }
 
 func op_data_reg(n, reg byte) (err error) {
 	var v value
 	b := make([]byte, n)
-	copy(b, script[dptr:])
+	dptr += copy(b, script[dptr:])
 	copy(v[:], b)
 	registers[reg] = v
-	dptr += int(n)
 	return
 }
 
@@ -490,31 +489,46 @@ func op_replace_short() (err error) {
 	return
 }
 
-func op_buffer_copy(lenh, lenl byte) (err error) {
-	length := s2i(lenh, lenl)
-	buffer = make([]byte, length)
-	copy(buffer, script[dptr:])
-	dptr += length
+func op_buf_copy(buf byte) (err error) {
+	err, lengthv := op_pop()
+	if err != nil {
+		return
+	}
+	length := int16(v2i(lengthv))
+	buffers[buf] = make([]byte, length)
+	dptr += copy(buffers[buf], script[dptr:])
 	return
 }
 
-func op_buffer_paste(lenh, lenl byte) (err error) {
-	length := s2i(lenh, lenl)
+func op_buf_paste(buf byte) (err error) {
+	err, lengthv := op_pop()
+	if err != nil {
+		return
+	}
+	length := int(int16(v2i(lengthv)))
 	// extend script if necessary
 	if dptr+length > len(script) {
 		ext := make([]byte, dptr+length-len(script))
 		script = append(script, ext...)
 	}
 	b := make([]byte, length)
-	copy(b, buffer)
+	copy(b, buffers[buf])
 	copy(script[dptr:], b)
 	return
 }
 
-func op_buffer_rest() (err error) {
-	buffer = make([]byte, len(script[dptr:]))
-	copy(buffer, script[dptr:])
-	dptr += len(buffer)
+func op_buf_prefix(buf byte) (err error) {
+	err = op_data_push(0x01)
+	if err != nil {
+		return
+	}
+	err = op_buf_copy(buf)
+	return
+}
+
+func op_buf_rest(buf byte) (err error) {
+	buffers[buf] = make([]byte, len(script[dptr:]))
+	dptr += copy(buffers[buf], script[dptr:])
 	return
 }
 
@@ -527,8 +541,9 @@ func op_reject() (err error) {
 	return errors.New("rejectected input")
 }
 
-func op_add_sibling() (err error) {
-	encSibling := buffer
+func op_add_sibling(buf byte) (err error) {
+	encSibling := buffers[buf]
+	print(len(encSibling))
 
 	// decode sibling
 	sib := new(quorum.Sibling)
@@ -542,7 +557,7 @@ func op_add_sibling() (err error) {
 	return
 }
 
-func op_add_wallet() (err error) {
+func op_add_wallet(buf byte) (err error) {
 	_, idv := op_pop()
 	_, lbalv := op_pop()
 	err, ubalv := op_pop()
@@ -557,7 +572,7 @@ func op_add_wallet() (err error) {
 	bal := quorum.NewBalance(ubal, lbal)
 
 	// create wallet
-	newscript := buffer
+	newscript := buffers[buf]
 	q.CreateWallet(wallet, id, bal, newscript)
 	return
 }

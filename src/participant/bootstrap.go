@@ -85,13 +85,13 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		bScript := []byte{
 			0x27, 0x01, //       load first byte of input
 			0x1F, 0x00, 0x02, // if byte == 0
-			0x2E, //                 move instruction pointer to input
+			0x2F, //                 move instruction pointer to input
 			//                   else
 			0x01, 0x01, //           push 0
 			0x01, 0x64, //           push 100
 			0x27, 0x08, //           push 8 bytes of input
-			0x2D, //                 read rest of input into buffer
-			0x30, //                 call create wallet
+			0x2D, 0x01, //           read rest of input into buffer 1
+			0x30, 0x01, //           call create wallet
 		}
 
 		// create the bootstrap wallet
@@ -103,13 +103,14 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		if err != nil {
 			return
 		}
-		fmt.Println(encSibling)
+
 		slenh, slenl := byte(len(encSibling)<<8), byte(len(encSibling))
 		sibScript := append([]byte{
 			0x00,             //   zero byte indicates this is a run script request
-			0x25, 0x00, 0x08, //   move data pointer to start of encSibling
-			0x2B, slenh, slenl, // copy encoded sibling into buffer
-			0x30, //               call addSibling on buffer
+			0x25, 0x00, 0x0B, //   move data pointer to start of encSibling
+			0x02, slenh, slenl, // push encoding sibling length
+			0x2B, 0x01, //         copy encoded sibling into buffer 1
+			0x31, 0x01, //         call addSibling on buffer 1
 			0xFF,
 		}, encSibling...)
 
