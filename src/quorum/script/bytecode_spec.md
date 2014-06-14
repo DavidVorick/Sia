@@ -55,4 +55,5 @@ List of bytecodes
 | 0x31 | add_sibling   | 1    | adds sibling; pushes success value                                                     |
 | 0x32 | make_wallet   | 1    | adds a wallet with an initial balance and script                                       |
 | 0x33 | send          | 0    | sends siacoins from host wallet to recipient                                           |
+| 0x34 | verify        | 0    | verifies that a signature is valid; pushes bool                                        |
 | 0xFF | exit          | 0    | terminates execution                                                                   |

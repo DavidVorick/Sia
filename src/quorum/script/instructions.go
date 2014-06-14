@@ -4,6 +4,7 @@ import (
 	"errors"
 	"quorum"
 	"reflect"
+	"siacrypto"
 	"siaencoding"
 )
 
@@ -60,6 +61,7 @@ var opTable = []instruction{
 	instruction{0x31, "add_sibling", 1, reflect.ValueOf(op_add_sibling), 5},
 	instruction{0x32, "add_wallet", 1, reflect.ValueOf(op_add_wallet), 5},
 	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
+	instruction{0x34, "verify", 0, reflect.ValueOf(op_verify), 9},
 }
 
 // helper functions
@@ -518,7 +520,7 @@ func op_buf_paste(buf byte) (err error) {
 }
 
 func op_buf_prefix(buf byte) (err error) {
-	err = op_data_push(0x01)
+	err = op_data_push(0x02)
 	if err != nil {
 		return
 	}
@@ -593,5 +595,26 @@ func op_send() (err error) {
 
 	// send
 	q.Send(wallet, bal, id)
+	return
+}
+
+func op_verify(pkey_buf, message_buf, signature_buf byte) (err error) {
+	// decode public key
+	pk := new(siacrypto.PublicKey)
+	err = pk.GobDecode(buffers[pkey_buf])
+	if err != nil {
+		return
+	}
+	// decode signed message
+	// TODO: pack message and signature into one buffer?
+	sm := new(siacrypto.SignedMessage)
+	sm.Message = buffers[message_buf]
+	err = sm.Signature.GobDecode(buffers[signature_buf])
+	if err != nil {
+		return
+	}
+	// verify signature
+	verified := pk.Verify(sm)
+	err = op_push_byte(b2y(verified))
 	return
 }
