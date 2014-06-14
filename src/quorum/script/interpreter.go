@@ -116,6 +116,10 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			break
 		}
 
+		if int(script[iptr]) > len(opTable) {
+			err = errors.New("invalid opcode " + fmt.Sprint(script[iptr]))
+			break
+		}
 		op := opTable[script[iptr]]
 
 		// place arguments in array while advancing instruction pointer
