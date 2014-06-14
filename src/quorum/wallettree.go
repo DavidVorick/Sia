@@ -25,6 +25,32 @@ type walletNode struct {
 	weight int
 }
 
+func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
+	// check that the id is in the quorum
+	wn := q.retrieve(id)
+	if wn == nil {
+		err = fmt.Errorf("id not found in wallet tree")
+		return
+	}
+
+	if q.walletRoot.weight+delta > AtomsPerQuorum {
+		err = fmt.Errorf("Insufficient room in quorum to complete action")
+		return
+	}
+
+	currentNode := q.walletRoot
+	for currentNode.id != id {
+		currentNode.weight += delta
+		if currentNode.id > id {
+			currentNode = currentNode.children[0]
+		} else {
+			currentNode = currentNode.children[1]
+		}
+	}
+	currentNode.weight += delta
+	return
+}
+
 // A helper function meant to be used by Quorum.Status() that prints out each
 // wallet in the tree, giving only basic information about the wallets as
 // opposed to the debugging information presented by printTree() in

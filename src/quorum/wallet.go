@@ -56,8 +56,6 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	return
 }
 
-// UpdateWeight goes here
-
 // takes a wallet and converts it to a byte slice. Considering changing the
 // name to GobEncode but not sure if that's needed. The hash is calculated
 // after encoding the rest of the wallet - it is this function alone that is
