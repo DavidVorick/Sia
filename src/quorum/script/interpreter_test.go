@@ -1,6 +1,7 @@
 package script
 
 import (
+	"os"
 	"quorum"
 	"testing"
 )
@@ -8,6 +9,12 @@ import (
 func TestOpCodes(t *testing.T) {
 	// create script execution environment
 	q := new(quorum.Quorum)
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wd = wd + "/../../../participantStorage/TestOpCodes."
+	q.SetWalletPrefix(wd)
 	q.CreateBootstrapWallet(1, quorum.NewBalance(0, 15000), []byte{0x2D})
 	si := &ScriptInput{
 		WalletID: 1,
@@ -21,7 +28,7 @@ func TestOpCodes(t *testing.T) {
 		0x16, 0x1F, 0x00, 0x0A,
 		0xFF,
 	}
-	_, err := si.Execute(q)
+	_, err = si.Execute(q)
 	if err != nil {
 		t.Fatal("wrong execution path taken:", err)
 	}

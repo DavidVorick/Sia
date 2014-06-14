@@ -2,6 +2,7 @@ package participant
 
 import (
 	"network"
+	"os"
 	"quorum"
 	"siacrypto"
 	"testing"
@@ -40,6 +41,12 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	}
 	p.messageRouter = new(network.DebugNetwork)
 	p.quorum = *new(quorum.Quorum)
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wd = wd + "/../../participantStorage/TestHandleSignedHeartbeat."
+	p.quorum.SetWalletPrefix(wd)
 
 	// create keypairs
 	pubKey, secKey, err := siacrypto.CreateKeyPair()
