@@ -120,7 +120,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 		// execute the bootstrapping script
 		si := &script.ScriptInput{
-			WalletID: 1,
+			WalletID: BootstrapID,
 			Input:    sibScript,
 		}
 		_, err = si.Execute(&p.quorum)
@@ -213,8 +213,6 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	for i, encodedWallet := range encodedWallets {
-		fmt.Println("Saving wallet:")
-		fmt.Println(encodedWallet)
 		err = p.quorum.InsertWallet(encodedWallet, walletList[i])
 		if err != nil {
 			return
