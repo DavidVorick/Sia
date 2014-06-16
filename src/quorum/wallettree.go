@@ -60,27 +60,12 @@ func (q *Quorum) printWallets(w *walletNode) (s string) {
 		return
 	}
 
+	s += q.printWallets(w.children[0])
+
 	s = fmt.Sprintf("\t\tWallet %v:\n", w.id)
 	s += q.walletString(w.id)
-
-	/* this informaiton requires opening the wallet files
-	b += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.upperBalance)
-	b += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.lowerBalance)
-	b += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
-
-	// calculate the number of sectors that have been allocated
-	allocatedSectors := 0
-	for _, sectorHeader := range w.sectorOverview {
-		if sectorHeader.numAtoms != 0 {
-			allocatedSectors += 1
-		}
-	}
-	b += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
-	*/
-
 	s += fmt.Sprintf("\n")
 
-	s += q.printWallets(w.children[0])
 	s += q.printWallets(w.children[1])
 	return
 }

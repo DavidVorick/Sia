@@ -41,6 +41,10 @@ func (q *Quorum) walletFilename(id WalletID) (s string) {
 
 func (q *Quorum) walletString(id WalletID) (s string) {
 	w := q.LoadWallet(id)
+	if w == nil {
+		return "\t\t\tError! Don't have wallet!\n"
+		return
+	}
 	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.Balance.upperBalance)
 	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.Balance.lowerBalance)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
@@ -136,6 +140,7 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 	if err != nil {
 		return
 	}
+	w.id = id
 
 	wn := q.retrieve(id)
 	if wn != nil {
