@@ -92,11 +92,11 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		t.Fatal(err)
 	}
 	sh.signatures[0] = sig1.Signature
-	combinedMessage, err := sig1.CombinedMessage()
+	encSm, err := sig1.GobEncode()
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig2, err := secKey2.Sign(combinedMessage)
+	sig2, err := secKey2.Sign(encSm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,11 +158,11 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		combinedMessage, err = signature1.CombinedMessage()
+		encSm, err = signature1.GobEncode()
 		if err != nil {
 			t.Fatal(err)
 		}
-		signature2, err = secKey1.Sign(combinedMessage)
+		signature2, err = secKey1.Sign(encSm)
 		if err != nil {
 			t.Error(err)
 		}

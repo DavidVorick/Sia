@@ -120,20 +120,49 @@ func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
 	return
 }
 
-// Return a []byte containing a signature followed by the signed message
-func (sm *SignedMessage) CombinedMessage() (combinedMessage []byte, err error) {
+func (sm *SignedMessage) GobEncode() (gobSm []byte, err error) {
 	if sm == nil {
-		err = fmt.Errorf("Cannot combine a nil signedMessage")
+		err = fmt.Errorf("Cannot encode a nil SignedMessage")
 		return
 	}
 
 	if sm.Signature.r == nil || sm.Signature.s == nil {
-		err = fmt.Errorf("Signature has been improperly initialized")
+		err = fmt.Errorf("Signature not properly initialized")
 		return
 	}
 
-	combinedMessage = append(sm.Signature.r.Bytes(), sm.Signature.s.Bytes()...)
-	combinedMessage = append(combinedMessage, sm.Message...)
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(sm.Signature)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(sm.Message)
+	if err != nil {
+		return
+	}
+
+	gobSm = w.Bytes()
+	return
+}
+
+func (sm *SignedMessage) GobDecode(gobSm []byte) (err error) {
+	if sm == nil {
+		err = fmt.Errorf("Cannot decode into a nil SignedMessage")
+		return
+	}
+
+	r := bytes.NewBuffer(gobSm)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&sm.Signature)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&sm.Message)
+	if err != nil {
+		return
+	}
+
 	return
 }
 

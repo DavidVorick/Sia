@@ -199,7 +199,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (er
 
 		// throwing the signature into the message here makes code cleaner in the loop
 		// and after we sign it to send it to everyone else
-		newMessage, err := signedMessage.CombinedMessage()
+		newMessage, err := signedMessage.GobEncode()
 		signedMessage.Message = newMessage
 		if err != nil {
 			fmt.Println(err)
