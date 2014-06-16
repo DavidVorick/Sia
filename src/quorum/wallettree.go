@@ -25,6 +25,32 @@ type walletNode struct {
 	weight int
 }
 
+func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
+	// check that the id is in the quorum
+	wn := q.retrieve(id)
+	if wn == nil {
+		err = fmt.Errorf("id not found in wallet tree")
+		return
+	}
+
+	if q.walletRoot.weight+delta > AtomsPerQuorum {
+		err = fmt.Errorf("Insufficient room in quorum to complete action")
+		return
+	}
+
+	currentNode := q.walletRoot
+	for currentNode.id != id {
+		currentNode.weight += delta
+		if currentNode.id > id {
+			currentNode = currentNode.children[0]
+		} else {
+			currentNode = currentNode.children[1]
+		}
+	}
+	currentNode.weight += delta
+	return
+}
+
 // A helper function meant to be used by Quorum.Status() that prints out each
 // wallet in the tree, giving only basic information about the wallets as
 // opposed to the debugging information presented by printTree() in
@@ -34,27 +60,12 @@ func (q *Quorum) printWallets(w *walletNode) (s string) {
 		return
 	}
 
+	s += q.printWallets(w.children[0])
+
 	s = fmt.Sprintf("\t\tWallet %v:\n", w.id)
 	s += q.walletString(w.id)
-
-	/* this informaiton requires opening the wallet files
-	b += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.upperBalance)
-	b += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.lowerBalance)
-	b += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
-
-	// calculate the number of sectors that have been allocated
-	allocatedSectors := 0
-	for _, sectorHeader := range w.sectorOverview {
-		if sectorHeader.numAtoms != 0 {
-			allocatedSectors += 1
-		}
-	}
-	b += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
-	*/
-
 	s += fmt.Sprintf("\n")
 
-	s += q.printWallets(w.children[0])
 	s += q.printWallets(w.children[1])
 	return
 }

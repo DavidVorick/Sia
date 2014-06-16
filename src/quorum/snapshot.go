@@ -193,7 +193,6 @@ func (self *Quorum) RecentSnapshot() (q *Quorum, err error) {
 
 	q = new(Quorum)
 	quorumBytes := make([]byte, header.walletLookupOffset-SnapHeaderSize)
-	println(len(quorumBytes))
 	n, err = file.Read(quorumBytes)
 	if err != nil || n != len(quorumBytes) {
 		err = fmt.Errorf("error reading snapshot into memory")
