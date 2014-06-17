@@ -226,7 +226,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 	p.synchronized = true // now compile will be called upon receiving a block
 
-	// 7. Request wallet from bootstrap
+	// 8. Request wallet from bootstrap
 	walletID := siacrypto.RandomUInt64()
 	encWalletID := siaencoding.EncUint64(walletID)
 	in := append(encWalletID, script.DefaultScript...)
@@ -245,10 +245,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
-	// 8. Wait for next compile
+	// 9. Wait for next compile
 	time.Sleep(time.Duration(quorum.QuorumSize) * StepDuration)
 
-	// 9. Submit AddSibling request
+	// 10. Submit AddSibling request
 	gobSibling, err := p.self.GobEncode()
 	if err != nil {
 		return
