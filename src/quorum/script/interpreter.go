@@ -96,9 +96,16 @@ func deductResources(op instruction) error {
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
 func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
+	if si == nil {
+		err = errors.New("nil ScriptInput")
+	}
 	// initialize execution environment
 	q = q_
 	wallet = q.LoadWallet(si.WalletID)
+	if wallet == nil {
+		err = errors.New("failed to load wallet")
+		return
+	}
 	script = append(wallet.Script(), si.Input...)
 	iptr = 0
 	dptr = len(wallet.Script())
