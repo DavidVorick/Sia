@@ -31,17 +31,24 @@ func establishQuorum() {
 	select {}
 }
 
+func printHelp() {
+	println()
+	println("h - help")
+	println("help - help")
+	println("e - establish a participant, who will either create or join a quorum depending on the bootstrap settings")
+	println("q - quit")
+	println()
+}
+
 func main() {
 	var input string
+	println("Sia Server Version 0.0.0.2")
 	for {
 		// grab some input
 		print("Please enter a command: ")
 		fmt.Scanln(&input)
 
-		// switch on the input as a command
 		switch input {
-
-		// get more input if input is invalid
 		default:
 			println("unrecognized command")
 
@@ -52,6 +59,13 @@ func main() {
 		// q: quit the program
 		case "q":
 			return
+
+		case "h":
+			printHelp()
+
+		case "help":
+			printHelp()
 		}
 	}
+	println()
 }
