@@ -18,8 +18,8 @@ var BootstrapScript = []byte{
 
 	0x2F, //             23 move instruction pointer to input
 
-	0x01, 0x64, //       24 push 100
-	0x01, 0x01, //       26 push 0
+	0x01, 0x00, //       24 push 0
+	0x01, 0x64, //       26 push 100
 	0x27, 0x08, //       28 push 8 bytes of input
 	0x2E, 0x01, //       30 read rest of input into buffer 1
 	0x32, 0x01, //       32 call create wallet
