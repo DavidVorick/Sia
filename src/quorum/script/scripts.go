@@ -45,8 +45,18 @@ func AddSiblingInput(encSib []byte) []byte {
 	return append([]byte{0x02}, encSib...)
 }
 
-func TransactionInput(dst, amount uint64) []byte {
-	d := siaencoding.EncUint64(dst)
-	a := siaencoding.EncUint64(amount)
-	return append([]byte{0x03}, append(d, a...)...)
+var TransactionScript = []byte{
+	0x27, 0x08, //       00 push 8 bytes of input (id)
+	0x27, 0x08, //       02 push 8 bytes of input (low balance)
+	0x27, 0x08, //       04 push 8 bytes of input (high balance)
+	0x33, //             06 call send
+}
+
+func TransactionInput(dst, high, low uint64) []byte {
+	wallet := siaencoding.EncUint64(dst)
+	amount := append(
+		siaencoding.EncUint64(high),
+		siaencoding.EncUint64(low)...,
+	)
+	return append(wallet, amount...)
 }
