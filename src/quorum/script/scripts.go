@@ -7,26 +7,22 @@ package script
 // - add sibling:   0x02 followed by encoded sibling
 var BootstrapScript = []byte{
 	0x27, 0x01, //       00 load first byte of input
-	0x04, 0x04, //       02 dup input byte twice
-	0x01, 0x00, 0x16, // 04 push 0 and compare
-	0x1F, 0x00, 0x0E, // 07 if true, goto 23
-	0x01, 0x01, 0x16, // 10 push 1 and compare
-	0x1F, 0x00, 0x09, // 13 if true, goto 24
-	0x01, 0x02, 0x16, // 16 push 2 and compare
-	0x1F, 0x00, 0x0E, // 19 if true, goto 35
-	0xFF, //             22 else, exit
+	0x35, 0x00, 0x08, // 02 if byte == 0, goto 12
+	0x35, 0x01, 0x06, // 05 if byte == 1, goto 13
+	0x35, 0x02, 0x0E, // 08 if byte == 2, goto 24
+	0xFF, //             11 else, exit
 
-	0x2F, //             23 move instruction pointer to input
+	0x2F, //             12 move instruction pointer to input
 
-	0x01, 0x00, //       24 push 0
-	0x01, 0x64, //       26 push 100
-	0x27, 0x08, //       28 push 8 bytes of input
-	0x2E, 0x01, //       30 read rest of input into buffer 1
-	0x32, 0x01, //       32 call create wallet
-	0xFF, //             34 exit
+	0x01, 0x00, //       13 push 0
+	0x01, 0x64, //       15 push 100
+	0x27, 0x08, //       17 push 8 bytes of input
+	0x2E, 0x01, //       19 read rest of input into buffer 1
+	0x32, 0x01, //       21 call create wallet
+	0xFF, //             23 exit
 
-	0x2E, 0x01, //       35 read rest of input into buffer 1
-	0x31, 0x01, //       37 call add sibling
+	0x2E, 0x01, //       24 read rest of input into buffer 1
+	0x31, 0x01, //       26 call add sibling
 }
 
 // these may be changed to functions later
