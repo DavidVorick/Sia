@@ -171,7 +171,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// begin processing heartbeats
 	go p.tick()
 
-	// 2. Download a recent quorum snapshot
+	// 3. Download a recent quorum snapshot
 	fmt.Println("Getting Quorum Snapshot From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: bootstrapAddress,
@@ -183,7 +183,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
-	// 3. Download the wallet list
+	// 4. Download the wallet list
 	var walletList []quorum.WalletID
 	fmt.Println("Getting List of Wallets From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -196,7 +196,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	println("got wallet list")
 	fmt.Println(walletList)
 
-	// 4. Download the wallets
+	// 5. Download the wallets
 	var encodedWallets [][]byte
 	fmt.Println("Getting all of the Wallets")
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -222,7 +222,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	fmt.Println("Untouched Snapshot Status():")
 	fmt.Println(p.quorum.Status())
 
-	// 5. Download the blocks
+	// 6. Download the blocks
 	var blockList []block
 	fmt.Println("Getting Blocks Since Snapshot")
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -235,7 +235,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 
-	// 6. Integrate with blocks built while listening, compile all blocks
+	// 7. Integrate with blocks built while listening, compile all blocks
 	for i := range blockList {
 		p.appendBlock(&blockList[i])
 	}
@@ -246,7 +246,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.compile(p.recentBlocks[currentHeight])
 		currentHeight += 1
 	}
-	p.synchronized = true
+	p.synchronized = true // now compile will be called upon receiving a block
 
 	/*
 		// encode an address and public key for script input
