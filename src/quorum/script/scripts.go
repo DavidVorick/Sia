@@ -1,5 +1,16 @@
 package script
 
+import (
+	"siaencoding"
+)
+
+// the default script
+// for now, this just moves control to the input
+// eventually it should allow itself to be overwritten
+var DefaultScript = []byte{
+	0x2F,
+}
+
 // the bootstrapping script
 // accepts two types of input:
 // - run script:    0x00 followed by key
@@ -25,16 +36,17 @@ var BootstrapScript = []byte{
 	0x31, 0x01, //       26 call add sibling
 }
 
-// these may be changed to functions later
-
-var CreateWalletInput = []byte{
-	0x01, //             00 0x01 byte indicates this is a bootstrap request
+func CreateWalletInput(walletID uint64, s []byte) []byte {
+	id := siaencoding.EncUint64(walletID)
+	return append([]byte{0x01}, append(id, s...)...)
 }
 
-var AddSiblingInput = []byte{
-	0x02, //             00 0x00 byte indicates this is a run script request
+func AddSiblingInput(encSib []byte) []byte {
+	return append([]byte{0x02}, encSib...)
 }
 
-var DefaultScript = []byte{
-	0x2F,
+func TransactionInput(dst, amount uint64) []byte {
+	d := siaencoding.EncUint64(dst)
+	a := siaencoding.EncUint64(amount)
+	return append([]byte{0x03}, append(d, a...)...)
 }

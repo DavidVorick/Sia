@@ -6,7 +6,6 @@ import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
-	"siaencoding"
 	"time"
 )
 
@@ -95,7 +94,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		// execute the bootstrapping script
 		si := script.ScriptInput{
 			WalletID: BootstrapID,
-			Input:    append(script.AddSiblingInput, encSibling...),
+			Input:    script.AddSiblingInput(encSibling),
 		}
 		_, err = si.Execute(&p.quorum)
 		if err != nil {
@@ -228,11 +227,9 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// 8. Request wallet from bootstrap
 	walletID := siacrypto.RandomUInt64()
-	encWalletID := siaencoding.EncUint64(walletID)
-	in := append(encWalletID, script.DefaultScript...)
 	s := script.ScriptInput{
 		WalletID: BootstrapID,
-		Input:    append(script.CreateWalletInput, in...),
+		Input:    script.CreateWalletInput(walletID, script.DefaultScript),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -255,7 +252,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 	s = script.ScriptInput{
 		WalletID: quorum.WalletID(walletID),
-		Input:    append(script.AddSiblingInput, gobSibling...),
+		Input:    script.AddSiblingInput(gobSibling),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
