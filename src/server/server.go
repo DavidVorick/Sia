@@ -32,14 +32,17 @@ func establishQuorum() {
 }
 
 func printHelp() {
+	println()
 	println("h - help")
 	println("help - help")
 	println("e - establish a participant, who will either create or join a quorum depending on the bootstrap settings")
 	println("q - quit")
+	println()
 }
 
 func main() {
 	var input string
+	println("Sia Server Version 0.0.0.2")
 	for {
 		// grab some input
 		print("Please enter a command: ")
@@ -64,4 +67,5 @@ func main() {
 			printHelp()
 		}
 	}
+	println()
 }
