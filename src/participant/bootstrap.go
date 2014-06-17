@@ -1,13 +1,13 @@
 package participant
 
 import (
-	//"bytes"
-	//"encoding/gob"
 	"fmt"
 	"network"
 	"quorum"
 	"quorum/script"
 	"siacrypto"
+	"siaencoding"
+	"time"
 )
 
 const (
@@ -92,12 +92,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 			return
 		}
 
-		sibScript := append(script.AddSiblingInput, encSibling...)
-
 		// execute the bootstrapping script
-		si := &script.ScriptInput{
+		si := script.ScriptInput{
 			WalletID: BootstrapID,
-			Input:    sibScript,
+			Input:    append(script.AddSiblingInput, encSibling...),
 		}
 		_, err = si.Execute(&p.quorum)
 		if err != nil {
@@ -105,6 +103,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		}
 
 		siblings := p.quorum.Siblings()
+		if siblings[0] == nil {
+			err = fmt.Errorf("failed to add self to quorum")
+			return
+		}
 		p.self = siblings[0]
 		p.newSignedHeartbeat()
 		go p.tick()
@@ -224,25 +226,44 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 	p.synchronized = true
 
-	/*
-		// encode an address and public key for script input
-		w := new(bytes.Buffer)
-		encoder := gob.NewEncoder(w)
-		encoder.Encode(p.self.Address())
-		encoder.Encode(pubKey)
-		gobSibling := w.Bytes()
+	// 7. Request wallet from bootstrap
+	walletID := siacrypto.RandomUInt64()
+	encWalletID := siaencoding.EncUint64(walletID)
+	in := append(encWalletID, script.DefaultScript...)
+	s := script.ScriptInput{
+		WalletID: BootstrapID,
+		Input:    append(script.CreateWalletInput, in...),
+	}
 
-		// simple script that calls AddSibling
-		var s script.ScriptInput
-		//s.WalletID = 1
-		s.Input = []byte{0x29, 0x04, byte(len(gobSibling)), 0xFF}
-		s.Input = append(s.Input, gobSibling...)
-		err = p.messageRouter.SendMessage(&network.Message{
-			Dest: bootstrapAddress,
-			Proc: "Participant.AddScriptInput",
-			Args: s,
-			Resp: nil,
-		})
-	*/
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: s,
+		Resp: nil,
+	})
+	if err != nil {
+		return
+	}
+
+	// 8. Wait for next compile
+	time.Sleep(time.Duration(quorum.QuorumSize) * StepDuration)
+
+	// 9. Submit AddSibling request
+	gobSibling, err := p.self.GobEncode()
+	if err != nil {
+		return
+	}
+	s = script.ScriptInput{
+		WalletID: quorum.WalletID(walletID),
+		Input:    append(script.AddSiblingInput, gobSibling...),
+	}
+
+	err = p.messageRouter.SendMessage(&network.Message{
+		Dest: bootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: s,
+		Resp: nil,
+	})
+
 	return
 }

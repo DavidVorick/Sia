@@ -19,7 +19,7 @@ List of bytecodes
 | 0x0D | div_float     | 0    | floating point division                                                                |
 | 0x0E | mod_int       | 0    | integer modulus                                                                        |
 | 0x0F | neg_int       | 0    | integer negation                                                                       |
-| 0x10 | neg_float     | 0    | floating point negatation                                                              |
+| 0x10 | neg_float     | 0    | floating point negation                                                                |
 | 0x11 | binary_or     | 0    | integer binary or                                                                      |
 | 0x12 | binary_and    | 0    | integer binary and                                                                     |
 | 0x13 | binary_xor    | 0    | integer binary xor                                                                     |
