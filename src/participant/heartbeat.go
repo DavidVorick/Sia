@@ -92,7 +92,7 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	}
 
 	// decode each script input
-	var nextOffset uint32
+	nextOffset := offset + 4
 	hb.scriptInputs = make([]script.ScriptInput, numScriptInputs)
 	for i := 0; i < int(numScriptInputs-1); i++ {
 		siOffset := siaencoding.DecUint32(gobHB[offset : offset+4])
