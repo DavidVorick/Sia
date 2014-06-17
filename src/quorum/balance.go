@@ -30,7 +30,7 @@ func (a *Balance) Add(b Balance) {
 
 func (a *Balance) Subtract(b Balance) {
 	a.upperBalance -= b.upperBalance
-	if a.lowerBalance > b.lowerBalance {
+	if a.lowerBalance < b.lowerBalance {
 		a.upperBalance -= 1
 		a.lowerBalance = ^uint64(0) - (b.lowerBalance - a.lowerBalance)
 	} else {
