@@ -133,7 +133,11 @@ func (sm *SignedMessage) GobEncode() (gobSm []byte, err error) {
 
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(sm.Signature)
+	err = encoder.Encode(sm.Signature.r.Bytes())
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(sm.Signature.s.Bytes())
 	if err != nil {
 		return
 	}
@@ -154,10 +158,18 @@ func (sm *SignedMessage) GobDecode(gobSm []byte) (err error) {
 
 	r := bytes.NewBuffer(gobSm)
 	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&sm.Signature)
+	var rBytes []byte
+	err = decoder.Decode(&rBytes)
 	if err != nil {
 		return
 	}
+	sm.Signature.r.SetBytes(rBytes)
+	var sBytes []byte
+	err = decoder.Decode(&sBytes)
+	if err != nil {
+		return
+	}
+	sm.Signature.s.SetBytes(sBytes)
 	err = decoder.Decode(&sm.Message)
 	if err != nil {
 		return
