@@ -22,7 +22,7 @@ const (
 // quorum. Data in the quorum can only be updated during a block, and the
 // update must be deterministic and reversable.
 type Quorum struct {
-	// quorum-wide lock
+	// Quorum-wide lock
 	lock sync.RWMutex
 
 	// Network Variables
@@ -32,12 +32,15 @@ type Quorum struct {
 	germ Entropy // Where internal entropy is stored before external entropy is applied
 	seed Entropy // Used to generate random numbers during compilation
 
-	// wallet management
+	// Event management
+	eventRoot *eventNode
+
+	// Wallet management
 	walletPrefix string
 	wallets      uint32
 	walletRoot   *walletNode
 
-	// snapshot management
+	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
 
 	// Block tracking
