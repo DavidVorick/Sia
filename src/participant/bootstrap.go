@@ -251,7 +251,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		return
 	}
 	s = script.ScriptInput{
-		WalletID: quorum.WalletID(walletID),
+		WalletID: BootstrapID,
 		Input:    script.AddSiblingInput(gobSibling),
 	}
 
