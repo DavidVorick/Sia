@@ -41,11 +41,11 @@ type stackElem struct {
 	next *stackElem
 }
 
-func push(b value) (err error) {
+func push(v value) (err error) {
 	if stackLen > MaxStackLen {
 		return errors.New("stack overflow")
 	}
-	stack = &stackElem{b, stack}
+	stack = &stackElem{v, stack}
 	stackLen++
 	return
 }
@@ -117,6 +117,7 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	// these values will likely be supplied as arguments in the future
 	instBalance = MaxInstructions
 	costBalance = 10000
+	fmt.Println("executing script:", script)
 
 	for {
 		if iptr >= len(script) || script[iptr] == 0xFF {
@@ -163,7 +164,9 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		// increment instruction pointer
 		iptr++
 	}
-
+	if err != nil {
+		fmt.Println("script execution failed:", err)
+	}
 	q.SaveWallet(wallet)
 	return
 }

@@ -25,15 +25,16 @@ var BootstrapScript = []byte{
 
 	0x2F, //             12 move instruction pointer to input
 
-	0x01, 0x00, //       13 push 0
-	0x01, 0x64, //       15 push 100
-	0x27, 0x08, //       17 push 8 bytes of input
+	0x27, 0x08, //       13 push 8 bytes of input (wallet id)
+	0x01, 0x00, //       15 push 0 (high balance)
+	0x01, 0x64, //       17 push 100 (low balance)
 	0x2E, 0x01, //       19 read rest of input into buffer 1
 	0x32, 0x01, //       21 call create wallet
 	0xFF, //             23 exit
 
 	0x2E, 0x01, //       24 read rest of input into buffer 1
 	0x31, 0x01, //       26 call add sibling
+	0xFF, //             28 exit
 }
 
 func CreateWalletInput(walletID uint64, s []byte) []byte {
@@ -47,9 +48,10 @@ func AddSiblingInput(encSib []byte) []byte {
 
 var TransactionScript = []byte{
 	0x27, 0x08, //       00 push 8 bytes of input (id)
-	0x27, 0x08, //       02 push 8 bytes of input (low balance)
-	0x27, 0x08, //       04 push 8 bytes of input (high balance)
+	0x27, 0x08, //       02 push 8 bytes of input (high balance)
+	0x27, 0x08, //       04 push 8 bytes of input (low balance)
 	0x33, //             06 call send
+	0xFF, //             07 exit
 }
 
 func TransactionInput(dst, high, low uint64) []byte {

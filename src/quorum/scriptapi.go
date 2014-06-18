@@ -15,9 +15,9 @@ const (
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
 // If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialScript []byte) (cost int, err error) {
+func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
 	cost += 1
-	if !w.Balance.Compare(Balance) {
+	if !w.Balance.Compare(balance) {
 		err = errors.New("insufficient balance")
 		return
 	}
@@ -46,11 +46,11 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialSc
 	// fill out a basic wallet struct from the inputs
 	nw := new(Wallet)
 	nw.id = id
-	nw.Balance = Balance
+	nw.Balance = balance
 	nw.script = initialScript
 	q.SaveWallet(nw)
 
-	w.Balance.Subtract(Balance)
+	w.Balance.Subtract(balance)
 
 	return
 }

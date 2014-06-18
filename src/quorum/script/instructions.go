@@ -561,9 +561,9 @@ func op_add_sibling(buf byte) (err error) {
 }
 
 func op_add_wallet(buf byte) (err error) {
-	_, idv := op_pop()
 	_, lbalv := op_pop()
-	err, ubalv := op_pop()
+	_, ubalv := op_pop()
+	err, idv := op_pop()
 	if err != nil {
 		return
 	}
@@ -581,9 +581,9 @@ func op_add_wallet(buf byte) (err error) {
 }
 
 func op_send() (err error) {
-	_, idv := op_pop()
 	_, lbalv := op_pop()
-	err, ubalv := op_pop()
+	_, ubalv := op_pop()
+	err, idv := op_pop()
 	if err != nil {
 		return
 	}
@@ -595,7 +595,7 @@ func op_send() (err error) {
 	bal := quorum.NewBalance(ubal, lbal)
 
 	// send
-	q.Send(wallet, bal, id)
+	_, err = q.Send(wallet, bal, id)
 	return
 }
 
