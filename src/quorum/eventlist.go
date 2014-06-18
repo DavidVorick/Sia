@@ -1,5 +1,9 @@
 package quorum
 
+import (
+	"siacrypto"
+)
+
 // An event is a task that the quorum will have to perform at a certain block,
 // which is returned by expiration(). Something may trigger the event early, at
 // which point the event will be deleted from the eventList. Each block, all
@@ -34,6 +38,69 @@ type eventNode struct {
 }
 
 func (q *Quorum) insertEvent(e event) {
+	freshNode := new(eventNode)
+	// check if the current is nil
+	if q.eventRoot == nil {
+		q.eventRoot = freshNode
+		q.eventRoot.event = e
+		return
+	}
+
+	// check if we are behind the root
+	if q.eventRoot.event.expiration() >= e.expiration() {
+		// place this node behind the eventRoot, and roll random distances for the eventRoot
+		return
+	}
+
+	// get the current height of the skip list
+	heightCounter := q.eventRoot.top
+	currentHeight := 0
+	for heightCounter != nil {
+		currentHeight += 1
+		heightCounter = heightCounter.nextPointer
+	}
+
+	// figure out the height of the node to be inserted
+	freshHeight := 1
+	heightAugmenter, _ := siacrypto.RandomInt(87)
+	for heightAugmenter < 32 {
+		freshHeight += 1
+		if freshHeight > currentHeight {
+			break // height can only grow by 1 upon insertion
+		}
+		heightAugmenter, _ = siacrypto.RandomInt(87)
+	}
+
+	// try moving forward until must move down
+	currentPointer := q.eventRoot.top
+	freshPointer := new(pointerStack)
+	freshNode.top = freshPointer
+	for {
+		// move forward until a larger node is found
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.expiration() < e.expiration() {
+			currentPointer = currentPointer.nextNode.top
+		}
+
+		// update pointer if needed
+		if currentHeight <= freshHeight {
+			freshPointer.nextNode = currentPointer.nextNode
+			currentPointer.nextNode = freshNode
+
+			// break the loop if we're at the bottom of the list. This logic will
+			// always be reached if we are at the bottom of the list, because at the
+			// bottom of the list currentHeight will be 1, and freshHeight will never
+			// be less than 1.
+			if currentPointer.nextPointer == nil {
+				break
+			}
+			freshPointer.nextPointer = new(pointerStack)
+			freshPointer = freshPointer.nextPointer
+		}
+
+		// move down
+		currentPointer = currentPointer.nextPointer
+		currentHeight -= 1
+	}
 }
 
 func (q *Quorum) deleteEvent(e event) {
