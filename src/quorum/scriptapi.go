@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"errors"
 	"os"
 	"siaencoding"
 )
@@ -14,9 +15,10 @@ const (
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
 // If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialScript []byte) (cost int) {
+func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialScript []byte) (cost int, err error) {
 	cost += 1
 	if !w.Balance.Compare(Balance) {
+		err = errors.New("insufficient balance")
 		return
 	}
 
@@ -24,6 +26,7 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialSc
 	cost += 2
 	wn := q.retrieve(id)
 	if wn != nil {
+		err = errors.New("wallet already exists")
 		return
 	}
 
@@ -80,14 +83,16 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 	q.SaveWallet(nw)
 }
 
-func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int) {
+func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
 	cost += 1
 	if !w.Balance.Compare(amount) {
+		err = errors.New("insufficient balance")
 		return
 	}
 	cost += 2
 	destWallet := q.LoadWallet(destID)
 	if destWallet == nil {
+		err = errors.New("destination wallet does not exist")
 		return
 	}
 

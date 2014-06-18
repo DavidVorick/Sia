@@ -576,7 +576,7 @@ func op_add_wallet(buf byte) (err error) {
 
 	// create wallet
 	newscript := buffers[buf]
-	q.CreateWallet(wallet, id, bal, newscript)
+	_, err = q.CreateWallet(wallet, id, bal, newscript)
 	return
 }
 
