@@ -67,9 +67,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 	wallet := p.quorum.LoadWallet(1)
 
 	// create siblings and add them to the quorum
-	sibling := quorum.NewSibling(bootstrapAddress, pubKey)
-	sibling1 := quorum.NewSibling(bootstrapAddress, pubKey1)
-	sibling2 := quorum.NewSibling(bootstrapAddress, pubKey2)
+	sibling := quorum.NewSibling(BootstrapAddress, pubKey)
+	sibling1 := quorum.NewSibling(BootstrapAddress, pubKey1)
+	sibling2 := quorum.NewSibling(BootstrapAddress, pubKey2)
 	p.quorum.AddSibling(wallet, sibling1)
 	p.quorum.AddSibling(wallet, sibling2)
 

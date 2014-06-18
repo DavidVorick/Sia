@@ -6,7 +6,6 @@ import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
-	"siaencoding"
 	"time"
 )
 
@@ -35,7 +34,7 @@ The Bootstrapping Process
 
 // currently a static variable, eventually there will be an entire process for
 // finding address to bootstrap to.
-var bootstrapAddress = network.Address{
+var BootstrapAddress = network.Address{
 	ID:   1,
 	Host: "localhost",
 	Port: 9988,
@@ -79,7 +78,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
-	if p.self.Address() == bootstrapAddress {
+	if p.self.Address() == BootstrapAddress {
 		p.synchronized = true
 
 		// create the bootstrap wallet
@@ -95,7 +94,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		// execute the bootstrapping script
 		si := script.ScriptInput{
 			WalletID: BootstrapID,
-			Input:    append(script.AddSiblingInput, encSibling...),
+			Input:    script.AddSiblingInput(encSibling),
 		}
 		_, err = si.Execute(&p.quorum)
 		if err != nil {
@@ -122,7 +121,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	synchronize := new(Synchronize)
 	fmt.Println("Synchronizeing to the Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.Synchronize",
 		Args: struct{}{},
 		Resp: synchronize,
@@ -137,7 +136,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 2. Subscribe to the current quorum and receive all heartbeats
 	fmt.Println("Subscribing to the Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.Subscribe",
 		Args: p.self.Address(),
 		Resp: nil,
@@ -152,7 +151,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 3. Download a recent quorum snapshot
 	fmt.Println("Getting Quorum Snapshot From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.RecentSnapshot",
 		Args: struct{}{},
 		Resp: &p.quorum,
@@ -165,7 +164,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	var walletList []quorum.WalletID
 	fmt.Println("Getting List of Wallets From Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.SnapshotWalletList",
 		Args: p.quorum.CurrentSnapshot(),
 		Resp: &walletList,
@@ -178,7 +177,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	var encodedWallets [][]byte
 	fmt.Println("Getting all of the Wallets")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.SnapshotWallets",
 		Args: SnapshotWalletsInput{
 			Snapshot: p.quorum.CurrentSnapshot(),
@@ -204,7 +203,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	var blockList []block
 	fmt.Println("Getting Blocks Since Snapshot")
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.SnapshotBlocks",
 		Args: p.quorum.CurrentSnapshot(),
 		Resp: &blockList,
@@ -228,15 +227,13 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// 8. Request wallet from bootstrap
 	walletID := siacrypto.RandomUInt64()
-	encWalletID := siaencoding.EncUint64(walletID)
-	in := append(encWalletID, script.DefaultScript...)
 	s := script.ScriptInput{
 		WalletID: BootstrapID,
-		Input:    append(script.CreateWalletInput, in...),
+		Input:    script.CreateWalletInput(walletID, script.DefaultScript),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: s,
 		Resp: nil,
@@ -255,11 +252,11 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 	s = script.ScriptInput{
 		WalletID: quorum.WalletID(walletID),
-		Input:    append(script.AddSiblingInput, gobSibling...),
+		Input:    script.AddSiblingInput(gobSibling),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: bootstrapAddress,
+		Dest: BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: s,
 		Resp: nil,

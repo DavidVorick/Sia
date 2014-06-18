@@ -62,6 +62,7 @@ var opTable = []instruction{
 	instruction{0x32, "add_wallet", 1, reflect.ValueOf(op_add_wallet), 5},
 	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
 	instruction{0x34, "verify", 0, reflect.ValueOf(op_verify), 9},
+	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
 }
 
 // helper functions
@@ -560,9 +561,9 @@ func op_add_sibling(buf byte) (err error) {
 }
 
 func op_add_wallet(buf byte) (err error) {
-	_, idv := op_pop()
 	_, lbalv := op_pop()
-	err, ubalv := op_pop()
+	_, ubalv := op_pop()
+	err, idv := op_pop()
 	if err != nil {
 		return
 	}
@@ -575,14 +576,14 @@ func op_add_wallet(buf byte) (err error) {
 
 	// create wallet
 	newscript := buffers[buf]
-	q.CreateWallet(wallet, id, bal, newscript)
+	_, err = q.CreateWallet(wallet, id, bal, newscript)
 	return
 }
 
 func op_send() (err error) {
-	_, idv := op_pop()
 	_, lbalv := op_pop()
-	err, ubalv := op_pop()
+	_, ubalv := op_pop()
+	err, idv := op_pop()
 	if err != nil {
 		return
 	}
@@ -594,7 +595,7 @@ func op_send() (err error) {
 	bal := quorum.NewBalance(ubal, lbal)
 
 	// send
-	q.Send(wallet, bal, id)
+	_, err = q.Send(wallet, bal, id)
 	return
 }
 
@@ -615,5 +616,18 @@ func op_verify(pkey_buf, sm_buf byte) (err error) {
 	// verify signature
 	verified := pk.Verify(sm)
 	err = op_push_byte(b2y(verified))
+	return
+}
+
+func op_switch(cmp, offset byte) (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	if cmp == a[0] {
+		err = op_goto(0, offset)
+	} else {
+		err = push(a)
+	}
 	return
 }
