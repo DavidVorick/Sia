@@ -44,7 +44,7 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, Balance Balance, initialSc
 	nw := new(Wallet)
 	nw.id = id
 	nw.Balance = Balance
-	copy(nw.script, initialScript)
+	nw.script = initialScript
 	q.SaveWallet(nw)
 
 	w.Balance.Subtract(Balance)
