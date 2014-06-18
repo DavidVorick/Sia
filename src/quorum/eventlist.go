@@ -19,6 +19,8 @@ import (
 type event interface {
 	handleEvent()
 	expiration() uint32
+	setCounter(uint64) // top 32 bits are the expiration, bottom 32 are the counter
+	fetchCounter() uint64 // structure will break if fetch does not return the same value called in set
 }
 
 // Event nodes have a stack of pointers to the next elements at each height in
@@ -38,7 +40,17 @@ type eventNode struct {
 }
 
 func (q *Quorum) insertEvent(e event) {
+	// counter has the high 32 bits as the expiration of the event, which allows
+	// for sorting according to expiration. Then there's the lower 32 bits which
+	// is the eventCounter, and this allows for FCFS unique ordering of events
+	// with the same expiration.
+	eCounter := uint64(e.expiration())
+	eCounter = eCounter << 32
+	eCounter += q.eventCounter
+	q.eventCounter += 1
+	e.setCounter(eCounter)
 	freshNode := new(eventNode)
+
 	// check if the current is nil
 	if q.eventRoot == nil {
 		q.eventRoot = freshNode
@@ -47,7 +59,7 @@ func (q *Quorum) insertEvent(e event) {
 	}
 
 	// check if we are behind the root
-	if q.eventRoot.event.expiration() >= e.expiration() {
+	if q.eventRoot.event.fetchCounter() >= e.fetchCounter() {
 		// place this node behind the eventRoot, and roll random distances for the eventRoot
 		return
 	}
@@ -62,8 +74,8 @@ func (q *Quorum) insertEvent(e event) {
 
 	// figure out the height of the node to be inserted
 	freshHeight := 1
-	heightAugmenter, _ := siacrypto.RandomInt(87)
-	for heightAugmenter < 32 {
+	heightAugmenter, _ := siacrypto.RandomInt(87) // rand from [0, 87)
+	for heightAugmenter < 32 { // 32/87 is ~ 1/e, which is mathematically the most efficient probability
 		freshHeight += 1
 		if freshHeight > currentHeight {
 			break // height can only grow by 1 upon insertion
@@ -71,13 +83,12 @@ func (q *Quorum) insertEvent(e event) {
 		heightAugmenter, _ = siacrypto.RandomInt(87)
 	}
 
-	// try moving forward until must move down
 	currentPointer := q.eventRoot.top
 	freshPointer := new(pointerStack)
 	freshNode.top = freshPointer
 	for {
 		// move forward until a larger node is found
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.expiration() < e.expiration() {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
 			currentPointer = currentPointer.nextNode.top
 		}
 

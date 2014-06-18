@@ -33,6 +33,7 @@ type Quorum struct {
 	seed Entropy // Used to generate random numbers during compilation
 
 	// Event management
+	eventCounter uint32
 	eventRoot *eventNode
 
 	// Wallet management
