@@ -123,3 +123,11 @@ func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
 
 	return errChan
 }
+
+func (rpcs *RPCServer) Ping(a *Address) (err error) {
+	conn, err := rpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
+	if err == nil {
+		conn.Close()
+	}
+	return
+}
