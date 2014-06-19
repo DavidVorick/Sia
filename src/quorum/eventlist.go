@@ -39,6 +39,25 @@ type eventNode struct {
 	event event
 }
 
+// counts the height of the pointerStack that has been input
+func (ps *pointerStack) height() (i int) {
+	if ps != nil {
+		i += 1
+	}
+	for ps.nextPointer != nil {
+		i += 1
+		ps = ps.nextPointer
+	}
+	return
+}
+
+func (ps *pointerStack) bottom() *pointerStack {
+	for ps.nextPointer != nil {
+		ps = ps.nextPointer
+	}
+	return ps
+}
+
 func (q *Quorum) insertEvent(e event) {
 	// counter has the high 32 bits as the expiration of the event, which allows
 	// for sorting according to expiration. Then there's the lower 32 bits which
@@ -60,22 +79,15 @@ func (q *Quorum) insertEvent(e event) {
 		return
 	}
 
-	// get the current height of the skip list
-	heightCounter := q.eventRoot.top
-	currentHeight := 0
-	for heightCounter != nil {
-		currentHeight += 1
-		heightCounter = heightCounter.nextPointer
-	}
+	currentHeight := q.eventRoot.top.height()
 
 	// figure out the height of the node to be inserted
 	freshHeight := 1
 	heightAugmenter, _ := siacrypto.RandomInt(87) // rand from [0, 87)
-	for heightAugmenter < 32 {                    // 32/87 is ~ 1/e, which is mathematically the most efficient probability
+	for heightAugmenter < 32 {                    // 32/87 is ~ 1/e, the most efficient probability
 		freshHeight += 1
 		if freshHeight > currentHeight {
 			// increase the height of the root node by one
-			//q.eventRoot.top.nextNode = freshNode
 			newTop := new(pointerStack)
 			newTop.nextPointer = q.eventRoot.top
 			q.eventRoot.top = newTop
@@ -170,6 +182,62 @@ func (q *Quorum) eventNode(e event) *eventNode {
 }
 
 func (q *Quorum) deleteEvent(e event) {
+	// first figure out if the event exists by recovering the assiciated eventNode
+	en := q.eventNode(e)
+	if en == nil {
+		return
+	}
+	if q.eventRoot.top.bottom().nextNode == nil {
+		q.eventRoot = nil
+		return
+	}
+
+	currentHeight := q.eventRoot.top.height()
+	currentPointer := q.eventRoot.top
+	if q.eventRoot == en {
+		// get information on the next node
+		currentPointer = currentPointer.bottom()
+		nPointer := currentPointer.nextNode.top
+		nHeight := nPointer.height()
+
+		currentPointer = q.eventRoot.top
+		for currentPointer.nextPointer != nil {
+			if currentHeight <= nHeight {
+				currentPointer.nextNode = nPointer.nextNode
+				nPointer = nPointer.nextPointer
+			}
+			currentHeight -= 1
+			currentPointer = currentPointer.nextPointer
+		}
+
+		currentPointer.nextNode.top = q.eventRoot.top
+		q.eventRoot = currentPointer.nextNode
+		currentPointer.nextNode = nPointer.nextNode
+		return
+	}
+
+	// then go through finding the event, repointing everything that points to the event as a height object
+	eventHeight := en.top.height()
+	eventPointer := en.top
+	for {
+		// move forward
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
+			currentPointer = currentPointer.nextNode.top
+		}
+
+		if eventHeight >= currentHeight {
+			currentPointer.nextNode = eventPointer.nextNode
+			eventPointer = eventPointer.nextPointer
+
+			if currentPointer.nextPointer == nil {
+				break
+			}
+		}
+
+		// move down
+		currentPointer = currentPointer.nextPointer
+		currentHeight -= 1
+	}
 }
 
 func (q *Quorum) handleExpiringEvents() {
