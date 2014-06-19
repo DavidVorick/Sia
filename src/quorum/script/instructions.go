@@ -61,7 +61,7 @@ var opTable = []instruction{
 	instruction{0x31, "add_sibling", 1, reflect.ValueOf(op_add_sibling), 5},
 	instruction{0x32, "add_wallet", 1, reflect.ValueOf(op_add_wallet), 5},
 	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
-	instruction{0x34, "verify", 0, reflect.ValueOf(op_verify), 9},
+	instruction{0x34, "verify", 2, reflect.ValueOf(op_verify), 9},
 	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
 }
 
@@ -497,7 +497,7 @@ func op_buf_copy(buf byte) (err error) {
 	if err != nil {
 		return
 	}
-	length := int16(v2i(lengthv))
+	length := uint16(v2i(lengthv))
 	buffers[buf] = make([]byte, length)
 	dptr += copy(buffers[buf], script[dptr:])
 	return
@@ -546,7 +546,6 @@ func op_reject() (err error) {
 
 func op_add_sibling(buf byte) (err error) {
 	encSibling := buffers[buf]
-	print(len(encSibling))
 
 	// decode sibling
 	sib := new(quorum.Sibling)
@@ -607,7 +606,6 @@ func op_verify(pkey_buf, sm_buf byte) (err error) {
 		return
 	}
 	// decode signed message
-	// TODO: pack message and signature into one buffer?
 	sm := new(siacrypto.SignedMessage)
 	err = sm.GobDecode(buffers[sm_buf])
 	if err != nil {
