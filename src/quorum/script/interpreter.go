@@ -10,6 +10,7 @@ import (
 const (
 	MaxInstructions = 10000
 	MaxStackLen     = 1 << 16
+	DEBUG           = false
 )
 
 type ScriptInput struct {
@@ -157,16 +158,16 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			break
 		}
 
-		// DEBUG: print op, stack, and buffers
-		// fmt.Println(op.print(fnArgs))
-		// fmt.Println("    stack:", stack.print())
-		// b := make([]byte, 20)
-		// copy(b, buffers[1])
-		// fmt.Println("    buffer 1:", len(buffers[1]), b)
-		// b = make([]byte, 20)
-		// copy(b, buffers[2])
-		// fmt.Println("    buffer 2:", len(buffers[2]), b)
-
+		if DEBUG {
+			fmt.Println(op.print(fnArgs))
+			fmt.Println("    stack:", stack.print())
+			b := make([]byte, 20)
+			copy(b, buffers[1])
+			fmt.Println("    buffer 1:", len(buffers[1]), b)
+			b = make([]byte, 20)
+			copy(b, buffers[2])
+			fmt.Println("    buffer 2:", len(buffers[2]), b)
+		}
 		// increment instruction pointer
 		iptr++
 	}
