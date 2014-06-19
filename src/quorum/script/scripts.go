@@ -18,9 +18,9 @@ var DefaultScript = []byte{
 // - add sibling:   0x02 followed by encoded sibling
 var BootstrapScript = []byte{
 	0x27, 0x01, //       00 load first byte of input
-	0x35, 0x00, 0x08, // 02 if byte == 0, goto 12
-	0x35, 0x01, 0x06, // 05 if byte == 1, goto 13
-	0x35, 0x02, 0x0E, // 08 if byte == 2, goto 24
+	0x35, 0x00, 0x0C, // 02 if byte == 0, goto 12
+	0x35, 0x01, 0x0D, // 05 if byte == 1, goto 13
+	0x35, 0x02, 0x18, // 08 if byte == 2, goto 24
 	0xFF, //             11 else, exit
 
 	0x2F, //             12 move instruction pointer to input

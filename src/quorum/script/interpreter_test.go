@@ -110,13 +110,13 @@ func TestVerify(t *testing.T) {
 
 	// construct script
 	si.Input = []byte{
-		0x25, 0x00, 0x0F, // 00 move data pointer to start of public key
-		0x2D, 0x01, //       03 copy public key into buffer 1
-		0x2E, 0x02, //       05 copy signed message into buffer 2
-		0x34, 0x01, 0x02, // 07 verify signature
-		0x1F, 0x00, 0x02, // 10 if verified, jump over rejection
-		0x30, //             13 reject input
-		0xFF, //             14 terminate script
+		0x25, 0x00, 0x0F, // move data pointer to start of public key
+		0x2D, 0x01, //       copy public key into buffer 1
+		0x2E, 0x02, //       copy signed message into buffer 2
+		0x34, 0x01, 0x02, // verify signature
+		0x36, 0x00, 0x02, // if verified, jump over rejection
+		0x30, //             reject input
+		0xFF, //             terminate script
 	}
 	si.Input = append(si.Input, encPKey...)
 	si.Input = append(si.Input, encSm...)

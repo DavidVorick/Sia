@@ -63,6 +63,8 @@ var opTable = []instruction{
 	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
 	instruction{0x34, "verify", 2, reflect.ValueOf(op_verify), 9},
 	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
+	instruction{0x36, "if_move", 2, reflect.ValueOf(op_if_move), 2},
+	instruction{0x37, "move", 2, reflect.ValueOf(op_move), 1},
 }
 
 // helper functions
@@ -414,6 +416,25 @@ func op_if(offh, offl byte) (err error) {
 }
 
 func op_goto(offh, offl byte) (err error) {
+	iptr = s2i(offh, offl) - 1
+	if iptr < 0 || iptr > len(script) {
+		err = errors.New("jumped to invalid index")
+	}
+	return
+}
+
+func op_if_move(offh, offl byte) (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	if v2b(a) {
+		err = op_move(offh, offl)
+	}
+	return
+}
+
+func op_move(offh, offl byte) (err error) {
 	iptr += s2i(offh, offl) - 1
 	if iptr < 0 || iptr > len(script) {
 		err = errors.New("jumped to invalid index")
