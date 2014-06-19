@@ -91,16 +91,16 @@ func s2i(high, low byte) int {
 	return int(int16(high)<<8 + int16(low))
 }
 
-func b2y(b bool) byte {
+func b2v(b bool) value {
 	if b {
-		return 0x01
+		return value{0x01}
 	} else {
-		return 0x00
+		return value{0x00}
 	}
 }
 
-func y2b(b value) bool {
-	return v2i(b) != 0
+func v2b(v value) bool {
+	return v2i(v) != 0
 }
 
 // opcodes
@@ -319,7 +319,7 @@ func op_equal() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(a == b))
+	push(b2v(a == b))
 	return
 }
 
@@ -329,7 +329,7 @@ func op_not_equal() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(a != b))
+	push(b2v(a != b))
 	return
 }
 
@@ -339,7 +339,7 @@ func op_less_int() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2i(a) < v2i(b)))
+	push(b2v(v2i(a) < v2i(b)))
 	return
 }
 
@@ -349,7 +349,7 @@ func op_less_float() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2f(a) < v2f(b)))
+	push(b2v(v2f(a) < v2f(b)))
 	return
 }
 
@@ -359,7 +359,7 @@ func op_greater_int() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2i(a) > v2i(b)))
+	push(b2v(v2i(a) > v2i(b)))
 	return
 }
 
@@ -369,7 +369,7 @@ func op_greater_float() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2f(a) > v2f(b)))
+	push(b2v(v2f(a) > v2f(b)))
 	return
 }
 
@@ -378,7 +378,7 @@ func op_logical_not() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(!y2b(a)))
+	push(b2v(!v2b(a)))
 	return
 }
 
@@ -388,7 +388,7 @@ func op_logical_or() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(y2b(a) || y2b(b)))
+	push(b2v(v2b(a) || v2b(b)))
 	return
 }
 
@@ -398,7 +398,7 @@ func op_logical_and() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(y2b(a) && y2b(b)))
+	push(b2v(v2b(a) && v2b(b)))
 	return
 }
 
@@ -407,7 +407,7 @@ func op_if(offh, offl byte) (err error) {
 	if err != nil {
 		return
 	}
-	if y2b(a) {
+	if v2b(a) {
 		err = op_goto(offh, offl)
 	}
 	return
@@ -613,7 +613,7 @@ func op_verify(pkey_buf, sm_buf byte) (err error) {
 	}
 	// verify signature
 	verified := pk.Verify(sm)
-	err = op_push_byte(b2y(verified))
+	err = push(b2v(verified))
 	return
 }
 
