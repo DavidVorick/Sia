@@ -19,7 +19,7 @@ import (
 type event interface {
 	handleEvent()
 	expiration() uint32
-	setCounter(uint64) // top 32 bits are the expiration, bottom 32 are the counter
+	setCounter(uint64)    // top 32 bits are the expiration, bottom 32 are the counter
 	fetchCounter() uint64 // structure will break if fetch does not return the same value called in set
 }
 
@@ -46,21 +46,17 @@ func (q *Quorum) insertEvent(e event) {
 	// with the same expiration.
 	eCounter := uint64(e.expiration())
 	eCounter = eCounter << 32
-	eCounter += q.eventCounter
+	eCounter += uint64(q.eventCounter)
 	q.eventCounter += 1
 	e.setCounter(eCounter)
 	freshNode := new(eventNode)
+	freshNode.event = e
 
 	// check if the current is nil
 	if q.eventRoot == nil {
 		q.eventRoot = freshNode
 		q.eventRoot.event = e
-		return
-	}
-
-	// check if we are behind the root
-	if q.eventRoot.event.fetchCounter() >= e.fetchCounter() {
-		// place this node behind the eventRoot, and roll random distances for the eventRoot
+		q.eventRoot.top = new(pointerStack)
 		return
 	}
 
@@ -75,16 +71,44 @@ func (q *Quorum) insertEvent(e event) {
 	// figure out the height of the node to be inserted
 	freshHeight := 1
 	heightAugmenter, _ := siacrypto.RandomInt(87) // rand from [0, 87)
-	for heightAugmenter < 32 { // 32/87 is ~ 1/e, which is mathematically the most efficient probability
+	for heightAugmenter < 32 {                    // 32/87 is ~ 1/e, which is mathematically the most efficient probability
 		freshHeight += 1
 		if freshHeight > currentHeight {
-			break // height can only grow by 1 upon insertion
+			// increase the height of the root node by one
+			//q.eventRoot.top.nextNode = freshNode
+			newTop := new(pointerStack)
+			newTop.nextPointer = q.eventRoot.top
+			q.eventRoot.top = newTop
+
+			break // root height can only grow by 1 each insertion
 		}
 		heightAugmenter, _ = siacrypto.RandomInt(87)
 	}
 
+	// check if we are behind the root
 	currentPointer := q.eventRoot.top
 	freshPointer := new(pointerStack)
+	if q.eventRoot.event.fetchCounter() >= e.fetchCounter() {
+		freshNode.top = q.eventRoot.top
+		q.eventRoot.top = freshPointer
+		for currentHeight > freshHeight {
+			currentPointer = currentPointer.nextPointer
+			currentHeight -= 1
+		}
+
+		for currentPointer.nextPointer != nil {
+			freshPointer.nextPointer = new(pointerStack)
+			freshPointer.nextNode = currentPointer.nextNode
+			currentPointer.nextNode = q.eventRoot
+			freshPointer = freshPointer.nextPointer
+			currentPointer = currentPointer.nextPointer
+		}
+		freshPointer.nextNode = currentPointer.nextNode
+		currentPointer.nextNode = q.eventRoot
+		q.eventRoot = freshNode
+		return
+	}
+
 	freshNode.top = freshPointer
 	for {
 		// move forward until a larger node is found
@@ -111,6 +135,37 @@ func (q *Quorum) insertEvent(e event) {
 		// move down
 		currentPointer = currentPointer.nextPointer
 		currentHeight -= 1
+	}
+}
+
+func (q *Quorum) eventNode(e event) *eventNode {
+	// check the base cases
+	if q.eventRoot == nil {
+		return nil
+	}
+	if q.eventRoot.event.fetchCounter() == e.fetchCounter() {
+		return q.eventRoot
+	}
+
+	currentPointer := q.eventRoot.top
+	for {
+		// move forward
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
+			currentPointer = currentPointer.nextNode.top
+		}
+
+		// see if the next node is the desired node
+		if currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() == e.fetchCounter() {
+			return currentPointer.nextNode
+		}
+
+		// see if we're at the bottom of the list - node not found
+		if currentPointer.nextPointer == nil {
+			return nil
+		}
+
+		// move down
+		currentPointer = currentPointer.nextPointer
 	}
 }
 

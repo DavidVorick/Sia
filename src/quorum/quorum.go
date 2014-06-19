@@ -34,7 +34,7 @@ type Quorum struct {
 
 	// Event management
 	eventCounter uint32
-	eventRoot *eventNode
+	eventRoot    *eventNode
 
 	// Wallet management
 	walletPrefix string
