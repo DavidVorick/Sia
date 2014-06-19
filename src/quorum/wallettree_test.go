@@ -186,7 +186,7 @@ func TestWalletTree(t *testing.T) {
 	// create a quorum and add a few children, just enough to hit a tree height
 	// of 4. After each insertion the tree is verified for integrity.
 	q := new(Quorum)
-	n := 16
+	n := 9
 	for i := 0; i < n; i++ {
 		newWallet := createTestWalletNode(i)
 		q.insert(newWallet)
@@ -222,38 +222,10 @@ func TestWalletTree(t *testing.T) {
 
 	// Insert many nodes into the tree, each with a random weight. After each
 	// iteration, verify the integrity of the tree.
-	n = 1500
-	weights := make(map[uint64]bool) // keeps track of which elements have been added
-	for i := 0; i < n; i++ {
-		found := false
-		var weight int
-		var err error
-		for !found {
-			weight, err = siacrypto.RandomInt(100000)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if weights[uint64(weight)] == false {
-				weights[uint64(weight)] = true
-				found = true
-			}
-		}
-
-		node := createTestWalletNode(weight)
-		q.insert(node)
-		checkViolations(2, q.walletRoot, i+1, t)
-	}
-
-	// randomly choose between inserting and deleting a random item
-	for i := 0; i < n; i++ {
-		insertOrDelete, err := siacrypto.RandomInt(2) // [0, 2)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if insertOrDelete == 0 {
-			// insert
+	for z := 0; z < 50; z++ {
+		n = 257
+		weights := make(map[uint64]bool) // keeps track of which elements have been added
+		for i := 0; i < n; i++ {
 			found := false
 			var weight int
 			var err error
@@ -271,64 +243,94 @@ func TestWalletTree(t *testing.T) {
 
 			node := createTestWalletNode(weight)
 			q.insert(node)
-			checkViolations(4, q.walletRoot, len(weights), t)
-		} else {
-			// delete
-			// turn weights into a slice so that a value can be selected at random
-			j := 0
-			weightSlice := make([]uint64, len(weights))
-			for key := range weights {
-				weightSlice[j] = key
-				j++
-			}
+			checkViolations(2, q.walletRoot, i+1, t)
+		}
 
-			j, err = siacrypto.RandomInt(len(weightSlice))
+		// randomly choose between inserting and deleting a random item
+		for i := 0; i < n; i++ {
+			insertOrDelete, err := siacrypto.RandomInt(2) // [0, 2)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			q.remove(WalletID(weightSlice[j]))
-			delete(weights, weightSlice[j])
-			checkViolations(5, q.walletRoot, len(weights), t)
+			if insertOrDelete == 0 {
+				// insert
+				found := false
+				var weight int
+				var err error
+				for !found {
+					weight, err = siacrypto.RandomInt(100000)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if weights[uint64(weight)] == false {
+						weights[uint64(weight)] = true
+						found = true
+					}
+				}
+
+				node := createTestWalletNode(weight)
+				q.insert(node)
+				checkViolations(4, q.walletRoot, len(weights), t)
+			} else {
+				// delete
+				// turn weights into a slice so that a value can be selected at random
+				j := 0
+				weightSlice := make([]uint64, len(weights))
+				for key := range weights {
+					weightSlice[j] = key
+					j++
+				}
+
+				j, err = siacrypto.RandomInt(len(weightSlice))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				q.remove(WalletID(weightSlice[j]))
+				delete(weights, weightSlice[j])
+				checkViolations(5, q.walletRoot, len(weights), t)
+			}
 		}
-	}
 
-	// verify that all weights within the slice are reachable
-	for key := range weights {
-		w := q.retrieve(WalletID(key))
-		if w == nil {
-			t.Error("Retrieval Error:", key)
+		// verify that all weights within the slice are reachable
+		for key := range weights {
+			w := q.retrieve(WalletID(key))
+			if w == nil {
+				t.Error("Retrieval Error:", key)
+			}
 		}
-	}
 
-	// delete all of the remaining items in the map in a random order
-	i := 0
-	weightSlice := make([]uint64, len(weights))
-	for key := range weights {
-		weightSlice[i] = key
-		i++
-	}
-
-	// shuffle the slice
-	for i := range weightSlice {
-		newIndex, err := siacrypto.RandomInt(len(weightSlice) - i)
-		if err != nil {
-			t.Fatal(err)
+		// delete all of the remaining items in the map in a random order
+		i := 0
+		weightSlice := make([]uint64, len(weights))
+		for key := range weights {
+			weightSlice[i] = key
+			i++
 		}
-		newIndex += i
 
-		tmp := weightSlice[newIndex]
-		weightSlice[newIndex] = weightSlice[i]
-		weightSlice[i] = tmp
-	}
+		// shuffle the slice
+		for i := range weightSlice {
+			newIndex, err := siacrypto.RandomInt(len(weightSlice) - i)
+			if err != nil {
+				t.Fatal(err)
+			}
+			newIndex += i
 
-	// remove the elements one at a time
-	for i, v := range weightSlice {
-		q.remove(WalletID(v))
-		w := q.retrieve(WalletID(v))
-		if w != nil {
-			t.Error("Maganed to retreive a removed wallet:", v)
+			tmp := weightSlice[newIndex]
+			weightSlice[newIndex] = weightSlice[i]
+			weightSlice[i] = tmp
 		}
-		checkViolations(3, q.walletRoot, len(weightSlice)-1-i, t)
+
+		// remove the elements one at a time
+		for i, v := range weightSlice {
+			q.remove(WalletID(v))
+			w := q.retrieve(WalletID(v))
+			if w != nil {
+				t.Error("Maganed to retreive a removed wallet:", v)
+			}
+			checkViolations(3, q.walletRoot, len(weightSlice)-1-i, t)
+		}
 	}
 }
