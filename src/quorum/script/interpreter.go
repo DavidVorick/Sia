@@ -50,17 +50,19 @@ func push(v value) (err error) {
 	return
 }
 
-func (s *stackElem) print() {
-	print("{ ")
+func (s *stackElem) print() string {
+	str := "{ "
 	p := s
 	for {
 		if p == nil {
 			break
 		}
-		print(v2i(p.val), " ")
+		str += fmt.Sprint(v2i(p.val))
+		str += " "
 		p = p.next
 	}
-	print("}")
+	str += "}"
+	return str
 }
 
 // global vars accessed by the various opcode functions
@@ -155,11 +157,15 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			break
 		}
 
-		// DEBUG: print op and stack
-		// print(op.print(fnArgs))
-		// print("\n    stack:  ")
-		// stack.print()
-		// print("\n")
+		// DEBUG: print op, stack, and buffers
+		// fmt.Println(op.print(fnArgs))
+		// fmt.Println("    stack:", stack.print())
+		// b := make([]byte, 20)
+		// copy(b, buffers[1])
+		// fmt.Println("    buffer 1:", len(buffers[1]), b)
+		// b = make([]byte, 20)
+		// copy(b, buffers[2])
+		// fmt.Println("    buffer 2:", len(buffers[2]), b)
 
 		// increment instruction pointer
 		iptr++
