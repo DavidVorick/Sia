@@ -1,15 +1,17 @@
 package quorum
 
 type upload struct {
-	timeout uint32
-	counter uint64
+	atoms    [256]bool
+	priority uint32
+	deadline uint32
+	counter  uint64
 }
 
 func (u *upload) handleEvent() {
 }
 
 func (u *upload) expiration() uint32 {
-	return u.timeout
+	return u.deadline
 }
 
 func (u *upload) setCounter(c uint64) {

@@ -41,6 +41,9 @@ type Quorum struct {
 	wallets      uint32
 	walletRoot   *walletNode
 
+	// File management
+	uploads map[string][]*upload
+
 	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
 

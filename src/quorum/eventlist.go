@@ -4,6 +4,10 @@ import (
 	"siacrypto"
 )
 
+const (
+	MaxDeadline uint32 = 1440
+)
+
 // An event is a task that the quorum will have to perform at a certain block,
 // which is returned by expiration(). Something may trigger the event early, at
 // which point the event will be deleted from the eventList. Each block, all

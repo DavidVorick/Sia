@@ -62,7 +62,7 @@ func (q *Quorum) printWallets(w *walletNode) (s string) {
 
 	s += q.printWallets(w.children[0])
 
-	s += fmt.Sprintf("\t\tWallet %v:\n", w.id)
+	s += fmt.Sprintf("\t\tWallet %x:\n", w.id)
 	s += q.walletString(w.id)
 	s += fmt.Sprintf("\n")
 
