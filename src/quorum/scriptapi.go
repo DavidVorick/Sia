@@ -216,6 +216,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 		uploadHash = siacrypto.CalculateHash(append(uploadHash[:], newHashSet[i][:]...))
 	}
 	u := upload{
+		sectorID:              sectorID,
 		requiredConfirmations: confirmations,
 		hashSet:               newHashSet,
 		hash:                  uploadHash,

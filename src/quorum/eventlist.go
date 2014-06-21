@@ -21,7 +21,7 @@ const (
 // and being able to provide malicious input to distrupt the order notation of
 // the list.
 type event interface {
-	handleEvent()
+	handleEvent(q *Quorum)
 	expiration() uint32
 	setCounter(uint64)    // top 32 bits are the expiration, bottom 32 are the counter
 	fetchCounter() uint64 // structure will break if fetch does not return the same value called in set
