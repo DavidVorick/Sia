@@ -2,10 +2,14 @@ package quorum
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"siaencoding"
+	"siacrypto"
 )
+
+// Cost structures...
+// There's a computational cost associated with all of these actions, but there is also a storage cost.
+// And there might also be other costs associated, such as network costs.
+// I don't know the best way to handle oall of this
 
 const (
 	CreateWalletMaxCost = 8
@@ -128,51 +132,37 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	return
 }
 
-func (q *Quorum) AllocateSector(w *Wallet, sector byte, atoms byte, m byte) (cost int) {
+func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
+	cost += 3
 	weightDelta := int(atoms)
-	weightDelta -= int(w.sectorOverview[sector].atoms)
+	weightDelta -= int(w.sectorAtoms)
+	if weightDelta == 0 {
+		return
+	}
 
-	// derive the name of the file housing the sector
+	// derive the name of the file housing the sector, and truncate the file
 	walletName := q.walletFilename(w.id)
-	sectorSlice := make([]byte, 1)
-	sectorSlice[0] = sector
-	sectorName := walletName + ".sector" + siaencoding.EncFilename(sectorSlice)
-
-	// delete old file associated with the sector
-	file, err := os.Create(sectorName)
+	sectorName := walletName + ".sector"
+	err = os.Truncate(sectorName, int64(atoms)*int64(AtomSize))
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
-
-	// write all the bytes to here
-	emptySlice := make([]byte, int(atoms)*AtomSize)
-	n, err := file.Write(emptySlice)
-	if n != int(atoms)*AtomSize || err != nil {
-		panic(err)
-	}
-
-	w.sectorOverview[sector].m = m
-	w.sectorOverview[sector].atoms = atoms
 
 	// update the weights in the wallet tree
+	q.updateWeight(w.id, weightDelta)
+	weight = weightDelta
+
+	// update the hash associated with the sector
 
 	return
 }
 
-func (q *Quorum) ProposeUpload(w *Wallet, sector byte, atoms [256]bool, priority uint32, confirmations byte, deadline uint32) (cost int, err error) {
-	// count the number of allocated atoms necessary for this upload
+func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHash siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
 	cost += 2
-	var i byte
-	for i = 255; i >= 0; i-- {
-		if atoms[i] == true {
-			break
-		}
-	}
 
 	// make sure the sector is allocated
-	if w.sectorOverview[sector].atoms < i {
-		err = errors.New("insufficient number of atoms allocated for Proposed Upload")
+	if w.sectorAtoms == 0 {
+		err = errors.New("Sector is not allocated")
 		return
 	}
 
@@ -181,7 +171,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, sector byte, atoms [256]bool, priority
 		err = errors.New("confirmations cannot be greater than quorum size")
 		return
 	}
-	if confirmations < w.sectorOverview[sector].m {
+	if confirmations < w.sectorM {
 		err = errors.New("confirmations cannot be less than the value of 'm' for the given sector")
 		return
 	}
@@ -196,51 +186,41 @@ func (q *Quorum) ProposeUpload(w *Wallet, sector byte, atoms [256]bool, priority
 		return
 	}
 
-	// make sure that all selected atoms are available to the sector
 	cost += 2
-	sectorString := fmt.Sprintf("%s%s", w.id.Bytes(), sector)
+	// look up all of the open uploads on this sector, and compare their hashes
+	// to the parent hash of this upload. As soon as one is found (potentially
+	// starting directly from the existing hash), all remaining uploads are
+	// truncated. There can only exist a single chain of potential uploads, all
+	// other get defeated by precedence.
+	sectorID := string(w.id.Bytes())
+	if parentHash == w.sectorHash {
+		// clear all existing uploads
+		q.clearUploads(sectorID, 0)
+	} else {
+		var i int
+		for i = 0; i < len(q.uploads[sectorID]); i++ {
+			if parentHash == q.uploads[sectorID][i].hash {
+				break
+			}
+		}
+
+		if i == len(q.uploads[sectorID]) {
+			err = errors.New("upload has invalid parent hash")
+			return
+		}
+		q.clearUploads(sectorID, i)
+	}
+
 	u := upload{
-		atoms:    atoms,
-		priority: priority,
+		requiredConfirmations: confirmations,
+		hash:     newHash,
+		weight:   atomsChanged,
 		deadline: deadline,
 	}
-	if q.uploads[sectorString] != nil {
-		// check that there are no conflicting higher prioirty uploads in progress
-		for i := range q.uploads[sectorString] {
-			if q.uploads[sectorString][i].priority > priority {
-				for j := range q.uploads[sectorString][i].atoms {
-					if q.uploads[sectorString][i].atoms[j] == true && atoms[j] == true {
-						err = errors.New("upload request is blocked by a higher priority upload in progress")
-						return
-					}
-				}
-			}
-		}
 
-		// overwrite any conflicting uploads of equal or lesser priority
-		for i := range q.uploads[sectorString] {
-			if q.uploads[sectorString][i].priority <= priority {
-				for j := range q.uploads[sectorString][i].atoms {
-					if q.uploads[sectorString][i].atoms[j] == true && atoms[j] == true {
-						// remove the upload from the slice
-						copy(q.uploads[sectorString][i-1:], q.uploads[sectorString][i+1:])
-						q.uploads[sectorString] = q.uploads[sectorString][:len(q.uploads[sectorString])-1]
-
-						// signal to the participant that the in-progress upload should be rejected
-						// ...?
-					}
-				}
-			}
-		}
-
-		// append the request to the uploads
-		q.uploads[sectorString] = append(q.uploads[sectorString], &u)
-	} else {
-		q.uploads[sectorString] = make([]*upload, 1)
-		q.uploads[sectorString][0] = &u
-	}
-
-	// add the upload to the eventList
+	cost += int((deadline - q.height) * uint32(atomsChanged) * q.storagePrice) // also need to add in the growth restraints
+	weight = atomsChanged
+	q.updateWeight(w.id, int(atomsChanged))
 	q.insertEvent(&u)
 	return
 }

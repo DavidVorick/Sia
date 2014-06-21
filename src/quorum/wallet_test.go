@@ -12,14 +12,16 @@ import (
 // does not introduce any errors.
 func TestWalletCoding(t *testing.T) {
 	// Fill out a wallet with completely random values
-	w := new(Wallet)
-	w.Balance = NewBalance(siacrypto.RandomUInt64(), siacrypto.RandomUInt64())
-	for i := range w.sectorOverview {
-		w.sectorOverview[i].m = siacrypto.RandomByte()
-		w.sectorOverview[i].atoms = siacrypto.RandomByte()
+	w := &Wallet{
+		id:          WalletID(siacrypto.RandomUInt64()),
+		Balance:     NewBalance(siacrypto.RandomUInt64(), siacrypto.RandomUInt64()),
+		sectorAtoms: siacrypto.RandomUInt16(),
+		sectorM:     35,
+		scriptAtoms: siacrypto.RandomUInt16(),
+		script:      siacrypto.RandomByteSlice(45),
 	}
-	randomBytes := siacrypto.RandomByteSlice(400)
-	copy(w.script, randomBytes)
+	copy(w.walletHash[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
+	copy(w.sectorHash[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
 
 	wBytes, err := w.GobEncode()
 	if err != nil {
@@ -39,15 +41,19 @@ func TestWalletCoding(t *testing.T) {
 		t.Error("wBytes mismatches wConfirm")
 	}
 	if w.Balance != wObj.Balance {
-		t.Error("Error with upperBalance")
+		t.Error("Error with balance")
 	}
-	for i := range w.sectorOverview {
-		if w.sectorOverview[i].m != wObj.sectorOverview[i].m {
-			t.Error("Error with sectorOverview:", i)
-		}
-		if w.sectorOverview[i].atoms != wObj.sectorOverview[i].atoms {
-			t.Error("Error with sectorOverview:", i)
-		}
+	if w.sectorAtoms != wObj.sectorAtoms {
+		t.Error("Error with sectorAtoms")
+	}
+	if w.sectorM != wObj.sectorM {
+		t.Error("Error with sectorM")
+	}
+	if w.sectorHash != wObj.sectorHash {
+		t.Error("Error with sectorHash")
+	}
+	if w.scriptAtoms != wObj.scriptAtoms {
+		t.Error("Error with scriptAtoms")
 	}
 	if bytes.Compare(w.script, wObj.script) != 0 {
 		t.Error("Script mismatch")

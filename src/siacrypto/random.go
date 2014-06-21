@@ -42,6 +42,17 @@ func RandomInt(ceiling int) (randInt int, err error) {
 	return
 }
 
+func RandomUInt16() (randInt uint16) {
+	maxint64 := int64(^uint64(0) >> 1)
+	bigInt := big.NewInt(maxint64)
+	randBig, err := rand.Int(rand.Reader, bigInt)
+	if err != nil {
+		return
+	}
+	randInt = uint16(randBig.Int64())
+	return
+}
+
 // RandomUInt64() generates a random uint64 of any value
 func RandomUInt64() (randInt uint64) {
 	maxint64 := int64(^uint64(0) >> 1)
