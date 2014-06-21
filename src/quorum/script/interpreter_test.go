@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// initEnvialize a script execution environment
+// initialize a script execution environment
 func initEnv() (q *quorum.Quorum, si *ScriptInput) {
 	// create script execution environment
 	q = new(quorum.Quorum)
