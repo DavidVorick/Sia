@@ -1,10 +1,16 @@
 package quorum
 
+import (
+	"siacrypto"
+)
+
 type upload struct {
-	atoms    [256]bool
-	priority uint32
-	deadline uint32
-	counter  uint64
+	requiredConfirmations byte
+	receivedConfirmations [QuorumSize]bool
+	hash                  siacrypto.Hash
+	weight                uint16
+	deadline              uint32
+	counter               uint64
 }
 
 func (u *upload) handleEvent() {
@@ -20,4 +26,8 @@ func (u *upload) setCounter(c uint64) {
 
 func (u *upload) fetchCounter() uint64 {
 	return u.counter
+}
+
+func (q *Quorum) clearUploads(sectorID string, i int) {
+	// delete all uploads starting with the ith index
 }

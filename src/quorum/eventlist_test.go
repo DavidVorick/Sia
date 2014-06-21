@@ -26,7 +26,7 @@ func countReachableEvents(en *eventNode) (i int) {
 
 func TestEventList(t *testing.T) {
 	u0 := &upload{
-		timeout: 5,
+		deadline: 5,
 	}
 
 	q := new(Quorum)
@@ -59,7 +59,7 @@ func TestEventList(t *testing.T) {
 		for i := 0; i < n; i++ {
 			randomTimeout, _ := siacrypto.RandomInt(12)
 			nu := &upload{
-				timeout: uint32(randomTimeout),
+				deadline: uint32(randomTimeout),
 			}
 			uploadMap[nu] = nu
 			q.insertEvent(nu)
