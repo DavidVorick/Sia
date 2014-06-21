@@ -30,7 +30,7 @@ func TestOpCodes(t *testing.T) {
 		0x01, 0x02, // push 2
 		0x01, 0x03, // push 3
 		// if 2 == 3, jump ahead 10 instructions (causing an error)
-		0x16, 0x1F, 0x00, 0x0A,
+		0x16, 0x1F, 0x0A, 0x00,
 	}
 	_, err := si.Execute(q)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestOpCodes(t *testing.T) {
 		0x21, 0x01, // store 2 in register 1
 		0x22, 0x01, // load 2 from register 1
 		// if 2 != 2, jump ahead 10 instructions (causing an error)
-		0x17, 0x1F, 0x00, 0x0A,
+		0x17, 0x1F, 0x0A, 0x00,
 	}
 	_, err = si.Execute(q)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestInvalidScripts(t *testing.T) {
 		t.Fatal("expected missing argument error")
 	}
 	si.Input = []byte{
-		0x25, 0x7F, 0xFF,
+		0x25, 0xFF, 0x7F,
 	}
 	_, err = si.Execute(q)
 	if err == nil {
@@ -110,11 +110,11 @@ func TestVerify(t *testing.T) {
 
 	// construct script
 	si.Input = []byte{
-		0x25, 0x00, 0x0F, // move data pointer to start of public key
+		0x25, 0x0F, 0x00, // move data pointer to start of public key
 		0x2D, 0x01, //       copy public key into buffer 1
 		0x2E, 0x02, //       copy signed message into buffer 2
 		0x34, 0x01, 0x02, // verify signature
-		0x36, 0x00, 0x02, // if verified, jump over rejection
+		0x36, 0x02, 0x00, // if verified, jump over rejection
 		0x30, //             reject input
 		0xFF, //             terminate script
 	}

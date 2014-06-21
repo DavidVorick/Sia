@@ -4,20 +4,20 @@ import (
 	"siaencoding"
 )
 
-func shortLen(data []byte) (h, l byte) {
-	h = byte(len(data) >> 8)
+func shortLen(data []byte) (l, h byte) {
 	l = byte(len(data))
+	h = byte(len(data) >> 8)
 	return
 }
 
 // the default script
 // verifies public key, then transfers control to the input
 func DefaultScript(encPKey []byte) []byte {
-	lenh, lenl := shortLen(encPKey)
-	negh, negl := 0xFF-lenh, 0xFF-lenl
+	lenl, lenh := shortLen(encPKey)
+	negl, negh := 0xFF-lenl, 0xFF-lenh
 	return append([]byte{
-		0x25, negh, negl, // 00 move data pointer to public key
-		0x02, lenh, lenl, // 03 push length of public key
+		0x25, negl, negh, // 00 move data pointer to public key
+		0x02, lenl, lenh, // 03 push length of public key
 		0x2B, 0x01, //       06 read public key into buffer 1
 		0x2D, 0x02, //       08 read signed message into buffer 2
 		0x34, 0x01, 0x02, // 10 verify signature
@@ -55,7 +55,7 @@ func AddSiblingInput(encSm, encSibling []byte) []byte {
 	lenh, lenl := shortLen(encSm)
 	s := append([]byte{lenh, lenl}, encSm...)
 	s = append(s, []byte{
-		0x25, 0x00, 0x08, // move data pointer to encoded sibling
+		0x25, 0x08, 0x00, // move data pointer to encoded sibling
 		0x2E, 0x01, //       read sibling into buffer 1
 		0x31, 0x01, //       call add sibling
 		0xFF, //             exit

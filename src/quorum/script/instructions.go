@@ -89,8 +89,8 @@ func f2v(f float64) (v value) {
 }
 
 // convert two bytes to signed short
-func s2i(high, low byte) int {
-	return int(int16(high)<<8 + int16(low))
+func s2i(low, high byte) int {
+	return int(int16(low) + int16(high)<<8)
 }
 
 func b2v(b bool) value {
@@ -116,7 +116,7 @@ func op_push_byte(b byte) (err error) {
 	return
 }
 
-func op_push_short(h, l byte) (err error) {
+func op_push_short(l, h byte) (err error) {
 	err = push(value{l, h})
 	return
 }
@@ -404,38 +404,38 @@ func op_logical_and() (err error) {
 	return
 }
 
-func op_if(offh, offl byte) (err error) {
+func op_if(offl, offh byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
 	if v2b(a) {
-		err = op_goto(offh, offl)
+		err = op_goto(offl, offh)
 	}
 	return
 }
 
-func op_goto(offh, offl byte) (err error) {
-	iptr = s2i(offh, offl) - 1
+func op_goto(offl, offh byte) (err error) {
+	iptr = s2i(offl, offh) - 1
 	if iptr < 0 || iptr > len(script) {
 		err = errors.New("jumped to invalid index")
 	}
 	return
 }
 
-func op_if_move(offh, offl byte) (err error) {
+func op_if_move(offl, offh byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
 	if v2b(a) {
-		err = op_move(offh, offl)
+		err = op_move(offl, offh)
 	}
 	return
 }
 
-func op_move(offh, offl byte) (err error) {
-	iptr += s2i(offh, offl) - 1
+func op_move(offl, offh byte) (err error) {
+	iptr += s2i(offl, offh) - 1
 	if iptr < 0 || iptr > len(script) {
 		err = errors.New("jumped to invalid index")
 	}
@@ -466,16 +466,16 @@ func op_reg_dec(reg, n byte) (err error) {
 	return
 }
 
-func op_data_move(loch, locl byte) (err error) {
-	dptr += s2i(loch, locl)
+func op_data_move(locl, loch byte) (err error) {
+	dptr += s2i(locl, loch)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
 	}
 	return
 }
 
-func op_data_goto(loch, locl byte) (err error) {
-	dptr = s2i(loch, locl)
+func op_data_goto(locl, loch byte) (err error) {
+	dptr = s2i(locl, loch)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
 	}
@@ -491,7 +491,7 @@ func op_data_push(n byte) (err error) {
 	return
 }
 
-func op_data_reg(n, reg byte) (err error) {
+func op_data_reg(reg, n byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	dptr += copy(b, script[dptr:])
