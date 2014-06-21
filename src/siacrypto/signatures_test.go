@@ -242,12 +242,11 @@ func TestMessageEncoding(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signedMessage, err := secretKey.Sign(RandomByteSlice(0))
+	message := []byte("test")
+	signedMessage, err := secretKey.Sign(message)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	signedMessage.Message = nil
 
 	gobSm, err := signedMessage.GobEncode()
 	if err != nil {

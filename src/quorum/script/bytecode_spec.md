@@ -55,6 +55,8 @@ List of bytecodes
 | 0x31 | add_sibling   | 1    | adds sibling; pushes success value                                                     |
 | 0x32 | make_wallet   | 1    | adds a wallet with an initial balance and script                                       |
 | 0x33 | send          | 0    | sends siacoins from host wallet to recipient                                           |
-| 0x34 | verify        | 0    | verifies that a signature is valid; pushes bool                                        |
+| 0x34 | verify        | 2    | verifies that a signature is valid; pushes bool                                        |
 | 0x35 | switch        | 2    | if value and $1 are equal, branch to $2. The value is only consumed upon equality.     |
+| 0x36 | if_move       | 2    | same as if, but with a relative, rather than absolute, address                         |
+| 0x37 | move          | 2    | move instruction pointer by offset $1$2                                                |
 | 0xFF | exit          | 0    | terminates execution                                                                   |

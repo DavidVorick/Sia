@@ -83,23 +83,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 		// create the bootstrap wallet
 		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 15000), script.BootstrapScript)
+		wallet := p.quorum.LoadWallet(BootstrapID)
 
-		// create the add sibling script input
-		var encSibling []byte
-		encSibling, err = p.self.GobEncode()
-		if err != nil {
-			return
-		}
-
-		// execute the bootstrapping script
-		si := script.ScriptInput{
-			WalletID: BootstrapID,
-			Input:    script.AddSiblingInput(encSibling),
-		}
-		_, err = si.Execute(&p.quorum)
-		if err != nil {
-			return
-		}
+		// add self as a sibling
+		p.quorum.AddSibling(wallet, p.self)
 
 		siblings := p.quorum.Siblings()
 		if siblings[0] == nil {
@@ -226,10 +213,15 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	p.synchronized = true // now compile will be called upon receiving a block
 
 	// 8. Request wallet from bootstrap
+	pkey := p.self.PublicKey()
+	gobPKey, err := pkey.GobEncode()
+	if err != nil {
+		return
+	}
 	walletID := siacrypto.RandomUInt64()
 	s := script.ScriptInput{
 		WalletID: BootstrapID,
-		Input:    script.CreateWalletInput(walletID, script.DefaultScript),
+		Input:    script.CreateWalletInput(walletID, script.DefaultScript(gobPKey)),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
@@ -245,14 +237,22 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 9. Wait for next compile
 	time.Sleep(time.Duration(quorum.QuorumSize) * StepDuration)
 
-	// 10. Submit AddSibling request
+	// 10. Create and send AddSibling request
 	gobSibling, err := p.self.GobEncode()
 	if err != nil {
 		return
 	}
+	signedMessage, err := p.secretKey.Sign(siacrypto.RandomByteSlice(8))
+	if err != nil {
+		return
+	}
+	gobSm, err := signedMessage.GobEncode()
+	if err != nil {
+		return
+	}
 	s = script.ScriptInput{
-		WalletID: BootstrapID,
-		Input:    script.AddSiblingInput(gobSibling),
+		WalletID: quorum.WalletID(walletID),
+		Input:    script.AddSiblingInput(gobSm, gobSibling),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{

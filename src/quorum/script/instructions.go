@@ -61,8 +61,10 @@ var opTable = []instruction{
 	instruction{0x31, "add_sibling", 1, reflect.ValueOf(op_add_sibling), 5},
 	instruction{0x32, "add_wallet", 1, reflect.ValueOf(op_add_wallet), 5},
 	instruction{0x33, "send", 0, reflect.ValueOf(op_send), 5},
-	instruction{0x34, "verify", 0, reflect.ValueOf(op_verify), 9},
+	instruction{0x34, "verify", 2, reflect.ValueOf(op_verify), 9},
 	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
+	instruction{0x36, "if_move", 2, reflect.ValueOf(op_if_move), 2},
+	instruction{0x37, "move", 2, reflect.ValueOf(op_move), 1},
 }
 
 // helper functions
@@ -87,20 +89,20 @@ func f2v(f float64) (v value) {
 }
 
 // convert two bytes to signed short
-func s2i(high, low byte) int {
-	return int(int16(high)<<8 + int16(low))
+func s2i(low, high byte) int {
+	return int(int16(low) + int16(high)<<8)
 }
 
-func b2y(b bool) byte {
+func b2v(b bool) value {
 	if b {
-		return 0x01
+		return value{0x01}
 	} else {
-		return 0x00
+		return value{0x00}
 	}
 }
 
-func y2b(b value) bool {
-	return v2i(b) != 0
+func v2b(v value) bool {
+	return v2i(v) != 0
 }
 
 // opcodes
@@ -114,7 +116,7 @@ func op_push_byte(b byte) (err error) {
 	return
 }
 
-func op_push_short(h, l byte) (err error) {
+func op_push_short(l, h byte) (err error) {
 	err = push(value{l, h})
 	return
 }
@@ -319,7 +321,7 @@ func op_equal() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(a == b))
+	push(b2v(a == b))
 	return
 }
 
@@ -329,7 +331,7 @@ func op_not_equal() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(a != b))
+	push(b2v(a != b))
 	return
 }
 
@@ -339,7 +341,7 @@ func op_less_int() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2i(a) < v2i(b)))
+	push(b2v(v2i(a) < v2i(b)))
 	return
 }
 
@@ -349,7 +351,7 @@ func op_less_float() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2f(a) < v2f(b)))
+	push(b2v(v2f(a) < v2f(b)))
 	return
 }
 
@@ -359,7 +361,7 @@ func op_greater_int() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2i(a) > v2i(b)))
+	push(b2v(v2i(a) > v2i(b)))
 	return
 }
 
@@ -369,7 +371,7 @@ func op_greater_float() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(v2f(a) > v2f(b)))
+	push(b2v(v2f(a) > v2f(b)))
 	return
 }
 
@@ -378,7 +380,7 @@ func op_logical_not() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(!y2b(a)))
+	push(b2v(!v2b(a)))
 	return
 }
 
@@ -388,7 +390,7 @@ func op_logical_or() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(y2b(a) || y2b(b)))
+	push(b2v(v2b(a) || v2b(b)))
 	return
 }
 
@@ -398,23 +400,42 @@ func op_logical_and() (err error) {
 	if err != nil {
 		return
 	}
-	op_push_byte(b2y(y2b(a) && y2b(b)))
+	push(b2v(v2b(a) && v2b(b)))
 	return
 }
 
-func op_if(offh, offl byte) (err error) {
+func op_if(offl, offh byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
 	}
-	if y2b(a) {
-		err = op_goto(offh, offl)
+	if v2b(a) {
+		err = op_goto(offl, offh)
 	}
 	return
 }
 
-func op_goto(offh, offl byte) (err error) {
-	iptr += s2i(offh, offl) - 1
+func op_goto(offl, offh byte) (err error) {
+	iptr = s2i(offl, offh) - 1
+	if iptr < 0 || iptr > len(script) {
+		err = errors.New("jumped to invalid index")
+	}
+	return
+}
+
+func op_if_move(offl, offh byte) (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	if v2b(a) {
+		err = op_move(offl, offh)
+	}
+	return
+}
+
+func op_move(offl, offh byte) (err error) {
+	iptr += s2i(offl, offh) - 1
 	if iptr < 0 || iptr > len(script) {
 		err = errors.New("jumped to invalid index")
 	}
@@ -445,16 +466,16 @@ func op_reg_dec(reg, n byte) (err error) {
 	return
 }
 
-func op_data_move(loch, locl byte) (err error) {
-	dptr += s2i(loch, locl)
+func op_data_move(locl, loch byte) (err error) {
+	dptr += s2i(locl, loch)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
 	}
 	return
 }
 
-func op_data_goto(loch, locl byte) (err error) {
-	dptr = s2i(loch, locl)
+func op_data_goto(locl, loch byte) (err error) {
+	dptr = s2i(locl, loch)
 	if dptr < 0 || dptr > len(script) {
 		err = errors.New("invalid data access")
 	}
@@ -470,7 +491,7 @@ func op_data_push(n byte) (err error) {
 	return
 }
 
-func op_data_reg(n, reg byte) (err error) {
+func op_data_reg(reg, n byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	dptr += copy(b, script[dptr:])
@@ -497,7 +518,7 @@ func op_buf_copy(buf byte) (err error) {
 	if err != nil {
 		return
 	}
-	length := int16(v2i(lengthv))
+	length := uint16(v2i(lengthv))
 	buffers[buf] = make([]byte, length)
 	dptr += copy(buffers[buf], script[dptr:])
 	return
@@ -541,12 +562,11 @@ func op_transfer() (err error) {
 }
 
 func op_reject() (err error) {
-	return errors.New("rejectected input")
+	return errors.New("rejected input")
 }
 
 func op_add_sibling(buf byte) (err error) {
 	encSibling := buffers[buf]
-	print(len(encSibling))
 
 	// decode sibling
 	sib := new(quorum.Sibling)
@@ -607,7 +627,6 @@ func op_verify(pkey_buf, sm_buf byte) (err error) {
 		return
 	}
 	// decode signed message
-	// TODO: pack message and signature into one buffer?
 	sm := new(siacrypto.SignedMessage)
 	err = sm.GobDecode(buffers[sm_buf])
 	if err != nil {
@@ -615,7 +634,7 @@ func op_verify(pkey_buf, sm_buf byte) (err error) {
 	}
 	// verify signature
 	verified := pk.Verify(sm)
-	err = op_push_byte(b2y(verified))
+	err = push(b2v(verified))
 	return
 }
 
