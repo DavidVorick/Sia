@@ -15,8 +15,9 @@ const (
 // Heartbeats contain keepalive information as well as a set of scripts
 // submitted by arbitrary sources.
 type heartbeat struct {
-	entropy      quorum.Entropy
-	scriptInputs []script.ScriptInput
+	entropy            quorum.Entropy
+	uploadAdvancements []quorum.UploadAdvancement
+	scriptInputs       []script.ScriptInput
 }
 
 func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {

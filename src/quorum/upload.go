@@ -15,6 +15,13 @@ type upload struct {
 	counter               uint64
 }
 
+type UploadAdvancement struct {
+	SectorID  string
+	Index     byte
+	Sibling   byte
+	Signature siacrypto.Signature
+}
+
 func (u *upload) handleEvent(q *Quorum) {
 	if q.uploads[u.sectorID] == nil {
 		return
@@ -48,18 +55,38 @@ func (q *Quorum) clearUploads(sectorID string, i int) {
 	// delete all uploads starting with the ith index
 }
 
-func (q *Quorum) advanceUpload(sectorID string, i int, sibling byte) {
+func (q *Quorum) advanceUpload(u *UploadAdvancement) {
 	// mark the sibling sibling as having completed the upload
 	// then check if the upload is ready to have complete() called
-	if q.uploads[sectorID] == nil {
+	if q.uploads[u.SectorID] == nil {
 		return
 	}
-	if len(q.uploads[sectorID]) < i {
+	if byte(len(q.uploads[u.SectorID])) < u.Index {
 		return
 	}
-	q.uploads[sectorID][i].receivedConfirmations[sibling] = true
-	q.uploads[sectorID][i].requiredConfirmations -= 1
-	if q.uploads[sectorID][i].requiredConfirmations == 0 {
+	if q.siblings[u.Sibling] == nil {
+		return
+	}
+	if q.uploads[u.SectorID][u.Index].receivedConfirmations[u.Sibling] == true {
+		return
+	}
+
+	// verify that the signature belongs to the sibling
+	advanceBytes := make([]byte, 10)
+	copy(advanceBytes, []byte(u.SectorID))
+	advanceBytes[8] = u.Index
+	advanceBytes[9] = u.Sibling
+	verified := q.siblings[u.Sibling].publicKey.Verify(&siacrypto.SignedMessage{
+		Signature: u.Signature,
+		Message:   advanceBytes,
+	})
+	if !verified {
+		return
+	}
+
+	q.uploads[u.SectorID][u.Index].receivedConfirmations[u.Sibling] = true
+	q.uploads[u.SectorID][u.Index].requiredConfirmations -= 1
+	if q.uploads[u.SectorID][u.Index].requiredConfirmations == 0 {
 		// completeUpload()
 	}
 }
