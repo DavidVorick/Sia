@@ -4,6 +4,10 @@ import (
 	"siacrypto"
 )
 
+const (
+	UploadAdvancementSize = 10 + siacrypto.SignatureSize
+)
+
 type upload struct {
 	sectorID              string
 	requiredConfirmations byte

@@ -42,6 +42,7 @@ test-quorum: libraries
 	$(govars) go test -v -race quorum
 
 dependencies: submodule-update race-libs directories
+	cd src/siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
 
 race-libs:
 	$(govars) go install -race std

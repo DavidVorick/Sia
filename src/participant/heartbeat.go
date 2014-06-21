@@ -38,6 +38,10 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	copy(gobHB, hb.entropy[:])
 	offset := uint32(quorum.EntropyVolume)
 
+	// copy in the number of uploadAdvancements
+
+	// copy each uploadAdvancement
+
 	// copy in the number of ScriptInputs
 	intb := siaencoding.EncUint32(uint32(len(hb.scriptInputs)))
 	copy(gobHB[offset:], intb[:])

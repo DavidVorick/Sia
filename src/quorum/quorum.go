@@ -99,11 +99,7 @@ func (q *Quorum) Status() (b string) {
 	b += fmt.Sprintf("\tSiblings:\n")
 	for _, s := range q.siblings {
 		if s != nil {
-			pubKeyHash, err := s.publicKey.Hash()
-			if err != nil {
-				// ???
-			}
-
+			pubKeyHash := s.publicKey.Hash()
 			b += fmt.Sprintf("\t\t%v\n", s.index)
 			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
 			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])
