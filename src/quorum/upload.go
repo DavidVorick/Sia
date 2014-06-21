@@ -7,6 +7,7 @@ import (
 type upload struct {
 	requiredConfirmations byte
 	receivedConfirmations [QuorumSize]bool
+	hashSet               [QuorumSize]siacrypto.Hash
 	hash                  siacrypto.Hash
 	weight                uint16
 	deadline              uint32

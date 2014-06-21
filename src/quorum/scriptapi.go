@@ -157,7 +157,7 @@ func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight i
 	return
 }
 
-func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHash siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
+func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
 	cost += 2
 
 	// make sure the sector is allocated
@@ -211,15 +211,21 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHash sia
 		q.clearUploads(sectorID, i)
 	}
 
+	var uploadHash siacrypto.Hash
+	for i := range newHashSet {
+		uploadHash = siacrypto.CalculateHash(append(uploadHash[:], newHashSet[i][:]...))
+	}
 	u := upload{
 		requiredConfirmations: confirmations,
-		hash:     newHash,
-		weight:   atomsChanged,
-		deadline: deadline,
+		hashSet:               newHashSet,
+		hash:                  uploadHash,
+		weight:                atomsChanged,
+		deadline:              deadline,
 	}
 
-	cost += int((deadline - q.height) * uint32(atomsChanged) * q.storagePrice) // also need to add in the growth restraints
+	cost += int((deadline - q.height) * uint32(atomsChanged+1) * q.storagePrice) // also need to add in the growth restraints
 	weight = atomsChanged
+	q.uploads[sectorID] = append(q.uploads[sectorID], &u)
 	q.updateWeight(w.id, int(atomsChanged))
 	q.insertEvent(&u)
 	return
