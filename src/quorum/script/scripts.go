@@ -17,13 +17,14 @@ func DefaultScript(encPKey []byte) []byte {
 	negl, negh := 0xFF-lenl, 0xFF-lenh
 	return append([]byte{
 		0x25, negl, negh, // 00 move data pointer to public key
-		0x02, lenl, lenh, // 03 push length of public key
-		0x2B, 0x01, //       06 read public key into buffer 1
-		0x2D, 0x02, //       08 read signed message into buffer 2
-		0x34, 0x01, 0x02, // 10 verify signature
-		0x1F, 0x01, 0x01, // 13 if verified, goto 17
-		0x30, //             16 else, reject input
-		0x2F, //             17 execute input
+		0x25, 0x01, 0x00, // 03 off by 1; move forward
+		0x02, lenl, lenh, // 06 push length of public key
+		0x2B, 0x01, //       09 read public key into buffer 1
+		0x2D, 0x02, //       11 read signed message into buffer 2
+		0x34, 0x01, 0x02, // 13 verify signature
+		0x1F, 0x14, 0x00, // 16 if verified, goto 20
+		0x30, //             19 else, reject input
+		0x2F, //             20 execute input
 	}, encPKey...)
 }
 
@@ -52,8 +53,8 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 }
 
 func AddSiblingInput(encSm, encSibling []byte) []byte {
-	lenh, lenl := shortLen(encSm)
-	s := append([]byte{lenh, lenl}, encSm...)
+	lenl, lenh := shortLen(encSm)
+	s := append([]byte{lenl, lenh}, encSm...)
 	s = append(s, []byte{
 		0x25, 0x08, 0x00, // move data pointer to encoded sibling
 		0x2E, 0x01, //       read sibling into buffer 1

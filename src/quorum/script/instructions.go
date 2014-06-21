@@ -562,7 +562,7 @@ func op_transfer() (err error) {
 }
 
 func op_reject() (err error) {
-	return errors.New("rejectected input")
+	return errors.New("rejected input")
 }
 
 func op_add_sibling(buf byte) (err error) {
