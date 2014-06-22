@@ -152,9 +152,15 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 
 		// call associated opcode function
 		retVals := op.fn.Call(fnArgs)
+
+		// check for error
 		errInter := retVals[0].Interface()
 		if errInter != nil {
-			err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + errInter.(error).Error())
+			if errInter.(error) == errRejected {
+				err = errInter.(error)
+			} else {
+				err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + errInter.(error).Error())
+			}
 			break
 		}
 
@@ -168,6 +174,7 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			copy(b, buffers[2])
 			fmt.Println("    buffer 2:", len(buffers[2]), b)
 		}
+
 		// increment instruction pointer
 		iptr++
 	}

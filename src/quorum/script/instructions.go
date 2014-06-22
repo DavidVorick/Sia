@@ -8,6 +8,8 @@ import (
 	"siaencoding"
 )
 
+var errRejected = errors.New("rejected input")
+
 var opTable = []instruction{
 	instruction{0x00, "no_op", 0, reflect.ValueOf(op_no_op), 1},
 	instruction{0x01, "push_byte", 1, reflect.ValueOf(op_push_byte), 2},
@@ -562,7 +564,7 @@ func op_transfer() (err error) {
 }
 
 func op_reject() (err error) {
-	return errors.New("rejected input")
+	return errRejected
 }
 
 func op_add_sibling(buf byte) (err error) {
