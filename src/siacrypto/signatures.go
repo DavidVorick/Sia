@@ -43,14 +43,14 @@ func (pk *PublicKey) Hash() (hash Hash, err error) {
 	return
 }
 
-// Creates a deterministic hash of a public key
+// Creates a deterministic hash of a secret key
 func (sk *SecretKey) Hash() (hash Hash, err error) {
 	if sk == nil {
-		err = fmt.Errorf("Cannot hash a nil public key")
+		err = fmt.Errorf("Cannot hash a nil secret key")
 		return
 	}
 	if sk.key.D == nil {
-		err = fmt.Errorf("Cannot hash an improperly initialized public key")
+		err = fmt.Errorf("Cannot hash an improperly initialized secret key")
 		return
 	}
 
