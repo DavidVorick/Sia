@@ -28,7 +28,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 
 	// calculate the size of the encoded heartbeat
 	encodedHeartbeatLen := quorum.EntropyVolume + 4 + 4
-	for i := range hb.uploadAdvancements {
+	for _ = range hb.uploadAdvancements {
 		encodedHeartbeatLen += quorum.UploadAdvancementSize
 	}
 	for _, scriptInput := range hb.scriptInputs {

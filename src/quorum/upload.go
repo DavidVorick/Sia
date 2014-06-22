@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"fmt"
 	"siacrypto"
 )
 
@@ -53,6 +54,33 @@ func (u *upload) setCounter(c uint64) {
 
 func (u *upload) fetchCounter() uint64 {
 	return u.counter
+}
+
+func (u *UploadAdvancement) GobEncode() (gobUA []byte, err error) {
+	if u == nil {
+		err = fmt.Errorf("Cannot encode nil UploadAdvancement")
+		return
+	}
+
+	gobUA = make([]byte, UploadAdvancementSize)
+	copy(gobUA, []byte(u.SectorID))
+	gobUA[8] = u.Index
+	gobUA[9] = u.Sibling
+	copy(gobUA[10:], u.Signature[:])
+	return
+}
+
+func (u *UploadAdvancement) GobDecode(gobUA []byte) (err error) {
+	if u == nil {
+		err = fmt.Errorf("Cannode decode into nil UploadAdvancement")
+		return
+	}
+
+	u.SectorID = string(gobUA[0:8])
+	u.Index = gobUA[8]
+	u.Sibling = gobUA[9]
+	copy(u.Signature[:], gobUA[10:])
+	return
 }
 
 func (q *Quorum) clearUploads(sectorID string, i int) {
