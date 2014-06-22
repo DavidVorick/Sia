@@ -70,6 +70,33 @@ func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	return true
 }
 
+// Compare returns true if the keys are composed of the same integer values
+// Compare returns false if any sub-value is nil
+func (sk0 *SecretKey) Compare(sk1 *SecretKey) bool {
+	// check for nil values
+	if sk0 == nil || sk1 == nil {
+		return false
+	}
+	if sk0.key == nil || sk1.key == nil {
+		return false
+	}
+	if sk0.key.X == nil || sk0.key.Y == nil || sk1.key.X == nil || sk1.key.Y == nil {
+		return false
+	}
+
+	cmp := sk0.key.X.Cmp(sk1.key.X)
+	if cmp != 0 {
+		return false
+	}
+
+	cmp = sk0.key.Y.Cmp(sk1.key.Y)
+	if cmp != 0 {
+		return false
+	}
+
+	return true
+}
+
 func (pk *PublicKey) GobEncode() (gobPk []byte, err error) {
 	if pk == nil {
 		err = fmt.Errorf("Cannot encode a nil value")
@@ -117,6 +144,56 @@ func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
 		return
 	}
 	pk.key.Curve = elliptic.P521() // might there be a way to make this const?
+	return
+}
+
+func (sk *SecretKey) GobEncode() (gobSk []byte, err error) {
+	if sk == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if sk.key == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if sk.key.X == nil || sk.key.Y == nil {
+		err = fmt.Errorf("secret key not properly initialized")
+		return
+	}
+
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(sk.key.X)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(sk.key.Y)
+	if err != nil {
+		return
+	}
+	gobSk = w.Bytes()
+	return
+}
+
+func (sk *SecretKey) GobDecode(gobSk []byte) (err error) {
+	if sk == nil {
+		err = fmt.Errorf("Cannot decode into nil value")
+		return
+	}
+
+	sk.key = new(ecdsa.PrivateKey)
+
+	r := bytes.NewBuffer(gobSk)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&sk.key.X)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&sk.key.Y)
+	if err != nil {
+		return
+	}
+	sk.key.Curve = elliptic.P521() // might there be a way to make this const?
 	return
 }
 

@@ -49,6 +49,50 @@ func TestPublicKeyCompare(t *testing.T) {
 	}
 }
 
+func TestSecretKeyCompare(t *testing.T) {
+	// compare nil public keys
+	var sk0 *SecretKey
+	var sk1 *SecretKey
+	compare := sk0.Compare(sk1)
+	if compare {
+		t.Error("Comparing nil public keys return true")
+	}
+
+	// compare when one public key is nil
+	_, sk0, err := CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare = sk0.Compare(sk1)
+	if compare {
+		t.Error("Comparing a nil public key returns true")
+	}
+	compare = sk1.Compare(sk0)
+	if compare {
+		t.Error("Comparing a nil public key returns true")
+	}
+
+	// compare unequal public keys
+	_, sk1, err = CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare = sk0.Compare(sk1)
+	if compare {
+		t.Error("Arbitray public keys being compared as identical")
+	}
+	compare = sk1.Compare(sk0)
+	if compare {
+		t.Error("Arbitrary public keys being compared as identical")
+	}
+
+	// compare a key to itself
+	compare = sk0.Compare(sk0)
+	if !compare {
+		t.Error("A key returns false when comparing with itself")
+	}
+}
+
 func TestPublicKeyEncoding(t *testing.T) {
 	// Encode and Decode nil values
 	var pk *PublicKey
@@ -76,6 +120,38 @@ func TestPublicKeyEncoding(t *testing.T) {
 		t.Error("Encoded and then decoded key not equal")
 	}
 	compare = pubKey.Compare(pk)
+	if !compare {
+		t.Error("Encoded and then decoded key not equal")
+	}
+}
+
+func TestSecretKeyEncoding(t *testing.T) {
+	// Encode and Decode nil values
+	var sk *SecretKey
+	_, _ = sk.GobEncode() // checking for panics
+	sk = new(SecretKey)
+	_, _ = sk.GobEncode() // checking for panics
+
+	_ = sk.GobDecode(nil) // checking for panics
+
+	// Encode and then Decode, see if the results are identical
+	_, secKey, err := CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eSecKey, err := secKey.GobEncode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sk.GobDecode(eSecKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compare := sk.Compare(secKey)
+	if !compare {
+		t.Error("Encoded and then decoded key not equal")
+	}
+	compare = secKey.Compare(sk)
 	if !compare {
 		t.Error("Encoded and then decoded key not equal")
 	}
