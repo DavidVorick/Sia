@@ -70,11 +70,12 @@ func main() {
 			fmt.Println("unrecognized command")
 		case "h", "help":
 			fmt.Println()
-			fmt.Println("c:\tConnect to Bootstrap")
-			fmt.Println("w:\tRequest Wallet")
-			fmt.Println("t:\tSubmit Transaction")
-			fmt.Println("g:\tGenerate Public and Secret Key Pair")
-			fmt.Println("s:\tSave Public and Secret key Pair")
+			fmt.Println("c:\tConnect to bootstrap")
+			fmt.Println("w:\tRequest wallet")
+			fmt.Println("t:\tSubmit transaction")
+			fmt.Println("g:\tGenerate public and secret key pair")
+			fmt.Println("s:\tSave public and secret key pair")
+			fmt.Println("l:\tLoad public and secret key pair")
 			fmt.Println()
 		case "c":
 			err = connectToBootstrap()
@@ -139,6 +140,26 @@ func main() {
 				return
 			} else {
 				fmt.Println("Success!")
+			}
+		case "l":
+			var filePath string
+			fmt.Print("What is the name of the file you want to load? ")
+			fmt.Scanf("%s", &filePath)
+			publicKey, secretKey, err = client.LoadKeyPair(filePath)
+			if err != nil {
+				panic(err)
+				return
+			} else {
+				pk, err := publicKey.GobEncode()
+				if err != nil {
+					panic(err)
+				}
+				sk, err := secretKey.GobEncode()
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println("First 8 bytes of public key:", pk)
+				fmt.Println("First 8 bytes of secret key:", sk)
 			}
 		case "q":
 			return
