@@ -27,7 +27,10 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	}
 
 	// calculate the size of the encoded heartbeat
-	encodedHeartbeatLen := quorum.EntropyVolume + 4
+	encodedHeartbeatLen := quorum.EntropyVolume + 4 + 4
+	for i := range hb.uploadAdvancements {
+		encodedHeartbeatLen += quorum.UploadAdvancementSize
+	}
 	for _, scriptInput := range hb.scriptInputs {
 		encodedHeartbeatLen += 12
 		encodedHeartbeatLen += len(scriptInput.Input)
@@ -39,11 +42,22 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 	offset := uint32(quorum.EntropyVolume)
 
 	// copy in the number of uploadAdvancements
+	intb := siaencoding.EncUint32(uint32(len(hb.uploadAdvancements)))
+	copy(gobHB[offset:], intb[:])
+	offset += 4
 
 	// copy each uploadAdvancement
+	for i := range hb.uploadAdvancements {
+		gobAdvancement, err := hb.uploadAdvancements[i].GobEncode()
+		if err != nil {
+			panic(err)
+		}
+		copy(gobHB[offset:], gobAdvancement)
+		offset += quorum.UploadAdvancementSize
+	}
 
 	// copy in the number of ScriptInputs
-	intb := siaencoding.EncUint32(uint32(len(hb.scriptInputs)))
+	intb = siaencoding.EncUint32(uint32(len(hb.scriptInputs)))
 	copy(gobHB[offset:], intb[:])
 	offset += 4
 
@@ -74,7 +88,7 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 		return
 	}
 	// check for a too-short byte slice
-	if len(gobHB) < quorum.EntropyVolume+4 {
+	if len(gobHB) < quorum.EntropyVolume+4+4 {
 		err = fmt.Errorf("Received invalid encoded heartbeat")
 		return
 	}
@@ -82,6 +96,18 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	// copy over the entropy
 	copy(hb.entropy[:], gobHB)
 	offset := uint32(quorum.EntropyVolume)
+
+	// read the number of uploadAdvancements
+	numUploadAdvancements := siaencoding.DecUint32(gobHB[offset : offset+4])
+	offset += 4
+	if len(gobHB) < quorum.EntropyVolume+4+4+(int(numUploadAdvancements)*quorum.UploadAdvancementSize) {
+		err = fmt.Errorf("Received invalid encoded heartbeat")
+		return
+	}
+	hb.uploadAdvancements = make([]quorum.UploadAdvancement, numUploadAdvancements)
+	for i := range hb.uploadAdvancements {
+		hb.uploadAdvancements[i].GobDecode(gobHB[offset : offset+quorum.UploadAdvancementSize])
+	}
 
 	// get the number of ScriptInputs
 	numScriptInputs := siaencoding.DecUint32(gobHB[offset : offset+4])
