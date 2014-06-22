@@ -67,6 +67,8 @@ var opTable = []instruction{
 	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
 	instruction{0x36, "if_move", 2, reflect.ValueOf(op_if_move), 2},
 	instruction{0x37, "move", 2, reflect.ValueOf(op_move), 1},
+	instruction{0x38, "cond_reject", 0, reflect.ValueOf(op_cond_reject), 1},
+	instruction{0x39, "data_buf", 2, reflect.ValueOf(op_data_buf), 2},
 }
 
 // helper functions
@@ -515,6 +517,12 @@ func op_replace_short() (err error) {
 	return
 }
 
+func op_data_buf(buf, n byte) (err error) {
+    buffers[buf] = make([]byte, n)
+    dptr += copy(buffers[buf], script[dptr:])
+    return
+}
+
 func op_buf_copy(buf byte) (err error) {
 	err, lengthv := op_pop()
 	if err != nil {
@@ -565,6 +573,17 @@ func op_transfer() (err error) {
 
 func op_reject() (err error) {
 	return errRejected
+}
+
+func op_cond_reject() (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	if !v2b(a) {
+		err = op_reject()
+	}
+	return
 }
 
 func op_add_sibling(buf byte) (err error) {
@@ -622,12 +641,9 @@ func op_send() (err error) {
 }
 
 func op_verify(pkey_buf, sm_buf byte) (err error) {
-	// decode public key
-	pk := new(siacrypto.PublicKey)
-	err = pk.GobDecode(buffers[pkey_buf])
-	if err != nil {
-		return
-	}
+	// get public key
+	var pk siacrypto.PublicKey
+	copy(pk[:], buffers[pkey_buf])
 	// decode signed message
 	sm := new(siacrypto.SignedMessage)
 	err = sm.GobDecode(buffers[sm_buf])

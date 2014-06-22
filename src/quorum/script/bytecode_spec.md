@@ -59,4 +59,6 @@ List of bytecodes
 | 0x35 | switch        | 2    | if value and $1 are equal, branch to $2. The value is only consumed upon equality.     |
 | 0x36 | if_move       | 2    | same as if, but with a relative, rather than absolute, address                         |
 | 0x37 | move          | 2    | move instruction pointer by offset $1$2                                                |
+| 0x38 | cond_reject   | 0    | if false, reject (otherwise no op)                                                     |
+| 0x39 | data_buf      | 2    | store (and move dptr) $1 bytes (zero-padded) from data pointer in buffer $2            |
 | 0xFF | exit          | 0    | terminates execution                                                                   |
