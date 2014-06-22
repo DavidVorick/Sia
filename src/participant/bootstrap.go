@@ -213,15 +213,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	p.synchronized = true // now compile will be called upon receiving a block
 
 	// 8. Request wallet from bootstrap
-	pkey := p.self.PublicKey()
-	gobPKey, err := pkey.GobEncode()
-	if err != nil {
-		return
-	}
 	walletID := siacrypto.RandomUInt64()
 	s := script.ScriptInput{
 		WalletID: BootstrapID,
-		Input:    script.CreateWalletInput(walletID, script.DefaultScript(gobPKey)),
+		Input:    script.CreateWalletInput(walletID, script.DefaultScript(p.self.PublicKey())),
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
