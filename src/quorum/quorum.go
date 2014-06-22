@@ -22,7 +22,7 @@ const (
 // quorum. Data in the quorum can only be updated during a block, and the
 // update must be deterministic and reversable.
 type Quorum struct {
-	// quorum-wide lock
+	// Quorum-wide lock
 	lock sync.RWMutex
 
 	// Network Variables
@@ -32,12 +32,20 @@ type Quorum struct {
 	germ Entropy // Where internal entropy is stored before external entropy is applied
 	seed Entropy // Used to generate random numbers during compilation
 
-	// wallet management
+	// Event management
+	eventCounter uint32
+	eventRoot    *eventNode
+
+	// Wallet management
 	walletPrefix string
 	wallets      uint32
 	walletRoot   *walletNode
 
-	// snapshot management
+	// File management
+	storagePrice uint32
+	uploads      map[string][]*upload
+
+	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
 
 	// Block tracking
@@ -91,11 +99,7 @@ func (q *Quorum) Status() (b string) {
 	b += fmt.Sprintf("\tSiblings:\n")
 	for _, s := range q.siblings {
 		if s != nil {
-			pubKeyHash, err := s.publicKey.Hash()
-			if err != nil {
-				// ???
-			}
-
+			pubKeyHash := s.publicKey.Hash()
 			b += fmt.Sprintf("\t\t%v\n", s.index)
 			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
 			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	walletBaseSize       = siacrypto.HashSize + 16 + 256*8
+	walletBaseSize       = siacrypto.HashSize + 16 + 2 + 1 + siacrypto.HashSize + 2
 	walletAtomMultiplier = 3
 )
 
@@ -19,10 +19,15 @@ var genesisScript = []byte{0x28}
 type Wallet struct {
 	id WalletID
 
-	walletHash     siacrypto.Hash // a hash of the encoded wallet
-	Balance        Balance
-	sectorOverview [256]sectorHeader
-	script         []byte
+	walletHash siacrypto.Hash
+	Balance    Balance
+
+	sectorAtoms uint16
+	sectorM     byte
+	sectorHash  siacrypto.Hash
+
+	scriptAtoms uint16
+	script      []byte
 }
 
 func (w *Wallet) Script() []byte {
@@ -47,16 +52,11 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	}
 	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.Balance.upperBalance)
 	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.Balance.lowerBalance)
+	s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
+	s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
+	s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash)
+	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
-
-	// calculate the number of sectors that have been allocated
-	allocatedSectors := 0
-	for _, sectorHeader := range w.sectorOverview {
-		if sectorHeader.atoms != 0 {
-			allocatedSectors += 1
-		}
-	}
-	s += fmt.Sprintf("\t\t\tAllocated Sectors: %v\n", allocatedSectors)
 	return
 }
 
@@ -81,15 +81,19 @@ func (w *Wallet) GobEncode() (b []byte, err error) {
 	copy(b[offset:], balanceBytes)
 	offset += 16
 
-	// encode sectorOverivew
-	for i, sector := range w.sectorOverview {
-		copy(b[offset+i*8:], sector.crc[:])
-		b[offset+i*8+6] = sector.m
-		b[offset+i*8+7] = sector.atoms
-	}
-	offset += 8 * len(w.sectorOverview)
+	// encode sector information
+	sectorAtomsBytes := siaencoding.EncUint16(w.sectorAtoms)
+	copy(b[offset:], sectorAtomsBytes)
+	offset += 2
+	b[offset] = w.sectorM
+	offset += 1
+	copy(b[offset:], w.sectorHash[:])
+	offset += siacrypto.HashSize
 
-	// encode script
+	// encode script information
+	scriptAtomsBytes := siaencoding.EncUint16(w.scriptAtoms)
+	copy(b[offset:], scriptAtomsBytes)
+	offset += 2
 	copy(b[offset:], w.script)
 
 	// calculate hash and place at beginning
@@ -116,21 +120,25 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	}
 	offset := siacrypto.HashSize
 
+	// decode balance
 	err = w.Balance.GobDecode(b[offset : offset+16])
 	if err != nil {
 		return
 	}
 	offset += 16
 
-	for i := range w.sectorOverview {
-		copy(w.sectorOverview[i].crc[:], b[offset+i*8:offset+i*8+6])
-		w.sectorOverview[i].m = b[offset+i*8+6]
-		w.sectorOverview[i].atoms = b[offset+i*8+7]
-	}
-	offset += 8 * len(w.sectorOverview)
+	// decode sector information
+	w.sectorAtoms = siaencoding.DecUint16(b[offset : offset+2])
+	offset += 2
+	w.sectorM = b[offset]
+	offset += 1
+	copy(w.sectorHash[:], b[offset:])
+	offset += siacrypto.HashSize
 
-	w.script = make([]byte, len(b)-offset)
-	copy(w.script, b[offset:])
+	// decode script informaiton
+	w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
+	offset += 2
+	w.script = b[offset:]
 	return
 }
 
@@ -148,18 +156,8 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 		return
 	}
 
-	weight := walletAtomMultiplier
-	if len(w.script) > 1024 {
-		tmp := len(w.script) - 1024
-		for tmp > 0 {
-			weight += walletAtomMultiplier
-			tmp -= 4096
-		}
-	}
-
-	for _, sector := range w.sectorOverview {
-		weight += int(sector.atoms)
-	}
+	weight := walletAtomMultiplier + w.scriptAtoms*walletAtomMultiplier
+	weight += w.sectorAtoms
 
 	wn = new(walletNode)
 	wn.id = id

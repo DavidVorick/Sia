@@ -3,8 +3,13 @@ package quorum
 import (
 	"errors"
 	"os"
-	"siaencoding"
+	"siacrypto"
 )
+
+// Cost structures...
+// There's a computational cost associated with all of these actions, but there is also a storage cost.
+// And there might also be other costs associated, such as network costs.
+// I don't know the best way to handle oall of this
 
 const (
 	CreateWalletMaxCost = 8
@@ -127,34 +132,102 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	return
 }
 
-func (q *Quorum) AllocateSector(w *Wallet, sector byte, atoms byte, m byte) (cost int) {
+func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
+	cost += 3
 	weightDelta := int(atoms)
-	weightDelta -= int(w.sectorOverview[sector].atoms)
+	weightDelta -= int(w.sectorAtoms)
+	if weightDelta == 0 {
+		return
+	}
 
-	// derive the name of the file housing the sector
+	// derive the name of the file housing the sector, and truncate the file
 	walletName := q.walletFilename(w.id)
-	sectorSlice := make([]byte, 1)
-	sectorSlice[0] = sector
-	sectorName := walletName + ".sector" + siaencoding.EncFilename(sectorSlice)
-
-	// delete old file associated with the sector
-	file, err := os.Create(sectorName)
+	sectorName := walletName + ".sector"
+	err = os.Truncate(sectorName, int64(atoms)*int64(AtomSize))
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
-
-	// write all the bytes to here
-	emptySlice := make([]byte, int(atoms)*AtomSize)
-	n, err := file.Write(emptySlice)
-	if n != int(atoms)*AtomSize || err != nil {
-		panic(err)
-	}
-
-	w.sectorOverview[sector].m = m
-	w.sectorOverview[sector].atoms = atoms
 
 	// update the weights in the wallet tree
+	q.updateWeight(w.id, weightDelta)
+	weight = weightDelta
 
+	// update the hash associated with the sector
+
+	return
+}
+
+func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
+	cost += 2
+
+	// make sure the sector is allocated
+	if w.sectorAtoms == 0 {
+		err = errors.New("Sector is not allocated")
+		return
+	}
+
+	// make sure that the confirmations value is a reasonable value
+	if int(confirmations) > QuorumSize {
+		err = errors.New("confirmations cannot be greater than quorum size")
+		return
+	}
+	if confirmations < w.sectorM {
+		err = errors.New("confirmations cannot be less than the value of 'm' for the given sector")
+		return
+	}
+
+	// make sure the deadline is a reasonable value
+	if deadline > MaxDeadline+q.height {
+		err = errors.New("deadline is too far in the future")
+		return
+	}
+	if deadline <= q.height {
+		err = errors.New("deadline has already arrived")
+		return
+	}
+
+	cost += 2
+	// look up all of the open uploads on this sector, and compare their hashes
+	// to the parent hash of this upload. As soon as one is found (potentially
+	// starting directly from the existing hash), all remaining uploads are
+	// truncated. There can only exist a single chain of potential uploads, all
+	// other get defeated by precedence.
+	sectorID := string(w.id.Bytes())
+	if parentHash == w.sectorHash {
+		// clear all existing uploads
+		q.clearUploads(sectorID, 0)
+	} else {
+		var i int
+		for i = 0; i < len(q.uploads[sectorID]); i++ {
+			if parentHash == q.uploads[sectorID][i].hash {
+				break
+			}
+		}
+
+		if i == len(q.uploads[sectorID]) {
+			err = errors.New("upload has invalid parent hash")
+			return
+		}
+		q.clearUploads(sectorID, i)
+	}
+
+	var uploadHash siacrypto.Hash
+	for i := range newHashSet {
+		uploadHash = siacrypto.CalculateHash(append(uploadHash[:], newHashSet[i][:]...))
+	}
+	u := upload{
+		sectorID:              sectorID,
+		requiredConfirmations: confirmations,
+		hashSet:               newHashSet,
+		hash:                  uploadHash,
+		weight:                atomsChanged,
+		deadline:              deadline,
+	}
+
+	cost += int((deadline - q.height) * uint32(atomsChanged+1) * q.storagePrice) // also need to add in the growth restraints
+	weight = atomsChanged
+	q.uploads[sectorID] = append(q.uploads[sectorID], &u)
+	q.updateWeight(w.id, int(atomsChanged))
+	q.insertEvent(&u)
 	return
 }

@@ -5,7 +5,6 @@ go:
 
 install:
   - make dependencies
-  - make race-libs
   - make
 
 script: make test-long-verbose

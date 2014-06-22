@@ -1,7 +1,6 @@
 package siacrypto
 
 import (
-	"math/big"
 	"testing"
 )
 
@@ -189,7 +188,7 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify empty message when signature is bad
-	msg.Signature.r.Sub(msg.Signature.r, big.NewInt(1))
+	msg.Signature[0] = 0
 	verified = publicKey.Verify(&msg)
 	if verified {
 		t.Error("Verified a signed empty message with forged signature")
@@ -221,14 +220,14 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify an imposter signature
-	signedMessage.Signature.r.Sub(msg.Signature.r, big.NewInt(1))
+	signedMessage.Signature[0] = 0
 	verification = publicKey.Verify(&signedMessage)
 	if verification {
 		t.Error("sucessfully verified an invalid message")
 	}
 
 	// restore the signature and fake a message
-	signedMessage.Signature.r.Add(msg.Signature.r, big.NewInt(1))
+	signedMessage.Signature[0] = 0
 	signedMessage.Message[0] = 0
 	verification = publicKey.Verify(&signedMessage)
 	if verification {
@@ -247,6 +246,10 @@ func TestMessageEncoding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	verified := publicKey.Verify(&signedMessage)
+	if !verified {
+		t.Error("verification failed")
+	}
 
 	gobSm, err := signedMessage.GobEncode()
 	if err != nil {
@@ -258,8 +261,8 @@ func TestMessageEncoding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verified := publicKey.Verify(&decSm)
+	verified = publicKey.Verify(&decSm)
 	if !verified {
-		t.Fatal("signed message corrupted during encode/decode")
+		t.Error("signed message corrupted during encode/decode")
 	}
 }
