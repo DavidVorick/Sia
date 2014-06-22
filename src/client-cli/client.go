@@ -74,8 +74,6 @@ func main() {
 			fmt.Println("w:\tRequest wallet")
 			fmt.Println("t:\tSubmit transaction")
 			fmt.Println("g:\tGenerate public and secret key pair")
-			fmt.Println("s:\tSave public and secret key pair")
-			fmt.Println("l:\tLoad public and secret key pair")
 			fmt.Println()
 		case "c":
 			err = connectToBootstrap()
@@ -112,26 +110,13 @@ func main() {
 				fmt.Println("Transaction successfully submitted")
 			}
 		case "g":
-			fmt.Println("okay")
+			var destFile string
 			publicKey, secretKey, err = siacrypto.CreateKeyPair()
 			if err != nil {
 				panic(err)
 				return
-			} else {
-				pk, err := publicKey.GobEncode()
-				if err != nil {
-					panic(err)
-				}
-				sk, err := secretKey.GobEncode()
-				if err != nil {
-					panic(err)
-				}
-				fmt.Println("First 8 bytes of public key:", pk)
-				fmt.Println("First 8 bytes of secret key:", sk)
 			}
-		case "s":
-			var destFile string
-			fmt.Print("Please enter a destination file path and name: ")
+			fmt.Println("keys generated. Where would you like to store them? ")
 			fmt.Scanf("%s", &destFile)
 			fmt.Println("Saving to:", destFile)
 			err = client.SaveKeyPair(publicKey, secretKey, destFile)
@@ -140,26 +125,6 @@ func main() {
 				return
 			} else {
 				fmt.Println("Success!")
-			}
-		case "l":
-			var filePath string
-			fmt.Print("What is the name of the file you want to load? ")
-			fmt.Scanf("%s", &filePath)
-			publicKey, secretKey, err = client.LoadKeyPair(filePath)
-			if err != nil {
-				panic(err)
-				return
-			} else {
-				pk, err := publicKey.GobEncode()
-				if err != nil {
-					panic(err)
-				}
-				sk, err := secretKey.GobEncode()
-				if err != nil {
-					panic(err)
-				}
-				fmt.Println("First 8 bytes of public key:", pk)
-				fmt.Println("First 8 bytes of secret key:", sk)
 			}
 		case "q":
 			return
