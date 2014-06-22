@@ -43,6 +43,21 @@ func (pk *PublicKey) Hash() (hash Hash, err error) {
 	return
 }
 
+// Creates a deterministic hash of a public key
+func (sk *SecretKey) Hash() (hash Hash, err error) {
+	if sk == nil {
+		err = fmt.Errorf("Cannot hash a nil public key")
+		return
+	}
+	if sk.key.D == nil {
+		err = fmt.Errorf("Cannot hash an improperly initialized public key")
+		return
+	}
+
+	hash = CalculateHash(sk.key.D.Bytes())
+	return
+}
+
 // Compare returns true if the keys are composed of the same integer values
 // Compare returns false if any sub-value is nil
 func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
@@ -80,16 +95,11 @@ func (sk0 *SecretKey) Compare(sk1 *SecretKey) bool {
 	if sk0.key == nil || sk1.key == nil {
 		return false
 	}
-	if sk0.key.X == nil || sk0.key.Y == nil || sk1.key.X == nil || sk1.key.Y == nil {
+	if sk0.key.D == nil || sk1.key.D == nil {
 		return false
 	}
 
-	cmp := sk0.key.X.Cmp(sk1.key.X)
-	if cmp != 0 {
-		return false
-	}
-
-	cmp = sk0.key.Y.Cmp(sk1.key.Y)
+	cmp := sk0.key.D.Cmp(sk1.key.D)
 	if cmp != 0 {
 		return false
 	}
@@ -156,18 +166,14 @@ func (sk *SecretKey) GobEncode() (gobSk []byte, err error) {
 		err = fmt.Errorf("Cannot encode a nil value")
 		return
 	}
-	if sk.key.X == nil || sk.key.Y == nil {
+	if sk.key.D == nil {
 		err = fmt.Errorf("secret key not properly initialized")
 		return
 	}
 
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(sk.key.X)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(sk.key.Y)
+	err = encoder.Encode(sk.key.D)
 	if err != nil {
 		return
 	}
@@ -185,11 +191,7 @@ func (sk *SecretKey) GobDecode(gobSk []byte) (err error) {
 
 	r := bytes.NewBuffer(gobSk)
 	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&sk.key.X)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&sk.key.Y)
+	err = decoder.Decode(&sk.key.D)
 	if err != nil {
 		return
 	}
