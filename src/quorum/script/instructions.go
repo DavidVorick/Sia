@@ -495,7 +495,7 @@ func op_data_push(n byte) (err error) {
 	return
 }
 
-func op_data_reg(reg, n byte) (err error) {
+func op_data_reg(n, reg byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	dptr += copy(b, script[dptr:])
@@ -517,10 +517,10 @@ func op_replace_short() (err error) {
 	return
 }
 
-func op_data_buf(buf, n byte) (err error) {
-    buffers[buf] = make([]byte, n)
-    dptr += copy(buffers[buf], script[dptr:])
-    return
+func op_data_buf(n, buf byte) (err error) {
+	buffers[buf] = make([]byte, n)
+	dptr += copy(buffers[buf], script[dptr:])
+	return
 }
 
 func op_buf_copy(buf byte) (err error) {
