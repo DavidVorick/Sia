@@ -42,7 +42,7 @@ var opTable = []instruction{
 	instruction{0x1C, "logical_not", 0, reflect.ValueOf(op_logical_not), 2},
 	instruction{0x1D, "logical_or", 0, reflect.ValueOf(op_logical_or), 2},
 	instruction{0x1E, "logical_and", 0, reflect.ValueOf(op_logical_and), 2},
-	instruction{0x1F, "if", 2, reflect.ValueOf(op_if), 2},
+	instruction{0x1F, "if_goto", 2, reflect.ValueOf(op_if_goto), 2},
 	instruction{0x20, "goto", 2, reflect.ValueOf(op_goto), 1},
 	instruction{0x21, "reg_store", 1, reflect.ValueOf(op_reg_store), 2},
 	instruction{0x22, "reg_load", 1, reflect.ValueOf(op_reg_load), 2},
@@ -406,7 +406,7 @@ func op_logical_and() (err error) {
 	return
 }
 
-func op_if(offl, offh byte) (err error) {
+func op_if_goto(offl, offh byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
