@@ -51,14 +51,12 @@ func connectToBootstrap() (err error) {
 
 func main() {
 	var (
-		input     string
-		err       error
-		id        quorum.WalletID
-		srcID     quorum.WalletID
-		destID    quorum.WalletID
-		amount    uint64
-		publicKey *siacrypto.PublicKey
-		secretKey *siacrypto.SecretKey
+		input  string
+		err    error
+		id     quorum.WalletID
+		srcID  quorum.WalletID
+		destID quorum.WalletID
+		amount uint64
 	)
 	fmt.Println("Sia Client Version 0.0.0.3")
 	for {
@@ -111,7 +109,7 @@ func main() {
 			}
 		case "g":
 			var destFile string
-			publicKey, secretKey, err = siacrypto.CreateKeyPair()
+			publicKey, secretKey, err := siacrypto.CreateKeyPair()
 			if err != nil {
 				panic(err)
 				return
