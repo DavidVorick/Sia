@@ -45,9 +45,8 @@ func init() {
 }
 
 func BytesToWords(script []byte) (s string) {
-	fmt.Println(script)
 	dataIndex := findDataSection(script)
-	for i := range script {
+	for i := 0; i < len(script); i++ {
 		if i == dataIndex {
 			s += "<-- data section -->\n"
 			for i < len(script) {
@@ -62,7 +61,10 @@ func BytesToWords(script []byte) (s string) {
 			s += "terminate\n"
 			continue
 		}
-		fmt.Println(script[i])
+		if int(script[i]) > len(opTable) {
+			s += " " + fmt.Sprint(script[i]) + "\n"
+			continue
+		}
 		op := opTable[script[i]]
 		s += op.name
 		if op.argBytes == 1 {
