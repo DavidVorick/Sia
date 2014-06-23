@@ -11,6 +11,19 @@ func short(length int) (l, h byte) {
 	return
 }
 
+func appendAll(slices ...[]byte) []byte {
+	var length int
+	for _, s := range slices {
+		length += len(s)
+	}
+	all := make([]byte, length)
+	var i int
+	for _, s := range slices {
+		i += copy(all[i:], s)
+	}
+	return all
+}
+
 // the default script
 // verifies public key, then transfers control to the input
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
@@ -51,21 +64,23 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 
 func AddSiblingInput(encSm, encSibling []byte) []byte {
 	lenl, lenh := short(len(encSm))
-	s := append([]byte{lenl, lenh}, encSm...)
-	s = append(s, []byte{
-		0x25, 0x08, 0x00, // move data pointer to encoded sibling
-		0x2E, 0x01, //       read sibling into buffer 1
-		0x31, 0x01, //       call add sibling
-		0xFF, //             exit
-	}...)
-	return append(s, encSibling...)
+	return appendAll(
+		[]byte{lenl, lenh},
+		encSm,
+		[]byte{
+			0x25, 0x08, 0x00, // move data pointer to encoded sibling
+			0x2E, 0x01, //       read sibling into buffer 1
+			0x31, 0x01, //       call add sibling
+			0xFF, //             exit
+		},
+		encSibling,
+	)
 }
 
 func TransactionInput(dst, high, low uint64) []byte {
-	wallet := siaencoding.EncUint64(dst)
-	amount := append(
+	return appendAll(
+		siaencoding.EncUint64(dst),
 		siaencoding.EncUint64(high),
-		siaencoding.EncUint64(low)...,
+		siaencoding.EncUint64(low),
 	)
-	return append(wallet, amount...)
 }
