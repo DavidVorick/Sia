@@ -112,7 +112,6 @@ func main() {
 			publicKey, secretKey, err := siacrypto.CreateKeyPair()
 			if err != nil {
 				panic(err)
-				return
 			}
 			fmt.Println("keys generated. Where would you like to store them? ")
 			fmt.Scanf("%s", &destFile)
@@ -120,7 +119,6 @@ func main() {
 			err = client.SaveKeyPair(publicKey, secretKey, destFile)
 			if err != nil {
 				panic(err)
-				return
 			} else {
 				fmt.Println("Success!")
 			}
