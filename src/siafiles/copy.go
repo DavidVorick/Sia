@@ -18,6 +18,6 @@ func Copy(src string, dst string) (err error) {
 	}
 	defer d.Close()
 
-	err = io.Copy(d, s)
+	_, err = io.Copy(d, s)
 	return
 }
