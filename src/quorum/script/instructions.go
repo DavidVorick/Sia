@@ -8,6 +8,8 @@ import (
 	"siaencoding"
 )
 
+var errRejected = errors.New("rejected input")
+
 var opTable = []instruction{
 	instruction{0x00, "no_op", 0, reflect.ValueOf(op_no_op), 1},
 	instruction{0x01, "push_byte", 1, reflect.ValueOf(op_push_byte), 2},
@@ -40,7 +42,7 @@ var opTable = []instruction{
 	instruction{0x1C, "logical_not", 0, reflect.ValueOf(op_logical_not), 2},
 	instruction{0x1D, "logical_or", 0, reflect.ValueOf(op_logical_or), 2},
 	instruction{0x1E, "logical_and", 0, reflect.ValueOf(op_logical_and), 2},
-	instruction{0x1F, "if", 2, reflect.ValueOf(op_if), 2},
+	instruction{0x1F, "if_goto", 2, reflect.ValueOf(op_if_goto), 2},
 	instruction{0x20, "goto", 2, reflect.ValueOf(op_goto), 1},
 	instruction{0x21, "reg_store", 1, reflect.ValueOf(op_reg_store), 2},
 	instruction{0x22, "reg_load", 1, reflect.ValueOf(op_reg_load), 2},
@@ -65,6 +67,8 @@ var opTable = []instruction{
 	instruction{0x35, "switch", 2, reflect.ValueOf(op_switch), 3},
 	instruction{0x36, "if_move", 2, reflect.ValueOf(op_if_move), 2},
 	instruction{0x37, "move", 2, reflect.ValueOf(op_move), 1},
+	instruction{0x38, "cond_reject", 0, reflect.ValueOf(op_cond_reject), 1},
+	instruction{0x39, "data_buf", 2, reflect.ValueOf(op_data_buf), 2},
 }
 
 // helper functions
@@ -404,7 +408,7 @@ func op_logical_and() (err error) {
 	return
 }
 
-func op_if(offl, offh byte) (err error) {
+func op_if_goto(offl, offh byte) (err error) {
 	err, a := op_pop()
 	if err != nil {
 		return
@@ -491,7 +495,7 @@ func op_data_push(n byte) (err error) {
 	return
 }
 
-func op_data_reg(reg, n byte) (err error) {
+func op_data_reg(n, reg byte) (err error) {
 	var v value
 	b := make([]byte, n)
 	dptr += copy(b, script[dptr:])
@@ -510,6 +514,12 @@ func op_replace_short() (err error) {
 	err, a := op_pop()
 	script[dptr] = a[0]
 	script[dptr+1] = a[1]
+	return
+}
+
+func op_data_buf(n, buf byte) (err error) {
+	buffers[buf] = make([]byte, n)
+	dptr += copy(buffers[buf], script[dptr:])
 	return
 }
 
@@ -562,7 +572,18 @@ func op_transfer() (err error) {
 }
 
 func op_reject() (err error) {
-	return errors.New("rejected input")
+	return errRejected
+}
+
+func op_cond_reject() (err error) {
+	err, a := op_pop()
+	if err != nil {
+		return
+	}
+	if !v2b(a) {
+		err = op_reject()
+	}
+	return
 }
 
 func op_add_sibling(buf byte) (err error) {
@@ -620,12 +641,9 @@ func op_send() (err error) {
 }
 
 func op_verify(pkey_buf, sm_buf byte) (err error) {
-	// decode public key
-	pk := new(siacrypto.PublicKey)
-	err = pk.GobDecode(buffers[pkey_buf])
-	if err != nil {
-		return
-	}
+	// get public key
+	var pk siacrypto.PublicKey
+	copy(pk[:], buffers[pkey_buf])
 	// decode signed message
 	sm := new(siacrypto.SignedMessage)
 	err = sm.GobDecode(buffers[sm_buf])

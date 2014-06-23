@@ -1,31 +1,28 @@
 package script
 
 import (
+	"siacrypto"
 	"siaencoding"
 )
 
-func shortLen(data []byte) (l, h byte) {
-	l = byte(len(data))
-	h = byte(len(data) >> 8)
+func short(length int) (l, h byte) {
+	l = byte(length)
+	h = byte(length >> 8)
 	return
 }
 
 // the default script
 // verifies public key, then transfers control to the input
-func DefaultScript(encPKey []byte) []byte {
-	lenl, lenh := shortLen(encPKey)
-	negl, negh := 0xFF-lenl, 0xFF-lenh
+func DefaultScript(publicKey siacrypto.PublicKey) []byte {
+	klen, _ := short(siacrypto.PublicKeySize)
 	return append([]byte{
-		0x25, negl, negh, // 00 move data pointer to public key
-		0x25, 0x01, 0x00, // 03 off by 1; move forward
-		0x02, lenl, lenh, // 06 push length of public key
-		0x2B, 0x01, //       09 read public key into buffer 1
-		0x2D, 0x02, //       11 read signed message into buffer 2
-		0x34, 0x01, 0x02, // 13 verify signature
-		0x1F, 0x14, 0x00, // 16 if verified, goto 20
-		0x30, //             19 else, reject input
-		0x2F, //             20 execute input
-	}, encPKey...)
+		0x26, 0x0D, 0x00, // 00 move data pointer to public key
+		0x39, klen, 0x01, // 03 read public key into buffer 1
+		0x2D, 0x02, //       06 read signed message into buffer 2
+		0x34, 0x01, 0x02, // 08 verify signature
+		0x38, //             11 if invalid signature, reject
+		0x2F, //             12 execute input
+	}, publicKey[:]...)
 }
 
 // the bootstrapping script
@@ -53,7 +50,7 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 }
 
 func AddSiblingInput(encSm, encSibling []byte) []byte {
-	lenl, lenh := shortLen(encSm)
+	lenl, lenh := short(len(encSm))
 	s := append([]byte{lenl, lenh}, encSm...)
 	s = append(s, []byte{
 		0x25, 0x08, 0x00, // move data pointer to encoded sibling
