@@ -91,9 +91,10 @@ func (u *UploadAdvancement) GobDecode(gobUA []byte) (err error) {
 	return
 }
 
-func (q *Quorum) confirmUpload(id string, h siacrypto.Hash) bool {
-	for i := range q.uploads[id] {
-		if q.uploads[id][i].hash == h {
+func (q *Quorum) ConfirmUpload(id WalletID, h siacrypto.Hash) bool {
+	idString := string(id.Bytes())
+	for i := range q.uploads[idString] {
+		if q.uploads[idString][i].hash == h {
 			return true
 		}
 	}
