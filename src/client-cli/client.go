@@ -1,11 +1,13 @@
 package main
 
 import (
+	"client"
 	"fmt"
 	"network"
 	"participant"
 	"quorum"
 	"quorum/script"
+	"siacrypto"
 )
 
 var (
@@ -56,7 +58,7 @@ func main() {
 		destID quorum.WalletID
 		amount uint64
 	)
-	fmt.Println("Sia Client Version 0.0.0.2")
+	fmt.Println("Sia Client Version 0.0.0.3")
 	for {
 		fmt.Print("Please enter a command: ")
 		fmt.Scanln(&input)
@@ -64,7 +66,13 @@ func main() {
 		switch input {
 		default:
 			fmt.Println("unrecognized command")
-
+		case "h", "help":
+			fmt.Println()
+			fmt.Println("c:\tConnect to bootstrap")
+			fmt.Println("w:\tRequest wallet")
+			fmt.Println("t:\tSubmit transaction")
+			fmt.Println("g:\tGenerate public and secret key pair")
+			fmt.Println()
 		case "c":
 			err = connectToBootstrap()
 			if err != nil {
@@ -99,7 +107,23 @@ func main() {
 			} else {
 				fmt.Println("Transaction successfully submitted")
 			}
-
+		case "g":
+			var destFile string
+			publicKey, secretKey, err := siacrypto.CreateKeyPair()
+			if err != nil {
+				panic(err)
+				return
+			}
+			fmt.Println("keys generated. Where would you like to store them? ")
+			fmt.Scanf("%s", &destFile)
+			fmt.Println("Saving to:", destFile)
+			err = client.SaveKeyPair(publicKey, secretKey, destFile)
+			if err != nil {
+				panic(err)
+				return
+			} else {
+				fmt.Println("Success!")
+			}
 		case "q":
 			return
 		}

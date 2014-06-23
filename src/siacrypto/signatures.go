@@ -32,7 +32,27 @@ func (pk *PublicKey) Hash() (hash Hash) {
 	return
 }
 
+<<<<<<< HEAD
 // Compare returns true only if the public keys are non-nil and equivalent
+=======
+// Creates a deterministic hash of a secret key
+func (sk *SecretKey) Hash() (hash Hash, err error) {
+	if sk == nil {
+		err = fmt.Errorf("Cannot hash a nil secret key")
+		return
+	}
+	if sk.key.D == nil {
+		err = fmt.Errorf("Cannot hash an improperly initialized secret key")
+		return
+	}
+
+	hash = CalculateHash(sk.key.D.Bytes())
+	return
+}
+
+// Compare returns true if the keys are composed of the same integer values
+// Compare returns false if any sub-value is nil
+>>>>>>> client
 func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	// check for nil values
 	if pk0 == nil || pk1 == nil {
@@ -41,6 +61,7 @@ func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	return *pk0 == *pk1
 }
 
+<<<<<<< HEAD
 // takes as input a public key and a signed message
 // returns whether the signature is valid or not
 func (pk *PublicKey) Verify(signedMessage *SignedMessage) (verified bool) {
@@ -62,6 +83,24 @@ func (pk *PublicKey) Verify(signedMessage *SignedMessage) (verified bool) {
 
 	signedMessageBytes, err := signedMessage.GobEncode()
 	if err != nil {
+=======
+// Compare returns true if the keys are composed of the same integer values
+// Compare returns false if any sub-value is nil
+func (sk0 *SecretKey) Compare(sk1 *SecretKey) bool {
+	// check for nil values
+	if sk0 == nil || sk1 == nil {
+		return false
+	}
+	if sk0.key == nil || sk1.key == nil {
+		return false
+	}
+	if sk0.key.D == nil || sk1.key.D == nil {
+		return false
+	}
+
+	cmp := sk0.key.D.Cmp(sk1.key.D)
+	if cmp != 0 {
+>>>>>>> client
 		return false
 	}
 	signedMessagePointer := (*C.uchar)(unsafe.Pointer(&signedMessageBytes[0]))
@@ -95,22 +134,44 @@ func (pk *PublicKey) GobDecode(gobPk []byte) (err error) {
 	return
 }
 
+<<<<<<< HEAD
 // Compare returns true if the keys are composed of the same integer values
 // Compare returns false if any sub-value is nil
 func (sk0 *SecretKey) Compare(sk1 *SecretKey) bool {
 	// check for nil values
 	if sk0 == nil || sk1 == nil {
 		return false
+=======
+func (sk *SecretKey) GobEncode() (gobSk []byte, err error) {
+	if sk == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if sk.key == nil {
+		err = fmt.Errorf("Cannot encode a nil value")
+		return
+	}
+	if sk.key.D == nil {
+		err = fmt.Errorf("secret key not properly initialized")
+		return
+>>>>>>> client
 	}
 	return *sk0 == *sk1
 }
 
+<<<<<<< HEAD
 // Sign takes a secret key and a message, and uses the secret key to sign the
 // message,  returning a single SignedMessage struct containing a Message and a
 // Signature
 func (secKey *SecretKey) Sign(message []byte) (signedMessage SignedMessage, err error) {
 	if secKey == nil {
 		err = fmt.Errorf("Cannot sign using a nil SecretKey")
+=======
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err = encoder.Encode(sk.key.D)
+	if err != nil {
+>>>>>>> client
 		return
 	}
 	if message == nil {
@@ -121,8 +182,20 @@ func (secKey *SecretKey) Sign(message []byte) (signedMessage SignedMessage, err 
 	signedMessageBytes := make([]byte, len(message)+SignatureSize)
 	signedMessagePointer := (*C.uchar)(unsafe.Pointer(&signedMessageBytes[0]))
 
+<<<<<<< HEAD
 	var signatureLen uint64
 	lenPointer := (*C.ulonglong)(unsafe.Pointer(&signatureLen))
+=======
+	r := bytes.NewBuffer(gobSk)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&sk.key.D)
+	if err != nil {
+		return
+	}
+	sk.key.Curve = elliptic.P521() // might there be a way to make this const?
+	return
+}
+>>>>>>> client
 
 	var messagePointer *C.uchar
 	if len(message) == 0 {
