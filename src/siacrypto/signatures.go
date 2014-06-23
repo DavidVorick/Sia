@@ -32,6 +32,12 @@ func (pk *PublicKey) Hash() (hash Hash) {
 	return
 }
 
+// Creates a deterministic hash of a secret key
+func (sk *SecretKey) Hash() (hash Hash) {
+	hash = CalculateHash(sk[:])
+	return
+}
+
 // Compare returns true only if the public keys are non-nil and equivalent
 func (pk0 *PublicKey) Compare(pk1 *PublicKey) bool {
 	// check for nil values
