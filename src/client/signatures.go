@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"siacrypto"
-	"siaencoding"
 )
 
 func SaveKeyPair(publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey, destFile string) (err error) {
-	if publicKey == nil || secretKey == nil || destFile == "" {
+	if publicKey == nil || secretKey == nil {
 		err = fmt.Errorf("Cannot write nil key to file")
+	}
+	if destFile == "" {
+		err = fmt.Errorf("Cannot save, file name is empty string")
 	}
 	pubSlice, err := publicKey.GobEncode()
 	if err != nil {
@@ -29,18 +31,6 @@ func SaveKeyPair(publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey,
 	}
 	defer f.Close()
 
-	lenPubSlice := siaencoding.EncUint32(uint32(len(pubSlice)))
-	_, err = f.Write(lenPubSlice)
-	if err != nil {
-		panic(err)
-		return
-	}
-	lenSecSlice := siaencoding.EncUint32(uint32(len(secSlice)))
-	_, err = f.Write(lenSecSlice)
-	if err != nil {
-		panic(err)
-		return
-	}
 	_, err = f.Write(pubSlice)
 	if err != nil {
 		panic(err)
@@ -56,42 +46,34 @@ func SaveKeyPair(publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey,
 
 func LoadKeyPair(filePath string) (publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey, err error) {
 	if filePath == "" {
-		err = fmt.Errorf("Cannot load from nil file")
+		err = fmt.Errorf("Cannot load, file name is empty string")
 	}
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 		return
 	}
-	byteLenPub := make([]byte, 4)
-	byteLenSec := make([]byte, 4)
-	_, err = f.Read(byteLenPub)
+	pubSlice := make([]byte, siacrypto.PublicKeySize)
+	secSlice := make([]byte, siacrypto.SecretKeySize)
+	_, err = f.Read(pubSlice)
 	if err != nil {
 		panic(err)
 		return
 	}
-	_, err = f.Read(byteLenSec)
+  _, err = f.Read(secSlice)
 	if err != nil {
 		panic(err)
 		return
 	}
-	bytePubSlice := make([]byte, siaencoding.DecUint32(byteLenPub))
-	byteSecSlice := make([]byte, siaencoding.DecUint32(byteLenSec))
-	_, err = f.Read(bytePubSlice)
-	_, err = f.Read(byteSecSlice)
-
 	publicKey = new(siacrypto.PublicKey)
 	secretKey = new(siacrypto.SecretKey)
 
-	err = publicKey.GobDecode(bytePubSlice)
-	fmt.Println("lol")
+	err = publicKey.GobDecode(pubSlice)
 	if err != nil {
 		panic(err)
 		return
 	}
-	err = secretKey.GobDecode(byteSecSlice)
-	fmt.Println("lollll")
-	err = nil
+	err = secretKey.GobDecode(secSlice)
 	if err != nil {
 		panic(err)
 		return
