@@ -23,13 +23,13 @@ func (q *Quorum) SectorFilename(id WalletID) (sectorFilename string) {
 // hash to each lower level hash and arrive at the final value. See the
 // whitepaper for a specification of how to construct Merkle Trees from a
 // sector. This algorithm takes linear time and logarithmic space.
-func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash, err error) {
+func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 	// Loop through every atom in the reader, building out the Merkle Tree in
 	// linear time.
 	prevHashes := make([]*siacrypto.Hash, 1) // prevHashes starts at size 1, to store the first hash
 	atom := make([]byte, AtomSize)
 	var atoms int
-	for _, err = reader.Read(atom); err == nil; atoms++ {
+	for _, err := reader.Read(atom); err == nil; atoms++ {
 		// If atoms is a power of 2, increase the length of prevHashes
 		if atoms&(atoms-1) == 0 {
 			prevHashes = append(prevHashes, nil)

@@ -77,10 +77,7 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ struct{}) (err error) {
 	}
 
 	// compare the hash of the file with the hash in the uploadRequest
-	newHash, err := p.quorum.MerkleCollapse(uploadFile)
-	if err != nil {
-		panic(err)
-	}
+	newHash := p.quorum.MerkleCollapse(uploadFile)
 	if newHash != ud.Hash {
 		err = os.Remove(uploadFilename)
 		if err != nil {

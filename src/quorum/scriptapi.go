@@ -46,6 +46,10 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 		wn.weight += 1
 		tmp -= 4096
 	}
+	if q.walletRoot.weight + wn.weight > AtomsPerQuorum {
+		err = errors.New("insufficient atoms in quorum")
+		return
+	}
 	q.insert(wn)
 
 	// fill out a basic wallet struct from the inputs
@@ -77,6 +81,10 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 	for tmp > 0 {
 		wn.weight += 1
 		tmp -= 4096
+	}
+	if q.walletRoot.weight + wn.weight > AtomsPerQuorum {
+		err = errors.New("insufficient atoms in quorum")
+		return
 	}
 	q.insert(wn)
 
@@ -132,6 +140,8 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	return
 }
 
+// Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
+// or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
 func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
@@ -140,6 +150,14 @@ func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight i
 		return
 	}
 
+	// update the weights in the wallet tree
+	q.updateWeight(w.id, weightDelta)
+	if q.walletRoot.weight > AtomsPerQuorum {
+		q.updateWeight(w.id, -weightDelta)
+		return
+	}
+	weight = weightDelta
+
 	// derive the name of the file housing the sector, and truncate the file
 	walletName := q.walletFilename(w.id)
 	sectorName := walletName + ".sector"
@@ -147,16 +165,20 @@ func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight i
 	if err != nil {
 		panic(err)
 	}
-
-	// update the weights in the wallet tree
-	q.updateWeight(w.id, weightDelta)
-	weight = weightDelta
+	file, err := os.Open(sectorName)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
 
 	// update the hash associated with the sector
+	w.sectorHash = q.MerkleCollapse(file)
 
 	return
 }
 
+// First sectors are allocated, and then changes are uploaded to them. This
+// creates a change.
 func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
 	cost += 2
 

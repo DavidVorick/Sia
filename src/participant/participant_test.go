@@ -15,6 +15,10 @@ func TestSynchronizeEncoding(t *testing.T) {
 
 // Create a state, check the defaults
 func TestCreateParticipant(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	zn := network.NewDebugNetwork()
 	// make sure CreateState does not cause errors
 	wd, err := os.Getwd()
