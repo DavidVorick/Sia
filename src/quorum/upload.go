@@ -3,10 +3,12 @@ package quorum
 import (
 	"fmt"
 	"siacrypto"
+	"siaencoding"
 )
 
 const (
-	UploadAdvancementSize = 10 + siacrypto.SignatureSize
+	UploadAdvancementSize         = WalletIDSize + siacrypto.HashSize + 1 + siacrypto.SignatureSize
+	UnsignedUploadAdvancementSize = UploadAdvancementSize - siacrypto.SignatureSize
 )
 
 type upload struct {
@@ -21,8 +23,8 @@ type upload struct {
 }
 
 type UploadAdvancement struct {
-	SectorID  string
-	Index     byte
+	SectorID  WalletID
+	Hash      siacrypto.Hash
 	Sibling   byte
 	Signature siacrypto.Signature
 }
@@ -63,10 +65,13 @@ func (u *UploadAdvancement) GobEncode() (gobUA []byte, err error) {
 	}
 
 	gobUA = make([]byte, UploadAdvancementSize)
-	copy(gobUA, []byte(u.SectorID))
-	gobUA[8] = u.Index
-	gobUA[9] = u.Sibling
-	copy(gobUA[10:], u.Signature[:])
+	copy(gobUA, u.SectorID.Bytes())
+	offset := WalletIDSize
+	copy(gobUA[offset:], u.Hash[:])
+	offset += siacrypto.HashSize
+	gobUA[offset] = u.Sibling
+	offset += 1
+	copy(gobUA[offset:], u.Signature[:])
 	return
 }
 
@@ -76,49 +81,75 @@ func (u *UploadAdvancement) GobDecode(gobUA []byte) (err error) {
 		return
 	}
 
-	u.SectorID = string(gobUA[0:8])
-	u.Index = gobUA[8]
-	u.Sibling = gobUA[9]
-	copy(u.Signature[:], gobUA[10:])
+	u.SectorID = WalletID(siaencoding.DecUint64(gobUA[0:WalletIDSize])) // bad, use GobDecode
+	offset := WalletIDSize
+	copy(u.Hash[:], gobUA[offset:])
+	offset += siacrypto.HashSize
+	u.Sibling = gobUA[offset]
+	offset += 1
+	copy(u.Signature[:], gobUA[offset:])
 	return
+}
+
+func (q *Quorum) confirmUpload(id string, h siacrypto.Hash) bool {
+	for i := range q.uploads[id] {
+		if q.uploads[id][i].hash == h {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (q *Quorum) clearUploads(sectorID string, i int) {
 	// delete all uploads starting with the ith index
 }
 
-func (q *Quorum) advanceUpload(u *UploadAdvancement) {
-	// mark the sibling sibling as having completed the upload
-	// then check if the upload is ready to have complete() called
-	if q.uploads[u.SectorID] == nil {
+func (q *Quorum) advanceUpload(ua *UploadAdvancement) {
+	// check that all the associated structures exist
+	sectorIDString := string(ua.SectorID.Bytes())
+	if q.uploads[sectorIDString] == nil {
 		return
 	}
-	if byte(len(q.uploads[u.SectorID])) < u.Index {
+	if q.siblings[ua.Sibling] == nil {
+		// this should never happen
 		return
 	}
-	if q.siblings[u.Sibling] == nil {
+
+	// find the index associated with this hash
+	var i int
+	for i = range q.uploads[sectorIDString] {
+		if q.uploads[sectorIDString][i].hash == ua.Hash {
+			break
+		}
+	}
+
+	// see if upload exists in quorum
+	if i == len(q.uploads[sectorIDString]) {
 		return
 	}
-	if q.uploads[u.SectorID][u.Index].receivedConfirmations[u.Sibling] == true {
+
+	// see if this sibling has already confirmed this upload advancement
+	if q.uploads[sectorIDString][i].receivedConfirmations[ua.Sibling] == true {
 		return
 	}
 
 	// verify that the signature belongs to the sibling
-	advanceBytes := make([]byte, 10)
-	copy(advanceBytes, []byte(u.SectorID))
-	advanceBytes[8] = u.Index
-	advanceBytes[9] = u.Sibling
-	verified := q.siblings[u.Sibling].publicKey.Verify(&siacrypto.SignedMessage{
-		Signature: u.Signature,
-		Message:   advanceBytes,
+	uaBytes, err := ua.GobEncode()
+	if err != nil {
+		panic(err)
+	}
+	verified := q.siblings[ua.Sibling].publicKey.Verify(&siacrypto.SignedMessage{
+		Signature: ua.Signature,
+		Message:   uaBytes[:UnsignedUploadAdvancementSize],
 	})
 	if !verified {
 		return
 	}
 
-	q.uploads[u.SectorID][u.Index].receivedConfirmations[u.Sibling] = true
-	q.uploads[u.SectorID][u.Index].requiredConfirmations -= 1
-	if q.uploads[u.SectorID][u.Index].requiredConfirmations == 0 {
+	q.uploads[sectorIDString][i].receivedConfirmations[ua.Sibling] = true
+	q.uploads[sectorIDString][i].requiredConfirmations -= 1
+	if q.uploads[sectorIDString][i].requiredConfirmations == 0 {
 		// completeUpload()
 	}
 }
