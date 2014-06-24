@@ -157,21 +157,57 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms byte, m byte) (cost int, wei
 	}
 	weight = weightDelta
 
-	// derive the name of the file housing the sector, and truncate the file
+	// remove the file and return if the sector has been resized to length 0
 	walletName := q.walletFilename(w.id)
 	sectorName := walletName + ".sector"
-	err = os.Truncate(sectorName, int64(atoms)*int64(AtomSize))
-	if err != nil {
-		panic(err)
+	if atoms == 0 {
+		os.Remove(sectorName)
+		return
 	}
-	file, err := os.Open(sectorName)
+
+	// derive the name of the file housing the sector, and truncate the file
+	file, err := os.Create(sectorName)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
+	// extend the file to being to proper length
+	err = file.Truncate(int64(atoms) * int64(AtomSize))
+	if err != nil {
+		panic(err)
+	}
+
 	// update the hash associated with the sector
-	w.sectorHash = q.MerkleCollapse(file)
+	_, err = file.Seek(int64(AtomSize), 0) // first atom contains hash information
+	if err != nil {
+		panic(err)
+	}
+	zeroMerkle := q.MerkleCollapse(file)
+
+	// build the first atom of the file to contain all of the hashes
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < QuorumSize; i++ {
+		_, err := file.Write(zeroMerkle[:])
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// get the hash of the first atom as the sector hash
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	firstAtom := make([]byte, AtomSize)
+	_, err = file.Read(firstAtom)
+	if err != nil {
+		panic(err)
+	}
+	w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
 	return
 }
