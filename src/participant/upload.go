@@ -19,7 +19,7 @@ type UploadDiff struct {
 	ConversionSet []Conversion
 }
 
-func (p *Participant) SignUploadAdvancement(ua *quorum.UploadAdvancement) {
+func (p *Participant) signUploadAdvancement(ua *quorum.UploadAdvancement) {
 	gobUA, err := ua.GobEncode()
 	if err != nil {
 		panic(err)
@@ -31,7 +31,7 @@ func (p *Participant) SignUploadAdvancement(ua *quorum.UploadAdvancement) {
 	ua.Signature = signedMessage.Signature
 }
 
-func (p *Participant) ReceieveDiff(ud UploadDiff, _ struct{}) (err error) {
+func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 	// find the parent in the quorum
 	if !p.quorum.ConfirmUpload(ud.Id, ud.Hash) {
 		err = fmt.Errorf("Upload is not found in the quorum")
@@ -93,7 +93,7 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ struct{}) (err error) {
 		Hash:    ud.Hash,
 		Sibling: p.self.Index(),
 	}
-	p.SignUploadAdvancement(&ua)
+	p.signUploadAdvancement(&ua)
 	p.uploadAdvancementsLock.Lock()
 	p.uploadAdvancements = append(p.uploadAdvancements, ua)
 	p.uploadAdvancementsLock.Unlock()

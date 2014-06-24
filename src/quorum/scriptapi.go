@@ -39,12 +39,14 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 	cost += 5
 	wn = new(walletNode)
 	wn.id = id
-	wn.weight = 1
+	wn.weight = walletAtomMultiplier
 	tmp := len(initialScript)
 	tmp -= 1024
+	var scriptAtoms uint16
 	for tmp > 0 {
-		wn.weight += 1
+		wn.weight += walletAtomMultiplier
 		tmp -= 4096
+		scriptAtoms += 1
 	}
 	if q.walletRoot.weight+wn.weight > AtomsPerQuorum {
 		err = errors.New("insufficient atoms in quorum")
@@ -57,6 +59,7 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 	nw.id = id
 	nw.Balance = balance
 	nw.script = initialScript
+	nw.scriptAtoms = scriptAtoms
 	q.SaveWallet(nw)
 
 	w.Balance.Subtract(balance)
@@ -75,7 +78,7 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 	// create a wallet node to insert into the walletTree
 	wn = new(walletNode)
 	wn.id = id
-	wn.weight = 1
+	wn.weight = walletAtomMultiplier
 	tmp := len(initialScript)
 	tmp -= 1024
 	for tmp > 0 {

@@ -54,7 +54,7 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.Balance.lowerBalance)
 	s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
 	s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
-	s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash)
+	s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
 	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
 	return
