@@ -68,6 +68,8 @@ var opTable = []instruction{
 	instruction{0x37, "move", 2, op_move, 1},
 	instruction{0x38, "cond_reject", 0, op_cond_reject, 1},
 	instruction{0x39, "data_buf", 2, op_data_buf, 2},
+	instruction{0x3A, "resize_sec", 2, op_resize_sec, 9},
+	instruction{0x3B, "prop_upload", 1, op_prop_upload, 9},
 }
 
 // helper functions
@@ -580,11 +582,9 @@ func op_cond_reject(args []byte) (err error) {
 }
 
 func op_add_sibling(args []byte) (err error) {
-	encSibling := buffers[args[0]]
-
 	// decode sibling
 	sib := new(quorum.Sibling)
-	err = sib.GobDecode(encSibling)
+	err = sib.GobDecode(buffers[args[0]])
 	if err != nil {
 		return
 	}
@@ -659,5 +659,30 @@ func op_switch(args []byte) (err error) {
 	} else {
 		err = push(a)
 	}
+	return
+}
+
+func op_resize_sec(args []byte) (err error) {
+	_, _, err = q.ResizeSectorErase(wallet, args[0], args[1])
+	return
+}
+
+func op_prop_upload(args []byte) (err error) {
+	// decode function arguments
+	var ua quorum.UploadArgs
+	err = ua.GobDecode(buffers[args[0]])
+	if err != nil {
+		return
+	}
+
+	// call function
+	_, _, err = q.ProposeUpload(
+		wallet,
+		ua.ParentHash,
+		ua.NewHashSet,
+		ua.AtomsChanged,
+		ua.Confirmations,
+		ua.Deadline,
+	)
 	return
 }
