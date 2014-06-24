@@ -104,6 +104,24 @@ func (q *Quorum) ConfirmUpload(id WalletID, h siacrypto.Hash) bool {
 
 func (q *Quorum) clearUploads(id WalletID, i int) {
 	// delete all uploads starting with the ith index
+	for i = i; i < len(q.uploads[id]); i++ {
+		// delete the file associated with the upload
+		sectorFilename := q.SectorFilename(id)
+		uploadFilename := sectorFilename + "." + string(q.uploads[id][i].hash[:])
+		err := os.Remove(uploadFilename)
+		if err != nil {
+			panic(err)
+		}
+
+		// subtract temporary atoms from the wallet
+		err = q.updateWeight(id, int(-q.uploads[id][i].weight))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// remove the uploads from the slice
+	q.uploads[id] = q.uploads[id][:i]
 }
 
 func (q *Quorum) advanceUpload(ua *UploadAdvancement) {
