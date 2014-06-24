@@ -27,7 +27,7 @@ func findDataSection(script []byte) (index int) {
 			index = i + 1
 		}
 		// these are good indicators that we're inside a data block
-		if int(b) > len(opTable) || i+opTable[b].argBytes >= len(script) {
+		if int(b) >= len(opTable) || i+opTable[b].argBytes >= len(script) {
 			break
 		}
 	}
@@ -80,7 +80,7 @@ func BytesToWords(script []byte) (s string, err error) {
 			continue
 		}
 		// unknown opcode
-		if int(script[i]) > len(opTable) {
+		if int(script[i]) >= len(opTable) {
 			err = errors.New("error parsing script")
 			return
 		}
