@@ -70,7 +70,7 @@ func AddSiblingInput(encSm, encSibling []byte) []byte {
 		[]byte{
 			0x25, 0x08, 0x00, // move data pointer to encoded sibling
 			0x2E, 0x01, //       read sibling into buffer 1
-			0x31, 0x01, //       call add sibling
+			0x31, 0x01, //       call AddSibling
 			0xFF, //             exit
 		},
 		encSibling,
@@ -83,4 +83,19 @@ func TransactionInput(dst, high, low uint64) []byte {
 		siaencoding.EncUint64(high),
 		siaencoding.EncUint64(low),
 	)
+}
+
+func ResizeSectorEraseInput(atoms, m byte) []byte {
+	return []byte{
+		0x3A, atoms, m, // simple as that
+	}
+}
+
+func ProposeUploadInput(encUA []byte) []byte {
+	return append([]byte{
+		0x25, 0x08, 0x00, // move data pointer to encoded args
+		0x2E, 0x01, //       read args into buffer 1
+		0x3B, 0x01, //       call ProposeUpload
+		0xFF, //             exit
+	}, encUA...)
 }
