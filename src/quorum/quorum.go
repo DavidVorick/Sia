@@ -42,7 +42,7 @@ type Quorum struct {
 	walletRoot   *walletNode
 
 	// File management
-	storagePrice uint32
+	storagePrice Balance
 	uploads      map[WalletID][]*upload
 
 	// Snapshot management
@@ -51,6 +51,12 @@ type Quorum struct {
 	// Block tracking
 	parent siacrypto.Hash
 	height uint32
+}
+
+func (q *Quorum) Init() {
+	q.storagePrice = Balance{
+		lowerBalance: 1,
+	}
 }
 
 // This is the prefix that the quorum will use when opening wallets as files.

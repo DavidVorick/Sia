@@ -38,6 +38,10 @@ func (a *Balance) Subtract(b Balance) {
 	}
 }
 
+// Luke does stuff here
+func (a *Balance) Multiply(i uint32) {
+}
+
 // Compare returns true if a is greater than or equal to b
 func (a *Balance) Compare(b Balance) bool {
 	if a.upperBalance < b.upperBalance {

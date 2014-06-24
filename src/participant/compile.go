@@ -24,6 +24,7 @@ func (p *Participant) compile(b *block) {
 			si.Execute(&p.quorum)
 		}
 	}
+	p.quorum.ExecuteCompensation()
 	p.quorum.IntegrateGerm()
 	p.quorum.AdvanceBlock(b.parent)
 	p.saveBlock(b)

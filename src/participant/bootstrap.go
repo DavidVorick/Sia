@@ -75,6 +75,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// initialize disk variables
 	p.recentBlocks = make(map[uint32]*block)
 	p.quorum.SetWalletPrefix(participantPrefix)
+	p.quorum.Init()
 	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
