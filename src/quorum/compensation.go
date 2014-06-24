@@ -13,8 +13,8 @@ func (q *Quorum) chargeWallets(wn *walletNode, multiplier int) {
 	// load the wallet, and
 	w := q.LoadWallet(wn.id)
 	weightedPrice := q.storagePrice
-	weightedPrice.Multiply(uint32(wn.weight))
-	weightedPrice.Multiply(uint32(multiplier))
+	weightedPrice.Multiply(NewBalance(0, uint64(wn.weight)))
+	weightedPrice.Multiply(NewBalance(0, uint64(multiplier)))
 	w.Balance.Subtract(weightedPrice)
 	q.SaveWallet(w)
 }
@@ -25,7 +25,7 @@ func (q *Quorum) ExecuteCompensation() {
 	}
 
 	compensation := q.storagePrice
-	compensation.Multiply(uint32(q.walletRoot.weight))
+	compensation.Multiply(NewBalance(0, uint64(q.walletRoot.weight)))
 	var siblings int
 	for i := range q.siblings {
 		if q.siblings[i] == nil {

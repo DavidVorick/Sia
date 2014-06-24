@@ -22,7 +22,7 @@ const (
 // If a wallet of that id already exists then the process aborts.
 func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
 	cost += 1
-	if !w.Balance.Compare(balance) {
+	if w.Balance.Compare(balance) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
@@ -97,7 +97,7 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 
 func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
 	cost += 1
-	if !w.Balance.Compare(amount) {
+	if w.Balance.Compare(amount) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}

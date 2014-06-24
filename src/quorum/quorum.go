@@ -54,9 +54,7 @@ type Quorum struct {
 }
 
 func (q *Quorum) Init() {
-	q.storagePrice = Balance{
-		lowerBalance: 1,
-	}
+	q.storagePrice = NewBalance(0, 1)
 }
 
 // This is the prefix that the quorum will use when opening wallets as files.
