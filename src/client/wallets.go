@@ -9,11 +9,11 @@ import (
 )
 
 type Wallet struct {
-	ID         int
-	ScriptTags map[string]struct{}
+	ID   int
+	Type string
 }
 
-func SaveWallet(id int, tags []string, destFile string) (err error) {
+func SaveWallet(id int, walletType string, destFile string) (err error) {
 	if destFile == "" {
 		fmt.Errorf("Cannot save, file name is empty string")
 		return
@@ -22,9 +22,7 @@ func SaveWallet(id int, tags []string, destFile string) (err error) {
 	wallet = new(Wallet)
 
 	wallet.ID = id
-	for t := range tags {
-		wallet.ScriptTags[tags[t]] = struct{}{}
-	}
+	wallet.Type = walletType
 	w1 := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w1)
 	err = encoder.Encode(wallet)
@@ -53,6 +51,31 @@ func SaveWallet(id int, tags []string, destFile string) (err error) {
 	return
 }
 
-func LoadWallet(fileName string) {
-
+func LoadWallet(fileName string) (wallet *Wallet, err error) {
+	if fileName == "" {
+		err = fmt.Errorf("Cannot load, file name is empty string")
+	}
+	f, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	sizeSlice := make([]byte, 4)
+	_, err = f.Read(sizeSlice)
+	if err != nil {
+		panic(err)
+	}
+	size := siaencoding.DecUint32(sizeSlice)
+	walletSlice := make([]byte, size)
+	_, err = f.Read(walletSlice)
+	if err != nil {
+		panic(err)
+	}
+	wallet = new(Wallet)
+	r := bytes.NewBuffer(walletSlice)
+	decoder := gob.NewDecoder(r)
+	err = decoder.Decode(&wallet)
+	if err != nil {
+		panic(err)
+	}
+	return
 }
