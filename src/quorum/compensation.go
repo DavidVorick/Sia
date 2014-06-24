@@ -13,7 +13,7 @@ func (q *Quorum) chargeWallets(wn *walletNode, multiplier int) {
 	// load the wallet, and
 	w := q.LoadWallet(wn.id)
 	weightedPrice := q.storagePrice
-	weightedPrice.Multiply(NewBalance(0, uint64(wn.weight)))
+	weightedPrice.Multiply(NewBalance(0, uint64(wn.nodeWeight())))
 	weightedPrice.Multiply(NewBalance(0, uint64(multiplier)))
 	w.Balance.Subtract(weightedPrice)
 	q.SaveWallet(w)
