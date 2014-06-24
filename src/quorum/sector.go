@@ -47,6 +47,7 @@ func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 
 		// store the new hash in the first empty slot
 		copy(prevHashes[i][:], hash[:])
+		_, err = reader.Read(atom)
 	}
 
 	// Merge the hashes into the final tree, starting with the highest level hash
