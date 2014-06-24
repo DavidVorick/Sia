@@ -112,8 +112,8 @@ func WordsToBytes(script string) (b []byte, err error) {
 	tokens := strings.Fields(script)
 
 	for i := 0; i < len(tokens); i++ {
+		// parse rest of script as hex literals
 		if tokens[i] == "<--data-->" {
-			// parse rest of script as hex literals
 			var data byte
 			for i++; i < len(tokens); i++ {
 				fmt.Sscanf(tokens[i], "%X", &data)
@@ -121,22 +121,28 @@ func WordsToBytes(script string) (b []byte, err error) {
 			}
 			return
 		}
+
+		// parse opcode
 		op, ok := opcodeMap[tokens[i]]
 		if !ok {
-			err = errors.New("error parsing script")
+			err = errors.New(fmt.Sprint("expected opcode, got ", tokens[i]))
 			return
 		}
 		b = append(b, op.opcode)
 
-		// process arguments
+		// parse argument(s)
 		numArgs := op.argBytes
 		if shortArg[op.opcode] {
 			numArgs = 1
 		}
-		var arg int
+		if i+numArgs > len(tokens) {
+			err = errors.New(fmt.Sprint("not enough arguments to ", tokens[i]))
+			return
+		}
 		for j := 1; j <= numArgs; j++ {
-			arg, err = strconv.Atoi(tokens[i+j])
-			if err != nil {
+			arg, convErr := strconv.Atoi(tokens[i+j])
+			if convErr != nil {
+				err = errors.New(fmt.Sprintf("invalid argument \"%s\" to opcode %s", tokens[i+j], tokens[i]))
 				return
 			}
 			// convert single number to two bytes
