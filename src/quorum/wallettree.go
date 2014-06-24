@@ -25,6 +25,20 @@ type walletNode struct {
 	weight int
 }
 
+func (wn *walletNode) nodeWeight() (nw int) {
+	if wn == nil {
+		return
+	}
+	nw = wn.weight
+	if wn.children[0] != nil {
+		nw -= wn.children[0].weight
+	}
+	if wn.children[1] != nil {
+		nw -= wn.children[1].weight
+	}
+	return
+}
+
 func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
 	// check that the id is in the quorum
 	wn := q.retrieve(id)

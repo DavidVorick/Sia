@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"io"
+	"os"
 	"siacrypto"
 )
 
@@ -59,4 +60,84 @@ func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 		}
 	}
 	return
+}
+
+func (q *Quorum) BuildStorageProof(id WalletID, atomIndex int) (proofStack []*siacrypto.Hash) {
+	return
+}
+
+// Recursive algorithm to take a list of proofs that fall down a merkle tree,
+// get to the bottom, and then hash them in the right order to build back up to
+// the merkle root
+func buildMerkleRoot(high uint16, search uint16, base siacrypto.Hash, proofStack []*siacrypto.Hash) siacrypto.Hash {
+	// base case: does high equal 1 or 0?
+	if high == 1 {
+		if search == 0 {
+			return siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
+		} else {
+			return siacrypto.CalculateHash(append(proofStack[0][:], base[:]...))
+		}
+	}
+	if high == 0 {
+		return base
+	}
+
+	// find the highest power of 2 that fits into 'high' (but not completely, so 2^2 for 8, 2^3 for 9)
+	var divider uint16
+	for divider<<1 < high {
+		divider <<= 1
+	}
+
+	if search < divider {
+		nextHash := buildMerkleRoot(divider, search-(high-divider), base, proofStack[1:])
+		return siacrypto.CalculateHash(append(nextHash[:], proofStack[0][:]...))
+	} else {
+		nextHash := buildMerkleRoot(high-divider, search, base, proofStack[1:])
+		return siacrypto.CalculateHash(append(proofStack[0][:], nextHash[:]...))
+	}
+}
+
+func (q *Quorum) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
+	// get the intended hash from the segment stored on disk
+	sectorFilename := q.SectorFilename(id)
+	file, err := os.Open(sectorFilename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// seek to the location where this particular siblings hash is stored
+	hashLocation := int64(sibling) * int64(siacrypto.HashSize)
+	_, err = file.Seek(hashLocation, 0)
+	if err != nil {
+		panic(err)
+	}
+	var expectedHash siacrypto.Hash
+	_, err = file.Read(expectedHash[:])
+	if err != nil {
+		panic(err)
+	}
+
+	w := q.LoadWallet(id)
+
+	// determine that proofStack is long enough
+	var proofsNeeded int
+	var proofCounter uint32
+	for proofCounter<<1 <= uint32(w.sectorAtoms) {
+		proofsNeeded += 1
+		proofCounter <<= 1
+	}
+	if len(proofStack) < proofsNeeded {
+		return false
+	}
+
+	// build the hash up from the base
+	initialHash := siacrypto.CalculateHash(proofBase)
+	initialHigh := w.sectorAtoms
+	finalHash := buildMerkleRoot(initialHigh, atomIndex, initialHash, proofStack)
+
+	if finalHash != expectedHash {
+		return false
+	}
+	return true
 }

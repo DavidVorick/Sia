@@ -44,7 +44,7 @@ func SaveKeyPair(publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey,
 func LoadKeyPair(filePath string) (publicKey *siacrypto.PublicKey, secretKey *siacrypto.SecretKey, err error) {
 	if filePath == "" {
 		err = fmt.Errorf("Cannot load, file name is empty string")
-    return
+		return
 	}
 	f, err := os.Open(filePath)
 	if err != nil {

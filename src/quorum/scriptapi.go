@@ -22,7 +22,7 @@ const (
 // If a wallet of that id already exists then the process aborts.
 func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
 	cost += 1
-	if !w.Balance.Compare(balance) {
+	if w.Balance.Compare(balance) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
@@ -97,7 +97,7 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 
 func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
 	cost += 1
-	if !w.Balance.Compare(amount) {
+	if w.Balance.Compare(amount) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
@@ -141,7 +141,7 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 
 // Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
 // or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
-func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
+func (q *Quorum) ResizeSectorErase(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
 	weightDelta -= int(w.sectorAtoms)
@@ -157,21 +157,57 @@ func (q *Quorum) ResizeSector(w *Wallet, atoms byte, m byte) (cost int, weight i
 	}
 	weight = weightDelta
 
-	// derive the name of the file housing the sector, and truncate the file
+	// remove the file and return if the sector has been resized to length 0
 	walletName := q.walletFilename(w.id)
 	sectorName := walletName + ".sector"
-	err = os.Truncate(sectorName, int64(atoms)*int64(AtomSize))
-	if err != nil {
-		panic(err)
+	if atoms == 0 {
+		os.Remove(sectorName)
+		return
 	}
-	file, err := os.Open(sectorName)
+
+	// derive the name of the file housing the sector, and truncate the file
+	file, err := os.Create(sectorName)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
+	// extend the file to being to proper length
+	err = file.Truncate(int64(atoms) * int64(AtomSize))
+	if err != nil {
+		panic(err)
+	}
+
 	// update the hash associated with the sector
-	w.sectorHash = q.MerkleCollapse(file)
+	_, err = file.Seek(int64(AtomSize), 0) // first atom contains hash information
+	if err != nil {
+		panic(err)
+	}
+	zeroMerkle := q.MerkleCollapse(file)
+
+	// build the first atom of the file to contain all of the hashes
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < QuorumSize; i++ {
+		_, err := file.Write(zeroMerkle[:])
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// get the hash of the first atom as the sector hash
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	firstAtom := make([]byte, AtomSize)
+	_, err = file.Read(firstAtom)
+	if err != nil {
+		panic(err)
+	}
+	w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
 	return
 }
@@ -244,7 +280,6 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 		deadline:              deadline,
 	}
 
-	cost += int((deadline - q.height) * uint32(atomsChanged+1) * q.storagePrice) // also need to add in the growth restraints
 	weight = atomsChanged
 	q.uploads[w.id] = append(q.uploads[w.id], &u)
 	q.updateWeight(w.id, int(atomsChanged))

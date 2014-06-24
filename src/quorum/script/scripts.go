@@ -42,8 +42,8 @@ func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 // creates a wallet with a provided ID and script
 var BootstrapScript = []byte{
 	0x27, 0x08, //       00 push 8 bytes of input (wallet id)
-	0x01, 0x00, //       02 push 0 (high balance)
-	0x01, 0x64, //       04 push 100 (low balance)
+	0x01, 0x00, //       02 push 1 (high balance)
+	0x02, 0xA8, 0x61, // 04 push 100 (low balance)
 	0x2E, 0x01, //       08 read rest of input into buffer 1
 	0x32, 0x01, //       10 call create wallet
 	0xFF, //             12 exit

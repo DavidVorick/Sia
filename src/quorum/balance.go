@@ -1,74 +1,68 @@
 package quorum
 
 import (
-	"fmt"
+	"errors"
 	"siaencoding"
 )
 
-type Balance struct {
-	upperBalance uint64
-	lowerBalance uint64
+type Balance [16]byte
+
+func NewBalance(upper, lower uint64) (b Balance) {
+	uBytes := siaencoding.EncUint64(upper)
+	lBytes := siaencoding.EncUint64(lower)
+	copy(b[:8], lBytes)
+	copy(b[8:], uBytes)
+	return
 }
 
-func NewBalance(upper, lower uint64) Balance {
-	return Balance{upper, lower}
-}
-
+// should return an error on overflow
 func (a *Balance) Add(b Balance) {
-	a.upperBalance += b.upperBalance
-	if ^uint64(0)-a.lowerBalance >= b.lowerBalance {
-		a.lowerBalance += b.lowerBalance
-	} else {
-		a.upperBalance += 1
-		if a.lowerBalance < b.lowerBalance {
-			a.lowerBalance = a.lowerBalance - (^uint64(0) - b.lowerBalance)
-		} else {
-			a.lowerBalance = b.lowerBalance - (^uint64(0) - a.lowerBalance)
-		}
-	}
+	x := siaencoding.DecUint128(a[:])
+	y := siaencoding.DecUint128(b[:])
+	copy(a[:], siaencoding.EncUint128(x.Add(x, y)))
 }
 
+// should return an error if b > a
 func (a *Balance) Subtract(b Balance) {
-	a.upperBalance -= b.upperBalance
-	if a.lowerBalance < b.lowerBalance {
-		a.upperBalance -= 1
-		a.lowerBalance = ^uint64(0) - (b.lowerBalance - a.lowerBalance)
-	} else {
-		a.lowerBalance -= b.lowerBalance
-	}
+	x := siaencoding.DecUint128(a[:])
+	y := siaencoding.DecUint128(b[:])
+	copy(a[:], siaencoding.EncUint128(x.Sub(x, y)))
 }
 
-// Compare returns true if a is greater than or equal to b
-func (a *Balance) Compare(b Balance) bool {
-	if a.upperBalance < b.upperBalance {
-		return false
-	}
-	if a.upperBalance == b.upperBalance && a.lowerBalance < b.lowerBalance {
-		return false
-	}
-
-	return true
+// should return an error on overflow
+func (a *Balance) Multiply(b Balance) {
+	x := siaencoding.DecUint128(a[:])
+	y := siaencoding.DecUint128(b[:])
+	copy(a[:], siaencoding.EncUint128(x.Mul(x, y)))
 }
 
-func (b *Balance) GobEncode() ([]byte, error) {
+// Compare returns 1 if a > b, -1 if a < b, and 0 if a == b
+func (a *Balance) Compare(b Balance) int {
+	x := siaencoding.DecUint128(a[:])
+	y := siaencoding.DecUint128(b[:])
+	return x.Cmp(y)
+}
+
+func (b *Balance) GobEncode() (gobB []byte, err error) {
 	if b == nil {
-		return nil, fmt.Errorf("Cannot encode nil Balance")
+		err = errors.New("Cannot encode nil Balance")
+		return
 	}
-
-	upperBytes := siaencoding.EncUint64(b.upperBalance)
-	lowerBytes := siaencoding.EncUint64(b.lowerBalance)
-	return append(upperBytes, lowerBytes...), nil
+	gobB = make([]byte, 16)
+	copy(gobB, b[:])
+	return
 }
 
-func (b *Balance) GobDecode(bytes []byte) error {
+func (b *Balance) GobDecode(gobB []byte) (err error) {
 	if b == nil {
-		return fmt.Errorf("Cannot decode into nil Balance")
+		err = errors.New("cannot decode into nil balance")
+		return
 	}
-	if len(bytes) != 16 {
-		return fmt.Errorf("Invalid encoded Balance!")
+	if len(gobB) != 16 {
+		err = errors.New("encoded balance has wrong length")
+		return
 	}
 
-	b.upperBalance = siaencoding.DecUint64(bytes[:8])
-	b.lowerBalance = siaencoding.DecUint64(bytes[8:])
-	return nil
+	copy(b[:], gobB)
+	return
 }

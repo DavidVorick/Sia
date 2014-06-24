@@ -75,6 +75,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// initialize disk variables
 	p.recentBlocks = make(map[uint32]*block)
 	p.quorum.SetWalletPrefix(participantPrefix)
+	p.quorum.Init()
 	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
@@ -82,7 +83,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.synchronized = true
 
 		// create the bootstrap wallet
-		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 15000), script.BootstrapScript)
+		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 1234000), script.BootstrapScript)
 		wallet := p.quorum.LoadWallet(BootstrapID)
 
 		// add self as a sibling
