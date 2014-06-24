@@ -9,11 +9,11 @@ import (
 )
 
 type Wallet struct {
-	ID   int
+	ID   uint32
 	Type string
 }
 
-func SaveWallet(id int, walletType string, destFile string) (err error) {
+func SaveWallet(id uint32, walletType string, destFile string) (err error) {
 	if destFile == "" {
 		fmt.Errorf("Cannot save, file name is empty string")
 		return
