@@ -46,7 +46,7 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 		wn.weight += 1
 		tmp -= 4096
 	}
-	if q.walletRoot.weight + wn.weight > AtomsPerQuorum {
+	if q.walletRoot.weight+wn.weight > AtomsPerQuorum {
 		err = errors.New("insufficient atoms in quorum")
 		return
 	}
@@ -81,10 +81,6 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 	for tmp > 0 {
 		wn.weight += 1
 		tmp -= 4096
-	}
-	if q.walletRoot.weight + wn.weight > AtomsPerQuorum {
-		err = errors.New("insufficient atoms in quorum")
-		return
 	}
 	q.insert(wn)
 

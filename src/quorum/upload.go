@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"fmt"
+	"os"
 	"siacrypto"
 	"siaencoding"
 )
@@ -150,12 +151,22 @@ func (q *Quorum) advanceUpload(ua *UploadAdvancement) {
 
 	q.uploads[sectorIDString][i].receivedConfirmations[ua.Sibling] = true
 	q.uploads[sectorIDString][i].requiredConfirmations -= 1
-	if q.uploads[sectorIDString][i].requiredConfirmations == 0 {
-		// completeUpload()
-	}
-}
+	if q.uploads[sectorIDString][i].requiredConfirmations <= 0 && i == 0 {
+		// copy the upload file over to the actual file
+		sectorFilename := q.SectorFilename(ua.SectorID)
+		uploadFilename := sectorFilename + "." + string(ua.Hash)
+		err := os.Rename(uploadFilename, sectorFilename)
+		if err != nil {
+			panic(err)
+		}
 
-func (q *Quorum) completeUpload(sectorID string) {
-	// the upload at the first index is popped from the chain (just do a reslice), and the hash is moved over
-	// costs are refunded where possible
+		// subtract the temporary atoms from the wallet
+		err := q.updateWeight(ua.ID, -ua.weight)
+		if err != nil {
+			panic(err)
+		}
+
+		// take the upload out of the uploads array
+		q.uploads[ua.SectorID] = q.uploads[sectorID][1:]
+	}
 }
