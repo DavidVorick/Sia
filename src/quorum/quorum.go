@@ -43,7 +43,7 @@ type Quorum struct {
 
 	// File management
 	storagePrice uint32
-	uploads      map[string][]*upload
+	uploads      map[WalletID][]*upload
 
 	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1

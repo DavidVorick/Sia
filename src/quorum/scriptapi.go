@@ -210,23 +210,22 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	// starting directly from the existing hash), all remaining uploads are
 	// truncated. There can only exist a single chain of potential uploads, all
 	// other get defeated by precedence.
-	sectorID := string(w.id.Bytes())
 	if parentHash == w.sectorHash {
 		// clear all existing uploads
-		q.clearUploads(sectorID, 0)
+		q.clearUploads(w.id, 0)
 	} else {
 		var i int
-		for i = 0; i < len(q.uploads[sectorID]); i++ {
-			if parentHash == q.uploads[sectorID][i].hash {
+		for i = 0; i < len(q.uploads[w.id]); i++ {
+			if parentHash == q.uploads[w.id][i].hash {
 				break
 			}
 		}
 
-		if i == len(q.uploads[sectorID]) {
+		if i == len(q.uploads[w.id]) {
 			err = errors.New("upload has invalid parent hash")
 			return
 		}
-		q.clearUploads(sectorID, i)
+		q.clearUploads(w.id, i)
 	}
 
 	var uploadHash siacrypto.Hash
@@ -234,7 +233,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 		uploadHash = siacrypto.CalculateHash(append(uploadHash[:], newHashSet[i][:]...))
 	}
 	u := upload{
-		sectorID:              sectorID,
+		id: w.id,
 		requiredConfirmations: confirmations,
 		hashSet:               newHashSet,
 		hash:                  uploadHash,
@@ -244,7 +243,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 
 	cost += int((deadline - q.height) * uint32(atomsChanged+1) * q.storagePrice) // also need to add in the growth restraints
 	weight = atomsChanged
-	q.uploads[sectorID] = append(q.uploads[sectorID], &u)
+	q.uploads[w.id] = append(q.uploads[w.id], &u)
 	q.updateWeight(w.id, int(atomsChanged))
 	q.insertEvent(&u)
 	return

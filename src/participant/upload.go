@@ -89,9 +89,9 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ struct{}) (err error) {
 
 	// submit an upload advancement to the quorum
 	ua := quorum.UploadAdvancement{
-		SectorID: ud.Id,
-		Hash:     ud.Hash,
-		Sibling:  p.self.Index(),
+		ID:      ud.Id,
+		Hash:    ud.Hash,
+		Sibling: p.self.Index(),
 	}
 	p.SignUploadAdvancement(&ua)
 	p.uploadAdvancementsLock.Lock()
