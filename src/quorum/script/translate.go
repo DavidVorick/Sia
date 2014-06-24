@@ -1,7 +1,10 @@
 package script
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 const hextable = "0123456789ABCDEF"
@@ -34,6 +37,8 @@ func findDataSection(script []byte) (index int) {
 // this might be added as a field in the instruction type later
 var shortArg [256]bool
 
+var opcodeMap map[string]instruction
+
 func init() {
 	shortArg[0x02] = true
 	shortArg[0x1F] = true
@@ -42,13 +47,24 @@ func init() {
 	shortArg[0x26] = true
 	shortArg[0x36] = true
 	shortArg[0x37] = true
+
+	// build name -> opcode map
+	opcodeMap = make(map[string]instruction)
+	for _, op := range opTable {
+		opcodeMap[op.name] = op
+	}
+	// kludge
+	opcodeMap["terminate"] = instruction{opcode: 0xFF, name: "terminate"}
 }
 
-func BytesToWords(script []byte) (s string) {
+func BytesToWords(script []byte) (s string, err error) {
+	// locate data section, if there is one
 	dataIndex := findDataSection(script)
+
 	for i := 0; i < len(script); i++ {
 		if i == dataIndex {
-			s += "<-- data section -->\n"
+			s += "<--data-->\n"
+			// print hex-formatted data in rows of 32
 			for i < len(script) {
 				b := make([]byte, 32)
 				n := copy(b, script[i:])
@@ -57,27 +73,91 @@ func BytesToWords(script []byte) (s string) {
 			}
 			break
 		}
+
+		// 0xFF is not in the opTable (yet)
 		if script[i] == 0xFF {
 			s += "terminate\n"
 			continue
 		}
+		// unknown opcode
 		if int(script[i]) > len(opTable) {
-			s += " " + fmt.Sprint(script[i]) + "\n"
-			continue
+			err = errors.New("error parsing script")
+			return
 		}
+
 		op := opTable[script[i]]
 		s += op.name
+
+		// unrolled loop, since there are only two arguments max
 		if op.argBytes == 1 {
-			s += " " + fmt.Sprint(script[i+1])
+			s += fmt.Sprint(" ", script[i+1])
 		} else if op.argBytes == 2 {
+			// combine two bytes into one number where appropriate
 			if shortArg[script[i]] {
-				s += " " + fmt.Sprint(s2i(script[i+1], script[i+2]))
+				s += fmt.Sprint(" ", s2i(script[i+1], script[i+2]))
 			} else {
-				s += " " + fmt.Sprint(script[i+1], script[i+2])
+				s += fmt.Sprint(" ", script[i+1], script[i+2])
 			}
 		}
+
 		s += "\n"
 		i += op.argBytes
 	}
+
+	return
+}
+
+func WordsToBytes(script string) (b []byte, err error) {
+	// simple tokenization using a whitespace separator
+	tokens := strings.Fields(script)
+
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i] == "<--data-->" {
+			// parse rest of script as hex literals
+			var data byte
+			for i++; i < len(tokens); i++ {
+				fmt.Sscanf(tokens[i], "%X", &data)
+				b = append(b, data)
+			}
+			return
+		}
+		op, ok := opcodeMap[tokens[i]]
+		if !ok {
+			err = errors.New("error parsing script")
+			return
+		}
+		b = append(b, op.opcode)
+
+		// process arguments
+		numArgs := op.argBytes
+		if shortArg[op.opcode] {
+			numArgs = 1
+		}
+		var arg int
+		for j := 1; j <= numArgs; j++ {
+			arg, err = strconv.Atoi(tokens[i+j])
+			if err != nil {
+				return
+			}
+			// convert single number to two bytes
+			if shortArg[op.opcode] {
+				if arg > 0xFFFF {
+					err = errors.New("argument overflows short")
+					return
+				}
+				b = append(b, byte(arg))
+				b = append(b, byte(arg>>8))
+			} else {
+				if arg > 0xFF {
+					err = errors.New("argument overflows byte")
+					return
+				}
+				b = append(b, byte(arg))
+			}
+		}
+
+		i += numArgs
+	}
+
 	return
 }
