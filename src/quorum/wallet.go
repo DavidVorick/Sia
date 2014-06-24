@@ -50,8 +50,7 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 		return "\t\t\tError! Don't have wallet!\n"
 		return
 	}
-	s += fmt.Sprintf("\t\t\tUpper Balance: %v\n", w.Balance.upperBalance)
-	s += fmt.Sprintf("\t\t\tLower Balance: %v\n", w.Balance.lowerBalance)
+	s += fmt.Sprintf("\t\t\tBalance: %v\n", siaencoding.DecUint128(w.Balance[:]))
 	s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
 	s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
 	s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
