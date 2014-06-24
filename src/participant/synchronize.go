@@ -40,6 +40,11 @@ func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]block) (err err
 	return
 }
 
+func (p *Participant) Siblings(_ struct{}, siblings *[quorum.QuorumSize]*quorum.Sibling) (err error) {
+	*siblings = p.quorum.Siblings()
+	return
+}
+
 // Synchronize just sends over participant.currentStep, and is a temporary
 // function. It's not secure or trusted and is highely exploitable.
 //

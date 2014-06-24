@@ -43,7 +43,7 @@ type Quorum struct {
 
 	// File management
 	storagePrice uint32
-	uploads      map[string][]*upload
+	uploads      map[WalletID][]*upload
 
 	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
@@ -112,6 +112,11 @@ func (q *Quorum) Status() (b string) {
 
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 
+	if q.walletRoot != nil {
+		b += fmt.Sprintf("\tWeight: %x\n", q.walletRoot.weight)
+	} else {
+		b += fmt.Sprintf("\tWeight: 0\n")
+	}
 	b += fmt.Sprintf("\tParent: %x\n", q.parent)
 	b += fmt.Sprintf("\tHeight: %x\n\n", q.height)
 	return

@@ -22,10 +22,12 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scriptInputs     []script.ScriptInput
-	scriptInputsLock sync.Mutex
-	heartbeats       [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
-	heartbeatsLock   sync.Mutex
+	scriptInputs           []script.ScriptInput
+	scriptInputsLock       sync.Mutex
+	uploadAdvancements     []quorum.UploadAdvancement
+	uploadAdvancementsLock sync.Mutex
+	heartbeats             [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
+	heartbeatsLock         sync.Mutex
 
 	// Consensus Algorithm Status
 	ticking     bool
