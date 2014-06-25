@@ -148,6 +148,19 @@ func main() {
 				fmt.Println("Sector resized")
 			}
 
+		case "u":
+			var filename string
+			fmt.Print("Filename: ")
+			fmt.Scanln(&filename)
+			fmt.Print("M: ")
+			fmt.Scanln(&m)
+			atomsRequired, err := client.CalculateAtoms(filename, int(m))
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Printf("Atoms Required: %v\n", atomsRequired)
+			}
+
 		case "q":
 			return
 		}
