@@ -1,17 +1,21 @@
 package client
 
 import (
+	"fmt"
 	"math"
+	"network"
 	"os"
+	"participant"
 	"quorum"
 )
 
-func CalculateAtoms(filename string, m int) (atoms int, err error) {
+func CalculateAtoms(filename string, m byte) (atoms int, err error) {
 	multiplier := float64(m) / float64(quorum.QuorumSize)
 	file, err := os.Open(filename)
 	if err != nil {
 		return
 	}
+	defer file.Close()
 	info, err := file.Stat()
 	if err != nil {
 		return

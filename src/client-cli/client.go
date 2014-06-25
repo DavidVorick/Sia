@@ -81,11 +81,12 @@ func main() {
 			fmt.Println("unrecognized command")
 
 		case "h", "help":
-			fmt.Println("c:\tConnect to bootstrap\n" +
+			fmt.Println("\nc:\tConnect to bootstrap\n" +
 				"w:\tRequest wallet\n" +
 				"t:\tSubmit transaction\n" +
 				"g:\tGenerate public and secret key pair\n" +
-				"r:\tResize a sector")
+				"r:\tResize a sector\n" +
+				"u:\tUpload a file (incomplete)\n")
 
 		case "c":
 			err = connectToBootstrap()
@@ -154,12 +155,16 @@ func main() {
 			fmt.Scanln(&filename)
 			fmt.Print("M: ")
 			fmt.Scanln(&m)
-			atomsRequired, err := client.CalculateAtoms(filename, int(m))
+			atomsRequired, err := client.CalculateAtoms(filename, m)
 			if err != nil {
 				fmt.Println(err)
 			} else {
 				fmt.Printf("Atoms Required: %v\n", atomsRequired)
 			}
+			fmt.Print("Wallet ID (hex): ")
+			fmt.Scanln("%x", &srcID)
+			// go client.UploadFile(srcID, filename, m)
+			fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
 
 		case "q":
 			return
