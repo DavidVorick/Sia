@@ -16,15 +16,17 @@ type Client struct {
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
 func (c *Client) Connect() (err error) {
-	router, err := network.NewRPCServer(9989)
+	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
 	}
-	err = router.Ping(&participant.BootstrapAddress)
+	err = c.router.Ping(&participant.BootstrapAddress)
 	return
 }
 
-func (c *Client) Init() (err error) {
+// This new function is a bit unique because it can return an error while also
+// returning a fully working client.
+func NewClient() (c *Client, err error) {
 	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
 	err = c.Connect()
 	return

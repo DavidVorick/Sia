@@ -93,8 +93,7 @@ func createGenericWallet(c *client.Client) {
 
 func main() {
 	fmt.Println("Sia Client Version 0.0.0.3")
-	c := new(client.Client)
-	err := c.Init()
+	c, err := client.NewClient()
 	if err != nil {
 		println(err)
 	}
@@ -126,7 +125,7 @@ func main() {
 		case "w", "wallet":
 			createGenericWallet(c)
 
-		case "q":
+		case "q", "quit":
 			return
 		}
 	}
