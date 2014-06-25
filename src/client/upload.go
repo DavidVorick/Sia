@@ -26,3 +26,19 @@ func CalculateAtoms(filename string, m byte) (atoms int, err error) {
 	atoms = int(math.Ceil(floatAtoms))
 	return
 }
+
+func (c *Client) UploadFile(id quorum.WalletID, filename string, m byte) {
+	var siblings [quorum.QuorumSize]*quorum.Sibling
+	err := c.router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.Siblings",
+		Args: struct{}{},
+		Resp: &siblings,
+	})
+	if err != nil {
+		fmt.Printf("Upload: Error: %v\n", err)
+	}
+
+	// take the file and produce a bunch of erasure coded atoms written one piece
+	// at a time to be MerkleCollapsed and then uploaded to the siblings.
+}
