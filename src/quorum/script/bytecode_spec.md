@@ -61,4 +61,6 @@ List of bytecodes
 | 0x37 | move          | 2    | move instruction pointer by offset $1$2                                                |
 | 0x38 | cond_reject   | 0    | if false, reject (otherwise no op)                                                     |
 | 0x39 | data_buf      | 2    | store (and move dptr) $1 bytes (zero-padded) from data pointer in buffer $2            |
+| 0x3A | resize_sec    | 2    | resize the sector associated with a given wallet (erases current sector data)          |
+| 0x3B | prop_upload   | 1    | propose an upload to the quorum (arguments are stored in one gob-encoded buffer)       |
 | 0xFF | exit          | 0    | terminates execution                                                                   |

@@ -40,6 +40,19 @@ func submitTransaction(src, dst quorum.WalletID, amount uint64) (err error) {
 	})
 }
 
+// resize sector associated with wallet
+func resizeSector(w quorum.WalletID, atoms, m byte) (err error) {
+	return router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: script.ScriptInput{
+			WalletID: w,
+			Input:    script.ResizeSectorEraseInput(atoms, m),
+		},
+		Resp: nil,
+	})
+}
+
 func connectToBootstrap() (err error) {
 	router, err = network.NewRPCServer(9989)
 	if err != nil {
@@ -50,13 +63,13 @@ func connectToBootstrap() (err error) {
 }
 
 func main() {
+	// input values
 	var (
-		input  string
-		err    error
-		id     quorum.WalletID
-		srcID  quorum.WalletID
-		destID quorum.WalletID
-		amount uint64
+		input, destFile   string
+		err               error
+		id, srcID, destID quorum.WalletID
+		amount            uint64
+		atoms, m          byte
 	)
 	fmt.Println("Sia Client Version 0.0.0.3")
 	for {
@@ -66,18 +79,18 @@ func main() {
 		switch input {
 		default:
 			fmt.Println("unrecognized command")
+
 		case "h", "help":
-			fmt.Println()
-			fmt.Println("c:\tConnect to bootstrap")
-			fmt.Println("w:\tRequest wallet")
-			fmt.Println("t:\tSubmit transaction")
-			fmt.Println("g:\tGenerate public and secret key pair")
-			fmt.Println()
+			fmt.Println("c:\tConnect to bootstrap\n" +
+				"w:\tRequest wallet\n" +
+				"t:\tSubmit transaction\n" +
+				"g:\tGenerate public and secret key pair\n" +
+				"r:\tResize a sector")
+
 		case "c":
 			err = connectToBootstrap()
 			if err != nil {
 				fmt.Println("Could not connect to bootstrap:", err)
-				return
 			} else {
 				fmt.Println("Connected to bootstrap")
 			}
@@ -88,7 +101,6 @@ func main() {
 			err = requestWallet(id)
 			if err != nil {
 				fmt.Println(err)
-				return
 			} else {
 				fmt.Println("Wallet requested")
 			}
@@ -103,12 +115,11 @@ func main() {
 			err = submitTransaction(srcID, destID, amount)
 			if err != nil {
 				fmt.Println(err)
-				return
 			} else {
 				fmt.Println("Transaction successfully submitted")
 			}
+
 		case "g":
-			var destFile string
 			publicKey, secretKey, err := siacrypto.CreateKeyPair()
 			if err != nil {
 				panic(err)
@@ -122,6 +133,21 @@ func main() {
 			} else {
 				fmt.Println("Success!")
 			}
+
+		case "r":
+			fmt.Print("Wallet ID (hex): ")
+			fmt.Scanf("%x", &srcID)
+			fmt.Print("New size (in atoms): ")
+			fmt.Scanln(&atoms)
+			fmt.Print("Redundancy: ")
+			fmt.Scanln(&m)
+			err = resizeSector(srcID, atoms, m)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println("Sector resized")
+			}
+
 		case "q":
 			return
 		}

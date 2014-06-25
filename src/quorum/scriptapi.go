@@ -1,6 +1,8 @@
 package quorum
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"os"
 	"siacrypto"
@@ -115,12 +117,6 @@ func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err
 	return
 }
 
-// JoinSia is a request that a wallet can submit to make itself a sibling in
-// the quorum.
-//
-// The input is a sibling, a wallet (have to make sure that the wallet used
-// as input is the sponsoring wallet...)
-//
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
@@ -209,6 +205,32 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms byte, m byte) (cost int, wei
 	}
 	w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
+	return
+}
+
+type UploadArgs struct {
+	ParentHash    siacrypto.Hash
+	NewHashSet    [QuorumSize]siacrypto.Hash
+	AtomsChanged  uint16
+	Confirmations byte
+	Deadline      uint32
+}
+
+func (ua *UploadArgs) GobEncode() (gobUA []byte, err error) {
+	if ua == nil {
+		return
+	}
+	b := new(bytes.Buffer)
+	enc := gob.NewEncoder(b)
+	err = enc.Encode(ua)
+	gobUA = b.Bytes()
+	return
+}
+
+func (ua *UploadArgs) GobDecode(gobUA []byte) (err error) {
+	b := bytes.NewBuffer(gobUA)
+	dec := gob.NewDecoder(b)
+	err = dec.Decode(&ua)
 	return
 }
 
