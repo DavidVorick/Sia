@@ -41,7 +41,7 @@ func submitTransaction(src, dst quorum.WalletID, amount uint64) (err error) {
 }
 
 // resize sector associated with wallet
-func resizeSector(w quorum.WalletID, atoms, m byte) (err error) {
+func resizeSector(w quorum.WalletID, atoms uint16, m byte) (err error) {
 	return router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
@@ -69,7 +69,8 @@ func main() {
 		err               error
 		id, srcID, destID quorum.WalletID
 		amount            uint64
-		atoms, m          byte
+		atoms             uint16
+		m                 byte
 	)
 	fmt.Println("Sia Client Version 0.0.0.3")
 	for {

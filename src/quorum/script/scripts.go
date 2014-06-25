@@ -85,9 +85,11 @@ func TransactionInput(dst, high, low uint64) []byte {
 	)
 }
 
-func ResizeSectorEraseInput(atoms, m byte) []byte {
+func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
+	l, h := short(int(atoms))
 	return []byte{
-		0x3A, atoms, m, // simple as that
+		0x02, l, h, // push number of atoms
+		0x3A, m, //    call resize
 	}
 }
 

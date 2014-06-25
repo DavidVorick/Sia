@@ -137,7 +137,7 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 
 // Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
 // or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
-func (q *Quorum) ResizeSectorErase(w *Wallet, atoms byte, m byte) (cost int, weight int, err error) {
+func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
 	weightDelta -= int(w.sectorAtoms)
@@ -203,6 +203,7 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms byte, m byte) (cost int, wei
 	if err != nil {
 		panic(err)
 	}
+	w.sectorAtoms = atoms
 	w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
 	return

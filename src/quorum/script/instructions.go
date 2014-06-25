@@ -68,7 +68,7 @@ var opTable = []instruction{
 	instruction{0x37, "move", 2, op_move, 1},
 	instruction{0x38, "cond_reject", 0, op_cond_reject, 1},
 	instruction{0x39, "data_buf", 2, op_data_buf, 2},
-	instruction{0x3A, "resize_sec", 2, op_resize_sec, 9},
+	instruction{0x3A, "resize_sec", 1, op_resize_sec, 9},
 	instruction{0x3B, "prop_upload", 1, op_prop_upload, 9},
 }
 
@@ -663,7 +663,12 @@ func op_switch(args []byte) (err error) {
 }
 
 func op_resize_sec(args []byte) (err error) {
-	_, _, err = q.ResizeSectorErase(wallet, args[0], args[1])
+	a, err := pop()
+	if err != nil {
+		return
+	}
+	atoms := siaencoding.DecUint16(a[:2])
+	_, _, err = q.ResizeSectorErase(wallet, atoms, args[0])
 	return
 }
 
