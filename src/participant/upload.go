@@ -71,7 +71,8 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 		}
 	}
 
-	_, err = uploadFile.Seek(0, 0)
+	// important to remember that the first atom is used for the hashes
+	_, err = uploadFile.Seek(int64(quorum.AtomSize), 0)
 	if err != nil {
 		panic(err)
 	}

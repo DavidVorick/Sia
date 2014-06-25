@@ -27,12 +27,12 @@ func (q *Quorum) SectorFilename(id WalletID) (sectorFilename string) {
 func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 	// Loop through every atom in the reader, building out the Merkle Tree in
 	// linear time.
-	prevHashes := make([]*siacrypto.Hash, 1) // prevHashes starts at size 1, to store the first hash
+	prevHashes := make([]*siacrypto.Hash, 0)
 	atom := make([]byte, AtomSize)
 	var atoms int
 	for _, err := reader.Read(atom); err == nil; atoms++ {
 		// If atoms is a power of 2, increase the length of prevHashes
-		if atoms&(atoms-1) == 0 {
+		if (atoms+1)&(atoms) == 0 {
 			prevHashes = append(prevHashes, nil)
 		}
 
@@ -47,8 +47,14 @@ func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 		}
 
 		// store the new hash in the first empty slot
+		prevHashes[i] = new(siacrypto.Hash)
 		copy(prevHashes[i][:], hash[:])
 		_, err = reader.Read(atom)
+	}
+
+	// check that at least something was read
+	if len(prevHashes) == 0 {
+		return
 	}
 
 	// Merge the hashes into the final tree, starting with the highest level hash
