@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	router *network.RPCServer
+	router    *network.RPCServer
+	publicKey *siacrypto.PublicKey
+	secretKey *siacrypto.SecretKey
 )
 
 // request a new wallet from the bootstrap
@@ -21,7 +23,7 @@ func requestWallet(id quorum.WalletID) error {
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: participant.BootstrapID,
-			Input:    script.CreateWalletInput(uint64(id), script.TransactionScript),
+			Input:    script.CreateWalletInput(uint64(id), script.DefaultScript(publicKey)),
 		},
 		Resp: nil,
 	})
@@ -29,12 +31,16 @@ func requestWallet(id quorum.WalletID) error {
 
 // send coins from one wallet to another
 func submitTransaction(src, dst quorum.WalletID, amount uint64) (err error) {
+	sm, err := script.RandomSignedMessage(secretKey)
+	if err != nil {
+		return
+	}
 	return router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: src,
-			Input:    script.TransactionInput(uint64(dst), 0, amount),
+			Input:    script.TransactionInput(sm, uint64(dst), 0, amount),
 		},
 		Resp: nil,
 	})
@@ -42,12 +48,16 @@ func submitTransaction(src, dst quorum.WalletID, amount uint64) (err error) {
 
 // resize sector associated with wallet
 func resizeSector(w quorum.WalletID, atoms uint16, m byte) (err error) {
+	sm, err := script.RandomSignedMessage(secretKey)
+	if err != nil {
+		return
+	}
 	return router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: w,
-			Input:    script.ResizeSectorEraseInput(atoms, m),
+			Input:    script.ResizeSectorEraseInput(sm, atoms, m),
 		},
 		Resp: nil,
 	})
@@ -97,6 +107,10 @@ func main() {
 			}
 
 		case "w":
+			if publicKey == nil {
+				fmt.Println("You need to generate a key pair first!")
+				break
+			}
 			fmt.Print("Enter desired Wallet ID (hex): ")
 			fmt.Scanf("%x", &id)
 			err = requestWallet(id)
@@ -107,6 +121,10 @@ func main() {
 			}
 
 		case "t":
+			if publicKey == nil {
+				fmt.Println("You need to generate a key pair first!")
+				break
+			}
 			fmt.Print("Source Wallet ID (hex): ")
 			fmt.Scanf("%x", &srcID)
 			fmt.Print("Dest Wallet ID (hex): ")
@@ -121,7 +139,7 @@ func main() {
 			}
 
 		case "g":
-			publicKey, secretKey, err := siacrypto.CreateKeyPair()
+			publicKey, secretKey, err = siacrypto.CreateKeyPair()
 			if err != nil {
 				panic(err)
 			}
@@ -136,6 +154,10 @@ func main() {
 			}
 
 		case "r":
+			if publicKey == nil {
+				fmt.Println("You need to generate a key pair first!")
+				break
+			}
 			fmt.Print("Wallet ID (hex): ")
 			fmt.Scanf("%x", &srcID)
 			fmt.Print("New size (in atoms): ")
@@ -150,6 +172,10 @@ func main() {
 			}
 
 		case "u":
+			if publicKey == nil {
+				fmt.Println("You need to generate a key pair first!")
+				break
+			}
 			var filename string
 			fmt.Print("Filename: ")
 			fmt.Scanln(&filename)
