@@ -24,10 +24,21 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
+func RandomSignedMessage(secretKey *siacrypto.SecretKey) (gobSm []byte, err error) {
+	sm, err := secretKey.Sign(siacrypto.RandomByteSlice(8))
+	if err != nil {
+		return
+	}
+	gobSm, err = sm.GobEncode()
+	lenl, lenh := short(len(gobSm))
+	gobSm = append([]byte{lenl, lenh}, gobSm...)
+	return
+}
+
 // the default script
 // verifies public key, then transfers control to the input
-func DefaultScript(publicKey siacrypto.PublicKey) []byte {
-	klen, _ := short(siacrypto.PublicKeySize)
+func DefaultScript(publicKey *siacrypto.PublicKey) []byte {
+	klen := byte(siacrypto.PublicKeySize)
 	return append([]byte{
 		0x26, 0x0D, 0x00, // 00 move data pointer to public key
 		0x39, klen, 0x01, // 03 read public key into buffer 1
@@ -47,14 +58,6 @@ var BootstrapScript = []byte{
 	0x2E, 0x01, //       08 read rest of input into buffer 1
 	0x32, 0x01, //       10 call create wallet
 	0xFF, //             12 exit
-}
-
-var TransactionScript = []byte{
-	0x27, 0x08, //       00 push 8 bytes of input (id)
-	0x27, 0x08, //       02 push 8 bytes of input (high balance)
-	0x27, 0x08, //       04 push 8 bytes of input (low balance)
-	0x33, //             06 call send
-	0xFF, //             07 exit
 }
 
 func CreateWalletInput(walletID uint64, s []byte) []byte {
@@ -77,18 +80,29 @@ func AddSiblingInput(encSm, encSibling []byte) []byte {
 	)
 }
 
-func TransactionInput(dst, high, low uint64) []byte {
+func TransactionInput(encSm []byte, dst, high, low uint64) []byte {
 	return appendAll(
+		encSm,
+		[]byte{
+			0x25, 0x0B, 0x00, // move data pointer to dst
+			0x27, 0x08, //       push 8 bytes of input (id)
+			0x27, 0x08, //       push 8 bytes of input (high balance)
+			0x27, 0x08, //       push 8 bytes of input (low balance)
+			0x33, //             call send
+			0xFF, //             exit
+		},
 		siaencoding.EncUint64(dst),
 		siaencoding.EncUint64(high),
 		siaencoding.EncUint64(low),
 	)
 }
 
-func ResizeSectorEraseInput(atoms, m byte) []byte {
-	return []byte{
-		0x3A, atoms, m, // simple as that
-	}
+func ResizeSectorEraseInput(encSm []byte, atoms uint16, m byte) []byte {
+	l, h := short(int(atoms))
+	return append(encSm, []byte{
+		0x02, l, h, // push number of atoms
+		0x3A, m, //    call resize
+	}...)
 }
 
 func ProposeUploadInput(encUA []byte) []byte {

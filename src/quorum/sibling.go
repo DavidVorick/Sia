@@ -24,8 +24,8 @@ func (s *Sibling) Index() byte {
 func (s *Sibling) Address() network.Address {
 	return s.address
 }
-func (s *Sibling) PublicKey() siacrypto.PublicKey {
-	return *s.publicKey
+func (s *Sibling) PublicKey() *siacrypto.PublicKey {
+	return s.publicKey
 }
 
 // Sibling variables are kept private because they should not be changing
