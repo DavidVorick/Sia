@@ -18,7 +18,7 @@ func CalculateAtoms(filename string, m int) (atoms int, err error) {
 	}
 	size := info.Size()
 
-	floatAtoms = multiplier * float64(size) / float64(quorum.AtomSize)
+	floatAtoms := multiplier * float64(size) / float64(quorum.AtomSize)
 	atoms = int(math.Ceil(floatAtoms))
 	return
 }
