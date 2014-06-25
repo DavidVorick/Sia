@@ -20,6 +20,12 @@ type PublicKey [PublicKeySize]byte
 type SecretKey [SecretKeySize]byte
 type Signature [SignatureSize]byte
 
+// The Keypair contains a PublicKey and its corresponding SecretKey
+type Keypair struct {
+	PK *PublicKey
+	SK *SecretKey
+}
+
 // A SignedMessage contains a message and a signature of the message
 type SignedMessage struct {
 	Signature Signature
