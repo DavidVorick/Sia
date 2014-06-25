@@ -8,6 +8,7 @@ import (
 	"os"
 	"participant"
 	"quorum"
+	"siacrypto"
 )
 
 func CalculateAtoms(filename string, k byte) (atoms int, err error) {
@@ -68,13 +69,55 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 	defer file.Close()
 
-	err = quorum.RSEncode(file, writerSegments, k)
+	atomsWritten, err := quorum.RSEncode(file, writerSegments, k)
 	if err != nil {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
 	}
 
+	// resize the sector to exactly big enough
+
+	// create the upload announcement
+	var hashSet [quorum.QuorumSize]siacrypto.Hash
+	for i := range fileSegments {
+		_, err := fileSegments[i].Seek(0, 0)
+		if err != nil {
+			panic(err)
+		}
+
+		hashSet[i] = quorum.MerkleCollapse(fileSegments[i])
+	}
+	sectorHash := quorum.SectorHash(hashSet)
+
 	// Now that the files have been written to 1 atom at a time, rewind them to
 	// the beginning and create diffs for each file. Then upload the diffs to
 	// each silbing via RPC
+	currentSegment := make([]byte, int(atomsWritten)*quorum.AtomSize)
+	for i := range fileSegments {
+		// read the appropriate segment into memory to be sent over RPC
+		_, err = fileSegments[i].Seek(0, 0)
+		if err != nil {
+			panic(err)
+		}
+		_, err = fileSegments[i].Read(currentSegment)
+		if err != nil {
+			panic(err)
+		}
+		conversion := make([]participant.Conversion, 1)
+		conversion[0].Offset = 0
+		conversion[0].Delta = currentSegment
+		diff := participant.UploadDiff{
+			ID:            id,
+			Hash:          sectorHash,
+			ConversionSet: conversion,
+		}
+
+		// send the diff over RPC
+		c.router.SendMessage(&network.Message{
+			Dest: siblings[i].Address(),
+			Proc: "Participant.ReceieveDiff",
+			Args: diff,
+			Resp: nil,
+		})
+	}
 }
