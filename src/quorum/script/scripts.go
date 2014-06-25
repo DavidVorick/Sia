@@ -25,35 +25,26 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-func SignInput(secretKey *siacrypto.SecretKey, input []byte) (m []byte, err error) {
+func SignInput(secretKey *siacrypto.SecretKey, input []byte) (gobSm []byte, err error) {
 	sm, err := secretKey.Sign(input)
 	if err != nil {
 		return
 	}
-	gobSm, err := sm.GobEncode()
-	if err != nil {
-		return
-	}
-	lenl, lenh := short(len(gobSm))
-	m = appendAll(
-		[]byte{lenl, lenh},
-		gobSm,
-		input,
-	)
+	gobSm, err = sm.GobEncode()
 	return
 }
 
 // the default script
 // verifies public key, then transfers control to the input
 func DefaultScript(publicKey *siacrypto.PublicKey) []byte {
-	klen := byte(siacrypto.PublicKeySize)
 	return append([]byte{
-		0x26, 0x0D, 0x00, // 00 move data pointer to public key
-		0x39, klen, 0x01, // 03 read public key into buffer 1
-		0x2D, 0x02, //       06 read signed message into buffer 2
+		0x26, 0x10, 0x00, // 00 move data pointer to public key
+		0x39, 0x20, 0x01, // 03 read public key into buffer 1
+		0x2E, 0x02, //       06 read signed message into buffer 2
 		0x34, 0x01, 0x02, // 08 verify signature
-		0x38, //             11 if invalid signature, reject
-		0x2F, //             12 execute input
+		0x38,             //             11 if invalid signature, reject
+		0x26, 0x70, 0x00, // 12 move data pointer to input body
+		0x2F, //             15 execute input
 	}, publicKey[:]...)
 }
 
