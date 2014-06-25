@@ -16,7 +16,7 @@ import (
 // hash to each lower level hash and arrive at the final value. See the
 // whitepaper for a specification of how to construct Merkle Trees from a
 // sector. This algorithm takes linear time and logarithmic space.
-func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
+func MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 	// Loop through every atom in the reader, building out the Merkle Tree in
 	// linear time.
 	prevHashes := make([]*siacrypto.Hash, 0)

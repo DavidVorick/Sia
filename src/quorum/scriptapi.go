@@ -179,7 +179,7 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, w
 	if err != nil {
 		panic(err)
 	}
-	zeroMerkle := q.MerkleCollapse(file)
+	zeroMerkle := MerkleCollapse(file)
 
 	// build the first atom of the file to contain all of the hashes
 	_, err = file.Seek(0, 0)

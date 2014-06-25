@@ -7,11 +7,10 @@ import (
 )
 
 func TestMerkleCollapse(t *testing.T) {
-	q := new(Quorum)
 	for i := 0; i < 33; i++ {
 		randomBytes := siacrypto.RandomByteSlice(i * AtomSize)
 		b := bytes.NewBuffer(randomBytes)
-		q.MerkleCollapse(b)
+		MerkleCollapse(b)
 	}
 
 	if testing.Short() {
@@ -22,6 +21,6 @@ func TestMerkleCollapse(t *testing.T) {
 		numAtoms, _ := siacrypto.RandomInt(1024)
 		randomBytes := siacrypto.RandomByteSlice(numAtoms * AtomSize)
 		b := bytes.NewBuffer(randomBytes)
-		q.MerkleCollapse(b)
+		MerkleCollapse(b)
 	}
 }
