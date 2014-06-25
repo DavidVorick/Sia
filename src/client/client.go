@@ -27,6 +27,7 @@ func (c *Client) Connect() (err error) {
 // This new function is a bit unique because it can return an error while also
 // returning a fully working client.
 func NewClient() (c *Client, err error) {
+	c = new(Client)
 	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
 	err = c.Connect()
 	return
