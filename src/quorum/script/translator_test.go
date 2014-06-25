@@ -8,7 +8,7 @@ import (
 
 // TestTranslator ensures that a script is unchanged after being translated back and forth
 func TestTranslator(t *testing.T) {
-	var pk siacrypto.PublicKey
+	pk := new(siacrypto.PublicKey)
 	copy(pk[:], siacrypto.RandomByteSlice(32))
 	s := DefaultScript(pk)
 
