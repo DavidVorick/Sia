@@ -21,7 +21,7 @@ import (
 
 // EncodeRedundancy takes a []byte and some redundancy parameters and produces
 // a set of k + m byte slices that compose the encoded data
-func EncodeRedundancy(k int, m int, decoded []byte) (encoded [][]byte, err error) {
+func EncodeRedundancy(k byte, m byte, decoded []byte) (encoded [][]byte, err error) {
 	// check for nil values
 	if decoded == nil {
 		err = fmt.Errorf("EncodeRedundancy: received nil input!")
@@ -39,26 +39,26 @@ func EncodeRedundancy(k int, m int, decoded []byte) (encoded [][]byte, err error
 	}
 
 	// check for correct padding on decoded []byte
-	if len(decoded)%(k*8) != 0 {
+	if len(decoded)%int((k*8)) != 0 {
 		err = fmt.Errorf("EncodeRedundancy: input has not been properly padded!")
 		return
 	}
 
-	b := len(decoded) / k
+	b := len(decoded) / int(k)
 
 	// call longhair to do encoding
 	redundantChunk := C.encodeRedundancy(C.int(k), C.int(m), C.int(b), (*C.char)(unsafe.Pointer(&decoded[0])))
-	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(m*b))
+	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(int(m)*b))
 
 	// allocate encoded
 	encoded = make([][]byte, k+m)
 
 	// split the original data into encoded
-	for i := 0; i < k; i++ {
+	for i := 0; i < int(k); i++ {
 		encoded[i] = decoded[i*b : (i+1)*b]
 	}
-	for i := 0; i < m; i++ {
-		encoded[i+k] = redundantBytes[i*b : (i+1)*b]
+	for i := 0; i < int(m); i++ {
+		encoded[i+int(k)] = redundantBytes[i*b : (i+1)*b]
 	}
 
 	// free the memory allocated by the C call
