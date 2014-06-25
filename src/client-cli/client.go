@@ -81,17 +81,16 @@ func main() {
 			fmt.Println("unrecognized command")
 
 		case "h", "help":
-			fmt.Println()
-			fmt.Println("c:\tConnect to bootstrap")
-			fmt.Println("w:\tRequest wallet")
-			fmt.Println("t:\tSubmit transaction")
-			fmt.Println("g:\tGenerate public and secret key pair")
-			fmt.Println()
+			fmt.Println("c:\tConnect to bootstrap\n" +
+				"w:\tRequest wallet\n" +
+				"t:\tSubmit transaction\n" +
+				"g:\tGenerate public and secret key pair\n" +
+				"r:\tResize a sector")
+
 		case "c":
 			err = connectToBootstrap()
 			if err != nil {
 				fmt.Println("Could not connect to bootstrap:", err)
-				return
 			} else {
 				fmt.Println("Connected to bootstrap")
 			}
@@ -102,7 +101,6 @@ func main() {
 			err = requestWallet(id)
 			if err != nil {
 				fmt.Println(err)
-				return
 			} else {
 				fmt.Println("Wallet requested")
 			}
@@ -117,7 +115,6 @@ func main() {
 			err = submitTransaction(srcID, destID, amount)
 			if err != nil {
 				fmt.Println(err)
-				return
 			} else {
 				fmt.Println("Transaction successfully submitted")
 			}
