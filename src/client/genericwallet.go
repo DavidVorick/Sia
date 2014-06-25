@@ -56,7 +56,7 @@ func (c *Client) SubmitTransaction(src, dst quorum.WalletID, amount uint64) (err
 }
 
 // resize sector associated with wallet
-func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, m byte) (err error) {
+func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, k byte) (err error) {
 	if c.genericWallets[w] == nil {
 		err = fmt.Errorf("Could not access wallet")
 		return

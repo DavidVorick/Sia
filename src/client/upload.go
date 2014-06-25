@@ -8,7 +8,9 @@ import (
 	"os"
 	"participant"
 	"quorum"
+	"quorum/script"
 	"siacrypto"
+	"time"
 )
 
 func CalculateAtoms(filename string, k byte) (atoms int, err error) {
@@ -76,8 +78,28 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 
 	// resize the sector to exactly big enough
+	sm, err := script.RandomSignedMessage(c.genericWallets[id].SK)
+	if err != nil {
+		return
+	}
+	c.router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: script.ScriptInput{
+			WalletID: id,
+			Input:    script.ResizeSectorEraseInput(sm, atomsWritten+1, k),
+		},
+		Resp: nil,
+	})
 
-	// create the upload announcement
+	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
+
+	// figure out the hash now that the sector has been resized
+	// fetch the current block to determine a reasonable deadline
+
+	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
+
+	// get the hash set and the set for propose upload
 	var hashSet [quorum.QuorumSize]siacrypto.Hash
 	for i := range fileSegments {
 		_, err := fileSegments[i].Seek(0, 0)
@@ -88,6 +110,13 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		hashSet[i] = quorum.MerkleCollapse(fileSegments[i])
 	}
 	sectorHash := quorum.SectorHash(hashSet)
+
+	// Propose Upload:
+	// parentHash: parentHash
+	// newHashSet: hashSet
+	// atomsChanged: atomsWritten
+	// confirmations: k
+	// deadline: dealine
 
 	// Now that the files have been written to 1 atom at a time, rewind them to
 	// the beginning and create diffs for each file. Then upload the diffs to
