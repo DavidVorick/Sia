@@ -238,17 +238,13 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	if err != nil {
 		return
 	}
-	signedMessage, err := p.secretKey.Sign(siacrypto.RandomByteSlice(8))
-	if err != nil {
-		return
-	}
-	gobSm, err := signedMessage.GobEncode()
+	input, err := script.SignInput(p.secretKey, script.AddSiblingInput(gobSibling))
 	if err != nil {
 		return
 	}
 	s = script.ScriptInput{
 		WalletID: quorum.WalletID(walletID),
-		Input:    script.AddSiblingInput(gobSm, gobSibling),
+		Input:    input,
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{
