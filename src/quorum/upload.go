@@ -102,6 +102,16 @@ func (q *Quorum) ConfirmUpload(id WalletID, h siacrypto.Hash) bool {
 	return false
 }
 
+func (q *Quorum) UploadExpectedHash(id WalletID, h siacrypto.Hash, index byte) (expected siacrypto.Hash) {
+	for i := range q.uploads[id] {
+		if q.uploads[id][i].hash == h {
+			expected = q.uploads[id][i].hashSet[index]
+			return
+		}
+	}
+	return
+}
+
 func (q *Quorum) clearUploads(id WalletID, i int) {
 	// delete all uploads starting with the ith index
 	for i = i; i < len(q.uploads[id]); i++ {

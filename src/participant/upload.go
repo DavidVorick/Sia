@@ -9,12 +9,12 @@ import (
 )
 
 type Conversion struct {
-	offset uint16
-	delta  []byte
+	Offset uint16
+	Delta  []byte
 }
 
 type UploadDiff struct {
-	Id            quorum.WalletID
+	ID            quorum.WalletID
 	Hash          siacrypto.Hash
 	ConversionSet []Conversion
 }
@@ -32,25 +32,26 @@ func (p *Participant) signUploadAdvancement(ua *quorum.UploadAdvancement) {
 }
 
 func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
-	// find the parent in the quorum
-	if !p.quorum.ConfirmUpload(ud.Id, ud.Hash) {
+	// find the upload in the quorum
+	if !p.quorum.ConfirmUpload(ud.ID, ud.Hash) {
 		err = fmt.Errorf("Upload is not found in the quorum")
 		return
 	}
 
-	// copy the file for the wallet over to a temporary state
-	sectorFilename := p.quorum.SectorFilename(ud.Id)
+	// Make sure that all offsets point to valid locations within the sector
+	sectorFilename := p.quorum.SectorFilename(ud.ID)
 	sectorSize, err := siafiles.Size(sectorFilename)
 	if err != nil {
 		panic(err)
 	}
 	for i := range ud.ConversionSet {
-		if int(ud.ConversionSet[i].offset)+len(ud.ConversionSet[i].delta) > int(sectorSize) {
+		if int(ud.ConversionSet[i].Offset)+len(ud.ConversionSet[i].Delta) > int(sectorSize) {
 			err = fmt.Errorf("offset out of bounds error")
 			return
 		}
 	}
 
+	// copy the file for the wallet over to a temporary state
 	uploadFilename := sectorFilename + "." + string(ud.Hash[:])
 	siafiles.Copy(sectorFilename, uploadFilename)
 
@@ -61,11 +62,11 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 	}
 	defer uploadFile.Close()
 	for i := range ud.ConversionSet {
-		_, err = uploadFile.Seek(int64(ud.ConversionSet[i].offset), 0)
+		_, err = uploadFile.Seek(int64(ud.ConversionSet[i].Offset), 0)
 		if err != nil {
 			panic(err)
 		}
-		_, err = uploadFile.Write(ud.ConversionSet[i].delta)
+		_, err = uploadFile.Write(ud.ConversionSet[i].Delta)
 		if err != nil {
 			panic(err)
 		}
@@ -90,7 +91,7 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 
 	// submit an upload advancement to the quorum
 	ua := quorum.UploadAdvancement{
-		ID:      ud.Id,
+		ID:      ud.ID,
 		Hash:    ud.Hash,
 		Sibling: p.self.Index(),
 	}

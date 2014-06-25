@@ -6,14 +6,6 @@ import (
 	"siacrypto"
 )
 
-// SectorFilename takes a wallet id and returns the filename of the sector
-// associated with that wallet.
-func (q *Quorum) SectorFilename(id WalletID) (sectorFilename string) {
-	walletFilename := q.walletFilename(id)
-	sectorFilename = walletFilename + ".sector"
-	return
-}
-
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
 // as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
 // doing this keeps in memory the previous hash at each level. Each atom is
@@ -65,6 +57,22 @@ func (q *Quorum) MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 			hash = siacrypto.CalculateHash(append(hash[:], prevHashes[i][:]...))
 		}
 	}
+	return
+}
+
+func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
+	atomRepresentation := make([]byte, AtomSize) // regardless of quorumsize, must hash a whole atom
+	for i := range hashSet {
+		copy(atomRepresentation[i*siacrypto.HashSize:], hashSet[i][:])
+	}
+	return siacrypto.CalculateHash(atomRepresentation)
+}
+
+// SectorFilename takes a wallet id and returns the filename of the sector
+// associated with that wallet.
+func (q *Quorum) SectorFilename(id WalletID) (sectorFilename string) {
+	walletFilename := q.walletFilename(id)
+	sectorFilename = walletFilename + ".sector"
 	return
 }
 
