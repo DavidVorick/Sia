@@ -74,7 +74,7 @@ func uploadToGenericWallet(c *client.Client) {
 		fmt.Printf("Atoms Required: %v\n", atomsRequired)
 	}
 	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanln(&id)
+	fmt.Scanf("%x", &id)
 	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
 	c.UploadFile(id, filename, k)
 }

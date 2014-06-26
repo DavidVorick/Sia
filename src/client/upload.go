@@ -34,6 +34,11 @@ func CalculateAtoms(filename string, k byte) (atoms int, err error) {
 }
 
 func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
+	if c.genericWallets[id] == nil {
+		fmt.Printf("Do not have access to wallet %v!\n", id)
+		return
+	}
+
 	// Get siblings so that each can be uploaded to individually.  This should be
 	// moved to a (c *Client) function that updates the current siblings. I'm
 	// actually considering that a client should listen on a quorum, or somehow
@@ -75,7 +80,6 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		writerSegments[i] = file
 		fileSegments[i] = file
 	}
-	println("Created Temporary Files")
 
 	file, err := os.Open(filename)
 	if err != nil {
