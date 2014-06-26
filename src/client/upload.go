@@ -11,11 +11,12 @@ import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
+	"siafiles"
 	"time"
 )
 
 func CalculateAtoms(filename string, k byte) (atoms int, err error) {
-	multiplier := float64(k) / float64(quorum.QuorumSize)
+	multiplier := 1 / float64(k)
 	file, err := os.Open(filename)
 	if err != nil {
 		return
@@ -33,15 +34,24 @@ func CalculateAtoms(filename string, k byte) (atoms int, err error) {
 }
 
 func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
-	var siblings [quorum.QuorumSize]*quorum.Sibling
+	// Get siblings so that each can be uploaded to individually.  This should be
+	// moved to a (c *Client) function that updates the current siblings. I'm
+	// actually considering that a client should listen on a quorum, or somehow
+	// perform lightweight actions (receive digests?) that allow it to keep up
+	// but don't require many resources.
+	var gobSiblings []byte
 	err := c.router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.Siblings",
 		Args: struct{}{},
-		Resp: &siblings,
+		Resp: &gobSiblings,
 	})
 	if err != nil {
 		fmt.Printf("Upload: Error: %v\n", err)
+		return
+	}
+	siblings, err := quorum.DecodeSiblings(gobSiblings)
+	if err != nil {
 		return
 	}
 
@@ -50,8 +60,9 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	// the approach is to create a bunch of files, one for each erasure coded section
 	var writerSegments [quorum.QuorumSize]io.Writer
 	var fileSegments [quorum.QuorumSize]*os.File
+	nonce := siafiles.SafeFilename(siacrypto.RandomByteSlice(2))
 	for i := range fileSegments {
-		tmpname := fmt.Sprintf("%s/%s.%v.tmp", os.TempDir(), filename, i)
+		tmpname := fmt.Sprintf("%s/%s.%v.tmp", os.TempDir(), nonce, i)
 		file, err := os.Create(tmpname)
 		if err != nil {
 			fmt.Printf("Upload: Error: %v\n", err)
@@ -64,6 +75,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		writerSegments[i] = file
 		fileSegments[i] = file
 	}
+	println("Created Temporary Files")
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -77,6 +89,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
 	}
+	println("Encoded files")
 
 	// resize the sector to exactly big enough
 	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
@@ -84,7 +97,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	if err != nil {
 		return
 	}
-	c.router.SendMessage(&network.Message{
+	err = c.router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
@@ -93,6 +106,11 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		},
 		Resp: nil,
 	})
+	if err != nil {
+		fmt.Printf("Upload: Error: %v\n", err)
+		return
+	}
+	println("Submitted sector resize request")
 
 	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
 

@@ -7,11 +7,11 @@ import (
 )
 
 func displayHelp() {
-	fmt.Println("\nc:\tConnect to Network (attempted at startup)\n" +
-		"w:\tRequest wallet\n" +
-		"t:\tSubmit transaction\n" +
+	fmt.Println("\nc:\tConnect to Network\n" +
 		"r:\tResize a sector\n" +
-		"u:\tUpload a file (incomplete)\n")
+		"t:\tSubmit transaction\n" +
+		"u:\tUpload a file\n" +
+		"w:\tRequest wallet\n")
 }
 
 func connect(c *client.Client) {
@@ -62,21 +62,21 @@ func sendFromGenericWallet(c *client.Client) {
 func uploadToGenericWallet(c *client.Client) {
 	var filename string
 	var id quorum.WalletID
-	var m byte
+	var k byte
 	fmt.Print("Filename: ")
 	fmt.Scanln(&filename)
-	fmt.Print("M: ")
-	fmt.Scanln(&m)
-	atomsRequired, err := client.CalculateAtoms(filename, m)
+	fmt.Print("K: ")
+	fmt.Scanln(&k)
+	atomsRequired, err := client.CalculateAtoms(filename, k)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		fmt.Printf("Atoms Required: %v\n", atomsRequired)
 	}
 	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanln("%x", &id)
-	// go client.UploadFile(srcID, filename, m)
+	fmt.Scanln(&id)
 	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
+	c.UploadFile(id, filename, k)
 }
 
 func createGenericWallet(c *client.Client) {
