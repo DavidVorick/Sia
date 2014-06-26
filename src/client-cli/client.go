@@ -16,9 +16,20 @@ func displayHelp() {
 
 func connect(c *client.Client) {
 	var host string
+	var port int
 	fmt.Print("Hostname: ")
-	fmt.Scanf("%s", &host)
-	err := c.Connect(host)
+	_, err := fmt.Scanf("%s", &host)
+	if err != nil {
+		fmt.Println("Invalid hostname")
+		return
+	}
+	fmt.Print("Port: ")
+	_, err = fmt.Scanf("%d", &port)
+	if err != nil {
+		fmt.Println("Invalid port")
+		return
+	}
+	err = c.Connect(host, port)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {
@@ -100,7 +111,7 @@ func main() {
 	if err == nil {
 		fmt.Println("Connected to local bootstrap")
 	} else {
-		fmt.Println("Local bootstrap not found -- press c to connect")
+		fmt.Println("Autoconnect failed: press c to connect manually")
 	}
 
 	var input string

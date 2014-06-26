@@ -9,7 +9,7 @@ import (
 func joinQuorum() {
 	// read port number
 	var port int
-	fmt.Print("Port number to listen on: ")
+	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
 
 	// create a message router
@@ -20,11 +20,14 @@ func joinQuorum() {
 	}
 	defer networkServer.Close()
 
-	// read bootstrap hostname
+	// read and set bootstrap address
 	var hostname string
 	fmt.Print("Bootstrap hostname: ")
 	fmt.Scanf("%s", &hostname)
+	fmt.Print("Bootstrap port: ")
+	fmt.Scanf("%d", &port)
 	participant.BootstrapAddress.Host = hostname
+	participant.BootstrapAddress.Port = port
 	err = networkServer.Ping(&participant.BootstrapAddress)
 	if err != nil {
 		fmt.Println("Failed to ping bootstrap:", err)
@@ -45,10 +48,11 @@ func joinQuorum() {
 }
 
 func establishQuorum() {
-	// read port number
+	// read and set port number
 	var port int
-	fmt.Print("Port number: ")
+	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
+	participant.BootstrapAddress.Port = port
 
 	// create a message router
 	networkServer, err := network.NewRPCServer(port)

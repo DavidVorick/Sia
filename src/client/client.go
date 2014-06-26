@@ -15,13 +15,14 @@ type Client struct {
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(host string) (err error) {
+func (c *Client) Connect(host string, port int) (err error) {
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
 	}
 	// set bootstrap address
 	participant.BootstrapAddress.Host = host
+	participant.BootstrapAddress.Port = port
 	err = c.router.Ping(&participant.BootstrapAddress)
 	if err != nil {
 		c.router.Close()
@@ -34,6 +35,6 @@ func (c *Client) Connect(host string) (err error) {
 func NewClient() (c *Client, err error) {
 	c = new(Client)
 	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
-	err = c.Connect("localhost") // default hostname
+	err = c.Connect("localhost", 9988) // default bootstrap address
 	return
 }
