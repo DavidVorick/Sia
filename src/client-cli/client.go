@@ -15,7 +15,10 @@ func displayHelp() {
 }
 
 func connect(c *client.Client) {
-	err := c.Connect()
+	var host string
+	fmt.Print("Hostname: ")
+	fmt.Scanf("%s", &host)
+	err := c.Connect(host)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {
@@ -94,8 +97,10 @@ func createGenericWallet(c *client.Client) {
 func main() {
 	fmt.Println("Sia Client Version 0.0.0.3")
 	c, err := client.NewClient()
-	if err != nil {
-		println(err)
+	if err == nil {
+		fmt.Println("Connected to local bootstrap")
+	} else {
+		fmt.Println("Local bootstrap not found -- press c to connect")
 	}
 
 	var input string
