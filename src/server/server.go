@@ -6,8 +6,46 @@ import (
 	"participant"
 )
 
+func joinQuorum() {
+	// read port number
+	var port int
+	fmt.Print("Port number to listen on: ")
+	fmt.Scanf("%d", &port)
+
+	// create a message router
+	networkServer, err := network.NewRPCServer(port)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer networkServer.Close()
+
+	// read bootstrap hostname
+	var hostname string
+	fmt.Print("Bootstrap hostname: ")
+	fmt.Scanf("%s", &hostname)
+	participant.BootstrapAddress.Host = hostname
+	err = networkServer.Ping(&participant.BootstrapAddress)
+	if err != nil {
+		fmt.Println("Failed to ping bootstrap:", err)
+		return
+	}
+
+	var directory string
+	fmt.Print("participant directory: ")
+	fmt.Scanf("%s", &directory)
+
+	// create a participant
+	_, err = participant.CreateParticipant(networkServer, directory)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	select {}
+}
+
 func establishQuorum() {
-	// grab a port number
+	// read port number
 	var port int
 	fmt.Print("Port number: ")
 	fmt.Scanf("%d", &port)
@@ -18,6 +56,7 @@ func establishQuorum() {
 		fmt.Println(err)
 		return
 	}
+	defer networkServer.Close()
 
 	var directory string
 	fmt.Print("participant directory: ")
@@ -36,7 +75,8 @@ func printHelp() {
 	fmt.Println(`
 h - help
 help - help
-e - establish a participant, who will either create or join a quorum depending on the bootstrap settings
+j - join an existing quorum
+e - establish a new quorum
 q - quit
 `)
 }
@@ -52,6 +92,10 @@ func main() {
 		switch input {
 		default:
 			fmt.Println("unrecognized command")
+
+		// j: create a participant and bootstrap to a quorum
+		case "j":
+			joinQuorum()
 
 		// e: create a participant and bootstrap to a quorum
 		case "e":
