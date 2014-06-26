@@ -62,7 +62,7 @@ func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, k byte) (err erro
 		return
 	}
 
-	input := script.ResizeSectorEraseInput(atoms, m)
+	input := script.ResizeSectorEraseInput(atoms, k)
 	input, err = script.SignInput(c.genericWallets[w].SK, input)
 	if err != nil {
 		return

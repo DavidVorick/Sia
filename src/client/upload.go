@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
@@ -78,7 +79,8 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 
 	// resize the sector to exactly big enough
-	sm, err := script.RandomSignedMessage(c.genericWallets[id].SK)
+	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
+	input, err = script.SignInput(c.genericWallets[id].SK, input)
 	if err != nil {
 		return
 	}
@@ -87,7 +89,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
-			Input:    script.ResizeSectorEraseInput(sm, atomsWritten+1, k),
+			Input:    input,
 		},
 		Resp: nil,
 	})
@@ -95,7 +97,17 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
 
 	// figure out the hash now that the sector has been resized
+	emptySegment := make([]byte, quorum.AtomSize*int(atomsWritten))
+	b := bytes.NewBuffer(emptySegment)
+	zeroMerkle := quorum.MerkleCollapse(b)
+	emptyAtom := make([]byte, quorum.AtomSize)
+	for i := 0; i < quorum.QuorumSize; i++ {
+		copy(emptyAtom[i*siacrypto.HashSize:], zeroMerkle[:])
+	}
+	parentHash := siacrypto.CalculateHash(emptyAtom)
+
 	// fetch the current block to determine a reasonable deadline
+	deadline := quorum.MaxDeadline // cheating right now... will implement rest of deadline soon
 
 	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
 
