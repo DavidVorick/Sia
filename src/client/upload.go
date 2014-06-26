@@ -109,8 +109,6 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	// fetch the current block to determine a reasonable deadline
 	deadline := quorum.MaxDeadline // cheating right now... will implement rest of deadline soon
 
-	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
-
 	// get the hash set and the set for propose upload
 	var hashSet [quorum.QuorumSize]siacrypto.Hash
 	for i := range fileSegments {
@@ -123,12 +121,34 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 	sectorHash := quorum.SectorHash(hashSet)
 
-	// Propose Upload:
-	// parentHash: parentHash
-	// newHashSet: hashSet
-	// atomsChanged: atomsWritten
-	// confirmations: k
-	// deadline: dealine
+	// Create and submit a propose upload script
+	ua := quorum.UploadArgs{
+		ParentHash:    parentHash,
+		NewHashSet:    hashSet,
+		AtomsChanged:  atomsWritten,
+		Confirmations: k,
+		Deadline:      deadline,
+	}
+	encUA, err := ua.GobEncode()
+	if err != nil {
+		panic(err)
+	}
+	si, err := script.SignInput(c.genericWallets[id].SK, script.ProposeUploadInput(encUA))
+	if err != nil {
+		panic(err)
+	}
+	c.router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: script.ScriptInput{
+			WalletID: id,
+			Input:    si,
+		},
+		Resp: nil,
+	})
+
+	// give enough time for the propose upload to complete
+	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
 
 	// Now that the files have been written to 1 atom at a time, rewind them to
 	// the beginning and create diffs for each file. Then upload the diffs to
