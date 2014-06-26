@@ -106,7 +106,7 @@ func (q *Quorum) Status() (b string) {
 			pubKeyHash := s.publicKey.Hash()
 			b += fmt.Sprintf("\t\t%v\n", s.index)
 			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
-			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])
+			b += fmt.Sprintf("\t\t\tPublic Key: %x\n", pubKeyHash)
 		}
 	}
 	b += fmt.Sprintf("\n")
