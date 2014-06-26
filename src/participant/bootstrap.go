@@ -107,7 +107,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 1. Synchronize to the current quorum to correctly produce blocks from
 	// heartbeats
 	synchronize := new(Synchronize)
-	fmt.Println("Synchronizeing to the Bootstrap")
+	fmt.Println("Synchronizing to the Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: BootstrapAddress,
 		Proc: "Participant.Synchronize",

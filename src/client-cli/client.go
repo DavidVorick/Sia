@@ -15,7 +15,21 @@ func displayHelp() {
 }
 
 func connect(c *client.Client) {
-	err := c.Connect()
+	var host string
+	var port int
+	fmt.Print("Hostname: ")
+	_, err := fmt.Scanf("%s", &host)
+	if err != nil {
+		fmt.Println("Invalid hostname")
+		return
+	}
+	fmt.Print("Port: ")
+	_, err = fmt.Scanf("%d", &port)
+	if err != nil {
+		fmt.Println("Invalid port")
+		return
+	}
+	err = c.Connect(host, port)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {
@@ -94,8 +108,10 @@ func createGenericWallet(c *client.Client) {
 func main() {
 	fmt.Println("Sia Client Version 0.0.0.3")
 	c, err := client.NewClient()
-	if err != nil {
-		println(err)
+	if err == nil {
+		fmt.Println("Connected to local bootstrap")
+	} else {
+		fmt.Println("Autoconnect failed: press c to connect manually")
 	}
 
 	var input string
