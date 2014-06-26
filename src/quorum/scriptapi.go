@@ -331,10 +331,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 		q.clearUploads(w.id, i)
 	}
 
-	var uploadHash siacrypto.Hash
-	for i := range newHashSet {
-		uploadHash = siacrypto.CalculateHash(append(uploadHash[:], newHashSet[i][:]...))
-	}
+	uploadHash := SectorHash(newHashSet)
 	u := upload{
 		id: w.id,
 		requiredConfirmations: confirmations,

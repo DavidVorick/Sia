@@ -168,7 +168,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	})
 
 	// give enough time for the propose upload to complete
-	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
+	time.Sleep(2 * time.Duration(quorum.QuorumSize) * participant.StepDuration)
 
 	// Now that the files have been written to 1 atom at a time, rewind them to
 	// the beginning and create diffs for each file. Then upload the diffs to
@@ -198,11 +198,14 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		}
 
 		// send the diff over RPC
-		c.router.SendMessage(&network.Message{
+		err = c.router.SendMessage(&network.Message{
 			Dest: siblings[i].Address(),
 			Proc: "Participant.ReceieveDiff",
 			Args: diff,
 			Resp: nil,
 		})
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }

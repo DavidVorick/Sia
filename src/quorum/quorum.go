@@ -16,7 +16,7 @@ const (
 	QuorumSize     int    = 4          // max siblings per quorum
 	AtomSize       int    = 4096       // in bytes
 	AtomsPerQuorum int    = 16777216   // 64GB
-	AtomsPerSector uint16 = ^uint16(0) // Max of uint16
+	AtomsPerSector uint16 = 200        // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
 )
 
 // A quorum is a set of data that is identical across all participants in the

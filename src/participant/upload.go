@@ -34,7 +34,7 @@ func (p *Participant) signUploadAdvancement(ua *quorum.UploadAdvancement) {
 func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 	// find the upload in the quorum
 	if !p.quorum.ConfirmUpload(ud.ID, ud.Hash) {
-		err = fmt.Errorf("Upload is not found in the quorum")
+		err = fmt.Errorf("Upload is not found in the quorum, %v, %v", ud.ID, ud.Hash)
 		return
 	}
 
@@ -52,17 +52,17 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 	}
 
 	// copy the file for the wallet over to a temporary state
-	uploadFilename := sectorFilename + "." + string(ud.Hash[:])
+	uploadFilename := sectorFilename + "." + siafiles.SafeFilename(ud.Hash[:])
 	siafiles.Copy(sectorFilename, uploadFilename)
 
 	// write the diffs into the file
-	uploadFile, err := os.OpenFile(uploadFilename, os.O_WRONLY, 0666)
+	uploadFile, err := os.OpenFile(uploadFilename, os.O_RDWR, 0666)
 	if err != nil {
 		panic(err)
 	}
 	defer uploadFile.Close()
 	for i := range ud.ConversionSet {
-		_, err = uploadFile.Seek(int64(ud.ConversionSet[i].Offset), 0)
+		_, err = uploadFile.Seek(int64(ud.ConversionSet[i].Offset)+int64(quorum.AtomSize), 0)
 		if err != nil {
 			panic(err)
 		}
