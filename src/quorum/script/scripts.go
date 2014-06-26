@@ -11,6 +11,7 @@ func short(length int) (l, h byte) {
 	return
 }
 
+// why isn't this a builtin? Definitely nicer than bytes.Join
 func appendAll(slices ...[]byte) []byte {
 	var length int
 	for _, s := range slices {
@@ -24,28 +25,26 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-func RandomSignedMessage(secretKey *siacrypto.SecretKey) (gobSm []byte, err error) {
-	sm, err := secretKey.Sign(siacrypto.RandomByteSlice(8))
+func SignInput(secretKey *siacrypto.SecretKey, input []byte) (gobSm []byte, err error) {
+	sm, err := secretKey.Sign(input)
 	if err != nil {
 		return
 	}
 	gobSm, err = sm.GobEncode()
-	lenl, lenh := short(len(gobSm))
-	gobSm = append([]byte{lenl, lenh}, gobSm...)
 	return
 }
 
 // the default script
 // verifies public key, then transfers control to the input
 func DefaultScript(publicKey *siacrypto.PublicKey) []byte {
-	klen := byte(siacrypto.PublicKeySize)
 	return append([]byte{
-		0x26, 0x0D, 0x00, // 00 move data pointer to public key
-		0x39, klen, 0x01, // 03 read public key into buffer 1
-		0x2D, 0x02, //       06 read signed message into buffer 2
+		0x26, 0x10, 0x00, // 00 move data pointer to public key
+		0x39, 0x20, 0x01, // 03 read public key into buffer 1
+		0x2E, 0x02, //       06 read signed message into buffer 2
 		0x34, 0x01, 0x02, // 08 verify signature
-		0x38, //             11 if invalid signature, reject
-		0x2F, //             12 execute input
+		0x38,             //             11 if invalid signature, reject
+		0x26, 0x70, 0x00, // 12 move data pointer to input body
+		0x2F, //             15 execute input
 	}, publicKey[:]...)
 }
 
@@ -61,15 +60,11 @@ var BootstrapScript = []byte{
 }
 
 func CreateWalletInput(walletID uint64, s []byte) []byte {
-	id := siaencoding.EncUint64(walletID)
-	return append(id, s...)
+	return append(siaencoding.EncUint64(walletID), s...)
 }
 
-func AddSiblingInput(encSm, encSibling []byte) []byte {
-	lenl, lenh := short(len(encSm))
+func AddSiblingInput(encSibling []byte) []byte {
 	return appendAll(
-		[]byte{lenl, lenh},
-		encSm,
 		[]byte{
 			0x25, 0x08, 0x00, // move data pointer to encoded sibling
 			0x2E, 0x01, //       read sibling into buffer 1
@@ -80,9 +75,8 @@ func AddSiblingInput(encSm, encSibling []byte) []byte {
 	)
 }
 
-func TransactionInput(encSm []byte, dst, high, low uint64) []byte {
+func TransactionInput(dst, high, low uint64) []byte {
 	return appendAll(
-		encSm,
 		[]byte{
 			0x25, 0x0B, 0x00, // move data pointer to dst
 			0x27, 0x08, //       push 8 bytes of input (id)
@@ -97,12 +91,12 @@ func TransactionInput(encSm []byte, dst, high, low uint64) []byte {
 	)
 }
 
-func ResizeSectorEraseInput(encSm []byte, atoms uint16, m byte) []byte {
+func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 	l, h := short(int(atoms))
-	return append(encSm, []byte{
+	return []byte{
 		0x02, l, h, // push number of atoms
 		0x3A, m, //    call resize
-	}...)
+	}
 }
 
 func ProposeUploadInput(encUA []byte) []byte {

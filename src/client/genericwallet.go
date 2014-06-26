@@ -38,7 +38,8 @@ func (c *Client) SubmitTransaction(src, dst quorum.WalletID, amount uint64) (err
 		return
 	}
 
-	sm, err := script.RandomSignedMessage(c.genericWallets[src].SK)
+	input := script.TransactionInput(uint64(dst), 0, amount)
+	input, err = script.SignInput(c.genericWallets[src].SK, input)
 	if err != nil {
 		return
 	}
@@ -48,7 +49,7 @@ func (c *Client) SubmitTransaction(src, dst quorum.WalletID, amount uint64) (err
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: src,
-			Input:    script.TransactionInput(sm, uint64(dst), 0, amount),
+			Input:    input,
 		},
 		Resp: nil,
 	})
@@ -61,16 +62,18 @@ func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, m byte) (err erro
 		return
 	}
 
-	sm, err := script.RandomSignedMessage(c.genericWallets[w].SK)
+	input := script.ResizeSectorEraseInput(atoms, m)
+	input, err = script.SignInput(c.genericWallets[w].SK, input)
 	if err != nil {
 		return
 	}
+
 	return c.router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: w,
-			Input:    script.ResizeSectorEraseInput(sm, atoms, m),
+			Input:    input,
 		},
 		Resp: nil,
 	})
