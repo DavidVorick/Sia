@@ -222,16 +222,57 @@ func (ua *UploadArgs) GobEncode() (gobUA []byte, err error) {
 		return
 	}
 	b := new(bytes.Buffer)
-	enc := gob.NewEncoder(b)
-	err = enc.Encode(ua)
+	encoder := gob.NewEncoder(b)
+
+	err = encoder.Encode(ua.ParentHash)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(ua.NewHashSet)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(ua.AtomsChanged)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(ua.Confirmations)
+	if err != nil {
+		return
+	}
+	err = encoder.Encode(ua.Deadline)
+	if err != nil {
+		return
+	}
+
 	gobUA = b.Bytes()
 	return
 }
 
 func (ua *UploadArgs) GobDecode(gobUA []byte) (err error) {
 	b := bytes.NewBuffer(gobUA)
-	dec := gob.NewDecoder(b)
-	err = dec.Decode(&ua)
+	decoder := gob.NewDecoder(b)
+
+	err = decoder.Decode(&ua.ParentHash)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&ua.NewHashSet)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&ua.AtomsChanged)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&ua.Confirmations)
+	if err != nil {
+		return
+	}
+	err = decoder.Decode(&ua.Deadline)
+	if err != nil {
+		return
+	}
 	return
 }
 
@@ -304,6 +345,9 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	}
 
 	weight = atomsChanged
+	if q.uploads[w.id] == nil {
+		q.uploads[w.id] = make([]*upload, 0)
+	}
 	q.uploads[w.id] = append(q.uploads[w.id], &u)
 	q.updateWeight(w.id, int(atomsChanged))
 	q.insertEvent(&u)

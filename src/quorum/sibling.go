@@ -44,8 +44,7 @@ func (q *Quorum) TossSibling(i byte) {
 	q.siblings[i] = nil
 }
 
-// Sibling.compare returns true if the values of each Sibling are equivalent
-// The index field is not considered.
+// Sibling returns true if the address and publicKey fields are identical
 func (s0 *Sibling) Compare(s1 *Sibling) bool {
 	// false if either sibling is nil
 	if s0 == nil || s1 == nil {
@@ -60,11 +59,6 @@ func (s0 *Sibling) Compare(s1 *Sibling) bool {
 	// return false if the public keys are not equivalent
 	compare := s0.publicKey.Compare(s1.publicKey)
 	if compare != true {
-		return false
-	}
-
-	// Return false if the WalletIDs are different
-	if s0.wallet != s1.wallet {
 		return false
 	}
 

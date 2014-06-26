@@ -55,6 +55,7 @@ type Quorum struct {
 }
 
 func (q *Quorum) Init() {
+	q.uploads = make(map[WalletID][]*upload)
 	q.storagePrice = NewBalance(0, 1)
 }
 

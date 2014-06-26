@@ -113,6 +113,15 @@ func (q *Quorum) UploadExpectedHash(id WalletID, h siacrypto.Hash, index byte) (
 }
 
 func (q *Quorum) clearUploads(id WalletID, i int) {
+	// if there are no uploads, mission accomplished
+	if q.uploads[id] == nil {
+		return
+	}
+	if i == 0 {
+		q.uploads[id] = nil
+		return
+	}
+
 	// delete all uploads starting with the ith index
 	for i = i; i < len(q.uploads[id]); i++ {
 		// delete the file associated with the upload

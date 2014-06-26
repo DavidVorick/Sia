@@ -93,7 +93,6 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
 	}
-	println("Encoded files")
 
 	// resize the sector to exactly big enough
 	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
@@ -114,7 +113,6 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
 	}
-	println("Submitted sector resize request")
 
 	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
 
@@ -177,6 +175,10 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	// each silbing via RPC
 	currentSegment := make([]byte, int(atomsWritten)*quorum.AtomSize)
 	for i := range fileSegments {
+		if siblings[i] == nil {
+			continue
+		}
+
 		// read the appropriate segment into memory to be sent over RPC
 		_, err = fileSegments[i].Seek(0, 0)
 		if err != nil {

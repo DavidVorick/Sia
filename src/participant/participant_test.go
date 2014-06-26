@@ -35,9 +35,11 @@ func TestCreateParticipant(t *testing.T) {
 	if p0.self.Index() != 0 {
 		t.Error("p0.self.index initialized to", p0.self.Index())
 	}
+	p0.stepLock.Lock()
 	if p0.currentStep != 1 {
 		t.Error("p0.currentStep should be initialized to 1!")
 	}
+	p0.stepLock.Unlock()
 
 	// check a non-bootstrap
 	p1, err := CreateParticipant(zn, wd)
