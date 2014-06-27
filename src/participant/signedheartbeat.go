@@ -46,6 +46,10 @@ func (p *Participant) newSignedHeartbeat() (err error) {
 	hb.scriptInputs = p.scriptInputs
 	p.scriptInputs = nil
 	p.scriptInputsLock.Unlock()
+	p.uploadAdvancementsLock.Lock()
+	hb.uploadAdvancements = p.uploadAdvancements
+	p.uploadAdvancements = nil
+	p.uploadAdvancementsLock.Unlock()
 
 	sh := new(SignedHeartbeat)
 

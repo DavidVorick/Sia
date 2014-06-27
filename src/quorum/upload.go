@@ -5,6 +5,7 @@ import (
 	"os"
 	"siacrypto"
 	"siaencoding"
+	"siafiles"
 )
 
 const (
@@ -102,12 +103,31 @@ func (q *Quorum) ConfirmUpload(id WalletID, h siacrypto.Hash) bool {
 	return false
 }
 
+func (q *Quorum) UploadExpectedHash(id WalletID, h siacrypto.Hash, index byte) (expected siacrypto.Hash) {
+	for i := range q.uploads[id] {
+		if q.uploads[id][i].hash == h {
+			expected = q.uploads[id][i].hashSet[index]
+			return
+		}
+	}
+	return
+}
+
 func (q *Quorum) clearUploads(id WalletID, i int) {
+	// if there are no uploads, mission accomplished
+	if q.uploads[id] == nil {
+		return
+	}
+	if i == 0 {
+		q.uploads[id] = nil
+		return
+	}
+
 	// delete all uploads starting with the ith index
 	for i = i; i < len(q.uploads[id]); i++ {
 		// delete the file associated with the upload
 		sectorFilename := q.SectorFilename(id)
-		uploadFilename := sectorFilename + "." + string(q.uploads[id][i].hash[:])
+		uploadFilename := sectorFilename + "." + siafiles.SafeFilename(q.uploads[id][i].hash[:])
 		err := os.Remove(uploadFilename)
 		if err != nil {
 			panic(err)
@@ -124,7 +144,7 @@ func (q *Quorum) clearUploads(id WalletID, i int) {
 	q.uploads[id] = q.uploads[id][:i]
 }
 
-func (q *Quorum) advanceUpload(ua *UploadAdvancement) {
+func (q *Quorum) AdvanceUpload(ua *UploadAdvancement) {
 	// check that all the associated structures exist
 	if q.uploads[ua.ID] == nil {
 		return
@@ -170,14 +190,14 @@ func (q *Quorum) advanceUpload(ua *UploadAdvancement) {
 	if q.uploads[ua.ID][i].requiredConfirmations <= 0 && i == 0 {
 		// copy the upload file over to the actual file
 		sectorFilename := q.SectorFilename(ua.ID)
-		uploadFilename := sectorFilename + "." + string(ua.Hash[:])
+		uploadFilename := sectorFilename + "." + siafiles.SafeFilename(ua.Hash[:])
 		err := os.Rename(uploadFilename, sectorFilename)
 		if err != nil {
 			panic(err)
 		}
 
 		// subtract the temporary atoms from the wallet
-		err = q.updateWeight(ua.ID, int(-q.uploads[ua.ID][0].weight))
+		err = q.updateWeight(ua.ID, 0-int(q.uploads[ua.ID][0].weight))
 		if err != nil {
 			panic(err)
 		}

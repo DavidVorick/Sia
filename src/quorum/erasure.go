@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (err error) {
+func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms uint16, err error) {
 	// check for nil inputs
 	if input == nil {
 		err = fmt.Errorf("Received nil input!")
@@ -29,8 +29,12 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (err erro
 	// read from the reader enough to build 1 atom on the quorum, then encode it
 	// to a single atom, which is then written to all of the writers
 	atom := make([]byte, AtomSize*int(k))
-	var atoms int
-	for _, err := input.Read(atom); err != nil; atoms++ {
+	for _, err = input.Read(atom); err == nil; atoms++ {
+		if atoms == AtomsPerSector {
+			err = fmt.Errorf("Exceeded max atoms per sector")
+			return
+		}
+
 		var encodedSegments [][]byte
 		encodedSegments, err = erasure.EncodeRedundancy(k, m, atom)
 		for i := range segments {
@@ -41,7 +45,10 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (err erro
 
 	// check that at least 1 atom was created, and return
 	if atoms == 0 {
+		fmt.Println(err)
 		err = fmt.Errorf("No data read from reader!")
+	} else {
+		err = nil
 	}
 	return
 }

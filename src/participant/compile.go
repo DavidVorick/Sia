@@ -18,6 +18,10 @@ func (p *Participant) compile(b *block) {
 			continue
 		}
 
+		for j := range b.heartbeats[i].uploadAdvancements {
+			p.quorum.AdvanceUpload(&b.heartbeats[i].uploadAdvancements[j])
+		}
+
 		fmt.Printf("Confirming Sibling %v\n", i)
 		p.quorum.IntegrateSiblingEntropy(b.heartbeats[i].entropy)
 		for _, si := range b.heartbeats[i].scriptInputs {

@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	QuorumSize     int = 4        // max siblings per quorum
-	AtomSize       int = 4096     // in bytes
-	AtomsPerQuorum int = 16777216 // 64GB
+	QuorumSize     int    = 4          // max siblings per quorum
+	AtomSize       int    = 4096       // in bytes
+	AtomsPerQuorum int    = 16777216   // 64GB
+	AtomsPerSector uint16 = 200        // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
 )
 
 // A quorum is a set of data that is identical across all participants in the
@@ -54,6 +55,7 @@ type Quorum struct {
 }
 
 func (q *Quorum) Init() {
+	q.uploads = make(map[WalletID][]*upload)
 	q.storagePrice = NewBalance(0, 1)
 }
 

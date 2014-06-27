@@ -5,6 +5,7 @@ import (
 	"os"
 	"siacrypto"
 	"siaencoding"
+	"siafiles"
 )
 
 const (
@@ -39,7 +40,7 @@ func (w *Wallet) Script() []byte {
 func (q *Quorum) walletFilename(id WalletID) (s string) {
 	// Turn the id into a suffix that will follow the quorum prefix
 	suffixBytes := siaencoding.EncUint64(uint64(id))
-	suffix := siaencoding.EncFilename(suffixBytes)
+	suffix := siafiles.SafeFilename(suffixBytes)
 	s = q.walletPrefix + suffix
 	return
 }
