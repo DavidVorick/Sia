@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	QuorumSize     int = 4        // max siblings per quorum
-	AtomSize       int = 4096     // in bytes
-	AtomsPerQuorum int = 16777216 // 64GB
+	QuorumSize     int    = 4          // max siblings per quorum
+	AtomSize       int    = 4096       // in bytes
+	AtomsPerQuorum int    = 16777216   // 64GB
+	AtomsPerSector uint16 = 200        // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
 )
 
 // A quorum is a set of data that is identical across all participants in the
@@ -42,8 +43,8 @@ type Quorum struct {
 	walletRoot   *walletNode
 
 	// File management
-	storagePrice uint32
-	uploads      map[string][]*upload
+	storagePrice Balance
+	uploads      map[WalletID][]*upload
 
 	// Snapshot management
 	currentSnapshot bool // false == snap0, true == snap1
@@ -51,6 +52,11 @@ type Quorum struct {
 	// Block tracking
 	parent siacrypto.Hash
 	height uint32
+}
+
+func (q *Quorum) Init() {
+	q.uploads = make(map[WalletID][]*upload)
+	q.storagePrice = NewBalance(0, 1)
 }
 
 // This is the prefix that the quorum will use when opening wallets as files.
@@ -102,7 +108,7 @@ func (q *Quorum) Status() (b string) {
 			pubKeyHash := s.publicKey.Hash()
 			b += fmt.Sprintf("\t\t%v\n", s.index)
 			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
-			b += fmt.Sprintf("\t\t\tPublic Key: %v\n", pubKeyHash[:6])
+			b += fmt.Sprintf("\t\t\tPublic Key: %x\n", pubKeyHash)
 		}
 	}
 	b += fmt.Sprintf("\n")
@@ -112,6 +118,11 @@ func (q *Quorum) Status() (b string) {
 
 	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
 
+	if q.walletRoot != nil {
+		b += fmt.Sprintf("\tWeight: %x\n", q.walletRoot.weight)
+	} else {
+		b += fmt.Sprintf("\tWeight: 0\n")
+	}
 	b += fmt.Sprintf("\tParent: %x\n", q.parent)
 	b += fmt.Sprintf("\tHeight: %x\n\n", q.height)
 	return

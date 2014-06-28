@@ -24,8 +24,8 @@ func (s *Sibling) Index() byte {
 func (s *Sibling) Address() network.Address {
 	return s.address
 }
-func (s *Sibling) PublicKey() siacrypto.PublicKey {
-	return *s.publicKey
+func (s *Sibling) PublicKey() *siacrypto.PublicKey {
+	return s.publicKey
 }
 
 // Sibling variables are kept private because they should not be changing
@@ -44,8 +44,7 @@ func (q *Quorum) TossSibling(i byte) {
 	q.siblings[i] = nil
 }
 
-// Sibling.compare returns true if the values of each Sibling are equivalent
-// The index field is not considered.
+// Sibling returns true if the address and publicKey fields are identical
 func (s0 *Sibling) Compare(s1 *Sibling) bool {
 	// false if either sibling is nil
 	if s0 == nil || s1 == nil {
@@ -68,8 +67,6 @@ func (s0 *Sibling) Compare(s1 *Sibling) bool {
 
 func (s *Sibling) GobEncode() (gobSibling []byte, err error) {
 	// Error checking for nil values
-	// Because public keys cannot be nil and are not valid as zero-values, a nil
-	// participant cannot be encoded
 	if s == nil {
 		err = fmt.Errorf("Cannot encode nil sibling")
 		return
@@ -128,5 +125,43 @@ func (s *Sibling) GobDecode(gobSibling []byte) (err error) {
 		return
 	}
 
+	return
+}
+
+// EncodedSiblings returns a []byte that contains sufficient information to
+// decode a [QuorumSize]*Sibling, which is necessary because gob can't encode
+// an array of siblings. This function doesn't act on a quorum because external
+// packages need to be able to receive siblings without having an entire quorum
+// attatched. I'm not sure if it's the best design decision.
+func EncodeSiblings(siblings [QuorumSize]*Sibling) (encodedSiblings []byte, err error) {
+	var siblingSlice []*Sibling
+	for i := range siblings {
+		if siblings[i] != nil {
+			siblingSlice = append(siblingSlice, siblings[i])
+		}
+	}
+
+	b := new(bytes.Buffer)
+	encoder := gob.NewEncoder(b)
+	err = encoder.Encode(siblingSlice)
+	if err != nil {
+		return
+	}
+	encodedSiblings = b.Bytes()
+	return
+}
+
+func DecodeSiblings(encodedSiblings []byte) (siblings [QuorumSize]*Sibling, err error) {
+	b := bytes.NewBuffer(encodedSiblings)
+	decoder := gob.NewDecoder(b)
+
+	var siblingSlice []*Sibling
+	err = decoder.Decode(&siblingSlice)
+	if err != nil {
+		return
+	}
+	for i := range siblingSlice {
+		siblings[siblingSlice[i].index] = siblingSlice[i]
+	}
 	return
 }

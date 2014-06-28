@@ -28,9 +28,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 
 	// calculate the size of the encoded heartbeat
 	encodedHeartbeatLen := quorum.EntropyVolume + 4 + 4
-	for _ = range hb.uploadAdvancements {
-		encodedHeartbeatLen += quorum.UploadAdvancementSize
-	}
+	encodedHeartbeatLen += quorum.UploadAdvancementSize * len(hb.uploadAdvancements)
 	for _, scriptInput := range hb.scriptInputs {
 		encodedHeartbeatLen += 12
 		encodedHeartbeatLen += len(scriptInput.Input)
@@ -39,7 +37,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 
 	// copy the entropy over
 	copy(gobHB, hb.entropy[:])
-	offset := uint32(quorum.EntropyVolume)
+	offset := quorum.EntropyVolume
 
 	// copy in the number of uploadAdvancements
 	intb := siaencoding.EncUint32(uint32(len(hb.uploadAdvancements)))
@@ -63,7 +61,7 @@ func (hb *heartbeat) GobEncode() (gobHB []byte, err error) {
 
 	// copy in each scriptInput, while also copying in the offset for each
 	// scriptInput
-	scriptInputOffset := offset + uint32(len(hb.scriptInputs)*4)
+	scriptInputOffset := uint32(offset + len(hb.scriptInputs)*4)
 	for _, scriptInput := range hb.scriptInputs {
 		// copy over the offset
 		intb := siaencoding.EncUint32(scriptInputOffset)
@@ -95,7 +93,7 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 
 	// copy over the entropy
 	copy(hb.entropy[:], gobHB)
-	offset := uint32(quorum.EntropyVolume)
+	offset := quorum.EntropyVolume
 
 	// read the number of uploadAdvancements
 	numUploadAdvancements := siaencoding.DecUint32(gobHB[offset : offset+4])
@@ -110,20 +108,20 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	}
 
 	// get the number of ScriptInputs
-	numScriptInputs := siaencoding.DecUint32(gobHB[offset : offset+4])
+	numScriptInputs := int(siaencoding.DecUint32(gobHB[offset : offset+4]))
 	if numScriptInputs == 0 {
 		return
 	}
 	offset += 4
 
 	// make sure there are at least enough bytes for all the offsets
-	if uint32(len(gobHB)-quorum.WalletIDSize) < offset+4*numScriptInputs {
+	if len(gobHB)-quorum.WalletIDSize < offset+4*numScriptInputs {
 		err = fmt.Errorf("Received invalid encoded heartbeat")
 		return
 	}
 
 	// decode each script input
-	nextOffset := offset + 4
+	nextOffset := uint32(offset + 4)
 	hb.scriptInputs = make([]script.ScriptInput, numScriptInputs)
 	for i := 0; i < int(numScriptInputs-1); i++ {
 		siOffset := siaencoding.DecUint32(gobHB[offset : offset+4])

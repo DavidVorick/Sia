@@ -75,6 +75,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// initialize disk variables
 	p.recentBlocks = make(map[uint32]*block)
 	p.quorum.SetWalletPrefix(participantPrefix)
+	p.quorum.Init()
 	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
@@ -82,7 +83,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.synchronized = true
 
 		// create the bootstrap wallet
-		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 15000), script.BootstrapScript)
+		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 1234000), script.BootstrapScript)
 		wallet := p.quorum.LoadWallet(BootstrapID)
 
 		// add self as a sibling
@@ -106,7 +107,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	// 1. Synchronize to the current quorum to correctly produce blocks from
 	// heartbeats
 	synchronize := new(Synchronize)
-	fmt.Println("Synchronizeing to the Bootstrap")
+	fmt.Println("Synchronizing to the Bootstrap")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: BootstrapAddress,
 		Proc: "Participant.Synchronize",
@@ -237,17 +238,13 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	if err != nil {
 		return
 	}
-	signedMessage, err := p.secretKey.Sign(siacrypto.RandomByteSlice(8))
-	if err != nil {
-		return
-	}
-	gobSm, err := signedMessage.GobEncode()
+	input, err := script.SignInput(p.secretKey, script.AddSiblingInput(gobSibling))
 	if err != nil {
 		return
 	}
 	s = script.ScriptInput{
 		WalletID: quorum.WalletID(walletID),
-		Input:    script.AddSiblingInput(gobSm, gobSibling),
+		Input:    input,
 	}
 
 	err = p.messageRouter.SendMessage(&network.Message{

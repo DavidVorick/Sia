@@ -244,5 +244,9 @@ func (q *Quorum) deleteEvent(e event) {
 	}
 }
 
-func (q *Quorum) handleExpiringEvents() {
+func (q *Quorum) ProcessEvents() {
+	for q.eventRoot != nil && q.eventRoot.event.expiration() <= q.height {
+		q.eventRoot.event.handleEvent(q)
+		q.deleteEvent(q.eventRoot.event)
+	}
 }

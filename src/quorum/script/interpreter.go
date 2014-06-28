@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"quorum"
-	"reflect"
 )
 
 const (
@@ -22,14 +21,14 @@ type instruction struct {
 	opcode   byte
 	name     string
 	argBytes int
-	fn       reflect.Value
+	fn       func([]byte) error
 	cost     int
 }
 
-func (in *instruction) print(args []reflect.Value) string {
+func (in *instruction) print(args []byte) string {
 	s := in.name
-	for i := range args {
-		s += fmt.Sprint(" ", args[i].Uint())
+	for _, b := range args {
+		s += fmt.Sprint(" ", b)
 	}
 	return s
 }
@@ -48,6 +47,17 @@ func push(v value) (err error) {
 	}
 	stack = &stackElem{v, stack}
 	stackLen++
+	return
+}
+
+func pop() (v value, err error) {
+	if stackLen < 1 {
+		err = errors.New("stack empty")
+		return
+	}
+	v = stack.val
+	stack = stack.next
+	stackLen--
 	return
 }
 
@@ -110,7 +120,6 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		return
 	}
 	script = append(wallet.Script(), si.Input...)
-	iptr = 0
 	dptr = len(wallet.Script())
 	registers = [256]value{}
 	buffers = [256][]byte{}
@@ -122,8 +131,8 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 	costBalance = 10000
 	fmt.Println("executing script:", script)
 
-	for {
-		if iptr >= len(script) || script[iptr] == 0xFF {
+	for iptr = 0; iptr < len(script); iptr++ {
+		if script[iptr] == 0xFF {
 			break
 		}
 
@@ -138,11 +147,6 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			err = errors.New("too few arguments to opcode " + op.name)
 			break
 		}
-		var fnArgs []reflect.Value
-		for j := 0; j < op.argBytes; j++ {
-			iptr++
-			fnArgs = append(fnArgs, reflect.ValueOf(script[iptr]))
-		}
 
 		// deduct resources and check that we can proceed with execution
 		err = deductResources(op)
@@ -151,15 +155,14 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		}
 
 		// call associated opcode function
-		retVals := op.fn.Call(fnArgs)
+		fnArgs := make([]byte, op.argBytes)
+		iptr += copy(fnArgs, script[iptr+1:])
+		err = op.fn(fnArgs)
 
 		// check for error
-		errInter := retVals[0].Interface()
-		if errInter != nil {
-			if errInter.(error) == errRejected {
-				err = errInter.(error)
-			} else {
-				err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + errInter.(error).Error())
+		if err != nil {
+			if err != errRejected {
+				err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
 			}
 			break
 		}
@@ -174,9 +177,6 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 			copy(b, buffers[2])
 			fmt.Println("    buffer 2:", len(buffers[2]), b)
 		}
-
-		// increment instruction pointer
-		iptr++
 	}
 	if err != nil {
 		fmt.Println("script execution failed:", err)

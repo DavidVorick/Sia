@@ -3,62 +3,118 @@ package main
 import (
 	"client"
 	"fmt"
-	"network"
-	"participant"
 	"quorum"
-	"quorum/script"
-	"siacrypto"
 )
 
-var (
-	router *network.RPCServer
-)
-
-// request a new wallet from the bootstrap
-func requestWallet(id quorum.WalletID) error {
-	return router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
-		Proc: "Participant.AddScriptInput",
-		Args: script.ScriptInput{
-			WalletID: participant.BootstrapID,
-			Input:    script.CreateWalletInput(uint64(id), script.TransactionScript),
-		},
-		Resp: nil,
-	})
+func displayHelp() {
+	fmt.Println("\nc:\tConnect to Network\n" +
+		"r:\tResize a sector\n" +
+		"t:\tSubmit transaction\n" +
+		"u:\tUpload a file\n" +
+		"w:\tRequest wallet\n")
 }
 
-// send coins from one wallet to another
-func submitTransaction(src, dst quorum.WalletID, amount uint64) (err error) {
-	return router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
-		Proc: "Participant.AddScriptInput",
-		Args: script.ScriptInput{
-			WalletID: src,
-			Input:    script.TransactionInput(uint64(dst), 0, amount),
-		},
-		Resp: nil,
-	})
-}
-
-func connectToBootstrap() (err error) {
-	router, err = network.NewRPCServer(9989)
+func connect(c *client.Client) {
+	var host string
+	var port int
+	fmt.Print("Hostname: ")
+	_, err := fmt.Scanf("%s", &host)
 	if err != nil {
+		fmt.Println("Invalid hostname")
 		return
 	}
-	err = router.Ping(&participant.BootstrapAddress)
-	return
+	fmt.Print("Port: ")
+	_, err = fmt.Scanf("%d", &port)
+	if err != nil {
+		fmt.Println("Invalid port")
+		return
+	}
+	err = c.Connect(host, port)
+	if err != nil {
+		fmt.Println("Error while connecting:", err)
+	} else {
+		fmt.Println("Successfully Connected!")
+	}
+}
+
+func resizeGenericWallet(c *client.Client) {
+	var srcID quorum.WalletID
+	var atoms uint16
+	var m byte
+	fmt.Print("Wallet ID (hex): ")
+	fmt.Scanf("%x", &srcID)
+	fmt.Print("New size (in atoms): ")
+	fmt.Scanln(&atoms)
+	fmt.Print("Redundancy: ")
+	fmt.Scanln(&m)
+	err := c.ResizeSector(srcID, atoms, m)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Sector resized")
+	}
+}
+
+func sendFromGenericWallet(c *client.Client) {
+	var srcID quorum.WalletID
+	var destID quorum.WalletID
+	var amount uint64
+	fmt.Print("Source Wallet ID (hex): ")
+	fmt.Scanf("%x", &srcID)
+	fmt.Print("Dest Wallet ID (hex): ")
+	fmt.Scanf("%x", &destID)
+	fmt.Print("Amount to send (dec): ")
+	fmt.Scanln(&amount)
+	err := c.SubmitTransaction(srcID, destID, amount)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Transaction successfully submitted")
+	}
+}
+
+func uploadToGenericWallet(c *client.Client) {
+	var filename string
+	var id quorum.WalletID
+	var k byte
+	fmt.Print("Filename: ")
+	fmt.Scanln(&filename)
+	fmt.Print("K: ")
+	fmt.Scanln(&k)
+	atomsRequired, err := client.CalculateAtoms(filename, k)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("Atoms Required: %v\n", atomsRequired)
+	}
+	fmt.Print("Wallet ID (hex): ")
+	fmt.Scanf("%x", &id)
+	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
+	c.UploadFile(id, filename, k)
+}
+
+func createGenericWallet(c *client.Client) {
+	var id quorum.WalletID
+	fmt.Print("Enter desired Wallet ID (hex): ")
+	fmt.Scanf("%x", &id)
+	err := c.RequestWallet(id)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Wallet requested")
+	}
 }
 
 func main() {
-	var (
-		input  string
-		err    error
-		id     quorum.WalletID
-		srcID  quorum.WalletID
-		destID quorum.WalletID
-		amount uint64
-	)
 	fmt.Println("Sia Client Version 0.0.0.3")
+	c, err := client.NewClient()
+	if err == nil {
+		fmt.Println("Connected to local bootstrap")
+	} else {
+		fmt.Println("Autoconnect failed: press c to connect manually")
+	}
+
+	var input string
 	for {
 		fmt.Print("Please enter a command: ")
 		fmt.Scanln(&input)
@@ -66,63 +122,26 @@ func main() {
 		switch input {
 		default:
 			fmt.Println("unrecognized command")
+
 		case "h", "help":
-			fmt.Println()
-			fmt.Println("c:\tConnect to bootstrap")
-			fmt.Println("w:\tRequest wallet")
-			fmt.Println("t:\tSubmit transaction")
-			fmt.Println("g:\tGenerate public and secret key pair")
-			fmt.Println()
-		case "c":
-			err = connectToBootstrap()
-			if err != nil {
-				fmt.Println("Could not connect to bootstrap:", err)
-				return
-			} else {
-				fmt.Println("Connected to bootstrap")
-			}
+			displayHelp()
 
-		case "w":
-			fmt.Print("Enter desired Wallet ID (hex): ")
-			fmt.Scanf("%x", &id)
-			err = requestWallet(id)
-			if err != nil {
-				fmt.Println(err)
-				return
-			} else {
-				fmt.Println("Wallet requested")
-			}
+		case "c", "conncet":
+			connect(c)
 
-		case "t":
-			fmt.Print("Source Wallet ID (hex): ")
-			fmt.Scanf("%x", &srcID)
-			fmt.Print("Dest Wallet ID (hex): ")
-			fmt.Scanf("%x", &destID)
-			fmt.Print("Amount to send (dec): ")
-			fmt.Scanln(&amount)
-			err = submitTransaction(srcID, destID, amount)
-			if err != nil {
-				fmt.Println(err)
-				return
-			} else {
-				fmt.Println("Transaction successfully submitted")
-			}
-		case "g":
-			var destFile string
-			publicKey, secretKey, err := siacrypto.CreateKeyPair()
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("keys generated. Where would you like to store them? ")
-			fmt.Scanf("%s", &destFile)
-			fmt.Println("Saving to:", destFile)
-			err = client.SaveKeyPair(publicKey, secretKey, destFile)
-			if err != nil {
-				panic(err)
-			} else {
-				fmt.Println("Success!")
-			}
-		case "q":
+		case "r", "resize":
+			resizeGenericWallet(c)
+
+		case "t", "send", "transaction":
+			sendFromGenericWallet(c)
+
+		case "u", "upload":
+			uploadToGenericWallet(c)
+
+		case "w", "wallet":
+			createGenericWallet(c)
+
+		case "q", "quit":
 			return
 		}
 	}

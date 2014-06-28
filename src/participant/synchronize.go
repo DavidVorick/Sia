@@ -40,11 +40,21 @@ func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]block) (err err
 	return
 }
 
-// Synchronize just sends over participant.currentStep, and is a temporary
-// function. It's not secure or trusted and is highely exploitable.
-//
-// This needs to be changed so that someone requests a synchronize, and a rv
-// is sent
+// Participant.Siblings is an RPC call that returns a set of quorum.QuorumSize
+// siblings that have been encoded individually into a byte slice. This is
+// necessary because gob doesn't know how to understand slices or arrays of
+// structs (somewhat frustratingly).
+func (p *Participant) Siblings(_ struct{}, encodedSiblings *[]byte) (err error) {
+	siblings := p.quorum.Siblings()
+	gobSiblings, err := quorum.EncodeSiblings(siblings)
+	if err != nil {
+		return
+	}
+
+	*encodedSiblings = gobSiblings
+	return
+}
+
 func (p *Participant) Synchronize(_ struct{}, s *Synchronize) (err error) {
 	p.stepLock.Lock()
 	s.currentStep = p.currentStep

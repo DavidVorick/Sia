@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"fmt"
 	"quorum"
 	"time"
 )
@@ -15,7 +14,6 @@ func (p *Participant) tick() {
 	for _ = range ticker {
 		p.stepLock.Lock()
 		if p.currentStep == quorum.QuorumSize {
-			fmt.Println("Compiling...")
 			b := p.condenseBlock()
 
 			p.appendBlock(b)
@@ -26,7 +24,6 @@ func (p *Participant) tick() {
 
 			p.currentStep = 1
 		} else {
-			fmt.Println("stepping")
 			p.currentStep += 1
 		}
 		p.stepLock.Unlock()

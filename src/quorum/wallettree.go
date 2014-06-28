@@ -25,6 +25,20 @@ type walletNode struct {
 	weight int
 }
 
+func (wn *walletNode) nodeWeight() (nw int) {
+	if wn == nil {
+		return
+	}
+	nw = wn.weight
+	if wn.children[0] != nil {
+		nw -= wn.children[0].weight
+	}
+	if wn.children[1] != nil {
+		nw -= wn.children[1].weight
+	}
+	return
+}
+
 func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
 	// check that the id is in the quorum
 	wn := q.retrieve(id)
@@ -64,6 +78,7 @@ func (q *Quorum) printWallets(w *walletNode) (s string) {
 
 	s += fmt.Sprintf("\t\tWallet %x:\n", w.id)
 	s += q.walletString(w.id)
+	s += fmt.Sprintf("\t\t\tWeight: %v\n", w.nodeWeight())
 	s += fmt.Sprintf("\n")
 
 	s += q.printWallets(w.children[1])
