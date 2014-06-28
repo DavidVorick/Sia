@@ -1,38 +1,36 @@
 package client
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"os"
+	"quorum"
+	"siacrypto"
 	"siaencoding"
 )
 
-type Wallet struct {
-	ID   uint32
-	Type string
-}
-
-func SaveWallet(id uint32, walletType string, destFile string) (err error) {
+func SaveWallet(id quorum.WalletID, keypair *siacrypto.Keypair, destFile string) (err error) {
 	if destFile == "" {
 		fmt.Errorf("Cannot save, file name is empty string")
 		return
 	}
-	var wallet *Wallet
-	wallet = new(Wallet)
+	if keypair == nil {
+		fmt.Errorf("Cannot encode nil key pair")
+		return
+	}
+	if keypair.PK == nil || keypair.SK == nil {
+		fmt.Errorf("Cannot write nil key to file")
+		return
+	}
 
-	wallet.ID = id
-	wallet.Type = walletType
-	w1 := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w1)
-	err = encoder.Encode(wallet)
+	idSlice := siaencoding.EncUint64(uint64(id))
+	pubSlice, err := keypair.PK.GobEncode()
 	if err != nil {
 		panic(err)
 	}
-	walletSlice := w1.Bytes()
-
-	walletSize := uint32(len(walletSlice))
-	sizeSlice := siaencoding.EncUint32(walletSize)
+	secSlice, err := keypair.SK.GobEncode()
+	if err != nil {
+		panic(err)
+	}
 
 	f, err := os.Create(destFile)
 	if err != nil {
@@ -40,18 +38,23 @@ func SaveWallet(id uint32, walletType string, destFile string) (err error) {
 	}
 	defer f.Close()
 
-	_, err = f.Write(sizeSlice)
+	_, err = f.Write(idSlice)
 	if err != nil {
 		panic(err)
 	}
-	_, err = f.Write(walletSlice)
+	_, err = f.Write(pubSlice)
+	if err != nil {
+		panic(err)
+	}
+	_, err = f.Write(secSlice)
 	if err != nil {
 		panic(err)
 	}
 	return
 }
 
-func LoadWallet(fileName string) (wallet *Wallet, err error) {
+/*
+func LoadWallet(fileName string) ( err error) {
 	if fileName == "" {
 		err = fmt.Errorf("Cannot load, file name is empty string")
 	}
@@ -70,12 +73,8 @@ func LoadWallet(fileName string) (wallet *Wallet, err error) {
 	if err != nil {
 		panic(err)
 	}
-	wallet = new(Wallet)
-	r := bytes.NewBuffer(walletSlice)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&wallet)
 	if err != nil {
 		panic(err)
 	}
 	return
-}
+}*/
