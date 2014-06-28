@@ -3,6 +3,7 @@ package client
 import (
 	"network"
 	"participant"
+	"path/filepath"
 	"quorum"
 	"siacrypto"
 )
@@ -35,6 +36,17 @@ func (c *Client) Connect(host string, port int) (err error) {
 func NewClient() (c *Client, err error) {
 	c = new(Client)
 	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
+	filenames, err := filepath.Glob("*.id")
+	if err != nil {
+		panic(err)
+	}
+	for _, j := range filenames {
+		id, keypair, err := LoadWallet(j)
+		if err != nil {
+			panic(err)
+		}
+		c.genericWallets[id] = keypair
+	}
 	err = c.Connect("localhost", 9988) // default bootstrap address
 	return
 }
