@@ -11,6 +11,7 @@ import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
+	"siaencoding"
 	"siafiles"
 	"time"
 )
@@ -30,6 +31,17 @@ func CalculateAtoms(filename string, k byte) (atoms int, err error) {
 
 	floatAtoms := multiplier * float64(size) / float64(quorum.AtomSize)
 	atoms = int(math.Ceil(floatAtoms))
+	return
+}
+
+func calculatePadding(file *os.File, k byte) (padding uint32, err error) {
+	info, err := file.Stat()
+	if err != nil {
+		return
+	}
+	size := 4 + info.Size()
+
+	padding = uint32(size % int64(quorum.AtomSize) * int64(k))
 	return
 }
 
@@ -88,7 +100,18 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 	defer file.Close()
 
-	atomsWritten, err := quorum.RSEncode(file, writerSegments, k)
+	// When uploading in the generic case, some information is needed about
+	// padding This gets put into it's own reader to prepend the encoding process
+	paddingNeeded, err := calculatePadding(file, k)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	encodedPadding := siaencoding.EncUint32(paddingNeeded)
+	paddingBuffer := bytes.NewBuffer(encodedPadding)
+	paddingAndFile := siafiles.NewDoubleReader(paddingBuffer, file)
+
+	atomsWritten, err := quorum.RSEncode(paddingAndFile, writerSegments, k)
 	if err != nil {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
