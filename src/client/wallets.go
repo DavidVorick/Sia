@@ -53,8 +53,7 @@ func SaveWallet(id quorum.WalletID, keypair *siacrypto.Keypair, destFile string)
 	return
 }
 
-/*
-func LoadWallet(fileName string) ( err error) {
+func LoadWallet(fileName string) (id quorum.WalletID, keypair *siacrypto.Keypair, err error) {
 	if fileName == "" {
 		err = fmt.Errorf("Cannot load, file name is empty string")
 	}
@@ -62,19 +61,32 @@ func LoadWallet(fileName string) ( err error) {
 	if err != nil {
 		panic(err)
 	}
-	sizeSlice := make([]byte, 4)
-	_, err = f.Read(sizeSlice)
+	idSlice := make([]byte, quorum.WalletIDSize)
+	pubSlice := make([]byte, siacrypto.PublicKeySize)
+	secSlice := make([]byte, siacrypto.SecretKeySize)
+	_, err = f.Read(idSlice)
 	if err != nil {
 		panic(err)
 	}
-	size := siaencoding.DecUint32(sizeSlice)
-	walletSlice := make([]byte, size)
-	_, err = f.Read(walletSlice)
+	_, err = f.Read(pubSlice)
 	if err != nil {
 		panic(err)
 	}
+	_, err = f.Read(secSlice)
+	if err != nil {
+		panic(err)
+	}
+	id = quorum.WalletID(siaencoding.DecUint64(idSlice))
+	keypair = new(siacrypto.Keypair)
+	keypair.PK = new(siacrypto.PublicKey)
+	keypair.SK = new(siacrypto.SecretKey)
+	err = keypair.PK.GobDecode(pubSlice)
+	if err != nil {
+		panic(err)
+	}
+	err = keypair.SK.GobDecode(secSlice)
 	if err != nil {
 		panic(err)
 	}
 	return
-}*/
+}
