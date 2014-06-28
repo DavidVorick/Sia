@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"network"
 	"participant"
 	"quorum"
@@ -11,6 +12,27 @@ import (
 type Client struct {
 	router         *network.RPCServer
 	genericWallets map[quorum.WalletID]*siacrypto.Keypair
+	siblings       [quorum.QuorumSize]*quorum.Sibling
+}
+
+// This new function is a bit unique because it can return an error while also
+// returning a fully working client.
+func NewClient() (c *Client, err error) {
+	c = new(Client)
+	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
+	err = c.Connect("localhost", 9988) // default bootstrap address
+	return
+}
+
+// There should probably be some sort of error checking, but I'm not sure the best approach to that.
+func (c *Client) Broadcast(nm network.Message) {
+	for i := range c.siblings {
+		if c.siblings[i] == nil {
+			continue
+		}
+		nm.Dest = c.siblings[i].Address()
+		c.router.SendMessage(&nm)
+	}
 }
 
 // Initializes the client message router and pings the bootstrap to verify

@@ -100,13 +100,13 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 
 	// resize the sector to exactly big enough
+	// get address from the first non-nil participant
 	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
 	input, err = script.SignInput(c.genericWallets[id].SK, input)
 	if err != nil {
 		return
 	}
-	err = c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
@@ -162,8 +162,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	if err != nil {
 		panic(err)
 	}
-	c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
