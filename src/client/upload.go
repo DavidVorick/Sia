@@ -15,6 +15,30 @@ import (
 	"time"
 )
 
+func (c *Client) DownloadSiblings() (err error) {
+	// Get siblings so that each can be uploaded to individually.  This should be
+	// moved to a (c *Client) function that updates the current siblings. I'm
+	// actually considering that a client should listen on a quorum, or somehow
+	// perform lightweight actions (receive digests?) that allow it to keep up
+	// but don't require many resources.
+	var gobSiblings []byte
+	err = c.router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.Siblings",
+		Args: struct{}{},
+		Resp: &gobSiblings,
+	})
+	if err != nil {
+		fmt.Printf("Upload: Error: %v\n", err)
+		return
+	}
+	c.siblings, err = quorum.DecodeSiblings(gobSiblings)
+	if err != nil {
+		return
+	}
+	return
+}
+
 func CalculateAtoms(filename string, k byte) (atoms int, err error) {
 	multiplier := 1 / float64(k)
 	file, err := os.Open(filename)
@@ -39,26 +63,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		return
 	}
 
-	// Get siblings so that each can be uploaded to individually.  This should be
-	// moved to a (c *Client) function that updates the current siblings. I'm
-	// actually considering that a client should listen on a quorum, or somehow
-	// perform lightweight actions (receive digests?) that allow it to keep up
-	// but don't require many resources.
-	var gobSiblings []byte
-	err := c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
-		Proc: "Participant.Siblings",
-		Args: struct{}{},
-		Resp: &gobSiblings,
-	})
-	if err != nil {
-		fmt.Printf("Upload: Error: %v\n", err)
-		return
-	}
-	siblings, err := quorum.DecodeSiblings(gobSiblings)
-	if err != nil {
-		return
-	}
+	err := c.DownloadSiblings()
 
 	// take the file and produce a bunch of erasure coded atoms written one piece
 	// at a time to be MerkleCollapsed and then uploaded to the siblings.
@@ -175,7 +180,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	// each silbing via RPC
 	currentSegment := make([]byte, int(atomsWritten)*quorum.AtomSize)
 	for i := range fileSegments {
-		if siblings[i] == nil {
+		if c.siblings[i] == nil {
 			continue
 		}
 
@@ -199,7 +204,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 
 		// send the diff over RPC
 		err = c.router.SendMessage(&network.Message{
-			Dest: siblings[i].Address(),
+			Dest: c.siblings[i].Address(),
 			Proc: "Participant.ReceieveDiff",
 			Args: diff,
 			Resp: nil,

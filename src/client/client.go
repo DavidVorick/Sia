@@ -12,6 +12,7 @@ import (
 type Client struct {
 	router         *network.RPCServer
 	genericWallets map[quorum.WalletID]*siacrypto.Keypair
+	siblings       [quorum.QuorumSize]*quorum.Sibling
 }
 
 // Initializes the client message router and pings the bootstrap to verify
