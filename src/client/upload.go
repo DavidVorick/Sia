@@ -126,7 +126,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	b := bytes.NewBuffer(emptySegment)
 	zeroMerkle := quorum.MerkleCollapse(b)
 	emptyAtom := make([]byte, quorum.AtomSize)
-	for i := 0; i < quorum.QuorumSize; i++ {
+	for i := 0; i < int(quorum.QuorumSize); i++ {
 		copy(emptyAtom[i*siacrypto.HashSize:], zeroMerkle[:])
 	}
 	parentHash := siacrypto.CalculateHash(emptyAtom)

@@ -21,7 +21,7 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 
 	// check k for sane value, then determine m
 	if k < 1 || k >= byte(QuorumSize) {
-		err = fmt.Errorf("K must be between zero and", QuorumSize, "(exclusive)")
+		err = fmt.Errorf("K must be between zero and %v (exclusive)", QuorumSize)
 		return
 	}
 	m := byte(QuorumSize) - k
@@ -29,7 +29,8 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 	// read from the reader enough to build 1 atom on the quorum, then encode it
 	// to a single atom, which is then written to all of the writers
 	atom := make([]byte, AtomSize*int(k))
-	for _, err = input.Read(atom); err == nil; atoms++ {
+	var n int
+	for n, err = input.Read(atom); err == nil || n > 0; atoms++ {
 		if atoms == AtomsPerSector {
 			err = fmt.Errorf("Exceeded max atoms per sector")
 			return

@@ -1,7 +1,12 @@
 package participant
 
+import (
+	"os"
+	"quorum"
+)
+
 func (p *Participant) DownloadSegment(id quorum.WalletID, segment *[]byte) (err error) {
-	filename := p.quorum.SectorFilename
+	filename := p.quorum.SectorFilename(id)
 	file, err := os.Open(filename)
 	if err != nil {
 		return
@@ -14,6 +19,6 @@ func (p *Participant) DownloadSegment(id quorum.WalletID, segment *[]byte) (err 
 	}
 
 	*segment = make([]byte, info.Size())
-	_, err := file.Read(*segment)
+	_, err = file.Read(*segment)
 	return
 }

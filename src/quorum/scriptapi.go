@@ -123,7 +123,7 @@ func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err
 func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	println("adding new sibling")
 	cost = 50
-	for i := 0; i < QuorumSize; i++ {
+	for i := byte(0); i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
 			s.index = byte(i)
 			s.wallet = w.id
@@ -186,7 +186,7 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, w
 	if err != nil {
 		panic(err)
 	}
-	for i := 0; i < QuorumSize; i++ {
+	for i := byte(0); i < QuorumSize; i++ {
 		_, err := file.Write(zeroMerkle[:])
 		if err != nil {
 			panic(err)
@@ -288,7 +288,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	}
 
 	// make sure that the confirmations value is a reasonable value
-	if int(confirmations) > QuorumSize {
+	if confirmations > QuorumSize {
 		err = errors.New("confirmations cannot be greater than quorum size")
 		return
 	}
