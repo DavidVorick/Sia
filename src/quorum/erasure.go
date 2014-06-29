@@ -53,3 +53,64 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 	}
 	return
 }
+
+func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) (atoms uint16, err error) {
+	if k < 1 || k >= byte(QuorumSize) {
+		err = fmt.Errorf("K must be between zero and %v, have %v", QuorumSize, k)
+		return
+	}
+
+	if segments == nil {
+		err = fmt.Errorf("Cannot recover from nil reader slice.")
+		return
+	}
+	if len(segments) < int(k) {
+		err = fmt.Errorf("Insufficient input segments to recover sector.")
+		return
+	}
+	for i := byte(0); i < k; i++ {
+		if segments[i] == nil {
+			err = fmt.Errorf("Reader %v is nil, cannot recover from a nil reader.", i)
+			return
+		}
+	}
+	if output == nil {
+		err = fmt.Errorf("Cannot recover to nil io writer.")
+		return
+	}
+
+	// inidicies gets error checked during call to erasure.Recover
+
+	// create k atoms that are read into from segments
+	atomsSlice := make([][]byte, k)
+	for i := range atomsSlice {
+		atomsSlice[i] = make([]byte, AtomSize)
+	}
+
+	// in a loop, read into atoms and call recover
+	var n int
+	for {
+		atoms++
+		for i := range atomsSlice {
+			n, err = segments[i].Read(atomsSlice[i])
+			if err != nil && n == 0 {
+				break
+			}
+		}
+
+		// got a bunch of new data, now recover it
+		var recoveredAtom []byte
+		recoveredAtom, err = erasure.Recover(k, QuorumSize-k, atomsSlice, indicies)
+		if err != nil {
+			return
+		}
+		output.Write(recoveredAtom)
+	}
+
+	if atoms == 0 {
+		err = fmt.Errorf("Unable to read from all Readers")
+	} else {
+		err = nil
+	}
+	return
+}
