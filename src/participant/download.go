@@ -2,6 +2,7 @@ package participant
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"quorum"
 )
@@ -31,20 +32,23 @@ func (p *Participant) DownloadSegment(ad AtomDownload, segment *[]byte) (err err
 
 	*segment = make([]byte, len(ad.AtomIndicies)*quorum.AtomSize)
 	for i := range ad.AtomIndicies {
-		seekTo := int64(quorum.AtomSize) * int64(1+ad.AtomIndicies[i])
-		if seekTo+int64(quorum.AtomSize) < info.Size() {
+		seekTo := int64(quorum.AtomSize) * int64(ad.AtomIndicies[i])
+		if seekTo+int64(quorum.AtomSize) > info.Size() {
 			err = fmt.Errorf("Invalid index request: sector is not composed of that many atoms!")
 			return
 		}
 
-		_, err = file.Seek(int64(quorum.AtomSize)*int64(1+ad.AtomIndicies[i]), 0)
+		_, err2 := file.Seek(int64(quorum.AtomSize)*int64(ad.AtomIndicies[i]), 0)
 		if err != nil {
-			panic(err)
+			panic(err2)
 		}
 
-		_, err := file.Read((*segment)[quorum.AtomSize*i : quorum.AtomSize*(i+1)])
-		if err != nil {
-			panic(err)
+		_, err = file.Read((*segment)[quorum.AtomSize*i : quorum.AtomSize*(i+1)])
+		if err != nil && err != io.EOF {
+			err = fmt.Errorf("Sibling unable to load file.")
+			return
+		} else {
+			err = nil
 		}
 	}
 	return

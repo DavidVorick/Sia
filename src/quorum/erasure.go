@@ -41,7 +41,7 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 		for i := range segments {
 			segments[i].Write(encodedSegments[i])
 		}
-		_, err = input.Read(atom)
+		n, err = input.Read(atom)
 	}
 
 	// check that at least 1 atom was created, and return
@@ -89,13 +89,17 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 
 	// in a loop, read into atoms and call recover
 	var n int
+	var finished bool
 	for {
 		atoms++
 		for i := range atomsSlice {
 			n, err = segments[i].Read(atomsSlice[i])
 			if err != nil && n == 0 {
-				break
+				finished = true
 			}
+		}
+		if finished {
+			break
 		}
 
 		// got a bunch of new data, now recover it

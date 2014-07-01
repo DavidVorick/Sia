@@ -8,6 +8,7 @@ import (
 
 func displayHelp() {
 	fmt.Println("\nc:\tConnect to Network\n" +
+		"d:\tDownload a file\n" +
 		"r:\tResize a sector\n" +
 		"t:\tSubmit transaction\n" +
 		"u:\tUpload a file\n" +
@@ -35,6 +36,17 @@ func connect(c *client.Client) {
 	} else {
 		fmt.Println("Successfully Connected!")
 	}
+}
+
+func download(c *client.Client) {
+	var dest string
+	var id quorum.WalletID
+	fmt.Print("Wallet ID (hex): ")
+	fmt.Scanf("%x", &id)
+	fmt.Print("Destination Filepath: ")
+	fmt.Scanln(&dest)
+	fmt.Println("Downloading File, please wait a few minutes")
+	c.Download(id, dest)
 }
 
 func resizeGenericWallet(c *client.Client) {
@@ -128,6 +140,9 @@ func main() {
 
 		case "c", "conncet":
 			connect(c)
+
+		case "d", "download":
+			download(c)
 
 		case "r", "resize":
 			resizeGenericWallet(c)

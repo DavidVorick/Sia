@@ -31,6 +31,14 @@ type Wallet struct {
 	script      []byte
 }
 
+func (w *Wallet) SectorAtoms() uint16 {
+	return w.sectorAtoms
+}
+
+func (w *Wallet) SectorM() byte {
+	return w.sectorM
+}
+
 func (w *Wallet) Script() []byte {
 	return w.script
 }
