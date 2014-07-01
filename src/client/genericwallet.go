@@ -9,6 +9,19 @@ import (
 	"siacrypto"
 )
 
+// send a user-specified script input
+func (c *Client) SendCustomInput(id quorum.WalletID, input []byte) (err error) {
+	return c.router.SendMessage(&network.Message{
+		Dest: participant.BootstrapAddress,
+		Proc: "Participant.AddScriptInput",
+		Args: script.ScriptInput{
+			WalletID: id,
+			Input:    input,
+		},
+		Resp: nil,
+	})
+}
+
 // request a new wallet from the bootstrap
 func (c *Client) RequestWallet(id quorum.WalletID) (err error) {
 	// Create a generic wallet with a keypair for the request
