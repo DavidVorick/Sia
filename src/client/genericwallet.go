@@ -23,7 +23,7 @@ func (c *Client) SendCustomInput(id quorum.WalletID, input []byte) (err error) {
 }
 
 // request a new wallet from the bootstrap
-func (c *Client) RequestWallet(id quorum.WalletID) (err error) {
+func (c *Client) RequestWallet(id quorum.WalletID, s []byte) (err error) {
 	// Create a generic wallet with a keypair for the request
 	pk, sk, err := siacrypto.CreateKeyPair()
 	if err != nil {
@@ -33,12 +33,17 @@ func (c *Client) RequestWallet(id quorum.WalletID) (err error) {
 	c.genericWallets[id].PK = pk
 	c.genericWallets[id].SK = sk
 
+	// use default script if none provided
+	if s == nil {
+		s = script.CreateWalletInput(uint64(id), script.DefaultScript(c.genericWallets[id].PK))
+	}
+
 	return c.router.SendMessage(&network.Message{
 		Dest: participant.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: participant.BootstrapID,
-			Input:    script.CreateWalletInput(uint64(id), script.DefaultScript(c.genericWallets[id].PK)),
+			Input:    s,
 		},
 		Resp: nil,
 	})

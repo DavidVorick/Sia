@@ -118,9 +118,20 @@ func uploadToGenericWallet(c *client.Client) {
 
 func createGenericWallet(c *client.Client) {
 	var id quorum.WalletID
+	var filename string
 	fmt.Print("Enter desired Wallet ID (hex): ")
 	fmt.Scanf("%x", &id)
-	err := c.RequestWallet(id)
+	fmt.Print("Script file (blank for default): ")
+	fmt.Scanf("%s", &filename)
+	var script []byte
+	var err error
+	if filename != "" {
+		script, err = ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+	}
+	err = c.RequestWallet(id, script)
 	if err != nil {
 		fmt.Println(err)
 	} else {
