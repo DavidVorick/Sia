@@ -13,9 +13,9 @@ func TestEncodeAndRecover(t *testing.T) {
 	}
 
 	corrupted := decoded[3:]
-	indicies := make([]int, len(corrupted))
+	indicies := make([]byte, len(corrupted))
 	for index := range indicies {
-		indicies[index] = index + 3
+		indicies[index] = byte(index) + 3
 	}
 
 	recoveredData, err := Recover(9, 3, corrupted, indicies)

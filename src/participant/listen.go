@@ -13,7 +13,7 @@ func (p *Participant) tick() {
 	ticker := time.Tick(StepDuration)
 	for _ = range ticker {
 		p.stepLock.Lock()
-		if p.currentStep == quorum.QuorumSize {
+		if p.currentStep == int(quorum.QuorumSize) {
 			b := p.condenseBlock()
 
 			p.appendBlock(b)

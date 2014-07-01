@@ -36,7 +36,7 @@ func TestRandInt(t *testing.T) {
 	}
 
 	low := 0
-	high := QuorumSize
+	high := int(QuorumSize)
 	for i := 0; i < 100000; i++ {
 		randInt, err = q.randInt(low, high)
 		if err != nil {
@@ -54,15 +54,15 @@ func TestSiblingOrdering(t *testing.T) {
 
 	// add QuorumSize siblings to the Quorum, each time calling SiblingOrdering
 	// and verifying that the correct number of siblings are present
-	for i := 0; i < QuorumSize; i++ {
+	for i := byte(0); i < QuorumSize; i++ {
 		sibling := Sibling{
-			index: byte(i),
+			index: i,
 		}
 
 		q.siblings[i] = &sibling
 
 		siblings := q.SiblingOrdering()
-		if len(siblings) != i+1 {
+		if len(siblings) != int(i+1) {
 			t.Error("SiblingOrdering producing wrong number of siblings")
 		}
 	}

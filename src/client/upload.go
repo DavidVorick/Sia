@@ -11,6 +11,7 @@ import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
+	"siaencoding"
 	"siafiles"
 	"time"
 )
@@ -33,32 +34,25 @@ func CalculateAtoms(filename string, k byte) (atoms int, err error) {
 	return
 }
 
+func calculatePadding(file *os.File, k byte) (padding uint32, err error) {
+	info, err := file.Stat()
+	if err != nil {
+		return
+	}
+	size := 4 + info.Size()
+
+	padding = uint32(size % int64(quorum.AtomSize) * int64(k))
+	return
+}
+
 func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	if c.genericWallets[id] == nil {
 		fmt.Printf("Do not have access to wallet %v!\n", id)
 		return
 	}
 
-	// Get siblings so that each can be uploaded to individually.  This should be
-	// moved to a (c *Client) function that updates the current siblings. I'm
-	// actually considering that a client should listen on a quorum, or somehow
-	// perform lightweight actions (receive digests?) that allow it to keep up
-	// but don't require many resources.
-	var gobSiblings []byte
-	err := c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
-		Proc: "Participant.Siblings",
-		Args: struct{}{},
-		Resp: &gobSiblings,
-	})
-	if err != nil {
-		fmt.Printf("Upload: Error: %v\n", err)
-		return
-	}
-	siblings, err := quorum.DecodeSiblings(gobSiblings)
-	if err != nil {
-		return
-	}
+	// Get a fresh list of siblings to have highest probability of success
+	c.RetrieveSiblings()
 
 	// take the file and produce a bunch of erasure coded atoms written one piece
 	// at a time to be MerkleCollapsed and then uploaded to the siblings.
@@ -88,20 +82,31 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 	defer file.Close()
 
-	atomsWritten, err := quorum.RSEncode(file, writerSegments, k)
+	// When uploading in the generic case, some information is needed about
+	// padding This gets put into it's own reader to prepend the encoding process
+	paddingNeeded, err := calculatePadding(file, k)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	encodedPadding := siaencoding.EncUint32(paddingNeeded)
+	paddingBuffer := bytes.NewBuffer(encodedPadding)
+	paddingAndFile := siafiles.NewDoubleReader(paddingBuffer, file)
+
+	atomsWritten, err := quorum.RSEncode(paddingAndFile, writerSegments, k)
 	if err != nil {
 		fmt.Printf("Upload: Error: %v\n", err)
 		return
 	}
 
 	// resize the sector to exactly big enough
+	// get address from the first non-nil participant
 	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
 	input, err = script.SignInput(c.genericWallets[id].SK, input)
 	if err != nil {
 		return
 	}
-	err = c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
@@ -121,7 +126,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	b := bytes.NewBuffer(emptySegment)
 	zeroMerkle := quorum.MerkleCollapse(b)
 	emptyAtom := make([]byte, quorum.AtomSize)
-	for i := 0; i < quorum.QuorumSize; i++ {
+	for i := 0; i < int(quorum.QuorumSize); i++ {
 		copy(emptyAtom[i*siacrypto.HashSize:], zeroMerkle[:])
 	}
 	parentHash := siacrypto.CalculateHash(emptyAtom)
@@ -157,8 +162,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	if err != nil {
 		panic(err)
 	}
-	c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
@@ -175,7 +179,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	// each silbing via RPC
 	currentSegment := make([]byte, int(atomsWritten)*quorum.AtomSize)
 	for i := range fileSegments {
-		if siblings[i] == nil {
+		if c.siblings[i] == nil {
 			continue
 		}
 
@@ -199,7 +203,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 
 		// send the diff over RPC
 		err = c.router.SendMessage(&network.Message{
-			Dest: siblings[i].Address(),
+			Dest: c.siblings[i].Address(),
 			Proc: "Participant.ReceieveDiff",
 			Args: diff,
 			Resp: nil,

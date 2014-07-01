@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	QuorumSize     int    = 4        // max siblings per quorum
+	QuorumSize     byte   = 4        // max siblings per quorum
 	AtomSize       int    = 4096     // in bytes
 	AtomsPerQuorum int    = 16777216 // 64GB
 	AtomsPerSector uint16 = 200      // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
@@ -123,7 +123,7 @@ func (q *Quorum) Status() (b string) {
 	} else {
 		b += fmt.Sprintf("\tWeight: 0\n")
 	}
-	b += fmt.Sprintf("\tParent: %x\n", q.parent)
+	// b += fmt.Sprintf("\tParent: %x\n", q.parent)
 	b += fmt.Sprintf("\tHeight: %x\n\n", q.height)
 	return
 }

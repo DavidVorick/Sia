@@ -38,8 +38,7 @@ func (c *Client) RequestWallet(id quorum.WalletID, s []byte) (err error) {
 		s = script.CreateWalletInput(uint64(id), script.DefaultScript(c.genericWallets[id].PK))
 	}
 
-	return c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: participant.BootstrapID,
@@ -47,6 +46,7 @@ func (c *Client) RequestWallet(id quorum.WalletID, s []byte) (err error) {
 		},
 		Resp: nil,
 	})
+	return
 }
 
 // send coins from one wallet to another
@@ -62,8 +62,7 @@ func (c *Client) SubmitTransaction(src, dst quorum.WalletID, amount uint64) (err
 		return
 	}
 
-	return c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: src,
@@ -71,6 +70,7 @@ func (c *Client) SubmitTransaction(src, dst quorum.WalletID, amount uint64) (err
 		},
 		Resp: nil,
 	})
+	return
 }
 
 // resize sector associated with wallet
@@ -86,8 +86,7 @@ func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, k byte) (err erro
 		return
 	}
 
-	return c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: w,
@@ -95,4 +94,5 @@ func (c *Client) ResizeSector(w quorum.WalletID, atoms uint16, k byte) (err erro
 		},
 		Resp: nil,
 	})
+	return
 }

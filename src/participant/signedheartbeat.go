@@ -97,7 +97,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (er
 	}
 
 	// check that there are not too many signatures and signatories
-	if len(sh.signatories) > quorum.QuorumSize {
+	if len(sh.signatories) > int(quorum.QuorumSize) {
 		err = hsherrOversigned
 		fmt.Println(err)
 		return
@@ -115,7 +115,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (er
 	// IMPORTANT: synchronizaation is broken, and hot-fixed together in an
 	// insecure way. What's important is that the parents block line up.
 	if currentStep > len(sh.signatories) {
-		if currentStep == quorum.QuorumSize {
+		if currentStep == int(quorum.QuorumSize) {
 			// by waiting StepDuration, the new block will be compiled
 			time.Sleep(StepDuration)
 			// now continue to rest of function
@@ -127,7 +127,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (er
 	}
 
 	// Check bounds on first signatory
-	if int(sh.signatories[0]) >= quorum.QuorumSize {
+	if sh.signatories[0] >= quorum.QuorumSize {
 		err = hsherrBounds
 		fmt.Println(err)
 		return
@@ -167,7 +167,7 @@ func (p *Participant) HandleSignedHeartbeat(sh SignedHeartbeat, _ *struct{}) (er
 	previousSignatories := make(map[byte]bool) // which signatories have already signed
 	for i, signatory := range sh.signatories {
 		// Check bounds on the signatory
-		if int(signatory) >= quorum.QuorumSize {
+		if signatory >= quorum.QuorumSize {
 			err = hsherrBounds
 			fmt.Println(err)
 			return

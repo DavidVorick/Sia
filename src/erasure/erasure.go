@@ -70,7 +70,7 @@ func EncodeRedundancy(k byte, m byte, decoded []byte) (encoded [][]byte, err err
 // Recover takes a set of pieces at least k in length, along with a list of
 // which index each piece was originally in the encoded data, and uses these
 // variables to produce a []byte that is equivalent to the original data.
-func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte, err error) {
+func Recover(k byte, m byte, remaining [][]byte, indicies []byte) (recovered []byte, err error) {
 	// check for nil values
 	if remaining == nil || indicies == nil {
 		err = fmt.Errorf("Recover: received nil input")
@@ -86,7 +86,7 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 		err = fmt.Errorf("Recover: k + m must be less than 255")
 		return
 	}
-	if len(remaining) < k {
+	if len(remaining) < int(k) {
 		err = fmt.Errorf("Recover: insufficient pieces to recover original")
 		return
 	}
@@ -105,7 +105,7 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 		err = fmt.Errorf("Recover: received input that is not modulo 8")
 		return
 	}
-	for i := 0; i < k; i++ {
+	for i := byte(0); i < k; i++ {
 		if remaining[i] == nil {
 			err = fmt.Errorf("Recover: received nil slice within set of data")
 			return
@@ -117,12 +117,12 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 	}
 
 	// check for reasonable and unique values within indicies
-	if len(indicies) < k {
+	if len(indicies) < int(k) {
 		err = fmt.Errorf("Recover: Indicies does not contain enough indexes")
 		return
 	}
-	seenIndicies := make(map[int]bool)
-	for i := 0; i < k; i++ {
+	seenIndicies := make(map[byte]bool)
+	for i := byte(0); i < k; i++ {
 		if indicies[i] >= k+m || indicies[i] < 0 {
 			err = fmt.Errorf("Recover: Received an index that is out of bounds")
 			return
@@ -136,9 +136,9 @@ func Recover(k int, m int, remaining [][]byte, indicies []int) (recovered []byte
 	}
 
 	// copy all data into a single slice
-	recovered = make([]byte, k*b)
+	recovered = make([]byte, int(k)*b)
 	remainingIndicies := make([]uint8, k)
-	for i := 0; i < k; i++ {
+	for i := 0; i < int(k); i++ {
 		copy(recovered[i*b:(i+1)*b], remaining[i])
 		remainingIndicies[i] = uint8(indicies[i])
 	}

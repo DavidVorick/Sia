@@ -123,7 +123,7 @@ func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err
 func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	println("adding new sibling")
 	cost = 50
-	for i := 0; i < QuorumSize; i++ {
+	for i := byte(0); i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
 			s.index = byte(i)
 			s.wallet = w.id
@@ -137,7 +137,7 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 
 // Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
 // or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
-func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, weight int, err error) {
+func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
 	weightDelta -= int(w.sectorAtoms)
@@ -186,7 +186,7 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, w
 	if err != nil {
 		panic(err)
 	}
-	for i := 0; i < QuorumSize; i++ {
+	for i := byte(0); i < QuorumSize; i++ {
 		_, err := file.Write(zeroMerkle[:])
 		if err != nil {
 			panic(err)
@@ -204,6 +204,7 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, m byte) (cost int, w
 		panic(err)
 	}
 	w.sectorAtoms = atoms
+	w.sectorM = k
 	w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
 	return
@@ -288,7 +289,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	}
 
 	// make sure that the confirmations value is a reasonable value
-	if int(confirmations) > QuorumSize {
+	if confirmations > QuorumSize {
 		err = errors.New("confirmations cannot be greater than quorum size")
 		return
 	}
