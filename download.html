@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="Sia, Industrial Grade Decentralized Storge">
+		<meta name="author" content="David Vorick, Luke Champine">
+
+		<title>Sia</title>
+
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/sia.css" rel="stylesheet">
+	</head>
+
+	<body>
+		<div class="container-fluid light">
+			<div class="navbar-collapse">
+				<ul class="nav navbar-nav navbar-right nav-style">
+					<li><a href="http://www.siacoin.com/">Sia</a></li>
+					<li><a href="http://www.siacoin.com/whitepaper.pdf">Whitepaper</a></li>
+					<li><a href="http://github.com/NebulousLabs/Sia">Github</a></li>
+					<li><a href="http://www.siacoin.com/sianotes.html">Sianotes</a></li>
+					<li><a href="http://www.siacoin.com/download.html">Download</a></li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="container-fluid shadow fill">
+			<div class="row">
+				<div class="col-xs-12 pad-top">
+					<center> <div id="logo"></div> </center>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-xs-10 col-xs-offset-1 body-text pad-top pad-bottom">
+				<b>How can I install Sia?</b>
+				<br>
+                Sia is being actively developed, and is not yet ready for widespread use.
+                However, an unstable alpha version is available for download.
+                Currently, Sia is available for Linux only.
+                Binaries for other platforms will be available during the beta.
+                <br>
+                Please read the "What's not in the alpha?" section below before downloading.
+				<br><br>
+                <b>GitHub (recommended):</b>
+                <br>
+                <ul>
+                    <li>Clone the repo:<pre>git clone http://github.com/NebulousLabs/Sia && cd Sia</pre></li>
+                    <li>Install dependencies:<pre>make dependencies</pre></li>
+                    <li>Build Sia: <pre>make</pre></li>
+                    <li>Client and server binaries are now installed in Sia/bin/</li>
+                </ul>
+                <br>
+                <b>Direct download:</b>
+                <br>
+                <ul>
+                    <li>Select the appropriate platform:</li>
+                    <ul>
+                        <li><a href=http://23.239.14.98/releases/sia-v0.0.1-linux-x86_64.tar.bz2>Linux x86_64</a></li>
+                    </ul>
+                    <li>Extract the tarball: <pre>tar -xvjf sia-v0.0.1-linux-x86_64.tar.bz2</pre></li>
+                    <li>Client and server binaries can be found in the extracted folder.</li>
+                </ul>
+                <br>
+                You will need libsodium installed.
+                Running 'make dependencies' should install libsodium automatically, however you will need autotools and you will need to provide your root password.
+                For more help with libsodium, please read <a href="http://github.com/jedisct1/libsodium">here</a>.
+                <i>(Since Go compiles binaries statically, this should be compatible across most Linux distributions.
+                    Please <a href=mailto:luke@nebulouslabs.com>let us know</a> if you encounter problems.)</i>
+                <br><br>
+                <b>How do I use Sia?</b>
+                <br>
+                To create a new server, run the "server" binary and enter "j" to join a quorum, or "e" to establish a new quorum.
+                You will see scrolling output as the server compiles blocks and receives input.
+                After you join a quorum, the server will stop accepting input, so we recommend running the server in its own window.
+                <br><br>
+                To connect to a quorum as a client, run the "client" binary.
+                The client will attempt to auto-connect to a quorum running on localhost:9988.
+                Enter "h" to view a list of client commands.
+                <br><br>
+                <b>What's not in the alpha?</b>
+                <br>
+                Sia is a complex project with lots of features that are not represented in the alpha.
+                You should view this release as a "proof of concept" instead of a usable product.
+                <br>
+                The following features are not available in this release:
+                <ul>
+                    <li>A fully trust-free quorum: hosts are assumed to be honest.</li>
+                    <li>Bankruptcy: wallets are not deleted when they reach a balance of 0.</li>
+                    <li>Self-repairing files: sectors are not repaired when hosts leave the network.</li>
+                    <li>Large files: uploading a large file will cause hosts to desynchronize.</li>
+                    <li>Automatic port negotiation: cross-router connections must ensure ports are forwarded.</li>
+                    <li>Meta quorums: communication is restricted to a single quorum.</li>
+                </ul>
+                These features are considered high-priority for the next release.
+				</div>
+			</div>
+		</div>
+		
+		<!-- Google Analytics -->
+		<script>
+			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+			})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+			ga('create', 'UA-50786427-2', 'siacoin.com');
+			ga('send', 'pageview');
+		</script>
+	</body>
+</html>
