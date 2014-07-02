@@ -22,12 +22,14 @@ func joinQuorum() {
 
 	// read and set bootstrap address
 	var hostname string
+	var id network.Identifier
 	fmt.Print("Bootstrap hostname: ")
 	fmt.Scanf("%s", &hostname)
 	fmt.Print("Bootstrap port: ")
 	fmt.Scanf("%d", &port)
-	participant.BootstrapAddress.Host = hostname
-	participant.BootstrapAddress.Port = port
+	fmt.Print("Bootstrap ID: ")
+	fmt.Scanf("%d", &id)
+	participant.BootstrapAddress = network.Address{id, hostname, port}
 	err = networkServer.Ping(&participant.BootstrapAddress)
 	if err != nil {
 		fmt.Println("Failed to ping bootstrap:", err)
@@ -39,7 +41,7 @@ func joinQuorum() {
 	fmt.Scanf("%s", &directory)
 
 	// create a participant
-	_, err = participant.CreateParticipant(networkServer, directory)
+	_, err = participant.CreateParticipant(networkServer, directory, false)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -52,7 +54,6 @@ func establishQuorum() {
 	var port int
 	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
-	participant.BootstrapAddress.Port = port
 
 	// create a message router
 	networkServer, err := network.NewRPCServer(port)
@@ -67,7 +68,7 @@ func establishQuorum() {
 	fmt.Scanf("%s", &directory)
 
 	// create a participant
-	_, err = participant.CreateParticipant(networkServer, directory)
+	_, err = participant.CreateParticipant(networkServer, directory, true)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -34,15 +34,11 @@ The Bootstrapping Process
 
 // currently a static variable, eventually there will be an entire process for
 // finding address to bootstrap to.
-var BootstrapAddress = network.Address{
-	ID:   1,
-	Host: "localhost",
-	Port: 9988,
-}
+var BootstrapAddress network.Address
 
 // CreateParticipant initializes a participant, and then either sets itself up
 // as the bootstrap or establishes itself as a sibling on an existing network
-func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string) (p *Participant, err error) {
+func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
 	// check for non-nil messageRouter
 	if messageRouter == nil {
 		err = fmt.Errorf("Cannot initialize with a nil messageRouter")
@@ -79,7 +75,8 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
-	if p.self.Address() == BootstrapAddress {
+	if bootstrap {
+		BootstrapAddress = p.self.Address()
 		p.synchronized = true
 
 		// create the bootstrap wallet

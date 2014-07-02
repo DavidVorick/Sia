@@ -26,7 +26,7 @@ func TestCreateParticipant(t *testing.T) {
 		t.Fatal(err)
 	}
 	wd = wd + "/../../participantStorage/TestCreateParticipant1."
-	p0, err := CreateParticipant(zn, wd)
+	p0, err := CreateParticipant(zn, wd, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestCreateParticipant(t *testing.T) {
 	p0.stepLock.Unlock()
 
 	// check a non-bootstrap
-	p1, err := CreateParticipant(zn, wd)
+	p1, err := CreateParticipant(zn, wd, false)
 	if err != nil {
 		t.Fatal(err)
 	}
