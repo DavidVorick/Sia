@@ -78,7 +78,6 @@ func establishQuorum() {
 func printHelp() {
 	fmt.Println(`
 h - help
-help - help
 j - join an existing quorum
 e - establish a new quorum
 q - quit
@@ -87,7 +86,7 @@ q - quit
 
 func main() {
 	var input string
-	fmt.Println("Sia Server Version 0.0.0.2")
+	fmt.Println("Sia Server Version 0.0.1")
 	for {
 		// grab some input
 		print("Please enter a command: ")

@@ -38,7 +38,12 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 	}
 
 	if err != nil {
-		fmt.Println("Could not download file - connectivity errors!")
+		fmt.Println("Connection error:", err)
+		return
+	}
+
+	if w.SectorAtoms() < 2 {
+		fmt.Println("Wallet is not storing a file.")
 		return
 	}
 
@@ -102,6 +107,10 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 
 	encodedPadding := sector[1][:4]
 	padding := siaencoding.DecUint32(encodedPadding)
+	if padding > uint32(quorum.AtomSize) {
+		fmt.Println("unexpected and illegal padding value - probably not a file")
+		return
+	}
 	sector[1] = sector[1][4:]
 	sector[w.SectorAtoms()-1] = sector[w.SectorAtoms()-1][:padding]
 

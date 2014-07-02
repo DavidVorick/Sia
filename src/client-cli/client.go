@@ -86,7 +86,7 @@ func sendScriptInput(c *client.Client) {
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
-		fmt.Println("Sector resized")
+		fmt.Println("Script input sent")
 	}
 }
 
@@ -142,6 +142,7 @@ func createGenericWallet(c *client.Client) {
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
+		return
 	}
 	err = c.RequestWallet(id, script)
 	if err != nil {
@@ -152,7 +153,7 @@ func createGenericWallet(c *client.Client) {
 }
 
 func main() {
-	fmt.Println("Sia Client Version 0.0.0.3")
+	fmt.Println("Sia Client Version 0.0.1")
 	c, err := client.NewClient()
 	if err == nil {
 		fmt.Println("Connected to local bootstrap")
