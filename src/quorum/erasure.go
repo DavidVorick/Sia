@@ -37,7 +37,7 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 		}
 
 		var encodedSegments [][]byte
-		encodedSegments, err = erasure.EncodeRedundancy(k, m, atom)
+		encodedSegments, err = erasure.ReedSolomonEncode(k, m, atom)
 		for i := range segments {
 			segments[i].Write(encodedSegments[i])
 		}
@@ -104,7 +104,7 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 
 		// got a bunch of new data, now recover it
 		var recoveredAtom []byte
-		recoveredAtom, err = erasure.Recover(k, QuorumSize-k, atomsSlice, indicies)
+		recoveredAtom, err = erasure.ReedSolomonRecover(k, QuorumSize-k, atomsSlice, indicies)
 		if err != nil {
 			return
 		}
