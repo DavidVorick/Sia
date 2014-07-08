@@ -2,12 +2,12 @@ package client
 
 import (
 	"bytes"
+	"consensus"
 	"fmt"
 	"io"
 	"math"
 	"network"
 	"os"
-	"participant"
 	"quorum"
 	"quorum/script"
 	"siacrypto"
@@ -100,7 +100,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	}
 
 	// resize the sector to exactly big enough
-	// get address from the first non-nil participant
+	// get address from the first non-nil consensus
 	input := script.ResizeSectorEraseInput(atomsWritten+1, k)
 	input, err = script.SignInput(c.genericWallets[id].SK, input)
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		return
 	}
 
-	time.Sleep(time.Duration(quorum.QuorumSize) * participant.StepDuration)
+	time.Sleep(time.Duration(quorum.QuorumSize) * consensus.StepDuration)
 
 	// figure out the hash now that the sector has been resized
 	emptySegment := make([]byte, quorum.AtomSize*int(atomsWritten))
@@ -172,7 +172,7 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 	})
 
 	// give enough time for the propose upload to complete
-	time.Sleep(2 * time.Duration(quorum.QuorumSize) * participant.StepDuration)
+	time.Sleep(2 * time.Duration(quorum.QuorumSize) * consensus.StepDuration)
 
 	// Now that the files have been written to 1 atom at a time, rewind them to
 	// the beginning and create diffs for each file. Then upload the diffs to
@@ -192,10 +192,10 @@ func (c *Client) UploadFile(id quorum.WalletID, filename string, k byte) {
 		if err != nil {
 			panic(err)
 		}
-		conversion := make([]participant.Conversion, 1)
+		conversion := make([]consensus.Conversion, 1)
 		conversion[0].Offset = 0
 		conversion[0].Delta = currentSegment
-		diff := participant.UploadDiff{
+		diff := consensus.UploadDiff{
 			ID:            id,
 			Hash:          sectorHash,
 			ConversionSet: conversion,

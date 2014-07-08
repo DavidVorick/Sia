@@ -2,11 +2,11 @@ package client
 
 import (
 	"bytes"
+	"consensus"
 	"fmt"
 	"io"
 	"network"
 	"os"
-	"participant"
 	"quorum"
 	"siaencoding"
 )
@@ -51,7 +51,7 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 	segments := make([][][]byte, w.SectorAtoms())
 	for i := uint16(1); i < w.SectorAtoms(); i++ {
 		segments[i] = make([][]byte, quorum.QuorumSize)
-		ad := participant.AtomDownload{
+		ad := consensus.AtomDownload{
 			ID:           id,
 			AtomIndicies: []uint16{i},
 		}

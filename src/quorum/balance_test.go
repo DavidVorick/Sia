@@ -9,6 +9,7 @@ func TestOperations(t *testing.T) {
 	a2 := NewBalance(0, ^uint64(0))
 	b := NewBalance(0, 0x00000002)
 	c := NewBalance(1, 0x00000001)
+
 	a.Add(b)
 	if a.Compare(c) != 0 {
 		t.Fatal("addition failed")

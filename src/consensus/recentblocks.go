@@ -1,4 +1,4 @@
-package participant
+package consensus
 
 func (p *Participant) appendBlock(b *block) {
 	if p.recentBlocks[b.height] != nil {

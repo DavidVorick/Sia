@@ -10,7 +10,7 @@ func (q *Quorum) chargeWallets(wn *walletNode, multiplier int) {
 	q.chargeWallets(wn.children[0], multiplier)
 	q.chargeWallets(wn.children[1], multiplier)
 
-	// load the wallet, and
+	// load the wallet and deduct storage fees
 	w := q.LoadWallet(wn.id)
 	weightedPrice := q.storagePrice
 	weightedPrice.Multiply(NewBalance(0, uint64(wn.nodeWeight())))
@@ -19,6 +19,7 @@ func (q *Quorum) chargeWallets(wn *walletNode, multiplier int) {
 	q.SaveWallet(w)
 }
 
+// ExecuteCompensation() is called between each block. Money is deducted from wallets
 func (q *Quorum) ExecuteCompensation() {
 	if q.walletRoot == nil {
 		return
