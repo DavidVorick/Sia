@@ -26,11 +26,11 @@ func TestHeartbeatEncoding(t *testing.T) {
 	// create random scriptInptus for the heartbeat
 	hb.scriptInputs = make([]script.ScriptInput, 3)
 	hb.scriptInputs[0] = script.ScriptInput{
-		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
+		WalletID: quorum.WalletID(siacrypto.RandomUint64()),
 		Input:    siacrypto.RandomByteSlice(15),
 	}
 	hb.scriptInputs[2] = script.ScriptInput{
-		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
+		WalletID: quorum.WalletID(siacrypto.RandomUint64()),
 		Input:    siacrypto.RandomByteSlice(7),
 	}
 

@@ -7,8 +7,8 @@ import (
 
 func TestSnapshotHeaderEncoding(t *testing.T) {
 	var sh snapshotHeader
-	sh.walletLookupOffset = uint32(siacrypto.RandomUInt64())
-	sh.wallets = uint32(siacrypto.RandomUInt64())
+	sh.walletLookupOffset = uint32(siacrypto.RandomUint64())
+	sh.wallets = uint32(siacrypto.RandomUint64())
 
 	var dsh snapshotHeader
 	esh, err := sh.GobEncode()

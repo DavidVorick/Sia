@@ -13,11 +13,11 @@ import (
 func TestWalletCoding(t *testing.T) {
 	// Fill out a wallet with completely random values
 	w := &Wallet{
-		id:          WalletID(siacrypto.RandomUInt64()),
-		Balance:     NewBalance(siacrypto.RandomUInt64(), siacrypto.RandomUInt64()),
-		sectorAtoms: siacrypto.RandomUInt16(),
+		id:          WalletID(siacrypto.RandomUint64()),
+		Balance:     NewBalance(siacrypto.RandomUint64(), siacrypto.RandomUint64()),
+		sectorAtoms: siacrypto.RandomUint16(),
 		sectorM:     35,
-		scriptAtoms: siacrypto.RandomUInt16(),
+		scriptAtoms: siacrypto.RandomUint16(),
 		script:      siacrypto.RandomByteSlice(45),
 	}
 	copy(w.walletHash[:], siacrypto.RandomByteSlice(siacrypto.HashSize))

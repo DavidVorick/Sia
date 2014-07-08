@@ -12,9 +12,9 @@ import (
 func TestBlockHistoryHeaderEncoding(t *testing.T) {
 	// create blockHistoryHeader and check for random values
 	var bhh blockHistoryHeader
-	bhh.latestBlock = uint32(siacrypto.RandomUInt64())
+	bhh.latestBlock = uint32(siacrypto.RandomUint64())
 	for i := range bhh.blockOffsets {
-		bhh.blockOffsets[i] = uint32(siacrypto.RandomUInt64())
+		bhh.blockOffsets[i] = uint32(siacrypto.RandomUint64())
 	}
 
 	// encode it
@@ -56,18 +56,18 @@ func TestBlockEncoding(t *testing.T) {
 	copy(hb1.entropy[:], siacrypto.RandomByteSlice(quorum.EntropyVolume))
 	hb0.scriptInputs = make([]script.ScriptInput, 1)
 	hb0.scriptInputs[0] = script.ScriptInput{
-		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
+		WalletID: quorum.WalletID(siacrypto.RandomUint64()),
 		Input:    siacrypto.RandomByteSlice(20),
 	}
 	hb1.scriptInputs = make([]script.ScriptInput, 1)
 	hb1.scriptInputs[0] = script.ScriptInput{
-		WalletID: quorum.WalletID(siacrypto.RandomUInt64()),
+		WalletID: quorum.WalletID(siacrypto.RandomUint64()),
 		Input:    siacrypto.RandomByteSlice(18),
 	}
 
 	// create the block and fill it with random values
 	var b block
-	b.height = uint32(siacrypto.RandomUInt64())
+	b.height = uint32(siacrypto.RandomUint64())
 	copy(b.parent[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
 	b.heartbeats[1] = &hb0
 	b.heartbeats[3] = &hb1

@@ -188,7 +188,7 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify empty message when signature is bad
-	msg.Signature[0] = 0
+	msg.Signature[0] = ^msg.Signature[0] // flip the bits on the first byte to guarantee corruption
 	verified = publicKey.Verify(&msg)
 	if verified {
 		t.Error("Verified a signed empty message with forged signature")
