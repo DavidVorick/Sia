@@ -18,6 +18,8 @@ func displayHelp() {
 }
 
 func connect(c *client.Client) {
+	// if we are already connected, disconnect first
+	c.Disconnect()
 	var host string
 	var port, id int
 	fmt.Print("Hostname: ")

@@ -49,6 +49,15 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	return
 }
 
+// Closes and destroys the client's RPC server
+func (c *Client) Disconnect() {
+	if c.router == nil {
+		return
+	}
+	c.router.Close()
+	c.router = nil
+}
+
 // Get siblings so that each can be uploaded to individually.  This should be
 // moved to a (c *Client) function that updates the current siblings. I'm
 // actually considering that a client should listen on a quorum, or somehow
