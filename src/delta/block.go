@@ -1,9 +1,10 @@
-package consensus
+package delta
 
 import (
 	"fmt"
 	"os"
 	"quorum"
+	"quorum/script"
 	"siacrypto"
 	"siaencoding"
 )
@@ -13,12 +14,34 @@ const (
 	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.HashSize*SnapshotLen
 )
 
-// A block is just a collection of heartbeats, along with information about
-// which block it is and which block was it's parent.
-type block struct {
-	height     uint32
-	parent     siacrypto.Hash
-	heartbeats [quorum.QuorumSize]*heartbeat
+// The heartbeat is the set of information that siblings are required to submit
+// every block. Each block contains an array of [quorum.QuorumSize] heartbeats,
+// and sets the NonNil value to 'false' if no heartbeat was submitted by the
+// sibling corresponding to that index.
+type Heartbeat struct {
+	NonNil  bool // heartbeat is invalid/ignored if false
+	Entropy quorum.Entropy
+	// storage proof
+	Signature siacrypto.Signature
+}
+
+// A block contains all the data that is necessary to move the quorum from one
+// state to the next. It contains a height and a parent block, as well as a
+// parent quorum. These values enable the quorum to verify that the block is
+// consistent with the current quorum and is not a block that is targeted
+// toward a fork.
+type Block struct {
+	// Meta data for the block
+	Height      uint32
+	ParentBlock siacrypto.Hash
+	// parentQuorum
+
+	// Heartbeats for each sibling (required)
+	Heartbeats [quorum.QuorumSize]Heartbeat
+
+	// Non-required information such as script inputs and upload advancements
+	ScriptInputs       []script.ScriptInput
+	UploadAdvancements []quorum.UploadAdvancement
 }
 
 // the blockHistoryHeader is the header that preceeds the block history file,
