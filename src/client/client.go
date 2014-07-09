@@ -30,7 +30,7 @@ func (c *Client) Broadcast(nm network.Message) {
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(host string, port int) (err error) {
+func (c *Client) Connect(host string, port int, id int) (err error) {
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
@@ -38,6 +38,7 @@ func (c *Client) Connect(host string, port int) (err error) {
 	// set bootstrap address
 	participant.BootstrapAddress.Host = host
 	participant.BootstrapAddress.Port = port
+	participant.BootstrapAddress.ID = network.Identifier(id)
 	err = c.router.Ping(&participant.BootstrapAddress)
 	if err != nil {
 		c.router.Close()
@@ -100,6 +101,6 @@ func NewClient() (c *Client, err error) {
 		}
 		c.genericWallets[id] = keypair
 	}
-	err = c.Connect("localhost", 9988) // default bootstrap address
+	err = c.Connect("localhost", 9988, 1) // default bootstrap address
 	return
 }
