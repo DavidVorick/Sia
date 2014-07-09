@@ -7,5 +7,13 @@ import (
 )
 
 type Engine struct {
+	// The State
 	quorum Quorum
+
+	// Engine Variables
+	filePrefix string
+
+	// Snapshot Variables
+	recentHistoryHead   uint32
+	activeHistoryLength byte
 }
