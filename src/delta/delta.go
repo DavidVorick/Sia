@@ -8,7 +8,7 @@ import (
 
 type Engine struct {
 	// The State
-	quorum Quorum
+	quorum quorum.Quorum
 
 	// Engine Variables
 	filePrefix string

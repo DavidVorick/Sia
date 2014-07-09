@@ -1,15 +1,21 @@
 package delta
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"siaencoding"
+)
+
+const (
+	historyIndexLength = 4 * SnapshotLength
 )
 
 // historyFilename is a helper function used to unify recentHistoryFilename and
 // activeHistoryFilename, and should only be called by these two functions.
 // Other history filenames are not guaranteed to exist.
 func (e *Engine) historyFilename(head uint32) string {
-	return fmt.Sprintf("%s.snapshot.%v", e.filePrefix, head)
+	return fmt.Sprintf("%s.blockHistory.%v", e.filePrefix, head)
 }
 
 // recentHistoryFilename returns the name of the file containing the
@@ -33,7 +39,13 @@ func (e *Engine) activeHistoryFilename() string {
 // Two chains are kept so that hosts synchronizing to the network can have
 // large windows of time to download the quorum and blocks before they risk
 // downloading obsolete data.
-func (e *Engine) saveBlock(b *block) (err error) {
+//
+// The layout of the active history file is a series of encoded, 4 byte
+// unsigned integers containing the byte-offsets of each block for the file.
+// There are 'SnapshotLength' offsets, representing a 'historyIndexLength'
+// prefix. Each points to the beginning of the next block. For convenience,
+// each block is also prefixed with its own length.
+func (e *Engine) saveBlock(b *Block) (err error) {
 	// if e.activeHistoryLen == SnapshotLen, the old complete history is deleted
 	// and replaced by the activeHistory. Then the activeHistory is replaced by a
 	// new history which will start with a single block and be of length 1.
@@ -47,79 +59,81 @@ func (e *Engine) saveBlock(b *block) (err error) {
 		e.recentHistoryHead += SnapshotLength
 
 		// create a new activeHistory file
-		p.activeHistory = p.quorum.GetWalletPrefix()
-		p.activeHistory += fmt.Sprintf("blockHistory.%v", b.height)
-		file, err = os.Create(p.activeHistory)
+		file, err = os.Create(e.activeHistoryFilename())
 		if err != nil {
-			panic(err)
+			return
 		}
 		defer file.Close()
 	} else {
 		// increase the active step and open the existing file for writing.
-		file, err = os.OpenFile(p.activeHistory, os.O_RDWR, 0666)
+		file, err = os.OpenFile(e.activeHistoryFilename(), os.O_RDWR, 0666)
 		if err != nil {
-			panic(p.activeHistory)
+			return
 		}
 		defer file.Close()
 	}
 
-	// if p.activeHistoryStep == 0, there is nothing to load. Otherwise, the saved
-	// blockHistoryHeader must be loaded from the file into memory.
-	var bhh blockHistoryHeader
-	if p.activeHistoryStep != 0 {
-		blockHistoryHeaderBytes := make([]byte, BlockHistoryHeaderSize)
-		n, err := file.Read(blockHistoryHeaderBytes)
-		if err != nil || n != BlockHistoryHeaderSize {
-			panic(err)
-		}
-		err = bhh.GobDecode(blockHistoryHeaderBytes)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// encode the block so it can be saved to disk
-	gobBlock, err := b.GobEncode()
+	// encode the block to be saved in the block history
+	encodedBlock, err := json.Marshal(b)
 	if err != nil {
 		return
 	}
 
-	// if the latest block is 0, then the struct is empty and the first index
-	// needs to account for the bhh struct. If the latest block is SnapshotLen-1,
-	// then it is the last block and updating the following index will cause a
-	// panic
-	if bhh.latestBlock == 0 {
-		bhh.blockOffsets[0] = uint32(BlockHistoryHeaderSize)
-	}
-	if bhh.latestBlock != SnapshotLen-1 {
-		bhh.blockOffsets[bhh.latestBlock+1] += uint32(len(gobBlock)) + bhh.blockOffsets[bhh.latestBlock]
-	}
-	bhh.latestBlock += 1
+	// figure out the offset for this block
+	var offset int
+	if e.activeHistoryLength == 0 {
+		offset = historyIndexLength
 
-	// seek back to 0 to write the updated bhh struct to disk
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		panic(err)
-	}
-	encodeBHH, err := bhh.GobEncode()
-	if err != nil {
-		panic(err)
-	}
-	n, err := file.Write(encodeBHH)
-	if err != nil || n != len(encodeBHH) {
-		panic(err)
+		// this is a special case where the previous save did not already set the
+		// offset (because there was no previous save). We therefore need to play
+		// that role and save the offset for the 0th block.
+		encodedOffset := siaencoding.EncUint32(uint32(offset))
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return
+		}
+		file.Write(encodedOffset)
+	} else {
+		encodedOffset := make([]byte, 4)
+		_, err = file.Seek(int64(e.activeHistoryLength), 0)
+		if err != nil {
+			return
+		}
+		_, err = file.Read(encodedOffset)
+		if err != nil {
+			return
+		}
+		offset = int(siaencoding.DecUint32(encodedOffset))
 	}
 
-	// seek to the offset location in the file to write the block to disk
-	_, err = file.Seek(int64(bhh.blockOffsets[bhh.latestBlock-1]), 0)
+	// save the offset of the next block, but only if there is a next block
+	if e.activeHistoryLength != SnapshotLength-1 {
+		nextOffset := offset + len(encodedBlock) + 4 // +4 for the length prefix
+		_, err = file.Seek(int64(4 + 4*e.activeHistoryLength), 0)
+		if err != nil {
+			return
+		}
+		encodedNextOffset := siaencoding.EncUint32(uint32(nextOffset))
+		_, err = file.Write(encodedNextOffset)
+		if err != nil {
+			return
+		}
+	}
+
+	// Save a variable indicating the block size, followed by the block itself
+	_, err = file.Seek(int64(offset), 0)
 	if err != nil {
-		panic(err)
+		return
 	}
-	n, err = file.Write(gobBlock)
-	if err != nil || n != len(gobBlock) {
-		panic(err)
+	blockSize := siaencoding.EncUint32(uint32(len(encodedBlock)))
+	_, err = file.Write(blockSize)
+	if err != nil {
+		return
 	}
-	p.activeHistoryStep += 1
+	_, err = file.Write(encodedBlock)
+	if err != nil {
+		return
+	}
 
 	return
 }

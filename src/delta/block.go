@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	SnapshotLength         = 3 // number of blocks separating each snapshot
-	BlockHistoryHeaderSize = 4 + SnapshotLen*4 + siacrypto.HashSize*SnapshotLen
+	SnapshotLength = 3 // blocks separating each snapshot
 )
 
 // The heartbeat is the set of information that siblings are required to submit
