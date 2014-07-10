@@ -4,6 +4,7 @@ package delta
 
 import (
 	"quorum"
+	"sync"
 )
 
 type Engine struct {
@@ -15,5 +16,7 @@ type Engine struct {
 
 	// Snapshot Variables
 	recentHistoryHead   uint32
-	activeHistoryLength byte
+	activeHistoryHead   uint32
+	activeHistoryLength uint32
+	historyLock         sync.RWMutex
 }

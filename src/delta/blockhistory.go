@@ -45,7 +45,11 @@ func (e *Engine) activeHistoryFilename() string {
 // There are 'SnapshotLength' offsets, representing a 'historyIndexLength'
 // prefix. Each points to the beginning of the next block. For convenience,
 // each block is also prefixed with its own length.
-func (e *Engine) saveBlock(b *Block) (err error) {
+func (e *Engine) saveBlock(b Block) (err error) {
+	// Lock the history for writing
+	e.historyLock.Lock()
+	defer e.historyLock.Unlock()
+
 	// if e.activeHistoryLen == SnapshotLen, the old complete history is deleted
 	// and replaced by the activeHistory. Then the activeHistory is replaced by a
 	// new history which will start with a single block and be of length 1.
@@ -56,7 +60,8 @@ func (e *Engine) saveBlock(b *Block) (err error) {
 		e.SaveSnapshot()
 		os.Remove(e.recentHistoryFilename())
 		e.activeHistoryLength = 0
-		e.recentHistoryHead += SnapshotLength
+		e.recentHistoryHead = e.activeHistoryHead
+		e.activeHistoryHead += SnapshotLength
 
 		// create a new activeHistory file
 		file, err = os.Create(e.activeHistoryFilename())
@@ -109,7 +114,7 @@ func (e *Engine) saveBlock(b *Block) (err error) {
 	// save the offset of the next block, but only if there is a next block
 	if e.activeHistoryLength != SnapshotLength-1 {
 		nextOffset := offset + len(encodedBlock) + 4 // +4 for the length prefix
-		_, err = file.Seek(int64(4 + 4*e.activeHistoryLength), 0)
+		_, err = file.Seek(int64(4+4*e.activeHistoryLength), 0)
 		if err != nil {
 			return
 		}
@@ -135,57 +140,67 @@ func (e *Engine) saveBlock(b *Block) (err error) {
 		return
 	}
 
+	e.activeHistoryLength += 1
 	return
 }
 
-func (p *Participant) loadBlocks(snapshot bool) (bs []block) {
+// LoadBlock will check if the block in question is stored in one of the block
+// history files, and then either return the block or an error.
+func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
+	// Lock the history for reading.
+	e.historyLock.RLock()
+	defer e.historyLock.RUnlock()
+
+	// Check for the block in active history and recent history, return an error
+	// if it's not found in either location. Recent history may not exist yet, so
+	// that possibility is also checked
 	var file *os.File
-	var err error
-	if snapshot == p.quorum.CurrentSnapshot() {
-		file, err = os.Open(p.activeHistory)
-	} else {
-		file, err = os.Open(p.recentHistory)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	var bhh blockHistoryHeader
-	bhhBytes := make([]byte, BlockHistoryHeaderSize)
-	n, err := file.Read(bhhBytes)
-	if err != nil || n != BlockHistoryHeaderSize {
-		panic(err)
-	}
-	err = bhh.GobDecode(bhhBytes)
-	if err != nil {
-		panic(err)
-	}
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-	fileSize := fileInfo.Size()
-	bs = make([]block, bhh.latestBlock)
-	for i := uint32(0); i < bhh.latestBlock; i++ {
-		var byteCount uint32
-		if i == SnapshotLen-1 {
-			byteCount = uint32(fileSize) - bhh.blockOffsets[i]
-		} else {
-			byteCount = bhh.blockOffsets[i+1] - bhh.blockOffsets[i]
-		}
-		blockBytes := make([]byte, byteCount)
-
-		n, err = file.Read(blockBytes)
-		if err != nil || n != int(byteCount) {
-			panic(err)
-		}
-
-		err = bs[i].GobDecode(blockBytes)
+	var blockIndex uint32
+	if height >= e.activeHistoryHead && height < e.activeHistoryHead+e.activeHistoryLength {
+		// block is in active history, load from that file
+		file, err = os.Open(e.activeHistoryFilename())
 		if err != nil {
-			panic(err)
+			return
 		}
+		blockIndex = height - e.activeHistoryHead
+	} else if e.recentHistoryHead != ^uint32(0) && height >= e.recentHistoryHead && height < e.recentHistoryHead+SnapshotLength {
+		// block is in recent history, load from that file
+		file, err = os.Open(e.recentHistoryFilename())
+		if err != nil {
+			return
+		}
+		blockIndex = height - e.recentHistoryHead
+	} else {
+		err = fmt.Errorf("LoadBlock: Block not found in the quorum")
+		return
 	}
 
+	// Fetch the block from the determined index in the opened file.
+	_, err = file.Seek(int64(4*blockIndex), 0)
+	if err != nil {
+		return
+	}
+	encodedBlockOffset := make([]byte, 4)
+	_, err = file.Read(encodedBlockOffset)
+	if err != nil {
+		return
+	}
+	blockOffset := siaencoding.DecUint32(encodedBlockOffset)
+	_, err = file.Seek(int64(blockOffset), 0)
+	if err != nil {
+		return
+	}
+	encodedBlockLength := make([]byte, 4)
+	_, err = file.Read(encodedBlockLength)
+	if err != nil {
+		return
+	}
+	blockLength := siaencoding.DecUint32(encodedBlockLength)
+	encodedBlock := make([]byte, blockLength)
+	_, err = file.Read(encodedBlock)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(encodedBlock, &b)
 	return
 }
