@@ -18,8 +18,10 @@ func displayHelp() {
 }
 
 func connect(c *client.Client) {
+	// if we are already connected, disconnect first
+	c.Disconnect()
 	var host string
-	var port int
+	var port, id int
 	fmt.Print("Hostname: ")
 	_, err := fmt.Scanf("%s", &host)
 	if err != nil {
@@ -32,7 +34,13 @@ func connect(c *client.Client) {
 		fmt.Println("Invalid port")
 		return
 	}
-	err = c.Connect(host, port)
+	fmt.Print("ID: ")
+	_, err = fmt.Scanf("%d", &id)
+	if err != nil {
+		fmt.Println("Invalid id")
+		return
+	}
+	err = c.Connect(host, port, id)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {

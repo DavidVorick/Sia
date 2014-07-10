@@ -30,7 +30,7 @@ func (c *Client) Broadcast(nm network.Message) {
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(host string, port int) (err error) {
+func (c *Client) Connect(host string, port int, id int) (err error) {
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
@@ -38,6 +38,7 @@ func (c *Client) Connect(host string, port int) (err error) {
 	// set bootstrap address
 	consensus.BootstrapAddress.Host = host
 	consensus.BootstrapAddress.Port = port
+	consensus.BootstrapAddress.ID = network.Identifier(id)
 	err = c.router.Ping(&consensus.BootstrapAddress)
 	if err != nil {
 		c.router.Close()
@@ -46,6 +47,15 @@ func (c *Client) Connect(host string, port int) (err error) {
 	c.siblings[0] = quorum.NewSibling(consensus.BootstrapAddress, nil)
 	c.RetrieveSiblings()
 	return
+}
+
+// Closes and destroys the client's RPC server
+func (c *Client) Disconnect() {
+	if c.router == nil {
+		return
+	}
+	c.router.Close()
+	c.router = nil
 }
 
 // Get siblings so that each can be uploaded to individually.  This should be
@@ -100,6 +110,6 @@ func NewClient() (c *Client, err error) {
 		}
 		c.genericWallets[id] = keypair
 	}
-	err = c.Connect("localhost", 9988) // default bootstrap address
+	err = c.Connect("localhost", 9988, 1) // default bootstrap address
 	return
 }
