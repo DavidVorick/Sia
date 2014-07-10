@@ -1,11 +1,15 @@
 package consensus
 
+import (
+	"delta"
+)
+
 // condenseBlock assumes that a heartbeat has a valid signature and that the
 // parent is the correct parent.
-func (p *Participant) condenseBlock() (b *block) {
-	b = new(block)
-	b.height = p.quorum.Height()
-	b.parent = p.quorum.Parent()
+func (p *Participant) condenseBlock() (b *delta.Block) {
+	/*b = new(delta.Block)
+	b.Height = p.quorum.Height()
+	b.Parent = p.quorum.Parent()
 
 	p.heartbeatsLock.Lock()
 	for i := range p.heartbeats {
@@ -18,6 +22,6 @@ func (p *Participant) condenseBlock() (b *block) {
 		}
 		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat) // clear map for next cycle
 	}
-	p.heartbeatsLock.Unlock()
+	p.heartbeatsLock.Unlock()*/
 	return
 }

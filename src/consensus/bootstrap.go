@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"delta"
 	"fmt"
 	"network"
 	"quorum"
@@ -69,10 +70,10 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	// initialize disk variables
-	p.recentBlocks = make(map[uint32]*block)
+	p.recentBlocks = make(map[uint32]*delta.Block)
 	p.quorum.SetWalletPrefix(participantPrefix)
 	p.quorum.Init()
-	p.activeHistoryStep = SnapshotLen // trigger cycling on the history during the first save
+	p.activeHistoryStep = delta.SnapshotLength // trigger cycling on the history during the first save
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if bootstrap {
@@ -185,7 +186,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	fmt.Println(p.quorum.Status())
 
 	// 6. Download the blocks
-	var blockList []block
+	var blockList []delta.Block
 	fmt.Println("Getting Blocks Since Snapshot")
 	err = p.messageRouter.SendMessage(&network.Message{
 		Dest: BootstrapAddress,
@@ -198,9 +199,9 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	}
 
 	// 7. Integrate with blocks built while listening, compile all blocks
-	for i := range blockList {
-		p.appendBlock(&blockList[i])
-	}
+	//for i := range blockList {
+	// p.appendBlock(&blockList[i])
+	//}
 
 	currentHeight := p.quorum.Height()
 	for p.recentBlocks[currentHeight] != nil {

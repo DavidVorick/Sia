@@ -1,7 +1,8 @@
 package consensus
 
 import (
-	"fmt"
+	"delta"
+	//"fmt"
 )
 
 // compile() is a messy, messy function that takes the quorum from one point to
@@ -9,8 +10,8 @@ import (
 // much that needs to happen and not much complexity to how it needs to happen.
 // It's just one of those cases where it comes out in english a lot smoother
 // than comes out in code.
-func (p *Participant) compile(b *block) {
-	siblingOrdering := p.quorum.SiblingOrdering()
+func (p *Participant) compile(b *delta.Block) {
+	/* siblingOrdering := p.quorum.SiblingOrdering()
 	for _, i := range siblingOrdering {
 		if b.heartbeats[i] == nil {
 			fmt.Printf("Tossing sibling %v for %v heartbeats\n", i, len(p.heartbeats[i]))
@@ -32,7 +33,7 @@ func (p *Participant) compile(b *block) {
 	p.quorum.IntegrateGerm()
 	p.quorum.ProcessEvents()
 	p.quorum.AdvanceBlock(b.parent)
-	p.saveBlock(b)
+	p.engine.SaveBlock(b)
 	fmt.Print(p.quorum.Status())
 
 	// if not a sibling, check to see if you've been added as a sibling. This is
@@ -50,6 +51,6 @@ func (p *Participant) compile(b *block) {
 	if p.self.Index() != 255 {
 		p.newSignedHeartbeat()
 	}
-
+	*/
 	return
 }

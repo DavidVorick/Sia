@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"delta"
 	"network"
 	"quorum"
 	"quorum/script"
@@ -10,6 +11,7 @@ import (
 
 type Participant struct {
 	// The quorum in which the participant participates
+	engine delta.Engine
 	quorum quorum.Quorum
 
 	// Variables local to the participant
@@ -37,7 +39,7 @@ type Participant struct {
 
 	// Bootstrap variables
 	synchronized bool
-	recentBlocks map[uint32]*block
+	recentBlocks map[uint32]*delta.Block
 
 	// Block history variables
 	activeHistoryStep int

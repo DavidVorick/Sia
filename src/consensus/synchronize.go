@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"bytes"
+	"delta"
 	"encoding/gob"
 	"quorum"
 	"siacrypto"
@@ -35,8 +36,8 @@ func (p *Participant) SnapshotWallets(swi SnapshotWalletsInput, wallets *[][]byt
 	return
 }
 
-func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]block) (err error) {
-	*blockList = p.loadBlocks(snapshot)
+func (p *Participant) SnapshotBlocks(snapshot bool, blockList *[]delta.Block) (err error) {
+	//*blockList = p.loadBlocks(snapshot)
 	return
 }
 

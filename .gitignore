@@ -6,3 +6,4 @@ doc/*.log
 doc/*.aux
 doc/*.toc
 participantStorage
+filesCreatedDuringTesting

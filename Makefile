@@ -38,6 +38,9 @@ test-long-verbose: libraries
 test-consensus: libraries
 	$(govars) go test -v -race consensus
 
+test-delta: libraries
+	$(govars) go test -v -race delta
+
 test-quorum: libraries
 	$(govars) go test -v -race quorum
 
@@ -50,4 +53,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-quorum dependencies race-libs docs directories
+.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-quorum dependencies race-libs docs directories

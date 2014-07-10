@@ -30,7 +30,7 @@ func (e *Engine) recentHistoryFilename() string {
 // activeHistory, which is a set of blocks numbering less than or equal to
 // SnapshotLength leading from the most recent snapshot to the current quorum.
 func (e *Engine) activeHistoryFilename() string {
-	return e.historyFilename(e.recentHistoryHead + SnapshotLength)
+	return e.historyFilename(e.activeHistoryHead)
 }
 
 // SaveBlock takes a block and saves it to disk. Blocks are saved in chains of
@@ -57,7 +57,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	if e.activeHistoryLength == SnapshotLength {
 		// reset history step, delete old history, migrate recently-completed
 		// history.
-		e.SaveSnapshot()
+		e.quorum.SaveSnap()
 		os.Remove(e.recentHistoryFilename())
 		e.activeHistoryLength = 0
 		e.recentHistoryHead = e.activeHistoryHead
@@ -93,14 +93,14 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		// offset (because there was no previous save). We therefore need to play
 		// that role and save the offset for the 0th block.
 		encodedOffset := siaencoding.EncUint32(uint32(offset))
-		_, err = file.Seek(0, 0)
-		if err != nil {
-			return
-		}
+		_, err = file.Seek(0, 0) // These lines shoulnd't be needed
+		if err != nil {          //
+			return //
+		} //
 		file.Write(encodedOffset)
 	} else {
 		encodedOffset := make([]byte, 4)
-		_, err = file.Seek(int64(e.activeHistoryLength), 0)
+		_, err = file.Seek(int64(e.activeHistoryLength*4), 0)
 		if err != nil {
 			return
 		}

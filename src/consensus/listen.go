@@ -16,7 +16,7 @@ func (p *Participant) tick() {
 		if p.currentStep == int(quorum.QuorumSize) {
 			b := p.condenseBlock()
 
-			p.appendBlock(b)
+			//p.appendBlock(b)
 
 			if p.synchronized {
 				p.compile(b)

@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SnapshotLength = 3 // blocks separating each snapshot
+	SnapshotLength = 3 // blocks separating each snapshot (probably needs a different name)
 )
 
 // The heartbeat is the set of information that siblings are required to submit
