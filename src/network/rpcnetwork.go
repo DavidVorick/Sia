@@ -62,12 +62,13 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 }
 
 // Close closes the connection associated with the TCP server.
-// This causes tcpServ.Accept() to return an err, ending the serverHandler process
+// This causes tcpServ.Accept() to return an err, ending the serverHandler process.
 func (rpcs *RPCServer) Close() {
 	rpcs.listener.Close()
 }
 
-// serverHandler accepts incoming RPCs, serves them, and closes the connection.
+// serverHandler runs in the background, accepting incoming RPCs, serving them, and closing the connection.
+// It is automatically terminated when Close() is called.
 func (rpcs *RPCServer) serverHandler() {
 	for {
 		conn, err := rpcs.listener.Accept()
