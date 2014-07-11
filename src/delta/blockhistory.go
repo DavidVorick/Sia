@@ -55,13 +55,20 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	// new history which will start with a single block and be of length 1.
 	var file *os.File
 	if e.activeHistoryLength == SnapshotLength {
-		// reset history step, delete old history, migrate recently-completed
-		// history.
-		e.quorum.SaveSnap()
+		// remove the recent history file, and progress the recentHistoryHead
 		os.Remove(e.recentHistoryFilename())
-		e.activeHistoryLength = 0
 		e.recentHistoryHead = e.activeHistoryHead
+
+		// reset activeHistoryLength, and progress the activeHistoryHead, then save
+		// the snapshot. The ordering is important - the activeHistoryHead value
+		// must be progressed before SaveSnapshot() is called, such that the
+		// snapshot is saved to the right filename.
+		e.activeHistoryLength = 0
 		e.activeHistoryHead += SnapshotLength
+		err = e.SaveSnapshot()
+		if err != nil {
+			return
+		}
 
 		// create a new activeHistory file
 		file, err = os.Create(e.activeHistoryFilename())

@@ -187,7 +187,6 @@ func (q *Quorum) GobEncode() (gobQuorum []byte, err error) {
 	}
 
 	gobQuorum = w.Bytes()
-	println(len(gobQuorum))
 	return
 }
 
