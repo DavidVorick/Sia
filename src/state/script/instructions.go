@@ -414,8 +414,8 @@ func op_if_goto(args []byte) (err error) {
 }
 
 func op_goto(args []byte) (err error) {
-	iptr = s2i(args[0], args[1]) - 1
-	if iptr < 0 || iptr > len(script) {
+	env.iptr = s2i(args[0], args[1]) - 1
+	if env.iptr < 0 || env.iptr > len(env.script) {
 		err = errors.New("jumped to invalid index")
 	}
 	return
@@ -433,8 +433,8 @@ func op_if_move(args []byte) (err error) {
 }
 
 func op_move(args []byte) (err error) {
-	iptr += s2i(args[0], args[1]) - 1
-	if iptr < 0 || iptr > len(script) {
+	env.iptr += s2i(args[0], args[1]) - 1
+	if env.iptr < 0 || env.iptr > len(env.script) {
 		err = errors.New("jumped to invalid index")
 	}
 	return
@@ -445,36 +445,36 @@ func op_reg_store(args []byte) (err error) {
 	if err != nil {
 		return
 	}
-	registers[args[0]] = a
+	env.registers[args[0]] = a
 	return
 }
 
 func op_reg_load(args []byte) (err error) {
-	err = push(registers[args[0]])
+	err = push(env.registers[args[0]])
 	return
 }
 
 func op_reg_inc(args []byte) (err error) {
-	registers[args[0]] = i2v(v2i(registers[args[0]]) + int64(args[1]))
+	env.registers[args[0]] = i2v(v2i(env.registers[args[0]]) + int64(args[1]))
 	return
 }
 
 func op_reg_dec(args []byte) (err error) {
-	registers[args[0]] = i2v(v2i(registers[args[0]]) - int64(args[1]))
+	env.registers[args[0]] = i2v(v2i(env.registers[args[0]]) - int64(args[1]))
 	return
 }
 
 func op_data_move(args []byte) (err error) {
-	dptr += s2i(args[0], args[1])
-	if dptr < 0 || dptr > len(script) {
+	env.dptr += s2i(args[0], args[1])
+	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
 	}
 	return
 }
 
 func op_data_goto(args []byte) (err error) {
-	dptr = s2i(args[0], args[1])
-	if dptr < 0 || dptr > len(script) {
+	env.dptr = s2i(args[0], args[1])
+	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
 	}
 	return
@@ -483,7 +483,7 @@ func op_data_goto(args []byte) (err error) {
 func op_data_push(args []byte) (err error) {
 	var v value
 	b := make([]byte, args[0])
-	dptr += copy(b, script[dptr:])
+	env.dptr += copy(b, env.script[env.dptr:])
 	copy(v[:], b)
 	err = push(v)
 	return
@@ -492,28 +492,28 @@ func op_data_push(args []byte) (err error) {
 func op_data_reg(args []byte) (err error) {
 	var v value
 	b := make([]byte, args[0])
-	dptr += copy(b, script[dptr:])
+	env.dptr += copy(b, env.script[env.dptr:])
 	copy(v[:], b)
-	registers[args[1]] = v
+	env.registers[args[1]] = v
 	return
 }
 
 func op_replace_byte(args []byte) (err error) {
 	a, err := pop()
-	script[dptr] = a[0]
+	env.script[env.dptr] = a[0]
 	return
 }
 
 func op_replace_short(args []byte) (err error) {
 	a, err := pop()
-	script[dptr] = a[0]
-	script[dptr+1] = a[1]
+	env.script[env.dptr] = a[0]
+	env.script[env.dptr+1] = a[1]
 	return
 }
 
 func op_data_buf(args []byte) (err error) {
-	buffers[args[1]] = make([]byte, args[0])
-	dptr += copy(buffers[args[1]], script[dptr:])
+	env.buffers[args[1]] = make([]byte, args[0])
+	env.dptr += copy(env.buffers[args[1]], env.script[env.dptr:])
 	return
 }
 
@@ -523,8 +523,8 @@ func op_buf_copy(args []byte) (err error) {
 		return
 	}
 	length := uint16(v2i(lengthv))
-	buffers[args[0]] = make([]byte, length)
-	dptr += copy(buffers[args[0]], script[dptr:])
+	env.buffers[args[0]] = make([]byte, length)
+	env.dptr += copy(env.buffers[args[0]], env.script[env.dptr:])
 	return
 }
 
@@ -534,14 +534,14 @@ func op_buf_paste(args []byte) (err error) {
 		return
 	}
 	length := int(int16(v2i(lengthv)))
-	// extend script if necessary
-	if dptr+length > len(script) {
-		ext := make([]byte, dptr+length-len(script))
-		script = append(script, ext...)
+	// extend env.script if necessary
+	if env.dptr+length > len(env.script) {
+		ext := make([]byte, env.dptr+length-len(env.script))
+		env.script = append(env.script, ext...)
 	}
 	b := make([]byte, length)
-	copy(b, buffers[args[0]])
-	copy(script[dptr:], b)
+	copy(b, env.buffers[args[0]])
+	copy(env.script[env.dptr:], b)
 	return
 }
 
@@ -555,13 +555,13 @@ func op_buf_prefix(args []byte) (err error) {
 }
 
 func op_buf_rest(args []byte) (err error) {
-	buffers[args[0]] = make([]byte, len(script[dptr:]))
-	dptr += copy(buffers[args[0]], script[dptr:])
+	env.buffers[args[0]] = make([]byte, len(env.script[env.dptr:]))
+	env.dptr += copy(env.buffers[args[0]], env.script[env.dptr:])
 	return
 }
 
 func op_transfer(args []byte) (err error) {
-	iptr = dptr - 1
+	env.iptr = env.dptr
 	return
 }
 
@@ -581,64 +581,70 @@ func op_cond_reject(args []byte) (err error) {
 }
 
 func op_add_sibling(args []byte) (err error) {
-	// decode sibling
-	/* sib := new(quorum.Sibling)
-	err = sib.GobDecode(buffers[args[0]])
-	if err != nil {
-		return
-	}
+	/*
+		// decode sibling
+		sib := new(quorum.Sibling)
+		err = sib.GobDecode(env.buffers[args[0]])
+		if err != nil {
+			return
+		}
 
-	// add sibling
-	q.AddSibling(wallet, sib) */
+		// add sibling
+		env.quorum.AddSibling(env.wallet, sib)
+	*/
 	return
 }
 
 func op_add_wallet(args []byte) (err error) {
-	/* lbalv, _ := pop()
-	ubalv, _ := pop()
-	idv, err := pop()
-	if err != nil {
-		return
-	}
+	/*
+		    lbalv, _ := pop()
+			ubalv, _ := pop()
+			idv, err := pop()
+			if err != nil {
+				return
+			}
 
-	// convert values to proper types
-	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
-	lbal := siaencoding.DecUint64(lbalv[:])
-	ubal := siaencoding.DecUint64(ubalv[:])
-	bal := quorum.NewBalance(ubal, lbal)
+			// convert values to proper types
+			id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+			lbal := siaencoding.DecUint64(lbalv[:])
+			ubal := siaencoding.DecUint64(ubalv[:])
+			bal := quorum.NewBalance(ubal, lbal)
 
-	// create wallet
-	newscript := buffers[args[0]]
-	_, err = q.CreateWallet(wallet, id, bal, newscript)*/
+			// create env.wallet
+			newscript := env.buffers[args[0]]
+			_, err = env.quorum.CreateWallet(env.wallet, id, bal, newscript)
+	*/
 	return
 }
 
 func op_send(args []byte) (err error) {
-	/* lbalv, _ := pop()
-	ubalv, _ := pop()
-	idv, err := pop()
-	if err != nil {
-		return
-	}
+	/*
+		    lbalv, _ := pop()
+			ubalv, _ := pop()
+			idv, err := pop()
+			if err != nil {
+				return
+			}
 
-	// convert values to proper types
-	id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
-	lbal := siaencoding.DecUint64(lbalv[:])
-	ubal := siaencoding.DecUint64(ubalv[:])
-	bal := quorum.NewBalance(ubal, lbal)
+			// convert values to proper types
+			id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+			lbal := siaencoding.DecUint64(lbalv[:])
+			ubal := siaencoding.DecUint64(ubalv[:])
+			bal := quorum.NewBalance(ubal, lbal)
 
-	// send
-	_, err = q.Send(wallet, bal, id)*/
+			// send
+			_, err = env.quorum.Send(env.wallet, bal, id)
+	*/
 	return
 }
 
 func op_verify(args []byte) (err error) {
 	// get public key
 	var pk siacrypto.PublicKey
-	copy(pk[:], buffers[args[0]])
+	copy(pk[:], env.buffers[args[0]])
 	// decode signed message
 	sm := new(siacrypto.SignedMessage)
-	err = sm.GobDecode(buffers[args[1]])
+	err = sm.GobDecode(env.buffers[args[1]])
 	if err != nil {
 		return
 	}
@@ -662,31 +668,35 @@ func op_switch(args []byte) (err error) {
 }
 
 func op_resize_sec(args []byte) (err error) {
-	/*a, err := pop()
-	if err != nil {
-		return
-	}
-	atoms := siaencoding.DecUint16(a[:2])
-	_, _, err = q.ResizeSectorErase(wallet, atoms, args[0])*/
+	/*
+		    a, err := pop()
+			if err != nil {
+				return
+			}
+			atoms := siaencoding.DecUint16(a[:2])
+			_, _, err = env.quorum.ResizeSectorErase(env.wallet, atoms, args[0])
+	*/
 	return
 }
 
 func op_prop_upload(args []byte) (err error) {
-	/* // decode function arguments
-	var ua quorum.UploadArgs
-	err = ua.GobDecode(buffers[args[0]])
-	if err != nil {
-		return
-	}
+	/*
+		    // decode function arguments
+			var ua quorum.UploadArgs
+			err = ua.GobDecode(env.buffers[args[0]])
+			if err != nil {
+				return
+			}
 
-	// call function
-	_, _, err = q.ProposeUpload(
-		wallet,
-		ua.ParentHash,
-		ua.NewHashSet,
-		ua.AtomsChanged,
-		ua.Confirmations,
-		ua.Deadline,
-	)*/
+			// call function
+			_, _, err = env.quorum.ProposeUpload(
+				env.wallet,
+				ua.ParentHash,
+				ua.NewHashSet,
+				ua.AtomsChanged,
+				ua.Confirmations,
+				ua.Deadline,
+			)
+	*/
 	return
 }

@@ -9,7 +9,7 @@ import (
 const (
 	MaxInstructions = 10000
 	MaxStackLen     = 1 << 16
-	DEBUG           = false
+	DEBUG           = true
 )
 
 type ScriptInput struct {
@@ -42,22 +42,22 @@ type stackElem struct {
 }
 
 func push(v value) (err error) {
-	if stackLen > MaxStackLen {
+	if env.stackLen > MaxStackLen {
 		return errors.New("stack overflow")
 	}
-	stack = &stackElem{v, stack}
-	stackLen++
+	env.stack = &stackElem{v, env.stack}
+	env.stackLen++
 	return
 }
 
 func pop() (v value, err error) {
-	if stackLen < 1 {
+	if env.stackLen < 1 {
 		err = errors.New("stack empty")
 		return
 	}
-	v = stack.val
-	stack = stack.next
-	stackLen--
+	v = env.stack.val
+	env.stack = env.stack.next
+	env.stackLen--
 	return
 }
 
@@ -76,31 +76,32 @@ func (s *stackElem) print() string {
 	return str
 }
 
-// global vars accessed by the various opcode functions
-// TODO: replace with env struct
-var (
-	script    []byte
-	iptr      int
-	dptr      int
-	registers [256]value
-	buffers   [256][]byte
-	stack     *stackElem
-	stackLen  int
-	wallet    state.Wallet
-	q         *state.State
+// environment variables necessary for script execution
+type scriptEnv struct {
+	script     []byte
+	iptr, dptr int
+	registers  [256]value
+	buffers    [256][]byte
+	stack      *stackElem
+	stackLen   int
+	wallet     state.Wallet
+	quorum     *state.State
 	// resource pools
 	instBalance int
 	costBalance int
-)
+}
+
+// global execution environment
+var env scriptEnv
 
 // deduct instruction cost from resource pools, and return an error if any pool is exhausted
 func deductResources(op instruction) error {
-	instBalance -= 1
-	costBalance -= op.cost
+	env.instBalance -= 1
+	env.costBalance -= op.cost
 	switch {
-	case instBalance < 0:
+	case env.instBalance < 0:
 		return errors.New("instruction limit reached")
-	case costBalance < 0:
+	case env.costBalance < 0:
 		return errors.New("balance exhausted")
 	default:
 		return nil
@@ -108,79 +109,84 @@ func deductResources(op instruction) error {
 }
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
-func (si *ScriptInput) Execute(q_ *state.State) (totalCost int, err error) {
+func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 	if si == nil {
 		err = errors.New("nil ScriptInput")
 	}
-	// initialize execution environment
-	q = q_
-	wallet, err = q.LoadWallet(si.WalletID)
+
+	// load wallet
+	w, err := q.LoadWallet(si.WalletID)
 	if err != nil {
-		err = errors.New("failed to load wallet")
 		return
 	}
-	script = append(wallet.Script, si.Input...)
-	dptr = len(wallet.Script)
-	registers = [256]value{}
-	buffers = [256][]byte{}
-	stack = nil
-	stackLen = 0
-	// resource pools
-	// these values will likely be supplied as arguments in the future
-	instBalance = MaxInstructions
-	costBalance = 10000
-	fmt.Println("executing script:", script)
 
-	for iptr = 0; iptr < len(script); iptr++ {
-		if script[iptr] == 0xFF {
-			break
+	// initialize execution environment
+	env = scriptEnv{
+		script: append(w.Script, si.Input...),
+		dptr:   len(w.Script),
+		wallet: w,
+		quorum: q,
+		// these values will likely be stored as part of the wallet
+		instBalance: MaxInstructions,
+		costBalance: 10000,
+	}
+
+	// run script
+	fmt.Println("executing script:", env.script)
+	if err = env.run(); err != nil {
+		fmt.Println("script execution failed:", err)
+	}
+
+	q.SaveWallet(env.wallet)
+	return
+}
+
+// execute opcodes until an error is encountered or the script terminates
+func (env *scriptEnv) run() error {
+	for {
+		// end of script or explicit termination
+		if env.iptr >= len(env.script) || env.script[env.iptr] == 0xFF {
+			return nil
 		}
 
-		if int(script[iptr]) > len(opTable) {
-			err = errors.New("invalid opcode " + fmt.Sprint(script[iptr]))
-			break
+		// look up opcode
+		if int(env.script[env.iptr]) > len(opTable) {
+			return errors.New("invalid opcode " + fmt.Sprint(env.script[env.iptr]))
 		}
-		op := opTable[script[iptr]]
+		op := opTable[env.script[env.iptr]]
 
-		// place arguments in array while advancing instruction pointer
-		if iptr+op.argBytes >= len(script) {
-			err = errors.New("too few arguments to opcode " + op.name)
-			break
+		if env.iptr+op.argBytes >= len(env.script) {
+			return errors.New("too few arguments to opcode " + op.name)
 		}
 
 		// deduct resources and check that we can proceed with execution
-		err = deductResources(op)
-		if err != nil {
-			break
+		if err := deductResources(op); err != nil {
+			return err
 		}
 
-		// call associated opcode function
+		// read bytes into argument array and advance env.iptr
 		fnArgs := make([]byte, op.argBytes)
-		iptr += copy(fnArgs, script[iptr+1:])
-		err = op.fn(fnArgs)
+		env.iptr++
+		env.iptr += copy(fnArgs, env.script[env.iptr:])
 
-		// check for error
-		if err != nil {
-			if err != errRejected {
-				err = errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
+		// call associated opcode function and check for error
+		if err := op.fn(fnArgs); err != nil {
+			if err == errRejected {
+				return err
 			}
-			break
+			return errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
 		}
 
 		if DEBUG {
 			fmt.Println(op.print(fnArgs))
-			fmt.Println("    stack:", stack.print())
+			fmt.Println("    stack:", env.stack.print())
 			b := make([]byte, 20)
-			copy(b, buffers[1])
-			fmt.Println("    buffer 1:", len(buffers[1]), b)
+			copy(b, env.buffers[1])
+			fmt.Println("    buffer 1:", len(env.buffers[1]), b)
 			b = make([]byte, 20)
-			copy(b, buffers[2])
-			fmt.Println("    buffer 2:", len(buffers[2]), b)
+			copy(b, env.buffers[2])
+			fmt.Println("    buffer 2:", len(env.buffers[2]), b)
 		}
 	}
-	if err != nil {
-		fmt.Println("script execution failed:", err)
-	}
-	q.SaveWallet(wallet)
-	return
+	return nil
 }
