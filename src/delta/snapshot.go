@@ -1,4 +1,4 @@
-package quorum
+package delta
 
 import (
 	"fmt"
@@ -7,46 +7,40 @@ import (
 )
 
 const (
-	SnapHeaderSize = 8
+	SnapshotHeaderSize = 8
 )
 
-type walletLookup struct {
-	id     WalletID
+// A snapshot is an on-disk representation of a quorum. A snapshot is not meant
+// to be sent over a wire all at once, but instead pieces of a snapshot can be
+// requested one at a time. This is because a full snapshot could be quite
+// large and costly to have in memory all at once.
+//
+// The layout of a snapshot is as follows:
+// 1. A table at the front of the file describing the location of each structure, prefixed by its size
+//		1a. Offset of quorum meta data + size of quorum meta data
+//		1b. Offset of wallet lookup table + size of wallet lookup table
+//		1c. Offset of event lookup table + size of event lookup table
+// 2. Quorum meta data
+// 3. Wallet lookup table
+// 4. Wallets with their scripts
+// 5. Event lookup table
+// 6. Events
+
+type snapshotOffsetTable struct {
+	quorumMetaDataOffset uint32
+	quorumMetaDataLength uint32
+
+	walletLookupTableOffset uint32
+	walletLookupTableLength uint32
+
+	eventLookupTableOffset uint32
+	eventLookupTableLength uint32
+}
+
+type walletOffset struct {
+	id     quorum.WalletID
 	offset uint32
-}
-
-type snapshotHeader struct {
-	walletLookupOffset uint32
-	wallets            uint32
-}
-
-func (s *snapshotHeader) GobEncode() (b []byte, err error) {
-	if s == nil {
-		err = fmt.Errorf("cannot encode nil snapshotHeader")
-		return
-	}
-
-	b = make([]byte, SnapHeaderSize)
-	intb := siaencoding.EncUint32(s.walletLookupOffset)
-	copy(b, intb[:])
-	intb = siaencoding.EncUint32(s.wallets)
-	copy(b[4:], intb[:])
-	return
-}
-
-func (s *snapshotHeader) GobDecode(b []byte) (err error) {
-	if s == nil {
-		err = fmt.Errorf("cannode decode into nil snapshotHeader")
-		return
-	}
-	if len(b) != SnapHeaderSize {
-		err = fmt.Errorf("received invalid snap header")
-		return
-	}
-
-	s.walletLookupOffset = siaencoding.DecUint32(b[:4])
-	s.wallets = siaencoding.DecUint32(b[4:])
-	return
+	length uint32
 }
 
 // saveWalletTree goes through in sorted order and saves the wallets to disk.
@@ -82,63 +76,30 @@ func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset
 	return
 }
 
-// SaveSnap takes all of the variables in quorum and stores them to disk, such
-// that anyone downloading the quorum and the blocks that follow the quorum can
-// maintain a consistent state. First the quorum is saved, then a list of
-// wallets, and then the actual wallets.
-func (q *Quorum) SaveSnap() {
-	// q.currentSnap is used to determine whether the current snapshot is snap0
-	// or snap1. Each time SaveSnap is called, the snapshot is cycled to the
-	// other one, meaning that there are 2 snaps at all times.
-	q.currentSnapshot = !q.currentSnapshot
-	snapname := q.walletPrefix
-	if q.currentSnapshot {
-		snapname += "snapshot0"
-	} else {
-		snapname += "snapshot1"
-	}
+// SaveSnapshot takes all of the variables listed at the top of the file,
+// encodes them, and writes to disk.
+func (e *Engine) SaveSnapshot() (err error) {
+	// Determine the filename for the snapshot
+	snapshotFilename := fmt.Sprintf("%s.snapshot.%v", e.filePrefix, e.activeHistoryHead)
 
-	// create a new snapshot of the filename, obliterating the old snapshot of the
-	// same filename
-	file, err := os.Create(snapname)
+	file, err := os.Create(snapshotFilename)
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer file.Close()
 
-	gobQuorum, err := q.GobEncode()
-	if err != nil {
-		panic(err)
-	}
+	// List of offsets that prefix the snapshot file
+	var offsetTable snapshotOffsetTable
 
-	// create the snapshot header and write it to disk
-	header := snapshotHeader{
-		walletLookupOffset: uint32(len(gobQuorum) + SnapHeaderSize),
-		wallets:            q.wallets,
-	}
-	headerBytes, err := header.GobEncode()
+	// encode the quorum and record the length
+	encodedQuorumMetaData, err := q.MarshalMetaData()
 	if err != nil {
-		panic(err)
+		return
 	}
-	size, err := file.Write(headerBytes)
-	if err != nil {
-		panic(err)
-	}
-	offset := uint32(size)
+	offsetTable.quorumMetaDataSize = len(encodedQuorum)
 
-	// write the encoded quorum to disk
-	size, err = file.Write(gobQuorum)
-	if err != nil {
-		panic(err)
-	}
-	offset += uint32(size)
-
-	// save an array indicating each wallet and its offset in the file. The
-	// offsets are left blank for the time being and will be filled out when the
-	// wallets are saved to disk.
-	walletSliceBytes := make([]byte, q.wallets*12)
-	size, err = file.Write(walletSliceBytes)
-	offset += uint32(size)
+	// create the wallet lookup table and save the wallets
+	walletDigest := e.quorum.WalletDigest()
 
 	// save every wallet to disk, recording the offset and id in the wallet lookup
 	// array at the beginning of the file

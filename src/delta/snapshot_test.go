@@ -1,4 +1,4 @@
-package quorum
+package delta
 
 import (
 	"siacrypto"
