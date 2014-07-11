@@ -18,7 +18,6 @@ type ScriptInput struct {
 }
 
 type instruction struct {
-	opcode   byte
 	name     string
 	argBytes int
 	fn       func([]byte) error
@@ -144,16 +143,15 @@ func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 // execute opcodes until an error is encountered or the script terminates
 func (env *scriptEnv) run() error {
 	for {
-		// end of script or explicit termination
-		if env.iptr >= len(env.script) || env.script[env.iptr] == 0xFF {
+		if env.iptr >= len(env.script) {
 			return nil
 		}
 
 		// look up opcode
-		if int(env.script[env.iptr]) > len(opTable) {
+		op, ok := opTable[env.script[env.iptr]]
+		if !ok {
 			return errors.New("invalid opcode " + fmt.Sprint(env.script[env.iptr]))
 		}
-		op := opTable[env.script[env.iptr]]
 
 		if env.iptr+op.argBytes >= len(env.script) {
 			return errors.New("too few arguments to opcode " + op.name)
@@ -171,10 +169,14 @@ func (env *scriptEnv) run() error {
 
 		// call associated opcode function and check for error
 		if err := op.fn(fnArgs); err != nil {
-			if err == errRejected {
+			switch err {
+			case errExit:
+				return nil
+			case errRejected:
 				return err
+			default:
+				return errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
 			}
-			return errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
 		}
 
 		if DEBUG {

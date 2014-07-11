@@ -37,7 +37,7 @@ func findDataSection(script []byte) (index int) {
 // this might be added as a field in the instruction type later
 var shortArg [256]bool
 
-var opcodeMap map[string]instruction
+var opcodeMap map[string]byte
 
 func init() {
 	shortArg[0x02] = true
@@ -49,12 +49,10 @@ func init() {
 	shortArg[0x37] = true
 
 	// build name -> opcode map
-	opcodeMap = make(map[string]instruction)
-	for _, op := range opTable {
-		opcodeMap[op.name] = op
+	opcodeMap = make(map[string]byte)
+	for opcode, op := range opTable {
+		opcodeMap[op.name] = opcode
 	}
-	// kludge
-	opcodeMap["terminate"] = instruction{opcode: 0xFF, name: "terminate"}
 }
 
 func BytesToWords(script []byte) (s string, err error) {
@@ -74,11 +72,6 @@ func BytesToWords(script []byte) (s string, err error) {
 			break
 		}
 
-		// 0xFF is not in the opTable (yet)
-		if script[i] == 0xFF {
-			s += "terminate\n"
-			continue
-		}
 		// unknown opcode
 		if int(script[i]) >= len(opTable) {
 			err = errors.New("error parsing script")
@@ -123,16 +116,16 @@ func WordsToBytes(script string) (b []byte, err error) {
 		}
 
 		// parse opcode
-		op, ok := opcodeMap[tokens[i]]
+		opcode, ok := opcodeMap[tokens[i]]
 		if !ok {
 			err = errors.New(fmt.Sprint("expected opcode, got ", tokens[i]))
 			return
 		}
-		b = append(b, op.opcode)
+		b = append(b, opcode)
 
 		// parse argument(s)
-		numArgs := op.argBytes
-		if shortArg[op.opcode] {
+		numArgs := opTable[opcode].argBytes
+		if shortArg[opcode] {
 			numArgs = 1
 		}
 		if i+numArgs > len(tokens) {
@@ -146,13 +139,12 @@ func WordsToBytes(script string) (b []byte, err error) {
 				return
 			}
 			// convert single number to two bytes
-			if shortArg[op.opcode] {
+			if shortArg[opcode] {
 				if arg > 0xFFFF {
 					err = errors.New("argument overflows short")
 					return
 				}
-				b = append(b, byte(arg))
-				b = append(b, byte(arg>>8))
+				b = append(b, byte(arg), byte(arg>>8))
 			} else {
 				if arg > 0xFF {
 					err = errors.New("argument overflows byte")
