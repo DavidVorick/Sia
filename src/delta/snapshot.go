@@ -38,43 +38,26 @@ type snapshotOffsetTable struct {
 	eventLookupTableLength uint32
 }
 
+func (s *snapshotOffsetTable) encode() (b []byte, err error) {
+	//
+}
+
+func (s *snapshotOffsetTable) decodeSnapshotOffsetTable(b []byte) (err error) {
+	//
+}
+
 type walletOffset struct {
 	id     quorum.WalletID
 	offset uint32
 	length uint32
 }
 
-// saveWalletTree goes through in sorted order and saves the wallets to disk.
-// upon saving the wallets, an element is appended to the wallet index, which
-// contains a list of all wallets and their offset in the snapshot. This only
-// exists to enable linear lookup of individual wallets within the snapshot.
-func (q *Quorum) saveWalletTree(w *walletNode, file *os.File, index *int, offset *uint32, walletSlice []walletLookup) {
-	if w == nil {
-		return
-	}
+func (s *walletOffset) encode() (b []byte, err error) {
+	//
+}
 
-	// save all wallets that are less than the current wallet
-	q.saveWalletTree(w.children[0], file, index, offset, walletSlice)
-
-	// save the current wallet
-	wBytes, err := q.LoadWallet(w.id).GobEncode()
-	if err != nil {
-		panic(err)
-	}
-	size, err := file.Write(wBytes)
-	if err != nil {
-		panic(err)
-	}
-	walletSlice[*index] = walletLookup{
-		id:     w.id,
-		offset: *offset,
-	}
-	*index += 1
-	*offset += uint32(size)
-
-	// save all wallets greater than the current wallet
-	q.saveWalletTree(w.children[1], file, index, offset, walletSlice)
-	return
+func (s *walletOffset) decodeWalletOffset(b []byte) (err error) {
+	//
 }
 
 // SaveSnapshot takes all of the variables listed at the top of the file,
@@ -91,6 +74,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 
 	// List of offsets that prefix the snapshot file
 	var offsetTable snapshotOffsetTable
+	currentOffset := snapshotOffsetTableLength
 
 	// put encodedQuorumMetaData in it's own scope so it can be cleared before
 	// the function returns
@@ -101,7 +85,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 			return
 		}
 		offsetTable.quorumMetaDataSize = len(encodedQuorum)
-		offsetTable.quorumMetaDataOffset = snapshotOffsetTableLength
+		offsetTable.quorumMetaDataOffset = currentOffset
 
 		// Write the encoded quorum to the snapshot file.
 		_, err = file.Seek(int64(offsetTable.quorumMetaDataOffset), 0)
@@ -112,34 +96,58 @@ func (e *Engine) SaveSnapshot() (err error) {
 		if err != nil {
 			return
 		}
+		currentOffset += len(encodedQuorumMetaData)
 	}
 
-	// create the wallet lookup table and save the wallets
-	walletDigest := e.quorum.WalletDigest()
+	// Create the wallet lookup table and save the wallets. This is again in its
+	// own scope so that the data can be garbage collected before the function
+	// returns.
+	{
+		// Retreive a list of all the wallets stored in the quorum and allocate the wallet lookup table
+		walletList := e.quorum.WalletList()
+		offsetTable.walletLookupTableOffset = currentOffset
+		offsetTable.walletLookupTableLength = len(walletList) * 16
+		walletLookupTable := make([]walletOffset, len(walletList))
+		currentOffset += len(walletList) * 16
 
-	// save every wallet to disk, recording the offset and id in the wallet lookup
-	// array at the beginning of the file
-	var index int
-	walletSlice := make([]walletLookup, q.wallets)
-	q.saveWalletTree(q.walletRoot, file, &index, &offset, walletSlice)
+		for i := range walletList {
+			// write wallets, update lookup table
+			size, encodedWallet := e.quorum.EncodeWallet(walletList[i])
+			walletLookupTable[i].length = size
+			walletLookupTable[i].offset = currentOffset
+			_, err = file.Write(encodedWallet)
+			if err != nil {
+				return
+			}
+			currentOffset += size
+		}
 
-	// fill out walletSliceBytes with the wallet lookup table
-	for i := range walletSlice {
-		intb := siaencoding.EncUint64(uint64(walletSlice[i].id))
-		copy(walletSliceBytes[i*12:], intb[:])
-		int32b := siaencoding.EncUint32(walletSlice[i].offset)
-		copy(walletSliceBytes[i*12+8:], int32b[:])
+		// Encode lookup table.
+		var encodedWalletLookupTable []byte
+		encodedWalletLookupTable := make([]byte, len(walletLookupTable) * 16)
+		for i := range walletLookupTable {
+			var encodedLookup []byte
+			encodedLookup, err = walletLookupTable[i].encode()
+			if err != nil {
+				return
+			}
+			copy(encodedWalletLookupTable[i*16:], encodedLookup)
+		}
+
+		// Write lookup table.
+		_, err = file.Seek(int64(offsetTable.walletLookupTableOffset), 0)
+		if err != nil {
+			return
+		}
+		_, err = file.Write(walletLookupTable)
+		if err != nil {
+			return
+		}
 	}
 
-	// seek to the offset where the wallet lookup table is kept and save the table
-	_, err = file.Seek(int64(header.walletLookupOffset), 0)
-	if err != nil {
-		panic(err)
-	}
-	_, err = file.Write(walletSliceBytes)
-	if err != nil {
-		panic(err)
-	}
+	// event list stuff here
+
+	// write the header here
 }
 
 // loads and transfers the quorum componenet from the most recent snapshot
