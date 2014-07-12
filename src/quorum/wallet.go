@@ -18,17 +18,10 @@ const (
 var genesisScript = []byte{0x28}
 
 type Wallet struct {
-	id WalletID
-
-	walletHash siacrypto.Hash
-	Balance    Balance
-
-	sectorAtoms uint16
-	sectorM     byte
-	sectorHash  siacrypto.Hash
-
-	scriptAtoms uint16
-	script      []byte
+	ID             WalletID
+	Balance        Balance
+	SectorSettings SectorSettings
+	Script         []byte
 }
 
 func (w *Wallet) SectorAtoms() uint16 {

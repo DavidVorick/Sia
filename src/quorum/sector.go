@@ -6,6 +6,11 @@ import (
 	"siacrypto"
 )
 
+type SectorSettings struct {
+	Atoms uint16
+	K     byte
+}
+
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
 // as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
 // doing this keeps in memory the previous hash at each level. Each atom is
