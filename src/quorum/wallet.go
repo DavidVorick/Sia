@@ -25,15 +25,13 @@ type Wallet struct {
 }
 
 func (w *Wallet) SectorAtoms() uint16 {
-	return w.sectorAtoms
+	//return w.sectorAtoms
+	return 0
 }
 
 func (w *Wallet) SectorM() byte {
-	return w.sectorM
-}
-
-func (w *Wallet) Script() []byte {
-	return w.script
+	//return w.sectorM
+	return 0
 }
 
 // takes a walletID and derives the filename from the quorum. Eventually, this
@@ -53,11 +51,11 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 		return
 	}
 	s += fmt.Sprintf("\t\t\tBalance: %v\n", siaencoding.DecUint128(w.Balance[:]))
-	s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
-	s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
-	s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
-	s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
-	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.script))
+	//s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
+	//s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
+	//s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
+	//s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
+	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.Script))
 	return
 }
 
@@ -71,7 +69,7 @@ func (w *Wallet) GobEncode() (b []byte, err error) {
 		return
 	}
 
-	b = make([]byte, walletBaseSize+len(w.script))
+	b = make([]byte, walletBaseSize+len(w.Script))
 
 	// leave room for Hash, encode balance and scriptAtoms
 	offset := siacrypto.HashSize
@@ -83,19 +81,19 @@ func (w *Wallet) GobEncode() (b []byte, err error) {
 	offset += 16
 
 	// encode sector information
-	sectorAtomsBytes := siaencoding.EncUint16(w.sectorAtoms)
-	copy(b[offset:], sectorAtomsBytes)
+	//sectorAtomsBytes := siaencoding.EncUint16(w.sectorAtoms)
+	//copy(b[offset:], sectorAtomsBytes)
 	offset += 2
-	b[offset] = w.sectorM
+	//b[offset] = w.sectorM
 	offset += 1
-	copy(b[offset:], w.sectorHash[:])
+	//copy(b[offset:], w.sectorHash[:])
 	offset += siacrypto.HashSize
 
 	// encode script information
-	scriptAtomsBytes := siaencoding.EncUint16(w.scriptAtoms)
-	copy(b[offset:], scriptAtomsBytes)
+	//scriptAtomsBytes := siaencoding.EncUint16(w.scriptAtoms)
+	//copy(b[offset:], scriptAtomsBytes)
 	offset += 2
-	copy(b[offset:], w.script)
+	copy(b[offset:], w.Script)
 
 	// calculate hash and place at beginning
 	hash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
@@ -113,12 +111,12 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	}
 
 	// verify the integrity of the wallet
-	copy(w.walletHash[:], b)
-	expectedHash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
-	if expectedHash != w.walletHash {
-		err = fmt.Errorf("Wallet Gob Decode: hash does not match wallet!")
-		return
-	}
+	//copy(w.walletHash[:], b)
+	//expectedHash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
+	//if expectedHash != w.walletHash {
+	//err = fmt.Errorf("Wallet Gob Decode: hash does not match wallet!")
+	//return
+	//}
 	offset := siacrypto.HashSize
 
 	// decode balance
@@ -129,17 +127,17 @@ func (w *Wallet) GobDecode(b []byte) (err error) {
 	offset += 16
 
 	// decode sector information
-	w.sectorAtoms = siaencoding.DecUint16(b[offset : offset+2])
+	// w.sectorAtoms = siaencoding.DecUint16(b[offset : offset+2])
 	offset += 2
-	w.sectorM = b[offset]
+	//w.sectorM = b[offset]
 	offset += 1
-	copy(w.sectorHash[:], b[offset:])
+	//copy(w.sectorHash[:], b[offset:])
 	offset += siacrypto.HashSize
 
 	// decode script informaiton
-	w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
+	//w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
 	offset += 2
-	w.script = b[offset:]
+	w.Script = b[offset:]
 	return
 }
 
@@ -149,7 +147,7 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 	if err != nil {
 		return
 	}
-	w.id = id
+	w.ID = id
 
 	wn := q.retrieve(id)
 	if wn != nil {
@@ -157,12 +155,12 @@ func (q *Quorum) InsertWallet(encodedWallet []byte, id WalletID) (err error) {
 		return
 	}
 
-	weight := walletAtomMultiplier + w.scriptAtoms*walletAtomMultiplier
-	weight += w.sectorAtoms
+	//weight := walletAtomMultiplier + w.scriptAtoms*walletAtomMultiplier
+	//weight += w.sectorAtoms
 
 	wn = new(walletNode)
 	wn.id = id
-	wn.weight = int(weight)
+	//wn.weight = int(weight)
 	q.insert(wn)
 
 	q.SaveWallet(w)
@@ -192,7 +190,7 @@ func (q *Quorum) LoadWallet(id WalletID) (w *Wallet) {
 	if err != nil {
 		panic(err)
 	}
-	w.id = id
+	w.ID = id
 	return
 }
 
@@ -200,7 +198,7 @@ func (q *Quorum) LoadWallet(id WalletID) (w *Wallet) {
 // determine the filename for the wallet. Then it writes a 4kb block of data to
 // the wallet file and saves it to disk.
 func (q *Quorum) SaveWallet(w *Wallet) {
-	walletFilename := q.walletFilename(w.id)
+	walletFilename := q.walletFilename(w.ID)
 	file, err := os.Create(walletFilename)
 	if err != nil {
 		panic(err)

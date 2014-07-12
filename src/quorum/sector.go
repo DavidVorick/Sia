@@ -137,26 +137,26 @@ func (q *Quorum) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte,
 		panic(err)
 	}
 
-	w := q.LoadWallet(id)
+	//w := q.LoadWallet(id)
 
 	// determine that proofStack is long enough
-	var proofsNeeded int
-	var proofCounter uint32
-	for proofCounter<<1 <= uint32(w.sectorAtoms) {
-		proofsNeeded += 1
-		proofCounter <<= 1
-	}
-	if len(proofStack) < proofsNeeded {
-		return false
-	}
+	//var proofsNeeded int
+	//var proofCounter uint32
+	//for proofCounter<<1 <= uint32(w.sectorAtoms) {
+	//	proofsNeeded += 1
+	//	proofCounter <<= 1
+	//}
+	//if len(proofStack) < proofsNeeded {
+	//	return false
+	//}
 
 	// build the hash up from the base
-	initialHash := siacrypto.CalculateHash(proofBase)
-	initialHigh := w.sectorAtoms
-	finalHash := buildMerkleRoot(initialHigh, atomIndex, initialHash, proofStack)
+	//initialHash := siacrypto.CalculateHash(proofBase)
+	//initialHigh := w.sectorAtoms
+	//finalHash := buildMerkleRoot(initialHigh, atomIndex, initialHash, proofStack)
 
-	if finalHash != expectedHash {
-		return false
-	}
+	//if finalHash != expectedHash {
+	//return false
+	//}
 	return true
 }

@@ -58,10 +58,9 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 
 	// fill out a basic wallet struct from the inputs
 	nw := new(Wallet)
-	nw.id = id
+	nw.ID = id
 	nw.Balance = balance
-	nw.script = initialScript
-	nw.scriptAtoms = scriptAtoms
+	nw.Script = initialScript
 	q.SaveWallet(nw)
 
 	w.Balance.Subtract(balance)
@@ -91,9 +90,9 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 
 	// fill out a basic wallet struct from the inputs
 	nw := new(Wallet)
-	nw.id = id
+	nw.ID = id
 	nw.Balance = Balance
-	nw.script = initialScript
+	nw.Script = initialScript
 	q.SaveWallet(nw)
 }
 
@@ -126,7 +125,7 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 	for i := byte(0); i < QuorumSize; i++ {
 		if q.siblings[i] == nil {
 			s.index = byte(i)
-			s.wallet = w.id
+			s.wallet = w.ID
 			q.siblings[i] = s
 			println("placed hopeful at index", i)
 			break
@@ -140,21 +139,21 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
-	weightDelta -= int(w.sectorAtoms)
+	// weightDelta -= int(w.sectorAtoms)
 	if weightDelta == 0 {
 		return
 	}
 
 	// update the weights in the wallet tree
-	q.updateWeight(w.id, weightDelta)
+	q.updateWeight(w.ID, weightDelta)
 	if q.walletRoot.weight > AtomsPerQuorum {
-		q.updateWeight(w.id, -weightDelta)
+		q.updateWeight(w.ID, -weightDelta)
 		return
 	}
 	weight = weightDelta
 
 	// remove the file and return if the sector has been resized to length 0
-	walletName := q.walletFilename(w.id)
+	walletName := q.walletFilename(w.ID)
 	sectorName := walletName + ".sector"
 	if atoms == 0 {
 		os.Remove(sectorName)
@@ -203,9 +202,9 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, w
 	if err != nil {
 		panic(err)
 	}
-	w.sectorAtoms = atoms
-	w.sectorM = k
-	w.sectorHash = siacrypto.CalculateHash(firstAtom)
+	// w.sectorAtoms = atoms
+	// w.sectorM = k
+	// w.sectorHash = siacrypto.CalculateHash(firstAtom)
 
 	return
 }
@@ -283,20 +282,20 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	cost += 2
 
 	// make sure the sector is allocated
-	if w.sectorAtoms == 0 {
-		err = errors.New("Sector is not allocated")
-		return
-	}
+	//if w.sectorAtoms == 0 {
+	//		err = errors.New("Sector is not allocated")
+	//		return
+	//	}
 
 	// make sure that the confirmations value is a reasonable value
 	if confirmations > QuorumSize {
 		err = errors.New("confirmations cannot be greater than quorum size")
 		return
 	}
-	if confirmations < w.sectorM {
-		err = errors.New("confirmations cannot be less than the value of 'm' for the given sector")
-		return
-	}
+	//if confirmations < w.sectorM {
+	//	err = errors.New("confirmations cannot be less than the value of 'm' for the given sector")
+	//		return
+	//	}
 
 	// make sure the deadline is a reasonable value
 	if deadline > MaxDeadline+q.height {
@@ -314,7 +313,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	// starting directly from the existing hash), all remaining uploads are
 	// truncated. There can only exist a single chain of potential uploads, all
 	// other get defeated by precedence.
-	if parentHash == w.sectorHash {
+	/* if parentHash == w.sectorHash {
 		// clear all existing uploads
 		q.clearUploads(w.id, 0)
 	} else {
@@ -330,11 +329,11 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 			return
 		}
 		q.clearUploads(w.id, i)
-	}
+	}*/
 
 	uploadHash := SectorHash(newHashSet)
 	u := upload{
-		id: w.id,
+		id: w.ID,
 		requiredConfirmations: confirmations,
 		hashSet:               newHashSet,
 		hash:                  uploadHash,
@@ -343,11 +342,11 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	}
 
 	weight = atomsChanged
-	if q.uploads[w.id] == nil {
-		q.uploads[w.id] = make([]*upload, 0)
+	if q.uploads[w.ID] == nil {
+		q.uploads[w.ID] = make([]*upload, 0)
 	}
-	q.uploads[w.id] = append(q.uploads[w.id], &u)
-	q.updateWeight(w.id, int(atomsChanged))
+	q.uploads[w.ID] = append(q.uploads[w.ID], &u)
+	q.updateWeight(w.ID, int(atomsChanged))
 	q.insertEvent(&u)
 	return
 }

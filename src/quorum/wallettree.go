@@ -1,9 +1,5 @@
 package quorum
 
-import (
-	"fmt"
-)
-
 // A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and
 // to pick random sectors in logarithmic time. It's also currently used for

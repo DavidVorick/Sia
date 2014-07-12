@@ -119,8 +119,8 @@ func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
 		err = errors.New("failed to load wallet")
 		return
 	}
-	script = append(wallet.Script(), si.Input...)
-	dptr = len(wallet.Script())
+	script = append(wallet.Script, si.Input...)
+	dptr = len(wallet.Script)
 	registers = [256]value{}
 	buffers = [256][]byte{}
 	stack = nil

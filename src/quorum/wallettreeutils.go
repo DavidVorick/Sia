@@ -1,5 +1,9 @@
 package quorum
 
+import (
+	"fmt"
+)
+
 // wallettreeutils.go contains functions that interact with the wallet tree but
 // aren't actually a part of the weighted-red-black tree data structure. I felt
 // that they should be in a separate file because the weighted-red-black tree
@@ -76,8 +80,8 @@ func buildWalletList(w *walletNode, wd []WalletID, index *int) {
 
 	buildWalletList(w.children[0], wd, index)
 
-	wd[index] = w.id
-	index++
+	wd[*index] = w.id
+	*index++
 
 	buildWalletList(w.children[1], wd, index)
 }
@@ -85,7 +89,8 @@ func buildWalletList(w *walletNode, wd []WalletID, index *int) {
 // WalletList returns a list of every wallet that can be found in the wallet
 // tree, sorted by id.
 func (q *Quorum) WalletList() (wd []WalletID) {
-	wd = make([]WalletDigest, q.wallets)
+	wd = make([]WalletID, q.wallets)
 	initialIndex := 0
 	buildWalletList(q.walletRoot, wd, &initialIndex)
+	return
 }
