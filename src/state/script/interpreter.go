@@ -94,6 +94,7 @@ type scriptEnv struct {
 var env scriptEnv
 
 // deduct instruction cost from resource pools, and return an error if any pool is exhausted
+// TODO: add memBalance to prevent buffer abuse
 func deductResources(op instruction) error {
 	env.instBalance -= 1
 	env.costBalance -= op.cost
