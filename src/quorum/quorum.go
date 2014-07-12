@@ -24,7 +24,8 @@ const (
 // update must be deterministic and reversable.
 type Quorum struct {
 	// Quorum-wide lock
-	lock sync.RWMutex
+	metaData QuorumMetadata
+	lock     sync.RWMutex
 
 	// Network Variables
 	siblings [QuorumSize]*Sibling
