@@ -3,13 +3,14 @@ package delta
 import (
 	"fmt"
 	"os"
+	"quorum"
 	"siaencoding"
 )
 
 const (
 	SnapshotHeaderSize        = 8
 	snapshotOffsetTableLength = 24
-	walletOffsetLength = 16
+	walletOffsetLength        = 16
 )
 
 // A snapshot is an on-disk representation of a quorum. A snapshot is not meant
@@ -62,8 +63,25 @@ func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 	return
 }
 
-func (s *snapshotOffsetTable) decodeSnapshotOffsetTable(b []byte) (err error) {
-	//
+func (s *snapshotOffsetTable) decode(b []byte) (err error) {
+	if len(b) <= snapshotOffsetTableLength {
+		err = fmt.Errorf("snapshotOffsetTable decode: input is too small to contain a snapshotOffsetTable.")
+		return
+	}
+
+	var offset int
+	s.quorumMetaDataOffset = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	s.quorumMetaDataLength = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	s.walletLookupTableOffset = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	s.walletLookupTableLength = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	s.eventLookupTableOffset = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	s.eventLookupTableLength = siaencoding.DecUint32(b[offset:])
+	return
 }
 
 type walletOffset struct {
@@ -86,8 +104,19 @@ func (wo *walletOffset) encode() (b []byte, err error) {
 	return
 }
 
-func (wo *walletOffset) decodeWalletOffset(b []byte) (err error) {
-	//
+func (wo *walletOffset) decode(b []byte) (err error) {
+	if len(b) <= walletOffsetLength {
+		err = fmt.Errorf("walletOffset decode: input is too small to contain a walletOffset")
+		return
+	}
+
+	var offset int
+	wo.id = quorum.WalletID(siaencoding.DecUint64(b[offset:]))
+	offset += 8
+	wo.offset = siaencoding.DecUint32(b[offset:])
+	offset += 4
+	wo.length = siaencoding.DecUint32(b[offset:])
+	return
 }
 
 // SaveSnapshot takes all of the variables listed at the top of the file,
