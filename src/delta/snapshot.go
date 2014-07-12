@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	SnapshotHeaderSize = 8
+	SnapshotHeaderSize        = 8
+	snapshotOffsetTableLength = 24
 )
 
 // A snapshot is an on-disk representation of a quorum. A snapshot is not meant
@@ -91,12 +92,27 @@ func (e *Engine) SaveSnapshot() (err error) {
 	// List of offsets that prefix the snapshot file
 	var offsetTable snapshotOffsetTable
 
-	// encode the quorum and record the length
-	encodedQuorumMetaData, err := q.MarshalMetaData()
-	if err != nil {
-		return
+	// put encodedQuorumMetaData in it's own scope so it can be cleared before
+	// the function returns
+	{
+		// encode the quorum and record the length
+		encodedQuorumMetaData, err := e.quorum.MarshalMetaData()
+		if err != nil {
+			return
+		}
+		offsetTable.quorumMetaDataSize = len(encodedQuorum)
+		offsetTable.quorumMetaDataOffset = snapshotOffsetTableLength
+
+		// Write the encoded quorum to the snapshot file.
+		_, err = file.Seek(int64(offsetTable.quorumMetaDataOffset), 0)
+		if err != nil {
+			return
+		}
+		_, err = file.Write(encodedQuorumMetaData)
+		if err != nil {
+			return
+		}
 	}
-	offsetTable.quorumMetaDataSize = len(encodedQuorum)
 
 	// create the wallet lookup table and save the wallets
 	walletDigest := e.quorum.WalletDigest()
