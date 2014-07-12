@@ -9,6 +9,7 @@ import (
 const (
 	SnapshotHeaderSize        = 8
 	snapshotOffsetTableLength = 24
+	walletOffsetLength        = 16
 )
 
 // A snapshot is an on-disk representation of a quorum. A snapshot is not meant
@@ -39,7 +40,26 @@ type snapshotOffsetTable struct {
 }
 
 func (s *snapshotOffsetTable) encode() (b []byte, err error) {
-	//
+	b := make([]byte, snapshotOffsetTableLength)
+	var offset int
+	qmdo := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], qmdo)
+	offset += 4
+	qmdl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], qmdl)
+	offset += 4
+	wlto := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], wlto)
+	offset += 4
+	wltl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], wltl)
+	offset += 4
+	elto := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], elto)
+	offset += 4
+	eltl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	copy(b[offset:], eltl)
+	return
 }
 
 func (s *snapshotOffsetTable) decodeSnapshotOffsetTable(b []byte) (err error) {
@@ -52,11 +72,21 @@ type walletOffset struct {
 	length uint32
 }
 
-func (s *walletOffset) encode() (b []byte, err error) {
-	//
+func (wo *walletOffset) encode() (b []byte, err error) {
+	b := make([]byte, walletOffsetLength)
+	var offset int
+	encID := siaencoding.EncUint64(uint64(wo.id))
+	copy(b[offset:], endID)
+	offset += 8
+	encOffset := siaencoding.EncUint32(wo.offset)
+	copy(b[offset:], encOffset)
+	offset += 4
+	encLength := siaencoding.EncUint32(wo.length)
+	copy(b[offset:], encLength)
+	return
 }
 
-func (s *walletOffset) decodeWalletOffset(b []byte) (err error) {
+func (wo *walletOffset) decodeWalletOffset(b []byte) (err error) {
 	//
 }
 
@@ -106,12 +136,12 @@ func (e *Engine) SaveSnapshot() (err error) {
 		// Retreive a list of all the wallets stored in the quorum and allocate the wallet lookup table
 		walletList := e.quorum.WalletList()
 		offsetTable.walletLookupTableOffset = currentOffset
-		offsetTable.walletLookupTableLength = len(walletList) * 16
+		offsetTable.walletLookupTableLength = len(walletList) * walletOffsetLength
 		walletLookupTable := make([]walletOffset, len(walletList))
-		currentOffset += len(walletList) * 16
+		currentOffset += len(walletList) * walletOffsetLength
 
+		// Write wallets, update lookup table.
 		for i := range walletList {
-			// write wallets, update lookup table
 			size, encodedWallet := e.quorum.EncodeWallet(walletList[i])
 			walletLookupTable[i].length = size
 			walletLookupTable[i].offset = currentOffset
@@ -124,14 +154,14 @@ func (e *Engine) SaveSnapshot() (err error) {
 
 		// Encode lookup table.
 		var encodedWalletLookupTable []byte
-		encodedWalletLookupTable := make([]byte, len(walletLookupTable) * 16)
+		encodedWalletLookupTable := make([]byte, len(walletLookupTable)*walletOffsetLength)
 		for i := range walletLookupTable {
 			var encodedLookup []byte
 			encodedLookup, err = walletLookupTable[i].encode()
 			if err != nil {
 				return
 			}
-			copy(encodedWalletLookupTable[i*16:], encodedLookup)
+			copy(encodedWalletLookupTable[i*walletOffsetLength:], encodedLookup)
 		}
 
 		// Write lookup table.
