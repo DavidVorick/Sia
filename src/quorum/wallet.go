@@ -1,7 +1,6 @@
 package quorum
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"siacrypto"
@@ -28,18 +27,8 @@ func (q *Quorum) MarshalWallet(id WalletID) (b []byte, err error) {
 	// instead of marshalling the id, you have to fetch the wallet from the
 	// wallet tree, load it off the disk or whatever, and then use it.
 
-	b, err = json.Marshal(id)
+	b, err = siaencoding.Marshal(id)
 	return
-}
-
-func (w *Wallet) SectorAtoms() uint16 {
-	//return w.sectorAtoms
-	return 0
-}
-
-func (w *Wallet) SectorM() byte {
-	//return w.sectorM
-	return 0
 }
 
 // takes a walletID and derives the filename from the quorum. Eventually, this
@@ -64,88 +53,6 @@ func (q *Quorum) walletString(id WalletID) (s string) {
 	//s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
 	//s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
 	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.Script))
-	return
-}
-
-// takes a wallet and converts it to a byte slice. Considering changing the
-// name to GobEncode but not sure if that's needed. The hash is calculated
-// after encoding the rest of the wallet - it is this function alone that is
-// responsible for creating a hash that verifies the integrity of the wallet.
-func (w *Wallet) GobEncode() (b []byte, err error) {
-	if w == nil {
-		err = fmt.Errorf("Cannot encode nil wallet")
-		return
-	}
-
-	b = make([]byte, walletBaseSize+len(w.Script))
-
-	// leave room for Hash, encode balance and scriptAtoms
-	offset := siacrypto.HashSize
-	balanceBytes, err := w.Balance.GobEncode()
-	if err != nil {
-		return
-	}
-	copy(b[offset:], balanceBytes)
-	offset += 16
-
-	// encode sector information
-	//sectorAtomsBytes := siaencoding.EncUint16(w.sectorAtoms)
-	//copy(b[offset:], sectorAtomsBytes)
-	offset += 2
-	//b[offset] = w.sectorM
-	offset += 1
-	//copy(b[offset:], w.sectorHash[:])
-	offset += siacrypto.HashSize
-
-	// encode script information
-	//scriptAtomsBytes := siaencoding.EncUint16(w.scriptAtoms)
-	//copy(b[offset:], scriptAtomsBytes)
-	offset += 2
-	copy(b[offset:], w.Script)
-
-	// calculate hash and place at beginning
-	hash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
-	copy(b, hash[:])
-
-	return
-}
-
-// upon decoding, the hash is checked to make sure that wallet integrity was
-// maintained.
-func (w *Wallet) GobDecode(b []byte) (err error) {
-	if w == nil {
-		err = fmt.Errorf("Cannot decode into nil wallet")
-		return
-	}
-
-	// verify the integrity of the wallet
-	//copy(w.walletHash[:], b)
-	//expectedHash := siacrypto.CalculateHash(b[siacrypto.HashSize:])
-	//if expectedHash != w.walletHash {
-	//err = fmt.Errorf("Wallet Gob Decode: hash does not match wallet!")
-	//return
-	//}
-	offset := siacrypto.HashSize
-
-	// decode balance
-	err = w.Balance.GobDecode(b[offset : offset+16])
-	if err != nil {
-		return
-	}
-	offset += 16
-
-	// decode sector information
-	// w.sectorAtoms = siaencoding.DecUint16(b[offset : offset+2])
-	offset += 2
-	//w.sectorM = b[offset]
-	offset += 1
-	//copy(w.sectorHash[:], b[offset:])
-	offset += siacrypto.HashSize
-
-	// decode script informaiton
-	//w.scriptAtoms = siaencoding.DecUint16(b[offset : offset+2])
-	offset += 2
-	w.Script = b[offset:]
 	return
 }
 

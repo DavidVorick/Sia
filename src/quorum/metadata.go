@@ -1,8 +1,8 @@
 package quorum
 
 import (
-	"encoding/json"
 	"siacrypto"
+	"siaencoding"
 )
 
 // Contains all of the general data for a quorum, and is an object that is
@@ -20,7 +20,7 @@ type QuorumMetadata struct {
 	Height       uint32
 }
 
-func (q *Quorum) MarshalMetaData() (b []byte, err error) {
-	b, err = json.Marshal(q.metaData)
+func (qm *QuorumMetadata) Marshal() (b []byte, err error) {
+	b, err = siaencoding.Marshal(qm)
 	return
 }

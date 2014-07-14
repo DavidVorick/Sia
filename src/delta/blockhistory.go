@@ -86,7 +86,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	}
 
 	// encode the block to be saved in the block history
-	encodedBlock, err := json.Marshal(b)
+	encodedBlock, err := siaencoding.Marshal(b)
 	if err != nil {
 		return
 	}
