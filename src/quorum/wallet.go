@@ -23,36 +23,10 @@ type Wallet struct {
 	Script         []byte
 }
 
-func (q *Quorum) MarshalWallet(id WalletID) (b []byte, err error) {
-	// instead of marshalling the id, you have to fetch the wallet from the
-	// wallet tree, load it off the disk or whatever, and then use it.
-
-	b, err = siaencoding.Marshal(id)
-	return
-}
-
-// takes a walletID and derives the filename from the quorum. Eventually, this
-// function should also verify that the id is located within the quorum.
-func (q *Quorum) walletFilename(id WalletID) (s string) {
-	// Turn the id into a suffix that will follow the quorum prefix
-	suffixBytes := siaencoding.EncUint64(uint64(id))
-	suffix := siafiles.SafeFilename(suffixBytes)
-	s = q.walletPrefix + suffix
-	return
-}
-
-func (q *Quorum) walletString(id WalletID) (s string) {
-	w := q.LoadWallet(id)
-	if w == nil {
-		return "\t\t\tError! Don't have wallet!\n"
-		return
-	}
-	s += fmt.Sprintf("\t\t\tBalance: %v\n", siaencoding.DecUint128(w.Balance[:]))
-	//s += fmt.Sprintf("\t\t\tSector Atoms: %v\n", w.sectorAtoms)
-	//s += fmt.Sprintf("\t\t\tSector M: %v\n", w.sectorM)
-	//s += fmt.Sprintf("\t\t\tSector Hash: %v\n", w.sectorHash[:6])
-	//s += fmt.Sprintf("\t\t\tScript Atoms: %v\n", w.scriptAtoms)
-	s += fmt.Sprintf("\t\t\tScript Length: %v\n", len(w.Script))
+// Takes an individual wallet and marshals it into something that can be sent
+// over a wire.
+func (w *Wallet) Marshal() (b []byte, err error) {
+	b, err = siaencoding.Marshal(w)
 	return
 }
 
