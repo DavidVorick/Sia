@@ -9,6 +9,7 @@ import (
 type SectorSettings struct {
 	Atoms uint16
 	K     byte
+	Hash  siacrypto.Hash
 }
 
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes

@@ -172,14 +172,15 @@ func (e *Engine) SaveSnapshot() (err error) {
 
 		// Write wallets, update lookup table.
 		for i := range walletList {
-			size, encodedWallet := e.quorum.EncodeWallet(walletList[i])
-			walletLookupTable[i].length = size
+			var encodedWallet []byte
+			encodedWallet, err = e.quorum.MarshalWallet(walletList[i])
+			walletLookupTable[i].length = uint32(len(encodedWallet))
 			walletLookupTable[i].offset = uint32(currentOffset)
 			_, err = file.Write(encodedWallet)
 			if err != nil {
 				return
 			}
-			currentOffset += size
+			currentOffset += len(encodedWallet)
 		}
 
 		// Encode lookup table.

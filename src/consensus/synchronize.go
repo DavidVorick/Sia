@@ -21,18 +21,18 @@ type Synchronize struct {
 }
 
 func (p *Participant) RecentSnapshot(_ struct{}, q *quorum.Quorum) (err error) {
-	quorum, err := p.quorum.RecentSnapshot()
-	*q = *quorum
+	//quorum, err := p.quorum.RecentSnapshot()
+	//*q = *quorum
 	return
 }
 
 func (p *Participant) SnapshotWalletList(snapshot bool, ids *[]quorum.WalletID) (err error) {
-	*ids = p.quorum.SnapshotWalletList(snapshot)
+	//*ids = p.quorum.SnapshotWalletList(snapshot)
 	return
 }
 
 func (p *Participant) SnapshotWallets(swi SnapshotWalletsInput, wallets *[][]byte) (err error) {
-	*wallets = p.quorum.SnapshotWallets(swi.Snapshot, swi.Ids)
+	//*wallets = p.quorum.SnapshotWallets(swi.Snapshot, swi.Ids)
 	return
 }
 

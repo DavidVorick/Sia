@@ -6,24 +6,7 @@ import (
 )
 
 func TestSnapshotHeaderEncoding(t *testing.T) {
-	var sh snapshotHeader
-	sh.walletLookupOffset = uint32(siacrypto.RandomUint64())
-	sh.wallets = uint32(siacrypto.RandomUint64())
-
-	var dsh snapshotHeader
-	esh, err := sh.GobEncode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = dsh.GobDecode(esh)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if sh.walletLookupOffset != dsh.walletLookupOffset {
-		t.Error("walletLookupOffset does not match")
-	}
-	if sh.wallets != dsh.wallets {
-		t.Error("wallets does not match")
-	}
+	// create a quorum object with a bunch of wallets, a bunch of initialized meta-data, and a bunch of events
+	// save it to a snapshot spot
+	// access each piece of the snapshot one-by-one and verify it matches the original data.
 }

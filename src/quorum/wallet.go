@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"siacrypto"
@@ -9,7 +10,6 @@ import (
 )
 
 const (
-	walletBaseSize       = siacrypto.HashSize + 16 + 2 + 1 + siacrypto.HashSize + 2
 	walletAtomMultiplier = 3
 )
 
@@ -22,6 +22,14 @@ type Wallet struct {
 	Balance        Balance
 	SectorSettings SectorSettings
 	Script         []byte
+}
+
+func (q *Quorum) MarshalWallet(id WalletID) (b []byte, err error) {
+	// instead of marshalling the id, you have to fetch the wallet from the
+	// wallet tree, load it off the disk or whatever, and then use it.
+
+	b, err = json.Marshal(id)
+	return
 }
 
 func (w *Wallet) SectorAtoms() uint16 {
