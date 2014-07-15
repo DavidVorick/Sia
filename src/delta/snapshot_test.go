@@ -1,7 +1,6 @@
 package delta
 
 import (
-	"siacrypto"
 	"testing"
 )
 

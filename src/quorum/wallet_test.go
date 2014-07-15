@@ -34,5 +34,36 @@ func TestWalletWeight(t *testing.T) {
 	}
 }
 
-func TestWalletCoding(t *testing.T) {
+// TestInsertLoadSaveRemoveWallet just makes sure that the logic runs without
+// error. The components each function called are tested elsewhere in the file.
+func TestInsertLoadSaveRemoveWallet(t *testing.T) {
+	// Test InsertWallet.
+	var s State
+	s.SetWalletPrefix("../../filesCreatedDuringTesting/TestInsertWallet.")
+	var w Wallet
+	err := s.InsertWallet(w)
+	if err != nil {
+		t.Error("Trouble while calling InsertWallet", err)
+	}
+
+	// Test LoadWallet.
+	_, err = s.LoadWallet(w.ID)
+	if err != nil {
+		t.Error("Trouble while calling LoadWallet", err)
+	}
+
+	// Test RemoveWallet, verifying that the wallet is no longer retrievable.
+	s.RemoveWallet(w.ID)
+	_, err = s.LoadWallet(w.ID)
+	if err == nil {
+		t.Error("Able to load a removed wallet!")
+	}
+
+	// Test SaveWallet, and then make sure that the saved wallet can be loaded.
+	w.ID = 25
+	s.SaveWallet(w)
+	_, err = s.LoadWallet(w.ID)
+	if err != nil {
+		t.Error("Trouble while calling LoadWallet", err)
+	}
 }
