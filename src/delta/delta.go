@@ -15,7 +15,7 @@ import (
 // activeHistoryHead needs to be initialized to ^uint32(0) - uint32(SnapshotLenght - 1)
 type Engine struct {
 	// The State
-	quorum quorum.Quorum
+	state quorum.State
 
 	// Engine Variables
 	filePrefix string

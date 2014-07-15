@@ -34,6 +34,6 @@ type Block struct {
 	Heartbeats [quorum.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
 
 	// Aggregate of non-required information submitted to the quorum
-	ScriptInputs       []script.ScriptInput
-	UploadAdvancements []quorum.UploadAdvancement
+	ScriptInputs []script.ScriptInput
+	//UploadAdvancements []quorum.UploadAdvancement
 }

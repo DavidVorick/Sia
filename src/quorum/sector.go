@@ -1,8 +1,8 @@
 package quorum
 
 import (
-	"io"
-	"os"
+	//"io"
+	//"os"
 	"siacrypto"
 )
 
@@ -12,6 +12,7 @@ type SectorSettings struct {
 	Hash  siacrypto.Hash
 }
 
+/*
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
 // as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
 // doing this keeps in memory the previous hash at each level. Each atom is
@@ -76,13 +77,13 @@ func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 
 // SectorFilename takes a wallet id and returns the filename of the sector
 // associated with that wallet.
-func (q *Quorum) SectorFilename(id WalletID) (sectorFilename string) {
-	walletFilename := q.walletFilename(id)
+func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
+	walletFilename := s.walletFilename(id)
 	sectorFilename = walletFilename + ".sector"
 	return
 }
 
-func (q *Quorum) BuildStorageProof(id WalletID, atomIndex int) (proofStack []*siacrypto.Hash) {
+func (s *State) BuildStorageProof(id WalletID, atomIndex int) (proofStack []*siacrypto.Hash) {
 	return
 }
 
@@ -117,9 +118,9 @@ func buildMerkleRoot(high uint16, search uint16, base siacrypto.Hash, proofStack
 	}
 }
 
-func (q *Quorum) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
+func (s *State) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
 	// get the intended hash from the segment stored on disk
-	sectorFilename := q.SectorFilename(id)
+	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
 		panic(err)
@@ -160,4 +161,4 @@ func (q *Quorum) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte,
 	//return false
 	//}
 	return true
-}
+}*/

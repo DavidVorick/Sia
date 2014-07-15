@@ -5,11 +5,8 @@
 package quorum
 
 import (
-	"bytes"
-	"encoding/gob"
-	"fmt"
-	"siacrypto"
-	"sync"
+	"siaencoding"
+	"siafiles"
 )
 
 const (
@@ -20,13 +17,13 @@ const (
 )
 
 type State struct {
-	metaData QuorumMetadata
+	Metadata StateMetadata
 
 	walletPrefix string
 	wallets      uint32
 	walletRoot   *walletNode
 
-	eventRoot *eventNode
+	// eventRoot *eventNode
 }
 
 // This is the prefix that the state will use when opening wallets as files.
@@ -40,6 +37,6 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	// Turn the id into a suffix that will follow the quorum prefix
 	suffixBytes := siaencoding.EncUint64(uint64(id))
 	suffix := siafiles.SafeFilename(suffixBytes)
-	filename = q.walletFilenamePrefix + suffix
+	filename = s.walletPrefix + suffix
 	return
 }

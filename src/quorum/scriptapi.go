@@ -1,17 +1,12 @@
 package quorum
 
-import (
+/* import (
 	"bytes"
 	"encoding/gob"
 	"errors"
 	"os"
 	"siacrypto"
 )
-
-// Cost structures...
-// There's a computational cost associated with all of these actions, but there is also a storage cost.
-// And there might also be other costs associated, such as network costs.
-// I don't know the best way to handle oall of this
 
 const (
 	CreateWalletMaxCost = 8
@@ -22,7 +17,7 @@ const (
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
 // If a wallet of that id already exists then the process aborts.
-func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
+func (s *State) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
 	cost += 1
 	if w.Balance.Compare(balance) < 0 {
 		err = errors.New("insufficient balance")
@@ -31,7 +26,7 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 
 	// check if the new wallet already exists
 	cost += 2
-	wn := q.retrieve(id)
+	wn := s.retrieve(id)
 	if wn != nil {
 		err = errors.New("wallet already exists")
 		return
@@ -50,18 +45,18 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 		tmp -= 4096
 		scriptAtoms += 1
 	}
-	if q.walletRoot.weight+wn.weight > AtomsPerQuorum {
+	if s.walletRoot.weight+wn.weight > AtomsPerQuorum {
 		err = errors.New("insufficient atoms in quorum")
 		return
 	}
-	q.insert(wn)
+	s.insert(wn)
 
 	// fill out a basic wallet struct from the inputs
 	nw := new(Wallet)
 	nw.ID = id
 	nw.Balance = balance
 	nw.Script = initialScript
-	q.SaveWallet(nw)
+	s.SaveWallet(nw)
 
 	w.Balance.Subtract(balance)
 
@@ -69,9 +64,9 @@ func (q *Quorum) CreateWallet(w *Wallet, id WalletID, balance Balance, initialSc
 }
 
 // "Cheat" function for initializing a bootstrap wallet
-func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScript []byte) {
+func (s *State) CreateBootstrapWallet(id WalletID, Balance Balance, initialScript []byte) {
 	// check if the new wallet already exists
-	wn := q.retrieve(id)
+	wn := s.retrieve(id)
 	if wn != nil {
 		panic("bootstrap wallet already exists")
 	}
@@ -86,24 +81,24 @@ func (q *Quorum) CreateBootstrapWallet(id WalletID, Balance Balance, initialScri
 		wn.weight += 1
 		tmp -= 4096
 	}
-	q.insert(wn)
+	s.insert(wn)
 
 	// fill out a basic wallet struct from the inputs
 	nw := new(Wallet)
 	nw.ID = id
 	nw.Balance = Balance
 	nw.Script = initialScript
-	q.SaveWallet(nw)
+	s.SaveWallet(nw)
 }
 
-func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
+func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
 	cost += 1
 	if w.Balance.Compare(amount) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
 	cost += 2
-	destWallet := q.LoadWallet(destID)
+	destWallet := s.LoadWallet(destID)
 	if destWallet == nil {
 		err = errors.New("destination wallet does not exist")
 		return
@@ -112,21 +107,21 @@ func (q *Quorum) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err
 	cost += 3
 	w.Balance.Subtract(amount)
 	destWallet.Balance.Add(amount)
-	q.SaveWallet(destWallet)
+	s.SaveWallet(destWallet)
 	return
 }
 
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
-func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
+func (s *State) AddSibling(w *Wallet, sib *Sibling) (cost int) {
 	println("adding new sibling")
 	cost = 50
 	for i := byte(0); i < QuorumSize; i++ {
-		if q.siblings[i] == nil {
-			s.index = byte(i)
-			s.wallet = w.ID
-			q.siblings[i] = s
+		if s.siblings[i] == nil {
+			sib.index = byte(i)
+			sib.wallet = w.ID
+			s.siblings[i] = sib
 			println("placed hopeful at index", i)
 			break
 		}
@@ -136,7 +131,7 @@ func (q *Quorum) AddSibling(w *Wallet, s *Sibling) (cost int) {
 
 // Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
 // or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
-func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
+func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
 	cost += 3
 	weightDelta := int(atoms)
 	// weightDelta -= int(w.sectorAtoms)
@@ -145,15 +140,15 @@ func (q *Quorum) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, w
 	}
 
 	// update the weights in the wallet tree
-	q.updateWeight(w.ID, weightDelta)
-	if q.walletRoot.weight > AtomsPerQuorum {
-		q.updateWeight(w.ID, -weightDelta)
+	s.updateWeight(w.ID, weightDelta)
+	if s.walletRoot.weight > AtomsPerQuorum {
+		s.updateWeight(w.ID, -weightDelta)
 		return
 	}
 	weight = weightDelta
 
 	// remove the file and return if the sector has been resized to length 0
-	walletName := q.walletFilename(w.ID)
+	walletName := s.walletFilename(w.ID)
 	sectorName := walletName + ".sector"
 	if atoms == 0 {
 		os.Remove(sectorName)
@@ -278,7 +273,7 @@ func (ua *UploadArgs) GobDecode(gobUA []byte) (err error) {
 
 // First sectors are allocated, and then changes are uploaded to them. This
 // creates a change.
-func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
+func (s *State) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
 	cost += 2
 
 	// make sure the sector is allocated
@@ -313,7 +308,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	// starting directly from the existing hash), all remaining uploads are
 	// truncated. There can only exist a single chain of potential uploads, all
 	// other get defeated by precedence.
-	/* if parentHash == w.sectorHash {
+	if parentHash == w.sectorHash {
 		// clear all existing uploads
 		q.clearUploads(w.id, 0)
 	} else {
@@ -329,7 +324,7 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 			return
 		}
 		q.clearUploads(w.id, i)
-	}*/
+	}
 
 	uploadHash := SectorHash(newHashSet)
 	u := upload{
@@ -342,11 +337,11 @@ func (q *Quorum) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet 
 	}
 
 	weight = atomsChanged
-	if q.uploads[w.ID] == nil {
-		q.uploads[w.ID] = make([]*upload, 0)
+	if s.uploads[w.ID] == nil {
+		s.uploads[w.ID] = make([]*upload, 0)
 	}
 	q.uploads[w.ID] = append(q.uploads[w.ID], &u)
 	q.updateWeight(w.ID, int(atomsChanged))
 	q.insertEvent(&u)
 	return
-}
+} */

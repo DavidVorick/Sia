@@ -40,8 +40,8 @@ func NewSibling(address network.Address, key *siacrypto.PublicKey) *Sibling {
 }
 
 // Removes a sibling from the list of siblings
-func (q *Quorum) TossSibling(i byte) {
-	q.siblings[i] = nil
+func (s *State) TossSibling(i byte) {
+	s.Metadata.Siblings[i] = nil
 }
 
 // Sibling returns true if the address and publicKey fields are identical

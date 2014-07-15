@@ -63,7 +63,7 @@ func (w *walletNode) doubleRotate(direction int) *walletNode {
 
 // insert takes a walletNode and inserts it into the rbw tree held within the
 // quorum.
-func (q *Quorum) insertWalletNode(w *walletNode) {
+func (s *State) insertWalletNode(w *walletNode) {
 	// exit insertion if given a nil node to insert
 	if w == nil {
 		return
@@ -71,10 +71,10 @@ func (q *Quorum) insertWalletNode(w *walletNode) {
 	w.red = true // all nodes are inserted as red
 
 	// if the root is nil, insert the node at the root and make it black.
-	if q.walletRoot == nil {
-		q.walletRoot = w
-		q.walletRoot.red = false
-		q.wallets += 1
+	if s.walletRoot == nil {
+		s.walletRoot = w
+		s.walletRoot.red = false
+		s.wallets += 1
 		return
 	}
 
@@ -83,8 +83,8 @@ func (q *Quorum) insertWalletNode(w *walletNode) {
 	var grandparent *walletNode
 	var parent *walletNode
 	temp := falseRoot
-	current := q.walletRoot
-	temp.children[1] = q.walletRoot
+	current := s.walletRoot
+	temp.children[1] = s.walletRoot
 	direction := 0
 	previousDirection := 0
 
@@ -159,15 +159,15 @@ func (q *Quorum) insertWalletNode(w *walletNode) {
 	}
 
 	// restore the root wallet and set it to black
-	q.walletRoot = falseRoot.children[1]
-	q.walletRoot.red = false
-	q.wallets += 1
+	s.walletRoot = falseRoot.children[1]
+	s.walletRoot.red = false
+	s.wallets += 1
 }
 
 // remove removes the presented key from the wallet tree.
-func (q *Quorum) removeWalletNode(id WalletID) (target *walletNode) {
+func (s *State) removeWalletNode(id WalletID) (target *walletNode) {
 	// if the tree is nil, there is nothing to do
-	if q.walletRoot == nil {
+	if s.walletRoot == nil {
 		return
 	}
 
@@ -176,7 +176,7 @@ func (q *Quorum) removeWalletNode(id WalletID) (target *walletNode) {
 	var grandparent *walletNode
 	var parent *walletNode
 	current := falseRoot
-	current.children[1] = q.walletRoot
+	current.children[1] = s.walletRoot
 	direction := 1
 
 	// search and push down a red node
@@ -290,18 +290,18 @@ func (q *Quorum) removeWalletNode(id WalletID) (target *walletNode) {
 	}
 
 	// update root and make it black
-	q.walletRoot = falseRoot.children[1]
-	if q.walletRoot != nil {
-		q.walletRoot.red = false
+	s.walletRoot = falseRoot.children[1]
+	if s.walletRoot != nil {
+		s.walletRoot.red = false
 	}
-	q.wallets -= 1
+	s.wallets -= 1
 
 	return
 }
 
 // Fetches the wallet from the rbw tree that matches the id presented.
-func (q *Quorum) walletNode(id WalletID) *walletNode {
-	current := q.walletRoot
+func (s *State) walletNode(id WalletID) *walletNode {
+	current := s.walletRoot
 
 	for current != nil {
 		if current.id == id {

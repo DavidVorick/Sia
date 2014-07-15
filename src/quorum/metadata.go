@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"siacrypto"
-	"siaencoding"
 )
 
 // Contains all of the general data for a quorum, and is an object that is
@@ -18,9 +17,4 @@ type StateMetadata struct {
 	StoragePrice Balance
 	Parent       siacrypto.Hash
 	Height       uint32
-}
-
-func (qm *StateMetadata) Marshal() (b []byte, err error) {
-	b, err = siaencoding.Marshal(qm)
-	return
 }

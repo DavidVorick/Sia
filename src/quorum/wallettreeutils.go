@@ -9,7 +9,7 @@ import (
 // that they should be in a separate file because the weighted-red-black tree
 // logic is complex enough to merit it's own file.
 
-func (wn *walletNode) weight() (nw int) {
+func (wn *walletNode) nodeWeight() (nw int) {
 	if wn == nil {
 		return
 	}
@@ -23,20 +23,20 @@ func (wn *walletNode) weight() (nw int) {
 	return
 }
 
-func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
+func (s *State) updateWeight(id WalletID, delta int) (err error) {
 	// check that the id is in the quorum
-	wn := q.retrieve(id)
+	wn := s.walletNode(id)
 	if wn == nil {
 		err = fmt.Errorf("id not found in wallet tree")
 		return
 	}
 
-	if q.walletRoot.weight+delta > AtomsPerQuorum {
+	if s.walletRoot.weight+delta > AtomsPerQuorum {
 		err = fmt.Errorf("Insufficient room in quorum to complete action")
 		return
 	}
 
-	currentNode := q.walletRoot
+	currentNode := s.walletRoot
 	for currentNode.id != id {
 		currentNode.weight += delta
 		if currentNode.id > id {
@@ -46,26 +46,6 @@ func (q *Quorum) updateWeight(id WalletID, delta int) (err error) {
 		}
 	}
 	currentNode.weight += delta
-	return
-}
-
-// A helper function meant to be used by Quorum.Status() that prints out each
-// wallet in the tree, giving only basic information about the wallets as
-// opposed to the debugging information presented by printTree() in
-// wallettree_test.go
-func (q *Quorum) printWallets(w *walletNode) (s string) {
-	if w == nil {
-		return
-	}
-
-	s += q.printWallets(w.children[0])
-
-	s += fmt.Sprintf("\t\tWallet %x:\n", w.id)
-	s += q.walletString(w.id)
-	s += fmt.Sprintf("\t\t\tWeight: %v\n", w.nodeWeight())
-	s += fmt.Sprintf("\n")
-
-	s += q.printWallets(w.children[1])
 	return
 }
 

@@ -1,6 +1,6 @@
 package quorum
 
-import (
+/* import (
 	"siacrypto"
 	"testing"
 )
@@ -114,4 +114,4 @@ func TestEventList(t *testing.T) {
 	// randomly insert and delete the things
 	// delete all of the things
 	// check sorting each time
-}
+} */

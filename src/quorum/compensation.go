@@ -1,6 +1,6 @@
 package quorum
 
-// chargeWallet subtracts a balance from the wallet depending on the number of
+// chargeWallets subtracts a balance from the wallet depending on the number of
 // siblings in the quorum, which is measured by 'multiplier'.
 func (s *State) chargeWallets(wn *walletNode, multiplier int) {
 	// Charge every wallet in the wallet tree.
@@ -12,14 +12,17 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) {
 
 	// Load the wallet and calculate the weighted price, which is the cost of
 	// storing the atoms on all of the siblings currently active in the quorum.
-	w := s.LoadWallet(wn.id)
-	weightedPrice := s.storagePrice
+	w, err := s.LoadWallet(wn.id)
+	if err != nil {
+		panic(err)
+	}
+	weightedPrice := s.Metadata.StoragePrice
 	weightedPrice.Multiply(NewBalance(0, uint64(wn.nodeWeight())))
 	weightedPrice.Multiply(NewBalance(0, uint64(multiplier)))
 
 	// If the wallet does not have enough money to pay for the storage it
 	// consumes between this block and next block, the wallet is deleted.
-	if weighted.Compare(w.Balace) == 1 {
+	if weightedPrice.Compare(w.Balance) == 1 {
 		// Wallet has run out of funds, purge from the network.
 	} else {
 		w.Balance.Subtract(weightedPrice)
@@ -27,25 +30,36 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) {
 	}
 }
 
-// ExecuteCompensation() is called between each block. Money is deducted from wallets
-func (q *Quorum) ExecuteCompensation() {
-	if q.walletRoot == nil {
+// ExecuteCompensation() is called between each block. Money is deducted from
+// wallets according to how much storage they are using, and money is added to
+// siblings according to how much storage is in use.
+func (s *State) ExecuteCompensation() {
+	if s.walletRoot == nil {
 		return
 	}
 
-	compensation := q.storagePrice
-	compensation.Multiply(NewBalance(0, uint64(q.walletRoot.weight)))
+	// Determine how much to pay each sibling, which is the weight of the quorum
+	// multiplied by the storage price.
+	compensation := s.Metadata.StoragePrice
+	compensation.Multiply(NewBalance(0, uint64(s.walletRoot.weight)))
+
+	// Pay each sibling the appropriate compensation.
 	var siblings int
-	for i := range q.siblings {
-		if q.siblings[i] == nil {
+	for i := range s.Metadata.Siblings {
+		if s.Metadata.Siblings[i] == nil {
 			continue
 		}
 
-		w := q.LoadWallet(q.siblings[i].wallet)
+		w, err := s.LoadWallet(s.Metadata.Siblings[i].wallet)
+		if err != nil {
+			panic(err)
+		}
 		w.Balance.Add(compensation)
-		q.SaveWallet(w)
+		s.SaveWallet(w)
 		siblings++
 	}
 
-	q.chargeWallets(q.walletRoot, siblings)
+	// Call a helper function to charge all the wallets for the storage they have
+	// consumed.
+	s.chargeWallets(s.walletRoot, siblings)
 }

@@ -86,8 +86,8 @@ var (
 	buffers   [256][]byte
 	stack     *stackElem
 	stackLen  int
-	wallet    *quorum.Wallet
-	q         *quorum.Quorum
+	wallet    quorum.Wallet
+	q         *quorum.State
 	// resource pools
 	instBalance int
 	costBalance int
@@ -108,14 +108,14 @@ func deductResources(op instruction) error {
 }
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
-func (si *ScriptInput) Execute(q_ *quorum.Quorum) (totalCost int, err error) {
+func (si *ScriptInput) Execute(q_ *quorum.State) (totalCost int, err error) {
 	if si == nil {
 		err = errors.New("nil ScriptInput")
 	}
 	// initialize execution environment
 	q = q_
-	wallet = q.LoadWallet(si.WalletID)
-	if wallet == nil {
+	wallet, err = q.LoadWallet(si.WalletID)
+	if err != nil {
 		err = errors.New("failed to load wallet")
 		return
 	}

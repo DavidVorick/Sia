@@ -1,6 +1,6 @@
 package quorum
 
-import (
+/* import (
 	"siacrypto"
 )
 
@@ -249,4 +249,4 @@ func (q *Quorum) ProcessEvents() {
 		q.eventRoot.event.handleEvent(q)
 		q.deleteEvent(q.eventRoot.event)
 	}
-}
+} */

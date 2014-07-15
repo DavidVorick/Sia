@@ -2,7 +2,6 @@ package script
 
 import (
 	"errors"
-	"quorum"
 	"siacrypto"
 	"siaencoding"
 )
@@ -583,19 +582,19 @@ func op_cond_reject(args []byte) (err error) {
 
 func op_add_sibling(args []byte) (err error) {
 	// decode sibling
-	sib := new(quorum.Sibling)
+	/* sib := new(quorum.Sibling)
 	err = sib.GobDecode(buffers[args[0]])
 	if err != nil {
 		return
 	}
 
 	// add sibling
-	q.AddSibling(wallet, sib)
+	q.AddSibling(wallet, sib) */
 	return
 }
 
 func op_add_wallet(args []byte) (err error) {
-	lbalv, _ := pop()
+	/* lbalv, _ := pop()
 	ubalv, _ := pop()
 	idv, err := pop()
 	if err != nil {
@@ -610,12 +609,12 @@ func op_add_wallet(args []byte) (err error) {
 
 	// create wallet
 	newscript := buffers[args[0]]
-	_, err = q.CreateWallet(wallet, id, bal, newscript)
+	_, err = q.CreateWallet(wallet, id, bal, newscript)*/
 	return
 }
 
 func op_send(args []byte) (err error) {
-	lbalv, _ := pop()
+	/* lbalv, _ := pop()
 	ubalv, _ := pop()
 	idv, err := pop()
 	if err != nil {
@@ -629,7 +628,7 @@ func op_send(args []byte) (err error) {
 	bal := quorum.NewBalance(ubal, lbal)
 
 	// send
-	_, err = q.Send(wallet, bal, id)
+	_, err = q.Send(wallet, bal, id)*/
 	return
 }
 
@@ -663,17 +662,17 @@ func op_switch(args []byte) (err error) {
 }
 
 func op_resize_sec(args []byte) (err error) {
-	a, err := pop()
+	/*a, err := pop()
 	if err != nil {
 		return
 	}
 	atoms := siaencoding.DecUint16(a[:2])
-	_, _, err = q.ResizeSectorErase(wallet, atoms, args[0])
+	_, _, err = q.ResizeSectorErase(wallet, atoms, args[0])*/
 	return
 }
 
 func op_prop_upload(args []byte) (err error) {
-	// decode function arguments
+	/* // decode function arguments
 	var ua quorum.UploadArgs
 	err = ua.GobDecode(buffers[args[0]])
 	if err != nil {
@@ -688,6 +687,6 @@ func op_prop_upload(args []byte) (err error) {
 		ua.AtomsChanged,
 		ua.Confirmations,
 		ua.Deadline,
-	)
+	)*/
 	return
 }

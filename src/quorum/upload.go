@@ -1,6 +1,6 @@
 package quorum
 
-import (
+/* import (
 	"fmt"
 	"os"
 	"siacrypto"
@@ -205,4 +205,4 @@ func (q *Quorum) AdvanceUpload(ua *UploadAdvancement) {
 		// take the upload out of the uploads array
 		q.uploads[ua.ID] = q.uploads[ua.ID][1:]
 	}
-}
+} */

@@ -140,7 +140,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 	{
 		// encode the quorum and record the length
 		var encodedQuorumMetaData []byte
-		encodedQuorumMetaData, err = e.quorum.MarshalMetaData()
+		encodedQuorumMetaData, err = siaencoding.Marshal(e.state.Metadata)
 		if err != nil {
 			return
 		}
@@ -164,7 +164,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 	// returns.
 	{
 		// Retreive a list of all the wallets stored in the quorum and allocate the wallet lookup table
-		walletList := e.quorum.WalletList()
+		walletList := e.state.WalletList()
 		offsetTable.walletLookupTableOffset = uint32(currentOffset)
 		offsetTable.walletLookupTableLength = uint32(len(walletList) * walletOffsetLength)
 		walletLookupTable := make([]walletOffset, len(walletList))
@@ -173,7 +173,15 @@ func (e *Engine) SaveSnapshot() (err error) {
 		// Write wallets, update lookup table.
 		for i := range walletList {
 			var encodedWallet []byte
-			encodedWallet, err = e.quorum.MarshalWallet(walletList[i])
+			var wallet quorum.Wallet
+			wallet, err = e.state.LoadWallet(walletList[i])
+			if err != nil {
+				return
+			}
+			encodedWallet, err = siaencoding.Marshal(wallet)
+			if err != nil {
+				return
+			}
 			walletLookupTable[i].length = uint32(len(encodedWallet))
 			walletLookupTable[i].offset = uint32(currentOffset)
 			_, err = file.Write(encodedWallet)

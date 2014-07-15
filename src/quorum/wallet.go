@@ -3,9 +3,7 @@ package quorum
 import (
 	"fmt"
 	"os"
-	"siacrypto"
 	"siaencoding"
-	"siafiles"
 )
 
 const (
@@ -42,7 +40,7 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 	}
 
 	wn = new(walletNode)
-	wn.id = id
+	wn.id = w.ID
 	s.insertWalletNode(wn)
 
 	s.SaveWallet(w)
@@ -63,19 +61,19 @@ func (s *State) RemoveWallet(id WalletID) {
 
 // LoadWallet checks the disk for a saved wallet, and loads that wallet into
 // memory. No changes to State are made.
-func (s *State) LoadWallet(id WalletID) (w Wallet) {
+func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	// Fetch the wallet filename and open the file.
 	walletFilename := s.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		return nil
+		return
 	}
 
 	// Fetch the size of the wallet from disk.
 	walletLengthBytes := make([]byte, 4)
 	_, err = file.Read(walletLengthBytes)
 	if err != nil {
-		panic(err)
+		return
 	}
 	walletLength := siaencoding.DecUint32(walletLengthBytes)
 
@@ -83,11 +81,11 @@ func (s *State) LoadWallet(id WalletID) (w Wallet) {
 	walletBytes := make([]byte, walletLength)
 	_, err = file.Read(walletBytes)
 	if err != nil {
-		panic(err)
+		return
 	}
 	err = siaencoding.Unmarshal(walletBytes, &w)
 	if err != nil {
-		panic(err)
+		return
 	}
 	return
 }
@@ -105,12 +103,12 @@ func (s *State) SaveWallet(w Wallet) {
 	defer file.Close()
 
 	// Encode the wallet to a byte slice.
-	walletBytes, err := w.Marshal()
+	walletBytes, err := siaencoding.Marshal(w)
 	if err != nil {
 		panic(err)
 	}
 	// Encode the length of the byte slice.
-	lengthPrefix = siaencoding.EncUint32(uint32(len(walletBytes)))
+	lengthPrefix := siaencoding.EncUint32(uint32(len(walletBytes)))
 	// Write the length prefix to the file.
 	_, err = file.Write(lengthPrefix[:])
 	if err != nil {
