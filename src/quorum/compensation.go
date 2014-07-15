@@ -2,21 +2,29 @@ package quorum
 
 // chargeWallet subtracts a balance from the wallet depending on the number of
 // siblings in the quorum, which is measured by 'multiplier'.
-func (q *Quorum) chargeWallets(wn *walletNode, multiplier int) {
-	// crawl through the whole tree
+func (s *State) chargeWallets(wn *walletNode, multiplier int) {
+	// Charge every wallet in the wallet tree.
 	if wn == nil {
 		return
 	}
-	q.chargeWallets(wn.children[0], multiplier)
-	q.chargeWallets(wn.children[1], multiplier)
+	s.chargeWallets(wn.children[0], multiplier)
+	s.chargeWallets(wn.children[1], multiplier)
 
-	// load the wallet and deduct storage fees
-	w := q.LoadWallet(wn.id)
-	weightedPrice := q.storagePrice
+	// Load the wallet and calculate the weighted price, which is the cost of
+	// storing the atoms on all of the siblings currently active in the quorum.
+	w := s.LoadWallet(wn.id)
+	weightedPrice := s.storagePrice
 	weightedPrice.Multiply(NewBalance(0, uint64(wn.nodeWeight())))
 	weightedPrice.Multiply(NewBalance(0, uint64(multiplier)))
-	w.Balance.Subtract(weightedPrice)
-	q.SaveWallet(w)
+
+	// If the wallet does not have enough money to pay for the storage it
+	// consumes between this block and next block, the wallet is deleted.
+	if weighted.Compare(w.Balace) == 1 {
+		// Wallet has run out of funds, purge from the network.
+	} else {
+		w.Balance.Subtract(weightedPrice)
+		s.SaveWallet(w)
+	}
 }
 
 // ExecuteCompensation() is called between each block. Money is deducted from wallets

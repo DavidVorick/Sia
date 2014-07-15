@@ -165,7 +165,7 @@ func (q *Quorum) insertWalletNode(w *walletNode) {
 }
 
 // remove removes the presented key from the wallet tree.
-func (q *Quorum) remove(id WalletID) (target *walletNode) {
+func (q *Quorum) removeWalletNode(id WalletID) (target *walletNode) {
 	// if the tree is nil, there is nothing to do
 	if q.walletRoot == nil {
 		return

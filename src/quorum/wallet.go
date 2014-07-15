@@ -55,6 +55,18 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 	return
 }
 
+func (s *State) RemoveWallet(id WalletID) {
+	// Delete the file that contains the wallet on disk.
+	filename := s.walletFilename(id)
+	err := os.Remove(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	// Delete from wallet tree.
+	s.removeWalletNode(id)
+}
+
 // LoadWallet checks the disk for a saved wallet, and loads that wallet into
 // memory. No changes to State are made.
 func (s *State) LoadWallet(id WalletID) (w Wallet) {
