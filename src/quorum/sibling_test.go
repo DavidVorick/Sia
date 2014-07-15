@@ -1,43 +1,9 @@
 package quorum
 
 import (
-	"network"
 	"siacrypto"
 	"testing"
 )
-
-// create a sibling with a bunch of non-zero values, and then compare the
-// values the sibling was created with against the values returned by the
-// getters
-func TestGetters(t *testing.T) {
-	index := byte(5)
-	address := network.Address{
-		ID:   network.Identifier(3),
-		Host: "notahost",
-		Port: 4555,
-	}
-	publicKey, _, err := siacrypto.CreateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sibling := Sibling{
-		index:     index,
-		address:   address,
-		publicKey: publicKey,
-	}
-
-	if sibling.Index() != index {
-		t.Error("Getter for Index is misbehaving")
-	}
-	if sibling.Address() != address {
-		t.Error("Getter for Address is misbehaving")
-	}
-	pk := sibling.PublicKey()
-	if !pk.Compare(publicKey) {
-		t.Error("Getter for publicKey is misbehaving")
-	}
-}
 
 func TestSiblingCompare(t *testing.T) {
 	var p0 *Sibling
@@ -66,9 +32,9 @@ func TestSiblingCompare(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p1.publicKey = pubKey
-	p0.publicKey = new(siacrypto.PublicKey)
-	*p0.publicKey = *p1.publicKey
+	p1.PublicKey = pubKey
+	p0.PublicKey = new(siacrypto.PublicKey)
+	*p0.PublicKey = *p1.PublicKey
 
 	// compare initialized participants
 	compare = p0.Compare(p1)
@@ -81,7 +47,7 @@ func TestSiblingCompare(t *testing.T) {
 	}
 
 	// compare when address are not equal
-	p1.address.Port = 9987
+	p1.Address.Port = 9987
 	compare = p0.Compare(p1)
 	if compare {
 		t.Error("Comparing two participants with different addresses should return false")
@@ -96,7 +62,7 @@ func TestSiblingCompare(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p1.publicKey = pubKey
+	p1.PublicKey = pubKey
 	compare = p0.Compare(p1)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
@@ -104,57 +70,5 @@ func TestSiblingCompare(t *testing.T) {
 	compare = p1.Compare(p0)
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
-	}
-}
-
-func TestSiblingEncoding(t *testing.T) {
-	// Try nil values
-	var p *Sibling
-	_, err := p.GobEncode()
-	if err == nil {
-		t.Error("Encoded nil sibling without error")
-	}
-	p = new(Sibling)
-	_, err = p.GobEncode()
-	if err == nil {
-		t.Fatal("Should not be able to encode nil values")
-	}
-
-	// Make a bootstrap participant
-	pubKey, _, err := siacrypto.CreateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
-	p.publicKey = pubKey
-	p.address = network.Address{
-		ID:   3,
-		Host: "localhost",
-		Port: 9950,
-	}
-
-	up := new(Sibling)
-	ep, err := p.GobEncode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = up.GobDecode(ep)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if up.address != p.address {
-		t.Error("up.address != p.address")
-	}
-
-	compare := up.publicKey.Compare(p.publicKey)
-	if compare != true {
-		t.Error("up.PublicKey != p.PublicKey")
-	}
-
-	// try to decode into nil participant
-	up = nil
-	err = up.GobDecode(ep)
-	if err != nil {
-		t.Error("falid to deceode into nil participant")
 	}
 }

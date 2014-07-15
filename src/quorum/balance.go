@@ -1,7 +1,6 @@
 package quorum
 
 import (
-	"errors"
 	"siaencoding"
 )
 
@@ -41,28 +40,4 @@ func (a *Balance) Compare(b Balance) int {
 	x := siaencoding.DecUint128(a[:])
 	y := siaencoding.DecUint128(b[:])
 	return x.Cmp(y)
-}
-
-func (b *Balance) GobEncode() (gobB []byte, err error) {
-	if b == nil {
-		err = errors.New("Cannot encode nil Balance")
-		return
-	}
-	gobB = make([]byte, 16)
-	copy(gobB, b[:])
-	return
-}
-
-func (b *Balance) GobDecode(gobB []byte) (err error) {
-	if b == nil {
-		err = errors.New("cannot decode into nil balance")
-		return
-	}
-	if len(gobB) != 16 {
-		err = errors.New("encoded balance has wrong length")
-		return
-	}
-
-	copy(b[:], gobB)
-	return
 }
