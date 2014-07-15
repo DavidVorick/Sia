@@ -1,5 +1,48 @@
-List of bytecodes
------------------
+# Bytecode Specification #
+
+Scripting is an integral part of the Sia network. Every wallet has a script associated with it, and during compilation each script executes using inputs supplied to it in heartbeats. Scripts are written in a Sia-specific *bytecode*, a low-level language similar to assembly. Low-level languages are more susceptible to programming errors, so most users should stick with the scripts provided in [scripts.go](scripts.go). However, anyone looking to take full advantage of the scripting system should study the specification outlined here.
+
+## Properties ##
+
+The Sia bytecode is Turing-complete, but places a limit on the total number of instructions that can executed during any given run. This prevents infinite loops and discourages prohibitively expensive computations.
+
+The bytecode is stack-based. Elements on the stack are generic 8-byte arrays called *values*. Depending on the opcode used, these values can be interpreted as integers, floats, or other types. In addition to the stack, two addressable caches are provided for convenience. There are 256 *registers*, each containing a value, and 256 *buffers*, each containing an arbitrary-length byte slice.
+
+## Execution ##
+
+Scripts only run if they are provided with an *input*. An input, just like a script, is a byte slice. Before execution begins, the input is appended to the end of the script.
+
+Like most bytecodes, execution is facilitated by an instruction pointer, or iptr. The iptr begins at the first byte of the script and looks up its associated opcode function. If the opcode requires arguments, the bytes after the opcode byte are passed to it, and the iptr is incremented once for each argument byte. *(Note: this must be taken into account when calculating offset addresses.)*
+
+The Sia bytecode also makes use of a separate pointer call the *data pointer*, or dptr. Unlike the iptr, the dptr can only be controlled via opcodes. It is used to read and write bytes in the script or input. Think of it as a cursor, as in a text editor. Because most inputs are too big to fit in 8-byte values, the dptr is often used to read inputs into buffers. The dptr seeks to the end of the data it reads, allowing for easy sequential reads.
+
+## Resources ##
+
+Scripts have access to a finite quantity of resources, including wallet balance, number of instructions, allocated memory, and more. The exact mechanics of how resources are allocated and charged are still being worked out. Exhausting any of the resources will cause the script to terminate. Support may be added later for making sets of instructions "atomic:" either all of them will execute or none of them will. 
+
+## Termination ##
+
+A number of conditions can cause a script to stop executing. The most benign is upon encountering the `exit` bytecode `0xFF`, or upon reaching the end of the script. Another opcode, `reject`, terminates execution with a special error that indicates the script owner should not be charged for any resources used. (This is to protect scripts from malicious inputs.) Finally, there are a multitude of errors that can cause the script to terminate mid-execution, such as dividing by zero, popping an empty stack, or passing malformed data to an opcode. If a script terminates in this way, the owner will still be charged for the resources used.
+
+After the script terminates without error, it is saved to disk. This means that any changes to the script body will be present upon the next execution of the script.
+
+## Limitations ##
+
+Many of the operations that people would like to do via scripting, such as resizing a sector or verifying a signature, are simply too complex to be implemented via low-level operations. As such, these operations are accessible only through specific opcodes; there are no low-level IO primitives for sending network requests or reading files from the disk. While this greatly limits the scope of operations that a script can perform, we feel that this is appropriate for the level of generality expected of the scripting system.
+
+There is currently no support for writing new procedures (functions, methods, etc.) in the bytecode. That is, you cannot define something like a factorial function and later call it with a supplied argument. Functions are not obviously aligned with the goals of the scripting system, so it is doubtful that they will be support in the future. However, functions can be crudely approximated through the use of `goto`.
+
+## Notes ##
+
+The scripting system is still in its infancy, and is subject to API-breaking changes. That said, some guidelines can still be provided for people looking to write their own scripts.
+
+Generally, you will want to protect your scripts using public key cryptography. To accomplish this, place your public key in the script body, and supply a cryptographic signature in any inputs you submit. The `verify` opcode can be used to verify cryptographic signatures. If verification fails, use `reject` (or more succinctly, `cond_reject`) to halt execution.
+
+Most of the more complex operations, such as proposing an upload to the quorum, require many arguments. Since opcodes are limited (for now) to two arguments, the current approach is to encode multiple arguments into one byte slice, store the byte slice in a buffer, and reference the buffer in the opcode. This is not a permanent solution, but in the meantime you should expect to make heavy use of the dptr to load and store arguments. In the future, the stack may be modified to hold byte slices instead of values, which would allow for a more traditional approach.
+
+## List of bytecodes ##
+
+Note that some of these descriptions are insufficient to explain the format of the data to be passed as arguments or other details. For a more exact specification of the function of each opcode, consult their implementations in [instructions.go](instructions.go)
 
 | Hex  | Name          | Args | Description                                                                            |
 |------|---------------|------|----------------------------------------------------------------------------------------|

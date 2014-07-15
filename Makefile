@@ -3,7 +3,7 @@ cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lst
 govars = $(gopath) $(cgo_ldflags)
 packages = logger network siacrypto siaencoding siafiles erasure quorum quorum/script delta
 
-all: submodule-update libraries
+all: submodule-update install
 
 submodule-update:
 	git submodule update --init
@@ -14,8 +14,12 @@ directories:
 fmt:
 	$(govars) go fmt $(packages)
 
-libraries: fmt
+install: fmt
 	$(govars) go install $(packages)
+
+release: fmt
+	$(govars) go install -ldflags '-extldflags "-static"' $(packages)
+	tar -cJvf release.xz bin
 
 test: libraries
 	$(govars) go test -short $(packages)
