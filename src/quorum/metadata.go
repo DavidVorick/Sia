@@ -11,7 +11,7 @@ import (
 // include wallets and events. This struct is meant to be small and to be sent
 // over the wire as a complete entity, without needing to be broken up or
 // buffered.
-type QuorumMetadata struct {
+type StateMetadata struct {
 	Siblings     [QuorumSize]*Sibling
 	Seed         Entropy
 	EventCounter uint32
@@ -20,7 +20,7 @@ type QuorumMetadata struct {
 	Height       uint32
 }
 
-func (qm *QuorumMetadata) Marshal() (b []byte, err error) {
+func (qm *StateMetadata) Marshal() (b []byte, err error) {
 	b, err = siaencoding.Marshal(qm)
 	return
 }

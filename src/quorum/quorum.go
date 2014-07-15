@@ -29,16 +29,11 @@ type State struct {
 	eventRoot    *eventNode
 }
 
-func (q *Quorum) Init() {
-	q.uploads = make(map[WalletID][]*upload)
-	q.storagePrice = NewBalance(0, 1)
-}
-
-// This is the prefix that the quorum will use when opening wallets as files.
+// This is the prefix that the state will use when opening wallets as files.
 // Eventually, logic will be implemented to move all of the wallets and files
 // if the prefex is changed.
-func (q *Quorum) SetWalletPrefix(walletPrefix string) {
-	q.walletPrefix = walletPrefix
+func (s *State) SetWalletPrefix(walletPrefix string) {
+	s.walletPrefix = walletPrefix
 }
 
 func (s *State) walletFilename(id WalletID) (filename string) {
@@ -46,39 +41,5 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	suffixBytes := siaencoding.EncUint64(uint64(id))
 	suffix := siafiles.SafeFilename(suffixBytes)
 	filename = q.walletFilenamePrefix + suffix
-	return
-}
-
-// q.Status() enumerates the variables of the quorum in a human-readable output
-func (q *Quorum) Status() (b string) {
-	q.lock.RLock()
-	defer q.lock.RUnlock()
-
-	b = "\nQuorum Status:\n"
-
-	b += fmt.Sprintf("\tPrefix: %v\n\n", q.walletPrefix)
-	b += fmt.Sprintf("\tSiblings:\n")
-	for _, s := range q.siblings {
-		if s != nil {
-			pubKeyHash := s.publicKey.Hash()
-			b += fmt.Sprintf("\t\t%v\n", s.index)
-			b += fmt.Sprintf("\t\t\tAddress: %v\n", s.address)
-			b += fmt.Sprintf("\t\t\tPublic Key: %x\n", pubKeyHash)
-		}
-	}
-	b += fmt.Sprintf("\n")
-
-	b += fmt.Sprintf("\tWallets:\n")
-	b += q.printWallets(q.walletRoot)
-
-	b += fmt.Sprintf("\tSeed: %x\n\n", q.seed)
-
-	if q.walletRoot != nil {
-		b += fmt.Sprintf("\tWeight: %x\n", q.walletRoot.weight)
-	} else {
-		b += fmt.Sprintf("\tWeight: 0\n")
-	}
-	// b += fmt.Sprintf("\tParent: %x\n", q.parent)
-	b += fmt.Sprintf("\tHeight: %x\n\n", q.height)
 	return
 }
