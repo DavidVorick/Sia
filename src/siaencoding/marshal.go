@@ -13,3 +13,9 @@ func Marshal(v interface{}) (b []byte, err error) {
 	b, err = json.Marshal(v)
 	return
 }
+
+// Unmarshal is the inverse of Marshal.
+func Unmarshal(b []byte, v interface{}) (err error) {
+	err = json.Unmarshal(b, v)
+	return
+}
