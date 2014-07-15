@@ -63,7 +63,7 @@ func (w *walletNode) doubleRotate(direction int) *walletNode {
 
 // insert takes a walletNode and inserts it into the rbw tree held within the
 // quorum.
-func (q *Quorum) insert(w *walletNode) {
+func (q *Quorum) insertWalletNode(w *walletNode) {
 	// exit insertion if given a nil node to insert
 	if w == nil {
 		return
@@ -300,7 +300,7 @@ func (q *Quorum) remove(id WalletID) (target *walletNode) {
 }
 
 // Fetches the wallet from the rbw tree that matches the id presented.
-func (q *Quorum) retrieve(id WalletID) *walletNode {
+func (q *Quorum) walletNode(id WalletID) *walletNode {
 	current := q.walletRoot
 
 	for current != nil {

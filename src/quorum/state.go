@@ -26,7 +26,7 @@ type State struct {
 	wallets      uint32
 	walletRoot   *walletNode
 
-	eventRoot    *eventNode
+	eventRoot *eventNode
 }
 
 // This is the prefix that the state will use when opening wallets as files.

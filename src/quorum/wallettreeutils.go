@@ -9,7 +9,7 @@ import (
 // that they should be in a separate file because the weighted-red-black tree
 // logic is complex enough to merit it's own file.
 
-func (wn *walletNode) nodeWeight() (nw int) {
+func (wn *walletNode) weight() (nw int) {
 	if wn == nil {
 		return
 	}
@@ -88,9 +88,9 @@ func buildWalletList(w *walletNode, wd []WalletID, index *int) {
 
 // WalletList returns a list of every wallet that can be found in the wallet
 // tree, sorted by id.
-func (q *Quorum) WalletList() (wd []WalletID) {
-	wd = make([]WalletID, q.wallets)
+func (s *State) WalletList() (wd []WalletID) {
+	wd = make([]WalletID, s.wallets)
 	initialIndex := 0
-	buildWalletList(q.walletRoot, wd, &initialIndex)
+	buildWalletList(s.walletRoot, wd, &initialIndex)
 	return
 }
