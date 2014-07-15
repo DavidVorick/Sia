@@ -27,9 +27,15 @@ func TestWalletWeight(t *testing.T) {
 		t.Error("Wallet weight is not being calculated correctly")
 	}
 
+	w.SectorSettings.Atoms = 12
+	weight = w.Weight()
+	if weight != 3*walletAtomMultiplier+uint32(w.SectorSettings.Atoms) {
+		t.Error("Wallet weight not properly calculated")
+	}
+
 	w.Script = nil
 	weight = w.Weight()
-	if weight != walletAtomMultiplier {
+	if weight != walletAtomMultiplier+uint32(w.SectorSettings.Atoms) {
 		t.Error("Wallet weight is not being calculated correctly")
 	}
 }

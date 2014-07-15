@@ -24,11 +24,20 @@ type Wallet struct {
 
 // Weight calculates and returns the weight of a wallet.
 func (w Wallet) Weight() (weight uint32) {
+	// Count the number of atoms used by the script.
 	walletByteCount := float64(len(w.Script))
 	walletAtomCount := walletByteCount / float64(AtomSize)
 	walletAtomCount = math.Ceil(walletAtomCount)
+
+	// Add an additional atom for the wallet itself.
 	walletAtomCount += 1
+
+	// Multiply script and wallet weight by the walletAtomMultiplier to account
+	// for the snapshots that the wallet needs to reside in.
 	walletAtomCount *= walletAtomMultiplier
+
+	// Add non-replicated weight according to the size of the wallet sector.
+	walletAtomCount += float64(w.SectorSettings.Atoms)
 	return uint32(walletAtomCount)
 }
 
@@ -43,6 +52,7 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 
 	wn = new(walletNode)
 	wn.id = w.ID
+	wn.weight = int(w.Weight())
 	s.insertWalletNode(wn)
 
 	s.SaveWallet(w)

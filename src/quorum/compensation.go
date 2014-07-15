@@ -23,7 +23,7 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) {
 	// If the wallet does not have enough money to pay for the storage it
 	// consumes between this block and next block, the wallet is deleted.
 	if weightedPrice.Compare(w.Balance) == 1 {
-		// Wallet has run out of funds, purge from the network.
+		s.RemoveWallet(w.ID)
 	} else {
 		w.Balance.Subtract(weightedPrice)
 		s.SaveWallet(w)
@@ -38,28 +38,34 @@ func (s *State) ExecuteCompensation() {
 		return
 	}
 
-	// Determine how much to pay each sibling, which is the weight of the quorum
-	// multiplied by the storage price.
-	compensation := s.Metadata.StoragePrice
-	compensation.Multiply(NewBalance(0, uint64(s.walletRoot.weight)))
-
-	// Pay each sibling the appropriate compensation.
+	// Count the number of siblings receiving compensation.
 	var siblings int
 	for i := range s.Metadata.Siblings {
 		if s.Metadata.Siblings[i] == nil {
 			continue
 		}
+		siblings++
+	}
 
-		w, err := s.LoadWallet(s.Metadata.Siblings[i].wallet)
+	// Call a helper function to charge all the wallets for the storage they have
+	// consumed. chargeWallets must be called before the siblings are
+	// compensated, so that the siblins don't get compensated for wallets that
+	// have been deleted by chargeWallets.
+	s.chargeWallets(s.walletRoot, siblings)
+
+	// Compensate each sibling.
+	compensation := s.Metadata.StoragePrice
+	compensation.Multiply(NewBalance(0, uint64(s.walletRoot.weight)))
+	for i := range s.Metadata.Siblings {
+		if s.Metadata.Siblings[i] == nil {
+			continue
+		}
+
+		w, err := s.LoadWallet(s.Metadata.Siblings[i].WalletID)
 		if err != nil {
 			panic(err)
 		}
 		w.Balance.Add(compensation)
 		s.SaveWallet(w)
-		siblings++
 	}
-
-	// Call a helper function to charge all the wallets for the storage they have
-	// consumed.
-	s.chargeWallets(s.walletRoot, siblings)
 }
