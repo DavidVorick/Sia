@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"siaencoding"
 )
@@ -25,6 +26,7 @@ type Wallet struct {
 func (w Wallet) Weight() (weight uint32) {
 	walletByteCount := float64(len(w.Script))
 	walletAtomCount := walletByteCount / float64(AtomSize)
+	walletAtomCount = math.Ceil(walletAtomCount)
 	walletAtomCount += 1
 	walletAtomCount *= walletAtomMultiplier
 	return uint32(walletAtomCount)

@@ -185,17 +185,17 @@ func createTestWalletNode(id int) (w *walletNode) {
 func TestWalletTree(t *testing.T) {
 	// create a quorum and add a few children, just enough to hit a tree height
 	// of 4. After each insertion the tree is verified for integrity.
-	q := new(Quorum)
+	s := new(State)
 	n := 9
 	for i := 0; i < n; i++ {
 		newWallet := createTestWalletNode(i)
-		q.insert(newWallet)
-		checkViolations(0, q.walletRoot, i+1, t)
+		s.insertWalletNode(newWallet)
+		checkViolations(0, s.walletRoot, i+1, t)
 	}
 
 	// make sure that all inserted nodes are reachable
 	for i := 0; i < n; i++ {
-		w := q.retrieve(WalletID(i))
+		w := s.walletNode(WalletID(i))
 		if w == nil {
 			t.Error("Unreachable Node:", i)
 		}
@@ -204,13 +204,13 @@ func TestWalletTree(t *testing.T) {
 	// remove each of the inserted nodes. After each removal, the tree is
 	// verified for integrity.
 	for i := 0; i < n; i++ {
-		q.remove(WalletID(i))
+		s.removeWalletNode(WalletID(i))
 
-		w := q.retrieve(WalletID(i))
+		w := s.walletNode(WalletID(i))
 		if w != nil {
 			t.Error("Maganed to retrieve a removed wallet:", i)
 		}
-		checkViolations(1, q.walletRoot, n-1-i, t)
+		checkViolations(1, s.walletRoot, n-1-i, t)
 	}
 
 	if testing.Short() {
@@ -242,8 +242,8 @@ func TestWalletTree(t *testing.T) {
 			}
 
 			node := createTestWalletNode(weight)
-			q.insert(node)
-			checkViolations(2, q.walletRoot, i+1, t)
+			s.insertWalletNode(node)
+			checkViolations(2, s.walletRoot, i+1, t)
 		}
 
 		// randomly choose between inserting and deleting a random item
@@ -271,8 +271,8 @@ func TestWalletTree(t *testing.T) {
 				}
 
 				node := createTestWalletNode(weight)
-				q.insert(node)
-				checkViolations(4, q.walletRoot, len(weights), t)
+				s.insertWalletNode(node)
+				checkViolations(4, s.walletRoot, len(weights), t)
 			} else {
 				// delete
 				// turn weights into a slice so that a value can be selected at random
@@ -288,15 +288,15 @@ func TestWalletTree(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				q.remove(WalletID(weightSlice[j]))
+				s.removeWalletNode(WalletID(weightSlice[j]))
 				delete(weights, weightSlice[j])
-				checkViolations(5, q.walletRoot, len(weights), t)
+				checkViolations(5, s.walletRoot, len(weights), t)
 			}
 		}
 
 		// verify that all weights within the slice are reachable
 		for key := range weights {
-			w := q.retrieve(WalletID(key))
+			w := s.walletNode(WalletID(key))
 			if w == nil {
 				t.Error("Retrieval Error:", key)
 			}
@@ -325,12 +325,12 @@ func TestWalletTree(t *testing.T) {
 
 		// remove the elements one at a time
 		for i, v := range weightSlice {
-			q.remove(WalletID(v))
-			w := q.retrieve(WalletID(v))
+			s.removeWalletNode(WalletID(v))
+			w := s.walletNode(WalletID(v))
 			if w != nil {
 				t.Error("Maganed to retreive a removed wallet:", v)
 			}
-			checkViolations(3, q.walletRoot, len(weightSlice)-1-i, t)
+			checkViolations(3, s.walletRoot, len(weightSlice)-1-i, t)
 		}
 	}
 }

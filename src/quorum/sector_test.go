@@ -1,5 +1,6 @@
 package quorum
 
+/*
 import (
 	"bytes"
 	"siacrypto"
@@ -23,4 +24,4 @@ func TestMerkleCollapse(t *testing.T) {
 		b := bytes.NewBuffer(randomBytes)
 		MerkleCollapse(b)
 	}
-}
+}*/
