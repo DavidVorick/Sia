@@ -6,56 +6,34 @@ import (
 	"testing"
 )
 
-// TestWalletCoding creates a wallet, fills it with random values, converts it
-// to bytes, back to a wallet, and then back to bytes, and then compares each
-// against the other to make sure that the process of encoding and decoding
-// does not introduce any errors.
+// TestWalletWeight runs some edge case testing on Wallet.Weight()
+func TestWalletWeight(t *testing.T) {
+	var w Wallet
+
+	w.Script = siacrypto.RandomByteSlice(5)
+	weight := w.Weight()
+	if weight != 2*walletAtomMultiplier {
+		t.Error("Wallet weight is not being calculated correctly")
+	}
+
+	w.Script = siacrypto.RandomByteSlice(AtomSize)
+	weight := w.Weight()
+	if weight != 2*walletAtomMultiplier {
+		t.Error("Wallet weight is not being calculated correctly")
+	}
+
+	w.Script = siacrypto.RandomByteSlice(AtomSize + 1)
+	weight := w.Weight()
+	if weight != 3*walletAtomMultiplier {
+		t.Error("Wallet weight is not being calculated correctly")
+	}
+
+	w.Script = nil
+	weight := w.Weight()
+	if weight != walletAtomMultiplier {
+		t.Error("Wallet weight is not being calculated correctly")
+	}
+}
+
 func TestWalletCoding(t *testing.T) {
-	// Fill out a wallet with completely random values
-	w := &Wallet{
-		id:          WalletID(siacrypto.RandomUint64()),
-		Balance:     NewBalance(siacrypto.RandomUint64(), siacrypto.RandomUint64()),
-		sectorAtoms: siacrypto.RandomUint16(),
-		sectorM:     35,
-		scriptAtoms: siacrypto.RandomUint16(),
-		script:      siacrypto.RandomByteSlice(45),
-	}
-	copy(w.walletHash[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
-	copy(w.sectorHash[:], siacrypto.RandomByteSlice(siacrypto.HashSize))
-
-	wBytes, err := w.GobEncode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var wObj Wallet
-	err = wObj.GobDecode(wBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wConfirm, err := wObj.GobEncode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bytes.Compare(wBytes, wConfirm) != 0 {
-		t.Error("wBytes mismatches wConfirm")
-	}
-	if w.Balance != wObj.Balance {
-		t.Error("Error with balance")
-	}
-	if w.sectorAtoms != wObj.sectorAtoms {
-		t.Error("Error with sectorAtoms")
-	}
-	if w.sectorM != wObj.sectorM {
-		t.Error("Error with sectorM")
-	}
-	if w.sectorHash != wObj.sectorHash {
-		t.Error("Error with sectorHash")
-	}
-	if w.scriptAtoms != wObj.scriptAtoms {
-		t.Error("Error with scriptAtoms")
-	}
-	if bytes.Compare(w.script, wObj.script) != 0 {
-		t.Error("Script mismatch")
-	}
 }

@@ -28,14 +28,8 @@ func (w Wallet) Weight() (weight uint32) {
 	walletByteCount := float64(len(w.Script))
 	walletAtomCount := walletByteCount / float64(AtomSize)
 	walletAtomCount += 1
+	walletAtomCount *= walletAtomMultiplier
 	return uint32(walletAtomCount)
-}
-
-// Takes an individual wallet and marshals it according the the sia
-// specification for marshalling wallets.
-func (w Wallet) Marshal() (b []byte, err error) {
-	b, err = siaencoding.Marshal(w)
-	return
 }
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
