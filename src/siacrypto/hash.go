@@ -1,5 +1,7 @@
 package siacrypto
 
+// Eventually, hash.go needs to be moved so that it uses libsodium
+
 import (
 	"crypto/sha512"
 )

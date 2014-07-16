@@ -1,9 +1,9 @@
 package client
 
 import (
+	"consensus"
 	"fmt"
 	"network"
-	"participant"
 	"quorum"
 	"quorum/script"
 	"siacrypto"
@@ -12,7 +12,7 @@ import (
 // send a user-specified script input
 func (c *Client) SendCustomInput(id quorum.WalletID, input []byte) (err error) {
 	return c.router.SendMessage(&network.Message{
-		Dest: participant.BootstrapAddress,
+		Dest: consensus.BootstrapAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
 			WalletID: id,
@@ -41,7 +41,7 @@ func (c *Client) RequestWallet(id quorum.WalletID, s []byte) (err error) {
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: script.ScriptInput{
-			WalletID: participant.BootstrapID,
+			WalletID: consensus.BootstrapID,
 			Input:    s,
 		},
 		Resp: nil,

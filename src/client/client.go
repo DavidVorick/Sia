@@ -1,9 +1,9 @@
 package client
 
 import (
+	"consensus"
 	"fmt"
 	"network"
-	"participant"
 	"path/filepath"
 	"quorum"
 	"siacrypto"
@@ -36,15 +36,15 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 		return
 	}
 	// set bootstrap address
-	participant.BootstrapAddress.Host = host
-	participant.BootstrapAddress.Port = port
-	participant.BootstrapAddress.ID = network.Identifier(id)
-	err = c.router.Ping(&participant.BootstrapAddress)
+	consensus.BootstrapAddress.Host = host
+	consensus.BootstrapAddress.Port = port
+	consensus.BootstrapAddress.ID = network.Identifier(id)
+	err = c.router.Ping(&consensus.BootstrapAddress)
 	if err != nil {
 		c.router.Close()
 	}
 
-	c.siblings[0] = quorum.NewSibling(participant.BootstrapAddress, nil)
+	c.siblings[0] = quorum.NewSibling(consensus.BootstrapAddress, nil)
 	c.RetrieveSiblings()
 	return
 }

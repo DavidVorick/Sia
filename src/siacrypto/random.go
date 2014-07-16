@@ -1,13 +1,21 @@
 package siacrypto
 
+// Should be moved to using libsodium
+
 import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
 )
 
-// RandomByteSlice takes an int as input and returns a []byte of length int that
-// is full of random values
+// RandomByte returns a random byte
+func RandomByte() byte {
+	randomByte := make([]byte, 1)
+	rand.Read(randomByte)
+	return randomByte[0]
+}
+
+// RandomByteSlice returns a slice of random bytes
 func RandomByteSlice(numBytes int) (randomBytes []byte) {
 	if numBytes < 0 {
 		randomBytes = make([]byte, 0)
@@ -19,14 +27,7 @@ func RandomByteSlice(numBytes int) (randomBytes []byte) {
 	return
 }
 
-// Generates and returns a random byte
-func RandomByte() byte {
-	randomByte := make([]byte, 1)
-	rand.Read(randomByte)
-	return randomByte[0]
-}
-
-// RandomInt() generates a random int [0, ceiling)
+// RandomInt generates a random int [0, ceiling)
 func RandomInt(ceiling int) (randInt int, err error) {
 	if ceiling < 1 {
 		err = fmt.Errorf("RandomInt: input must be greater than 0")
@@ -42,7 +43,8 @@ func RandomInt(ceiling int) (randInt int, err error) {
 	return
 }
 
-func RandomUInt16() (randInt uint16) {
+// RandomUint16 returns a random uint16, no ceiling
+func RandomUint16() (randInt uint16) {
 	maxint64 := int64(^uint64(0) >> 1)
 	bigInt := big.NewInt(maxint64)
 	randBig, err := rand.Int(rand.Reader, bigInt)
@@ -53,8 +55,8 @@ func RandomUInt16() (randInt uint16) {
 	return
 }
 
-// RandomUInt64() generates a random uint64 of any value
-func RandomUInt64() (randInt uint64) {
+// RandomUint64() generates a random uint64 of any value
+func RandomUint64() (randInt uint64) {
 	maxint64 := int64(^uint64(0) >> 1)
 	bigInt := big.NewInt(maxint64)
 	randBig, err := rand.Int(rand.Reader, bigInt)

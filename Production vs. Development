@@ -1,0 +1,18 @@
+This file documents the differences between production code and development
+code. The primary difference is the values of the constants.
+
+Step Length:
+	Development: 0.8 seconds
+	Production: 8 seconds
+
+Quorum Size:
+	Development: 4
+	Production: 32
+
+Atoms Per Quorum:
+	Development: 5000
+	Production: 4194304 (16 GB)
+
+Snapshot Length:
+	Development: 3
+	Production: 12

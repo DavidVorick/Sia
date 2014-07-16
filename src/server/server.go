@@ -1,9 +1,9 @@
 package main
 
 import (
+	"consensus"
 	"fmt"
 	"network"
-	"participant"
 )
 
 func joinQuorum() {
@@ -29,8 +29,8 @@ func joinQuorum() {
 	fmt.Scanf("%d", &port)
 	fmt.Print("Bootstrap ID: ")
 	fmt.Scanf("%d", &id)
-	participant.BootstrapAddress = network.Address{id, hostname, port}
-	err = networkServer.Ping(&participant.BootstrapAddress)
+	consensus.BootstrapAddress = network.Address{id, hostname, port}
+	err = networkServer.Ping(&consensus.BootstrapAddress)
 	if err != nil {
 		fmt.Println("Failed to ping bootstrap:", err)
 		return
@@ -41,7 +41,7 @@ func joinQuorum() {
 	fmt.Scanf("%s", &directory)
 
 	// create a participant
-	_, err = participant.CreateParticipant(networkServer, directory, false)
+	_, err = consensus.CreateParticipant(networkServer, directory, false)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -68,7 +68,7 @@ func establishQuorum() {
 	fmt.Scanf("%s", &directory)
 
 	// create a participant
-	_, err = participant.CreateParticipant(networkServer, directory, true)
+	_, err = consensus.CreateParticipant(networkServer, directory, true)
 	if err != nil {
 		fmt.Println(err)
 		return
