@@ -26,3 +26,9 @@ type Engine struct {
 	activeHistoryLength uint32
 	historyLock         sync.RWMutex
 }
+
+func (e *Engine) SetFilePrefix(prefix string) {
+	e.filePrefix = prefix
+	walletPrefix := prefix + ".wallet"
+	e.state.SetWalletPrefix(walletPrefix)
+}

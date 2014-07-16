@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"fmt"
 	"io"
 	"os"
@@ -52,4 +52,4 @@ func (p *Participant) DownloadSegment(ad AtomDownload, segment *[]byte) (err err
 		}
 	}
 	return
-}
+} */

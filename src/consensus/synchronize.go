@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"bytes"
 	"delta"
 	"encoding/gob"
@@ -102,4 +102,4 @@ func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
 		return
 	}
 	return
-}
+} */

@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"bytes"
 	"encoding/gob"
 	"errors"
@@ -289,4 +289,4 @@ func (sh *SignedHeartbeat) GobDecode(gobSignedHeartbeat []byte) (err error) {
 	}
 
 	return
-}
+} */

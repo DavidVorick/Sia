@@ -2,20 +2,19 @@ package consensus
 
 import (
 	"delta"
+	"errors"
 	"network"
-	"quorum"
-	"quorum/script"
 	"siacrypto"
+	"state"
+	"state/script"
 	"sync"
 )
 
 type Participant struct {
-	// The quorum in which the participant participates
 	engine delta.Engine
-	quorum quorum.Quorum
 
 	// Variables local to the participant
-	self      *quorum.Sibling      // the sibling object for this participant
+	self      *state.Sibling       // the sibling object for this participant
 	secretKey *siacrypto.SecretKey // secret key matching self.publicKey
 
 	// Network Related Variables
@@ -24,12 +23,12 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scriptInputs           []script.ScriptInput
-	scriptInputsLock       sync.Mutex
-	uploadAdvancements     []quorum.UploadAdvancement
+	scriptInputs     []script.ScriptInput
+	scriptInputsLock sync.Mutex
+	//uploadAdvancements     []quorum.UploadAdvancement
 	uploadAdvancementsLock sync.Mutex
-	heartbeats             [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
-	heartbeatsLock         sync.Mutex
+	//heartbeats             [state.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
+	heartbeatsLock sync.Mutex
 
 	// Consensus Algorithm Status
 	ticking     bool
@@ -47,7 +46,41 @@ type Participant struct {
 	recentHistory     string // file containing SnapshotLen blocks
 }
 
-func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
+var npNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
+
+func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+	if mr == nil {
+		err = npNilMessageRouter
+		return
+	}
+
+	p = new(Participant)
+
+	// Create a keypair for the participant.
+	publicKey, secretKey, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+	p.secretKey = secretKey
+
+	// Initialize the network components of the participant.
+	p.messageRouter = mr
+	p.self = &state.Sibling{
+		Address:   mr.Address(),
+		PublicKey: publicKey,
+	}
+	p.self.Address.ID = mr.RegisterHandler(p)
+
+	// Initialize the file prefix
+	p.engine.SetFilePrefix(filePrefix)
+
+	// Initialize currentStep to 1
+	p.currentStep = 1
+
+	return
+}
+
+/* func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
 	p.scriptInputsLock.Lock()
 	p.scriptInputs = append(p.scriptInputs, si)
 	p.scriptInputsLock.Unlock()
@@ -83,4 +116,4 @@ func (p *Participant) broadcast(m *network.Message) {
 		nm.Dest = listener
 		p.messageRouter.SendAsyncMessage(&nm)
 	}
-}
+} */

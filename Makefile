@@ -1,7 +1,7 @@
 gopath = GOPATH=$(CURDIR)
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lstdc++"
 govars = $(gopath) $(cgo_ldflags)
-packages = logger network siacrypto siaencoding siafiles erasure state state/script delta
+packages = logger network siacrypto siaencoding siafiles erasure state state/script delta consensus
 
 all: submodule-update install
 

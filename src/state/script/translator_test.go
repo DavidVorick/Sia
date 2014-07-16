@@ -1,6 +1,6 @@
 package script
 
-import (
+/* import (
 	"bytes"
 	"siacrypto"
 	"testing"
@@ -25,4 +25,4 @@ func TestTranslator(t *testing.T) {
 	if bytes.Compare(s, b) != 0 {
 		t.Fatal("scripts do not match after translate/untranslate")
 	}
-}
+}*/

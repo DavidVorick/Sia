@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"fmt"
 	"quorum"
 	"quorum/script"
@@ -145,4 +145,4 @@ func (hb *heartbeat) GobDecode(gobHB []byte) (err error) {
 	hb.scriptInputs[numScriptInputs-1].Input = gobHB[nextOffset:]
 
 	return
-}
+} */

@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"fmt"
 	"os"
 	"quorum"
@@ -100,4 +100,4 @@ func (p *Participant) ReceieveDiff(ud UploadDiff, _ *struct{}) (err error) {
 	p.uploadAdvancements = append(p.uploadAdvancements, ua)
 	p.uploadAdvancementsLock.Unlock()
 	return
-}
+} */

@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"quorum"
 	"time"
 )
@@ -28,4 +28,4 @@ func (p *Participant) tick() {
 		}
 		p.stepLock.Unlock()
 	}
-}
+} */

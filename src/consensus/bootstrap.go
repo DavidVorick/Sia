@@ -1,13 +1,7 @@
 package consensus
 
 import (
-	"delta"
-	"fmt"
 	"network"
-	"quorum"
-	"quorum/script"
-	"siacrypto"
-	"time"
 )
 
 const (
@@ -33,47 +27,20 @@ The Bootstrapping Process
 
 */
 
-// currently a static variable, eventually there will be an entire process for
-// finding address to bootstrap to.
-var BootstrapAddress network.Address
-
-// CreateParticipant initializes a participant, and then either sets itself up
-// as the bootstrap or establishes itself as a sibling on an existing network
-func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
-	// check for non-nil messageRouter
-	if messageRouter == nil {
-		err = fmt.Errorf("Cannot initialize with a nil messageRouter")
-		return
-	}
-
-	// create a signature keypair for this participant
-	pubKey, secKey, err := siacrypto.CreateKeyPair()
+func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
 
-	// initialize State with default values and keypair
-	p = &Participant{
-		messageRouter: messageRouter,
-		secretKey:     secKey,
-		currentStep:   1,
-	}
+	p.synchronized = true
+	return
+}
 
-	// Can this be merged into one step?
-	address := messageRouter.Address()
-	address.ID = messageRouter.RegisterHandler(p)
-	p.self = quorum.NewSibling(address, pubKey)
-
-	// initialize heartbeat maps
-	for i := range p.heartbeats {
-		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
-	}
-
-	// initialize disk variables
-	p.recentBlocks = make(map[uint32]*delta.Block)
-	p.quorum.SetWalletPrefix(participantPrefix)
-	p.quorum.Init()
-	p.activeHistoryStep = delta.SnapshotLength // trigger cycling on the history during the first save
+/* // CreateParticipant initializes a participant, and then either sets itself up
+// as the bootstrap or establishes itself as a sibling on an existing network
+func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
+	p = NewParticipant(messageRouter)
 
 	// if we are the bootstrap participant, initialize a new quorum
 	if bootstrap {
@@ -81,7 +48,7 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 		p.synchronized = true
 
 		// create the bootstrap wallet
-		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 1234000), script.BootstrapScript)
+		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 25000000), script.BootstrapScript)
 		wallet := p.quorum.LoadWallet(BootstrapID)
 
 		// add self as a sibling
@@ -253,4 +220,4 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	})
 
 	return
-}
+}*/
