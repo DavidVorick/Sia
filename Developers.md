@@ -25,4 +25,6 @@ GobHooks:
 Encoding is for data that stays on the computer, whether it is going to disk, or being hashed, or whatever. Encoding stays on the disk, has an arbitrary implementation, and is tracked by the protocol.
 Marshalling is for objects that go over the wire, or have their hashes compared. Marshalling must follow an exact specification set out by the protocol.
 
+Each time the weight of the quorum is changed in an upward direction, must check that AtomsPerQuorum is not being exceeded.
+
 This is a work in progress.

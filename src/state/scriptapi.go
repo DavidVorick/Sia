@@ -1,11 +1,7 @@
 package state
 
-/* import (
-	"bytes"
-	"encoding/gob"
+import (
 	"errors"
-	"os"
-	"siacrypto"
 )
 
 const (
@@ -14,55 +10,58 @@ const (
 	AddSiblingMaxCost   = 50
 )
 
+var cwInsufficientBalance = errors.New("Insufficient balance to create a wallet with the given balance.")
+var cwWalletExists = errors.New("Wallet of given ID already exists.")
+var cwInsufficientAtoms = errors.New("Insufficient atoms in quorum to create the given wallet.")
+
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
 // If a wallet of that id already exists then the process aborts.
-func (s *State) CreateWallet(w *Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
+func (s *State) CreateWallet(w Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
+	// Check that the wallet making the call has enough funds to deposit into the
+	// wallet being created.
 	cost += 1
 	if w.Balance.Compare(balance) < 0 {
-		err = errors.New("insufficient balance")
+		err = cwInsufficientBalance
 		return
 	}
 
 	// check if the new wallet already exists
 	cost += 2
-	wn := s.retrieve(id)
+	wn := s.walletNode(id)
 	if wn != nil {
-		err = errors.New("wallet already exists")
+		err = cwWalletExists
 		return
 	}
 
-	// create a wallet node to insert into the walletTree
-	cost += 5
+	// Create a new wallet based on the inputs.
+	cost += 2
+	newWallet := Wallet{
+		ID:      id,
+		Balance: balance,
+		Script:  initialScript,
+	}
+
+	// Create a wallet node and insert it into the wallet tree.
 	wn = new(walletNode)
 	wn.id = id
-	wn.weight = walletAtomMultiplier
-	tmp := len(initialScript)
-	tmp -= 1024
-	var scriptAtoms uint16
-	for tmp > 0 {
-		wn.weight += walletAtomMultiplier
-		tmp -= 4096
-		scriptAtoms += 1
-	}
+	wn.weight = int(newWallet.Weight())
 	if s.walletRoot.weight+wn.weight > AtomsPerQuorum {
-		err = errors.New("insufficient atoms in quorum")
+		err = cwInsufficientAtoms
 		return
 	}
-	s.insert(wn)
+	cost += 3
+	s.insertWalletNode(wn)
 
-	// fill out a basic wallet struct from the inputs
-	nw := new(Wallet)
-	nw.ID = id
-	nw.Balance = balance
-	nw.Script = initialScript
-	s.SaveWallet(nw)
+	// Save the wallet
+	s.SaveWallet(newWallet)
 
 	w.Balance.Subtract(balance)
 
 	return
 }
 
+/*
 // "Cheat" function for initializing a bootstrap wallet
 func (s *State) CreateBootstrapWallet(id WalletID, Balance Balance, initialScript []byte) {
 	// check if the new wallet already exists
@@ -212,65 +211,6 @@ type UploadArgs struct {
 	Deadline      uint32
 }
 
-func (ua *UploadArgs) GobEncode() (gobUA []byte, err error) {
-	if ua == nil {
-		return
-	}
-	b := new(bytes.Buffer)
-	encoder := gob.NewEncoder(b)
-
-	err = encoder.Encode(ua.ParentHash)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(ua.NewHashSet)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(ua.AtomsChanged)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(ua.Confirmations)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(ua.Deadline)
-	if err != nil {
-		return
-	}
-
-	gobUA = b.Bytes()
-	return
-}
-
-func (ua *UploadArgs) GobDecode(gobUA []byte) (err error) {
-	b := bytes.NewBuffer(gobUA)
-	decoder := gob.NewDecoder(b)
-
-	err = decoder.Decode(&ua.ParentHash)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&ua.NewHashSet)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&ua.AtomsChanged)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&ua.Confirmations)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&ua.Deadline)
-	if err != nil {
-		return
-	}
-	return
-}
-
 // First sectors are allocated, and then changes are uploaded to them. This
 // creates a change.
 func (s *State) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
@@ -344,4 +284,4 @@ func (s *State) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [
 	q.updateWeight(w.ID, int(atomsChanged))
 	q.insertEvent(&u)
 	return
-} */
+}*/
