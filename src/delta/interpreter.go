@@ -1,4 +1,4 @@
-package script
+package delta
 
 import (
 	"errors"

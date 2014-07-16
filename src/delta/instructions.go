@@ -1,4 +1,4 @@
-package script
+package delta
 
 import (
 	"errors"
@@ -601,43 +601,43 @@ func op_add_sibling(args []byte) (err error) {
 
 func op_add_wallet(args []byte) (err error) {
 	/*
-		    lbalv, _ := pop()
-			ubalv, _ := pop()
-			idv, err := pop()
-			if err != nil {
-				return
-			}
+		lbalv, _ := pop()
+		ubalv, _ := pop()
+		idv, err := pop()
+		if err != nil {
+			return
+		}
 
-			// convert values to proper types
-			id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
-			lbal := siaencoding.DecUint64(lbalv[:])
-			ubal := siaencoding.DecUint64(ubalv[:])
-			bal := quorum.NewBalance(ubal, lbal)
+		// convert values to proper types
+		id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+		lbal := siaencoding.DecUint64(lbalv[:])
+		ubal := siaencoding.DecUint64(ubalv[:])
+		bal := quorum.NewBalance(ubal, lbal)
 
-			// create env.wallet
-			newscript := env.buffers[args[0]]
-			_, err = env.quorum.CreateWallet(env.wallet, id, bal, newscript)
+		// create env.wallet
+		newscript := env.buffers[args[0]]
+		_, err = env.quorum.CreateWallet(env.wallet, id, bal, newscript)
 	*/
 	return
 }
 
 func op_send(args []byte) (err error) {
 	/*
-		    lbalv, _ := pop()
-			ubalv, _ := pop()
-			idv, err := pop()
-			if err != nil {
-				return
-			}
+		lbalv, _ := pop()
+		ubalv, _ := pop()
+		idv, err := pop()
+		if err != nil {
+			return
+		}
 
-			// convert values to proper types
-			id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
-			lbal := siaencoding.DecUint64(lbalv[:])
-			ubal := siaencoding.DecUint64(ubalv[:])
-			bal := quorum.NewBalance(ubal, lbal)
+		// convert values to proper types
+		id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
+		lbal := siaencoding.DecUint64(lbalv[:])
+		ubal := siaencoding.DecUint64(ubalv[:])
+		bal := quorum.NewBalance(ubal, lbal)
 
-			// send
-			_, err = env.quorum.Send(env.wallet, bal, id)
+		// send
+		_, err = env.quorum.Send(env.wallet, bal, id)
 	*/
 	return
 }
@@ -673,34 +673,34 @@ func op_switch(args []byte) (err error) {
 
 func op_resize_sec(args []byte) (err error) {
 	/*
-		    a, err := pop()
-			if err != nil {
-				return
-			}
-			atoms := siaencoding.DecUint16(a[:2])
-			_, _, err = env.quorum.ResizeSectorErase(env.wallet, atoms, args[0])
+		a, err := pop()
+		if err != nil {
+			return
+		}
+		atoms := siaencoding.DecUint16(a[:2])
+		_, _, err = env.quorum.ResizeSectorErase(env.wallet, atoms, args[0])
 	*/
 	return
 }
 
 func op_prop_upload(args []byte) (err error) {
 	/*
-		    // decode function arguments
-			var ua quorum.UploadArgs
-			err = ua.GobDecode(env.buffers[args[0]])
-			if err != nil {
-				return
-			}
+		// decode function arguments
+		var ua quorum.UploadArgs
+		err = ua.GobDecode(env.buffers[args[0]])
+		if err != nil {
+			return
+		}
 
-			// call function
-			_, _, err = env.quorum.ProposeUpload(
-				env.wallet,
-				ua.ParentHash,
-				ua.NewHashSet,
-				ua.AtomsChanged,
-				ua.Confirmations,
-				ua.Deadline,
-			)
+		// call function
+		_, _, err = env.quorum.ProposeUpload(
+			env.wallet,
+			ua.ParentHash,
+			ua.NewHashSet,
+			ua.AtomsChanged,
+			ua.Confirmations,
+			ua.Deadline,
+		)
 	*/
 	return
 }
