@@ -1,5 +1,10 @@
 package consensus
 
+type ConsensusSynchronize struct {
+	CurrentStep byte
+	// Heartbeats
+}
+
 /* import (
 	"bytes"
 	"delta"
@@ -11,13 +16,6 @@ package consensus
 type SnapshotWalletsInput struct {
 	Snapshot bool
 	Ids      []quorum.WalletID
-}
-
-// Contains Synchronization information for the quorum.
-// Eventually this should include an offset.
-type Synchronize struct {
-	currentStep int
-	heartbeats  [quorum.QuorumSize]map[siacrypto.Hash]*heartbeat
 }
 
 func (p *Participant) RecentSnapshot(_ struct{}, q *quorum.Quorum) (err error) {
@@ -64,42 +62,5 @@ func (p *Participant) Synchronize(_ struct{}, s *Synchronize) (err error) {
 	p.heartbeatsLock.Lock()
 	s.heartbeats = p.heartbeats
 	p.heartbeatsLock.Unlock()
-	return
-}
-
-func (s *Synchronize) GobEncode() (gobSynchronize []byte, err error) {
-	if s == nil {
-		s = new(Synchronize)
-	}
-
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(s.currentStep)
-	if err != nil {
-		return
-	}
-	err = encoder.Encode(s.heartbeats)
-	if err != nil {
-		return
-	}
-	gobSynchronize = w.Bytes()
-	return
-}
-
-func (s *Synchronize) GobDecode(gobSynchronize []byte) (err error) {
-	if s == nil {
-		s = new(Synchronize)
-	}
-
-	r := bytes.NewBuffer(gobSynchronize)
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&s.currentStep)
-	if err != nil {
-		return
-	}
-	err = decoder.Decode(&s.heartbeats)
-	if err != nil {
-		return
-	}
 	return
 } */

@@ -36,7 +36,7 @@ func (e *Engine) SetFilePrefix(prefix string) {
 // NewBootstrapEngine() returns an engine that has its variables set so that
 // the engine can function as the first sibling in a quorum. This requires a
 // call to NewBootstrapState()
-func NewBootstrapEngine(sib *state.Sibling) (e Engine, err error) {
-	e.state, err = state.NewBootstrapState(sib)
+func (e *Engine) BootstrapEngine(sib *state.Sibling) (err error) {
+	err = e.state.BootstrapState(sib)
 	return
 }

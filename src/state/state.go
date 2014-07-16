@@ -71,7 +71,7 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 // NewBootstrapState initializes the quorum so that there is a bootstrap wallet
 // which has funds. This wallet can then be used by other potential siblings as
 // a fountain, and the network has some way to get the ball rolling.
-func NewBootstrapState(sib *Sibling) (s State, err error) {
+func (s *State) BootstrapState(sib *Sibling) (err error) {
 	// Create the bootstrap wallet, which acts as a fountain to get the economy
 	// started.
 	w := Wallet{

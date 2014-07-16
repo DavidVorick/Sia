@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"delta"
 	"network"
 )
 
@@ -24,40 +23,37 @@ The Bootstrapping Process
 
 */
 
+// CreateBootstrapParticipant returns a participant that is participating as
+// the first and only sibling on a new quorum.
 func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+	// Call NewParticipant, which gives a participant that has all of the basic fields initialized.
 	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
 
-	p.engine, err = delta.NewBootstrapEngine(p.self)
+	// Call NewBootstrapEngine, which returns an engine that has a quorum with a
+	// bootstrap/fountain wallet, and a sibling as described by p.self. The
+	// sibling has also been given some funds.
+	err = p.engine.BootstrapEngine(p.self)
 	if err != nil {
 		return
 	}
 
+	// Set synchronized to true for the ticking.
 	p.synchronized = true
+	return
+}
+
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+	// 1. Become a listener on the quorum and begin storing the blocks that get
+	// created.
 	return
 }
 
 /* // CreateParticipant initializes a participant, and then either sets itself up
 // as the bootstrap or establishes itself as a sibling on an existing network
 func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
-	p = NewParticipant(messageRouter)
-
-	// if we are the bootstrap participant, initialize a new quorum
-		// add self as a sibling
-		p.quorum.AddSibling(wallet, p.self)
-
-		siblings := p.quorum.Siblings()
-		if siblings[0] == nil {
-			err = fmt.Errorf("failed to add self to quorum")
-			return
-		}
-		p.self = siblings[0]
-		p.newSignedHeartbeat()
-		go p.tick()
-		return
-	}
 
 	////////////////////////////
 	// Bootstrap As A Hopeful //
