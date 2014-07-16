@@ -35,7 +35,7 @@ func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
 
 // NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
 // It then spawns a serverHandler with a specified message.
-// It is the callers's responsibility to close the TCP connection, via RPCServer.Close().
+// It is the caller's responsibility to close the TCP connection, via RPCServer.Close().
 func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
@@ -74,12 +74,11 @@ func (rpcs *RPCServer) serverHandler() {
 		conn, err := rpcs.listener.Accept()
 		if err != nil {
 			return
-		} else {
-			go func() {
-				rpcs.rpcServ.ServeConn(conn)
-				conn.Close()
-			}()
 		}
+		go func(c net.Conn) {
+			rpcs.rpcServ.ServeConn(c)
+			c.Close()
+		}(conn)
 	}
 }
 
