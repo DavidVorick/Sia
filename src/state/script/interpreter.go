@@ -3,7 +3,7 @@ package script
 import (
 	"errors"
 	"fmt"
-	"quorum"
+	"state"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 )
 
 type ScriptInput struct {
-	WalletID quorum.WalletID
+	WalletID state.WalletID
 	Input    []byte
 }
 
@@ -86,8 +86,8 @@ var (
 	buffers   [256][]byte
 	stack     *stackElem
 	stackLen  int
-	wallet    quorum.Wallet
-	q         *quorum.State
+	wallet    state.Wallet
+	q         *state.State
 	// resource pools
 	instBalance int
 	costBalance int
@@ -108,7 +108,7 @@ func deductResources(op instruction) error {
 }
 
 // Execute interprets a script on a set of inputs and returns the execution cost.
-func (si *ScriptInput) Execute(q_ *quorum.State) (totalCost int, err error) {
+func (si *ScriptInput) Execute(q_ *state.State) (totalCost int, err error) {
 	if si == nil {
 		err = errors.New("nil ScriptInput")
 	}

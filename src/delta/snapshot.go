@@ -3,8 +3,8 @@ package delta
 import (
 	"fmt"
 	"os"
-	"quorum"
 	"siaencoding"
+	"state"
 )
 
 const (
@@ -30,8 +30,8 @@ const (
 // 6. Events
 
 type snapshotOffsetTable struct {
-	quorumMetaDataOffset uint32
-	quorumMetaDataLength uint32
+	stateMetaDataOffset uint32
+	stateMetaDataLength uint32
 
 	walletLookupTableOffset uint32
 	walletLookupTableLength uint32
@@ -43,22 +43,22 @@ type snapshotOffsetTable struct {
 func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 	b = make([]byte, snapshotOffsetTableLength)
 	var offset int
-	qmdo := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	qmdo := siaencoding.EncUint32(s.stateMetaDataOffset)
 	copy(b[offset:], qmdo)
 	offset += 4
-	qmdl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	qmdl := siaencoding.EncUint32(s.stateMetaDataLength)
 	copy(b[offset:], qmdl)
 	offset += 4
-	wlto := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	wlto := siaencoding.EncUint32(s.walletLookupTableOffset)
 	copy(b[offset:], wlto)
 	offset += 4
-	wltl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	wltl := siaencoding.EncUint32(s.walletLookupTableLength)
 	copy(b[offset:], wltl)
 	offset += 4
-	elto := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	elto := siaencoding.EncUint32(s.eventLookupTableOffset)
 	copy(b[offset:], elto)
 	offset += 4
-	eltl := siaencoding.EncUint32(s.quorumMetaDataOffset)
+	eltl := siaencoding.EncUint32(s.eventLookupTableLength)
 	copy(b[offset:], eltl)
 	return
 }
@@ -70,9 +70,9 @@ func (s *snapshotOffsetTable) decode(b []byte) (err error) {
 	}
 
 	var offset int
-	s.quorumMetaDataOffset = siaencoding.DecUint32(b[offset:])
+	s.stateMetaDataOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
-	s.quorumMetaDataLength = siaencoding.DecUint32(b[offset:])
+	s.stateMetaDataLength = siaencoding.DecUint32(b[offset:])
 	offset += 4
 	s.walletLookupTableOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
@@ -85,7 +85,7 @@ func (s *snapshotOffsetTable) decode(b []byte) (err error) {
 }
 
 type walletOffset struct {
-	id     quorum.WalletID
+	id     state.WalletID
 	offset uint32
 	length uint32
 }
@@ -111,7 +111,7 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 	}
 
 	var offset int
-	wo.id = quorum.WalletID(siaencoding.DecUint64(b[offset:]))
+	wo.id = state.WalletID(siaencoding.DecUint64(b[offset:]))
 	offset += 8
 	wo.offset = siaencoding.DecUint32(b[offset:])
 	offset += 4
@@ -144,11 +144,11 @@ func (e *Engine) SaveSnapshot() (err error) {
 		if err != nil {
 			return
 		}
-		offsetTable.quorumMetaDataLength = uint32(len(encodedQuorumMetaData))
-		offsetTable.quorumMetaDataOffset = uint32(currentOffset)
+		offsetTable.stateMetaDataLength = uint32(len(encodedQuorumMetaData))
+		offsetTable.stateMetaDataOffset = uint32(currentOffset)
 
 		// Write the encoded quorum to the snapshot file.
-		_, err = file.Seek(int64(offsetTable.quorumMetaDataOffset), 0)
+		_, err = file.Seek(int64(offsetTable.stateMetaDataOffset), 0)
 		if err != nil {
 			return
 		}
@@ -173,7 +173,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 		// Write wallets, update lookup table.
 		for i := range walletList {
 			var encodedWallet []byte
-			var wallet quorum.Wallet
+			var wallet state.Wallet
 			wallet, err = e.state.LoadWallet(walletList[i])
 			if err != nil {
 				return

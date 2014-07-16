@@ -1,4 +1,4 @@
-package quorum
+package state
 
 // A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and

@@ -1,9 +1,9 @@
 package delta
 
 import (
-	"quorum"
-	"quorum/script"
 	"siacrypto"
+	"state"
+	"state/script"
 )
 
 const (
@@ -11,10 +11,10 @@ const (
 )
 
 // The heartbeat is the set of information that siblings are required to submit
-// every block. Each block contains an array of [quorum.QuorumSize] heartbeats,
+// every block. Each block contains an array of [state.QuorumSize] heartbeats,
 // and sets the value to 'nil' if nothing was submitted.
 type Heartbeat struct {
-	Entropy quorum.Entropy
+	Entropy state.Entropy
 	// storage proof
 	Signature siacrypto.Signature
 }
@@ -31,7 +31,7 @@ type Block struct {
 	// parentQuorum
 
 	// Heartbeats for each sibling
-	Heartbeats [quorum.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
+	Heartbeats [state.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
 
 	// Aggregate of non-required information submitted to the quorum
 	ScriptInputs []script.ScriptInput

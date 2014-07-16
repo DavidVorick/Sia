@@ -3,7 +3,7 @@
 package delta
 
 import (
-	"quorum"
+	"state"
 	"sync"
 )
 
@@ -15,7 +15,7 @@ import (
 // activeHistoryHead needs to be initialized to ^uint32(0) - uint32(SnapshotLenght - 1)
 type Engine struct {
 	// The State
-	state quorum.State
+	state state.State
 
 	// Engine Variables
 	filePrefix string

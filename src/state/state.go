@@ -2,7 +2,7 @@
 // 1. Send
 // 2. AddNewSibling
 // 3. CreateWallet
-package quorum
+package state
 
 import (
 	"siaencoding"

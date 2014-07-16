@@ -2,8 +2,8 @@ package script
 
 import (
 	"os"
-	"quorum"
 	"siacrypto"
+	"state"
 	"testing"
 )
 

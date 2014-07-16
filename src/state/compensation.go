@@ -1,4 +1,4 @@
-package quorum
+package state
 
 // chargeWallets subtracts a balance from the wallet depending on the number of
 // siblings in the quorum, which is measured by 'multiplier'.

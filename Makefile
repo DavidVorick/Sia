@@ -1,7 +1,7 @@
 gopath = GOPATH=$(CURDIR)
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lstdc++"
 govars = $(gopath) $(cgo_ldflags)
-packages = logger network siacrypto siaencoding siafiles erasure quorum quorum/script delta
+packages = logger network siacrypto siaencoding siafiles erasure state state/script delta
 
 all: submodule-update install
 
@@ -45,8 +45,8 @@ test-consensus: libraries
 test-delta: libraries
 	$(govars) go test -v -race delta
 
-test-quorum: libraries
-	$(govars) go test -v -race quorum
+test-state: libraries
+	$(govars) go test -v -race state
 
 dependencies: submodule-update race-libs directories
 	cd src/siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
@@ -57,4 +57,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-quorum dependencies race-libs docs directories
+.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs directories
