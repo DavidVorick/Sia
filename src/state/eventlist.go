@@ -1,5 +1,13 @@
 package state
 
+// The Event type is a generic type that is meant to be switched upon. Each
+// event has its own set of functions but they all go into a single event list
+// together.
+type Event struct {
+	Type string
+	EncodedEvent []byte
+}
+
 /* import (
 	"siacrypto"
 )
