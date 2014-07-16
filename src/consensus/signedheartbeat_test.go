@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"network"
 	"os"
 	"quorum"
@@ -217,5 +217,5 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		p.currentStep = 1
 		p.stepLock.Unlock()
 		time.Sleep(time.Second)
-		time.Sleep(StepDuration)*/
-}
+		time.Sleep(StepDuration)
+} */

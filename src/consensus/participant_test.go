@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/* import (
 	"network"
 	"os"
 	"testing"
@@ -51,4 +51,4 @@ func TestCreateParticipant(t *testing.T) {
 	}
 
 	// test creating another participant that doesn't have the bootstrap address
-}
+} */

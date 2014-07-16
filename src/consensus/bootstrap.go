@@ -1,11 +1,8 @@
 package consensus
 
 import (
+	"delta"
 	"network"
-)
-
-const (
-	BootstrapID = 24
 )
 
 /*
@@ -33,6 +30,11 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 		return
 	}
 
+	p.engine, err = delta.NewBootstrapEngine(p.self)
+	if err != nil {
+		return
+	}
+
 	p.synchronized = true
 	return
 }
@@ -43,14 +45,6 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 	p = NewParticipant(messageRouter)
 
 	// if we are the bootstrap participant, initialize a new quorum
-	if bootstrap {
-		BootstrapAddress = p.self.Address()
-		p.synchronized = true
-
-		// create the bootstrap wallet
-		p.quorum.CreateBootstrapWallet(BootstrapID, quorum.NewBalance(0, 25000000), script.BootstrapScript)
-		wallet := p.quorum.LoadWallet(BootstrapID)
-
 		// add self as a sibling
 		p.quorum.AddSibling(wallet, p.self)
 

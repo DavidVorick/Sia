@@ -61,35 +61,23 @@ func (s *State) CreateWallet(w Wallet, id WalletID, balance Balance, initialScri
 	return
 }
 
-/*
-// "Cheat" function for initializing a bootstrap wallet
-func (s *State) CreateBootstrapWallet(id WalletID, Balance Balance, initialScript []byte) {
-	// check if the new wallet already exists
-	wn := s.retrieve(id)
-	if wn != nil {
-		panic("bootstrap wallet already exists")
+// Currently, AddSibling tries to add the new sibling to the existing quorum
+// and throws the sibling out if there's no space. Once quorums are
+// communicating, the AddSibling routine will always succeed.
+func (s *State) AddSibling(w *Wallet, sib *Sibling) (cost int) {
+	cost = 50
+	for i := byte(0); i < QuorumSize; i++ {
+		if s.Metadata.Siblings[i] == nil {
+			sib.Index = byte(i)
+			sib.WalletID = w.ID
+			s.Metadata.Siblings[i] = sib
+			break
+		}
 	}
-
-	// create a wallet node to insert into the walletTree
-	wn = new(walletNode)
-	wn.id = id
-	wn.weight = walletAtomMultiplier
-	tmp := len(initialScript)
-	tmp -= 1024
-	for tmp > 0 {
-		wn.weight += 1
-		tmp -= 4096
-	}
-	s.insert(wn)
-
-	// fill out a basic wallet struct from the inputs
-	nw := new(Wallet)
-	nw.ID = id
-	nw.Balance = Balance
-	nw.Script = initialScript
-	s.SaveWallet(nw)
+	return
 }
 
+/*
 func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
 	cost += 1
 	if w.Balance.Compare(amount) < 0 {
@@ -107,24 +95,6 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 	w.Balance.Subtract(amount)
 	destWallet.Balance.Add(amount)
 	s.SaveWallet(destWallet)
-	return
-}
-
-// Currently, AddSibling tries to add the new sibling to the existing quorum
-// and throws the sibling out if there's no space. Once quorums are
-// communicating, the AddSibling routine will always succeed.
-func (s *State) AddSibling(w *Wallet, sib *Sibling) (cost int) {
-	println("adding new sibling")
-	cost = 50
-	for i := byte(0); i < QuorumSize; i++ {
-		if s.siblings[i] == nil {
-			sib.index = byte(i)
-			sib.wallet = w.ID
-			s.siblings[i] = sib
-			println("placed hopeful at index", i)
-			break
-		}
-	}
 	return
 }
 

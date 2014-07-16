@@ -1,6 +1,6 @@
 package consensus
 
-import (
+/*import (
 	"quorum"
 	"quorum/script"
 	"siacrypto"
@@ -78,4 +78,4 @@ func TestHeartbeatEncoding(t *testing.T) {
 			}
 		}
 	}
-}
+}*/

@@ -32,3 +32,11 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	walletPrefix := prefix + ".wallet"
 	e.state.SetWalletPrefix(walletPrefix)
 }
+
+// NewBootstrapEngine() returns an engine that has its variables set so that
+// the engine can function as the first sibling in a quorum. This requires a
+// call to NewBootstrapState()
+func NewBootstrapEngine(sib *state.Sibling) (e Engine, err error) {
+	e.state, err = state.NewBootstrapState(sib)
+	return
+}
