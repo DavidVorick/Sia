@@ -220,15 +220,15 @@ func TestSigning(t *testing.T) {
 	}
 
 	// verify an imposter signature
-	signedMessage.Signature[0] = 0
+	signedMessage.Signature[0] = ^signedMessage.Signature[0]
 	verification = publicKey.Verify(&signedMessage)
 	if verification {
 		t.Error("sucessfully verified an invalid message")
 	}
 
 	// restore the signature and fake a message
-	signedMessage.Signature[0] = 0
-	signedMessage.Message[0] = 0
+	signedMessage.Signature[0] = ^signedMessage.Signature[0]
+	signedMessage.Message[0] = ^signedMessage.Message[0]
 	verification = publicKey.Verify(&signedMessage)
 	if verification {
 		t.Error("successfully verified a corrupted message")
