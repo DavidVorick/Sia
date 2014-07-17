@@ -1,6 +1,6 @@
 # Bytecode Specification #
 
-Scripting is an integral part of the Sia network. Every wallet has a script associated with it, and during compilation each script executes using inputs supplied to it in heartbeats. Scripts are written in a Sia-specific *bytecode*, a low-level language similar to assembly. Low-level languages are more susceptible to programming errors, so most users should stick with the scripts provided in [scripts.go](scripts.go). However, anyone looking to take full advantage of the scripting system should study the specification outlined here.
+Scripting is an integral part of the Sia network. Every wallet has a script associated with it, and during compilation each script executes using inputs supplied to it in heartbeats. Scripts are written in a Sia-specific *bytecode*, a low-level language similar to assembly. Low-level languages are more susceptible to programming errors, so most users should stick with the scripts provided in [scripts.go](../src/delta/scripts.go). However, anyone looking to take full advantage of the scripting system should study the specification outlined here.
 
 ## Properties ##
 
@@ -18,7 +18,7 @@ The Sia bytecode also makes use of a separate pointer call the *data pointer*, o
 
 ## Resources ##
 
-Scripts have access to a finite quantity of resources, including wallet balance, number of instructions, allocated memory, and more. The exact mechanics of how resources are allocated and charged are still being worked out. Exhausting any of the resources will cause the script to terminate. Support may be added later for making sets of instructions "atomic:" either all of them will execute or none of them will. 
+Scripts have access to a finite quantity of resources, including wallet balance, number of instructions, allocated memory, and more. The exact mechanics of how resources are allocated and charged are still being worked out. Exhausting any of the resources will cause the script to terminate. Support may be added later for making sets of instructions "atomic:" either all of them will execute or none of them will.
 
 ## Termination ##
 
@@ -42,7 +42,7 @@ Most of the more complex operations, such as proposing an upload to the quorum, 
 
 ## List of bytecodes ##
 
-Note that some of these descriptions are insufficient to explain the format of the data to be passed as arguments or other details. For a more exact specification of the function of each opcode, consult their implementations in [instructions.go](instructions.go)
+Note that some of these descriptions are insufficient to explain the format of the data to be passed as arguments or other details. For a more exact specification of the function of each opcode, consult their implementations in [instructions.go](../src/delta/instructions.go)
 
 | Hex  | Name          | Args | Description                                                                            |
 |------|---------------|------|----------------------------------------------------------------------------------------|

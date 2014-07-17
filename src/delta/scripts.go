@@ -1,4 +1,4 @@
-package script
+package delta
 
 import (
 	"siacrypto"
@@ -18,7 +18,7 @@ func appendAll(slices ...[]byte) []byte {
 		length += len(s)
 	}
 	all := make([]byte, length)
-	var i int
+	i := 0
 	for _, s := range slices {
 		i += copy(all[i:], s)
 	}

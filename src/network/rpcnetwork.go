@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"net/rpc"
+	"net/rpc/jsonrpc"
 	"reflect"
 	"strconv"
 	"strings"
@@ -35,7 +36,7 @@ func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
 
 // NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
 // It then spawns a serverHandler with a specified message.
-// It is the callers's responsibility to close the TCP connection, via RPCServer.Close().
+// It is the caller's responsibility to close the TCP connection, via RPCServer.Close().
 func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
@@ -74,19 +75,15 @@ func (rpcs *RPCServer) serverHandler() {
 		conn, err := rpcs.listener.Accept()
 		if err != nil {
 			return
-		} else {
-			go func() {
-				rpcs.rpcServ.ServeConn(conn)
-				conn.Close()
-			}()
 		}
+		go rpcs.rpcServ.ServeCodec(jsonrpc.NewServerCodec(conn))
 	}
 }
 
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
 // It times out after waiting for half the step duration.
 func (rpcs *RPCServer) SendMessage(m *Message) error {
-	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		return err
 	}
@@ -108,7 +105,7 @@ func (rpcs *RPCServer) SendMessage(m *Message) error {
 // It returns a channel that will contain an error value when the request completes.
 func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
 	errChan := make(chan error, 2)
-	conn, err := rpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		errChan <- err
 		return errChan
@@ -134,7 +131,7 @@ func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
 }
 
 func (rpcs *RPCServer) Ping(a *Address) (err error) {
-	conn, err := rpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
+	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
 	if err == nil {
 		conn.Close()
 	}

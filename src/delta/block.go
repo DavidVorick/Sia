@@ -3,7 +3,6 @@ package delta
 import (
 	"siacrypto"
 	"state"
-	"state/script"
 )
 
 const (
@@ -34,6 +33,6 @@ type Block struct {
 	Heartbeats [state.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
 
 	// Aggregate of non-required information submitted to the quorum
-	ScriptInputs []script.ScriptInput
+	ScriptInputs []ScriptInput
 	//UploadAdvancements []quorum.UploadAdvancement
 }

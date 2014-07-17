@@ -9,13 +9,11 @@ import (
 // our own function however because if the spec is changed to use an encoding
 // other than json (which is likely), then it we will only need to make changes
 // in one place.
-func Marshal(v interface{}) (b []byte, err error) {
-	b, err = json.Marshal(v)
-	return
+func Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
 }
 
 // Unmarshal is the inverse of Marshal.
-func Unmarshal(b []byte, v interface{}) (err error) {
-	err = json.Unmarshal(b, v)
-	return
+func Unmarshal(b []byte, v interface{}) error {
+	return json.Unmarshal(b, v)
 }
