@@ -14,7 +14,6 @@ const (
 // and sets the value to 'nil' if nothing was submitted.
 type Heartbeat struct {
 	ParentBlock siacrypto.Hash
-	ParentState siacrypto.Hash
 	Entropy     state.Entropy
 	// storage proof
 	Signature siacrypto.Signature

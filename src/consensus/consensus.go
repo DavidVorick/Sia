@@ -48,9 +48,9 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Check that the Update matches the current block. If it doesn't, it has one
 	// step to match the next block.
-	if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock || su.Update.Heartbeat.ParentState != p.engine.Metadata().ParentState {
+	if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
 		time.Sleep(StepDuration)
-		if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock || su.Update.Heartbeat.ParentState != p.engine.Metadata().ParentState {
+		if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
 			err = hsuerrInvalidParent
 			fmt.Println(err)
 			return
