@@ -70,7 +70,7 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.self.Address.ID = mr.RegisterHandler(p)
 
 	// Initialize the file prefix
-	p.engine.SetFilePrefix(filePrefix)
+	p.engine.Initialize(filePrefix)
 
 	// Initialize currentStep to 1
 	p.currentStep = 1

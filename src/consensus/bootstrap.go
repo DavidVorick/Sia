@@ -35,7 +35,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 	// Call NewBootstrapEngine, which returns an engine that has a quorum with a
 	// bootstrap/fountain wallet, and a sibling as described by p.self. The
 	// sibling has also been given some funds.
-	err = p.engine.BootstrapEngine(p.self)
+	err = p.engine.Bootstrap(p.self)
 	if err != nil {
 		return
 	}
