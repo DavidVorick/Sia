@@ -18,9 +18,6 @@ const (
 // the list.
 type EventInterface interface {
 	handleEvent(s *State)
-	expiration() uint32
-	setCounter(uint64)    // top 32 bits are the expiration, bottom 32 are the counter
-	fetchCounter() uint64 // structure will break if fetch does not return the same value called in set
 }
 
 // The Event type is a generic type that is meant to be switched upon. Each
@@ -28,5 +25,7 @@ type EventInterface interface {
 // together.
 type Event struct {
 	Type         string
+	Expiration   uint32
+	Counter      uint64
 	EncodedEvent []byte
 }

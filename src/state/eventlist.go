@@ -8,7 +8,7 @@ import (
 // The pointer stack is the structure used to implement a skip list.
 type eventNode struct {
 	top   *pointerStack
-	event EventInterface
+	event Event
 }
 
 // A pointerStack is a linked list of pointers to the next elements at each
@@ -47,16 +47,15 @@ func (ps *pointerStack) bottom() *pointerStack {
 // InsertEvent takes a new event and inserts it into the event list.
 // InsertEvent does not check that the event already exists inside of the list,
 // as duplicate events are allowed to exist in the event list.
-func (s *State) InsertEvent(e EventInterface) {
+func (s *State) InsertEvent(e Event) {
 	// counter has the high 32 bits as the expiration of the event, which allows
 	// for sorting according to expiration. Then there's the lower 32 bits which
 	// is the eventCounter, and this allows for FCFS unique ordering of events
 	// with the same expiration.
-	eCounter := uint64(e.expiration())
-	eCounter = eCounter << 32
-	eCounter += uint64(s.Metadata.EventCounter)
+	e.Counter = uint64(e.Expiration)
+	e.Counter = e.Counter << 32
+	e.Counter += uint64(s.Metadata.EventCounter)
 	s.Metadata.EventCounter += 1
-	e.setCounter(eCounter)
 	freshNode := new(eventNode)
 	freshNode.event = e
 
@@ -93,7 +92,7 @@ func (s *State) InsertEvent(e EventInterface) {
 	// check if we are behind the root
 	currentPointer := s.eventRoot.top
 	freshPointer := new(pointerStack)
-	if s.eventRoot.event.fetchCounter() >= e.fetchCounter() {
+	if s.eventRoot.event.Counter >= e.Counter {
 		freshNode.top = s.eventRoot.top
 		s.eventRoot.top = freshPointer
 		for currentHeight > freshHeight {
@@ -117,7 +116,7 @@ func (s *State) InsertEvent(e EventInterface) {
 	freshNode.top = freshPointer
 	for {
 		// Move forward until a larger node is found.
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -146,7 +145,7 @@ func (s *State) InsertEvent(e EventInterface) {
 // deleteEvent takes an event, finds it in the event list, and then deletes the
 // event. This is called after an event expires, and is also called if an event
 // is triggered before its expiration.
-func (s *State) DeleteEvent(e EventInterface) {
+func (s *State) DeleteEvent(e Event) {
 	// first figure out if the event exists by recovering the assiciated eventNode
 	en := s.eventNode(e)
 	if en == nil {
@@ -186,7 +185,7 @@ func (s *State) DeleteEvent(e EventInterface) {
 	eventPointer := en.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -207,24 +206,24 @@ func (s *State) DeleteEvent(e EventInterface) {
 
 // eventNode() retreives an eventNode that corresponds to a specific event.
 // eventNode() is only used internally.
-func (s *State) eventNode(e EventInterface) *eventNode {
+func (s *State) eventNode(e Event) *eventNode {
 	// check the base cases
 	if s.eventRoot == nil {
 		return nil
 	}
-	if s.eventRoot.event.fetchCounter() == e.fetchCounter() {
+	if s.eventRoot.event.Counter == e.Counter {
 		return s.eventRoot
 	}
 
 	currentPointer := s.eventRoot.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() < e.fetchCounter() {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
 			currentPointer = currentPointer.nextNode.top
 		}
 
 		// see if the next node is the desired node
-		if currentPointer.nextNode != nil && currentPointer.nextNode.event.fetchCounter() == e.fetchCounter() {
+		if currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter == e.Counter {
 			return currentPointer.nextNode
 		}
 
