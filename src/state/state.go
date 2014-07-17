@@ -31,7 +31,7 @@ var BootstrapScript = []byte{
 
 // the default script
 // verifies public key, then transfers control to the input
-func DefaultScript(publicKey *siacrypto.PublicKey) []byte {
+func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	return append([]byte{
 		0x26, 0x10, 0x00, // 00 move data pointer to public key
 		0x39, 0x20, 0x01, // 03 read public key into buffer 1

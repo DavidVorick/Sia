@@ -10,7 +10,7 @@ import (
 type Sibling struct {
 	Index     byte
 	Address   network.Address
-	PublicKey *siacrypto.PublicKey
+	PublicKey siacrypto.PublicKey
 	WalletID  WalletID
 }
 

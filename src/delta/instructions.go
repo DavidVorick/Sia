@@ -647,8 +647,8 @@ func op_verify(args []byte) (err error) {
 	var pk siacrypto.PublicKey
 	copy(pk[:], env.buffers[args[0]])
 	// decode signed message
-	sm := new(siacrypto.SignedMessage)
-	err = sm.GobDecode(env.buffers[args[1]])
+	var sm siacrypto.SignedMessage
+	err = siaencoding.Unmarshal(env.buffers[args[1]], &sm)
 	if err != nil {
 		return
 	}
