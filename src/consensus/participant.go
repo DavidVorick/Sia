@@ -10,39 +10,38 @@ import (
 )
 
 type Participant struct {
-	engine delta.Engine
+	engine     delta.Engine
+	engineLock sync.Mutex
 
 	// Variables local to the participant
-	self      *state.Sibling       // the sibling object for this participant
-	secretKey *siacrypto.SecretKey // secret key matching self.publicKey
+	self      *state.Sibling      // the sibling object for this participant
+	secretKey siacrypto.SecretKey // secret key matching self.publicKey
 
 	// Network Related Variables
 	messageRouter network.MessageRouter
-	listeners     []network.Address
-	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scriptInputs     []delta.ScriptInput
-	scriptInputsLock sync.Mutex
+	updates     [state.QuorumSize]map[siacrypto.Hash]Update // list of heartbeats received from siblings
+	updatesLock sync.Mutex
+	//scriptInputs     []delta.ScriptInput
+	//scriptInputsLock sync.Mutex
 	//uploadAdvancements     []quorum.UploadAdvancement
-	uploadAdvancementsLock sync.Mutex
-	//heartbeats             [state.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
-	heartbeatsLock sync.Mutex
+	//uploadAdvancementsLock sync.Mutex
 
 	// Consensus Algorithm Status
-	ticking     bool
-	tickingLock sync.Mutex
-	currentStep int
-	stepLock    sync.RWMutex // prevents a benign race condition
+	//ticking     bool
+	//tickingLock sync.Mutex
+	currentStep     byte
+	currentStepLock sync.RWMutex // prevents a benign race condition
 
 	// Bootstrap variables
 	synchronized bool
-	recentBlocks map[uint32]*delta.Block
+	//recentBlocks map[uint32]*delta.Block
 
 	// Block history variables
-	activeHistoryStep int
-	activeHistory     string // file currently being appended with new blocks
-	recentHistory     string // file containing SnapshotLen blocks
+	//activeHistoryStep int
+	//activeHistory     string // file currently being appended with new blocks
+	//recentHistory     string // file containing SnapshotLen blocks
 }
 
 var npNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")

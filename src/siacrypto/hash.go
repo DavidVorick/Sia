@@ -21,3 +21,13 @@ func CalculateHash(data []byte) (hash Hash) {
 	copy(hash[:], hashSlice)
 	return
 }
+
+func HashObject(v interface{}) (h Hash, err error) {
+	bytes, err := siaencoding.Marshal(v)
+	if err != nil {
+		return
+	}
+
+	h = CalculateHash(bytes)
+	return
+}

@@ -33,6 +33,10 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
+func (e *Engine) Metadata() state.StateMetadata {
+	return e.state.Metadata
+}
+
 // NewBootstrapEngine() returns an engine that has its variables set so that
 // the engine can function as the first sibling in a quorum. This requires a
 // call to NewBootstrapState()

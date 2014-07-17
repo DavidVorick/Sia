@@ -15,6 +15,7 @@ type StateMetadata struct {
 	Seed         Entropy
 	EventCounter uint32
 	StoragePrice Balance
-	Parent       siacrypto.Hash
+	ParentState  siacrypto.Hash
+	ParentBlock  siacrypto.Hash
 	Height       uint32
 }
