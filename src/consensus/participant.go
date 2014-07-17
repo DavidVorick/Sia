@@ -6,7 +6,6 @@ import (
 	"network"
 	"siacrypto"
 	"state"
-	"state/script"
 	"sync"
 )
 
@@ -23,7 +22,7 @@ type Participant struct {
 	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scriptInputs     []script.ScriptInput
+	scriptInputs     []delta.ScriptInput
 	scriptInputsLock sync.Mutex
 	//uploadAdvancements     []quorum.UploadAdvancement
 	uploadAdvancementsLock sync.Mutex

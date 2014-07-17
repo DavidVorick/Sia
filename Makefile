@@ -1,7 +1,7 @@
 gopath = GOPATH=$(CURDIR)
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lstdc++"
 govars = $(gopath) $(cgo_ldflags)
-packages = logger network siacrypto siaencoding siafiles erasure state state/script delta consensus
+packages = logger network siacrypto siaencoding siafiles erasure state delta consensus
 
 all: submodule-update install
 
@@ -21,31 +21,31 @@ release: fmt
 	$(govars) go install -ldflags '-extldflags "-static"' $(packages)
 	tar -cJvf release.xz bin
 
-test: libraries
+test:
 	$(govars) go test -short $(packages)
 
-test-verbose: libraries
+test-verbose:
 	$(govars) go test -short -v $(packages)
 
-test-race: libraries
+test-race:
 	$(govars) go test -short -race $(packages)
 
-test-race-verbose: libraries
+test-race-verbose:
 	$(govars) go test -short -race -v $(packages)
 
-test-long: libraries
+test-long:
 	$(govars) go test -race $(packages)
 
-test-long-verbose: libraries
+test-long-verbose:
 	$(govars) go test -v -race $(packages)
 
-test-consensus: libraries
+test-consensus:
 	$(govars) go test -v -race consensus
 
-test-delta: libraries
+test-delta:
 	$(govars) go test -v -race delta
 
-test-state: libraries
+test-state:
 	$(govars) go test -v -race state
 
 dependencies: submodule-update race-libs directories
@@ -57,4 +57,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt libraries test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs directories
+.PHONY: all submodule-update fmt install test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs directories
