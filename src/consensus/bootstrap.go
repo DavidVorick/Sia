@@ -45,9 +45,16 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 	return
 }
 
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
-	// 1. Become a listener on the quorum and begin storing the blocks that get
-	// created.
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, trustedSiblings []network.Address) (p *Participant, err error) {
+	p, err = NewParticipant(mr, filePrefix)
+	if err != nil {
+		return
+	}
+
+	// 1. Submit a join request to the existing quorum.
+
+	// this is being held off on implementation until a single participant is doing full consensus.
+
 	return
 }
 

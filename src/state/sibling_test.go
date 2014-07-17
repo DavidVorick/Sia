@@ -33,8 +33,7 @@ func TestSiblingCompare(t *testing.T) {
 		t.Fatal(err)
 	}
 	p1.PublicKey = pubKey
-	p0.PublicKey = new(siacrypto.PublicKey)
-	*p0.PublicKey = *p1.PublicKey
+	p0.PublicKey = p1.PublicKey
 
 	// compare initialized participants
 	compare = p0.Compare(p1)

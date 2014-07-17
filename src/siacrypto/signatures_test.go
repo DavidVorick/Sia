@@ -88,13 +88,6 @@ func TestSigning(t *testing.T) {
 		t.Error("Verified a signed empty message with forged signature")
 	}
 
-	// sign using a nil key
-	var nilKey *SecretKey
-	_, err = nilKey.Sign(empty)
-	if err == nil {
-		t.Error("Signed with a nil key!")
-	}
-
 	// sign the message
 	signedMessage, err := secretKey.Sign(RandomByteSlice(20))
 	if err != nil {

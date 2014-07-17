@@ -1,8 +1,17 @@
 package consensus
 
-type ConsensusSynchronize struct {
+type SynchronizeConsensus struct {
 	CurrentStep byte
 	// Heartbeats
+}
+
+// SynchronizeConsensus returns all of the variables needed to be up-to-speed
+// with the current round of consensus. This includes all of the heartbeats
+// that have been received as well as the current step that the algorithm is
+// on.
+func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus) (err error) {
+	sc.CurrentStep = p.currentStep
+	return
 }
 
 /* import (
