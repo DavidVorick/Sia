@@ -135,7 +135,7 @@ func TestRPCScheduling(t *testing.T) {
 	largeChan := rpcs2.SendAsyncMessage(&Message{
 		Dest: Address{id1, "localhost", 9987},
 		Proc: "TestStoreHandler.StoreMessage",
-		Args: string(bytes.Repeat([]byte{0x10}, 1<<27)), // ~130 MB
+		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
 		Resp: nil,
 	})
 
@@ -143,7 +143,7 @@ func TestRPCScheduling(t *testing.T) {
 	smallChan := rpcs1.SendAsyncMessage(&Message{
 		Dest: Address{id2, "localhost", 9986},
 		Proc: "TestStoreHandler.StoreMessage",
-		Args: string(bytes.Repeat([]byte{0x10}, 1<<17)), // ~130 KB
+		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),
 		Resp: nil,
 	})
 
