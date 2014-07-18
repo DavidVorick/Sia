@@ -12,12 +12,6 @@ import (
 // Need to test that there are no recentHistoryHead errors regarding improper
 // initialization.
 func TestSaveAndLoadBlock(t *testing.T) {
-	/*e := Engine{
-		filePrefix:          "../../filesCreatedDuringTesting/TestSaveAndLoad",
-		activeHistoryHead:   ^uint32(0) - uint32(SnapshotLength-1),
-		activeHistoryLength: SnapshotLength,
-	}*/
-
 	var e Engine
 	e.Initialize("../../filesCreatedDuringTesting/TestSaveAndLoad")
 	err := e.Bootstrap(&state.Sibling{})

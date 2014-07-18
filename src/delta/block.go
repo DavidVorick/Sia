@@ -31,9 +31,9 @@ type Block struct {
 	// parentQuorum
 
 	// Heartbeats for each sibling
-	Heartbeats [state.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
+	Heartbeats [state.QuorumSize]Heartbeat // using pointers enables setting Heartbeats to nil
 
 	// Aggregate of non-required information submitted to the quorum
-	ScriptInputs []ScriptInput
-	//UploadAdvancements []quorum.UploadAdvancement
+	// ScriptInputs []ScriptInput
+	// UploadAdvancements []quorum.UploadAdvancement
 }
