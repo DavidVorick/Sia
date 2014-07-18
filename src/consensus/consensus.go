@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-const (
-	StepDuration = 800 * time.Millisecond
-)
-
 type SignedUpdate struct {
 	Update      Update // eventually be replaced with a hash and fetch request
 	Signatories []byte

@@ -40,8 +40,10 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 		return
 	}
 
-	// Set synchronized to true for the ticking.
+	// Set synchronized to true and start ticking.
 	p.synchronized = true
+	go p.tick() // Tick gets its own thread, so the this function can return.
+
 	return
 }
 
