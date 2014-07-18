@@ -82,7 +82,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
-		if p.engine.Metadata().Siblings[signatory] == nil {
+		if !p.engine.Metadata().Siblings[signatory].Active {
 			err = hsuerrNonSibling
 			fmt.Println(err)
 			return
@@ -135,7 +135,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		return
 	}
 	su.Signatures = append(su.Signatures, signedMessage.Signature)
-	su.Signatories = append(su.Signatories, p.self.Index)
+	su.Signatories = append(su.Signatories, p.siblingIndex)
 
 	// broadcast the update to the quorum
 	return

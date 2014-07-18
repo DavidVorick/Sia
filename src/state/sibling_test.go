@@ -1,33 +1,13 @@
 package state
 
-import (
+/* import (
 	"siacrypto"
 	"testing"
 )
 
 func TestSiblingCompare(t *testing.T) {
-	var p0 *Sibling
-	var p1 *Sibling
-
-	// compare nil values
-	compare := p0.Compare(p1)
-	if compare == true {
-		t.Error("Comparing any nil participant should return false")
-	}
-
-	// compare when one is nil
-	p0 = new(Sibling)
-	compare = p0.Compare(p1)
-	if compare == true {
-		t.Error("Comparing a zero participant to a nil participant should return false")
-	}
-	compare = p1.Compare(p0)
-	if compare == true {
-		t.Error("Comparing a zero participant to a nil participant should return false")
-	}
-
 	// initialize each participant with a public key
-	p1 = new(Sibling)
+	var
 	pubKey, _, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
@@ -70,4 +50,4 @@ func TestSiblingCompare(t *testing.T) {
 	if compare == true {
 		t.Error("Comparing two participants with different public keys should return false")
 	}
-}
+}*/

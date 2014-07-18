@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"state"
 )
 
 /*
@@ -35,12 +36,17 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 	// Call NewBootstrapEngine, which returns an engine that has a quorum with a
 	// bootstrap/fountain wallet, and a sibling as described by p.self. The
 	// sibling has also been given some funds.
-	err = p.engine.Bootstrap(p.self)
+	sib := state.Sibling{
+		Address:   p.address,
+		PublicKey: p.publicKey,
+	}
+	err = p.engine.Bootstrap(sib)
 	if err != nil {
 		return
 	}
 
 	// Set synchronized to true and start ticking.
+	p.siblingIndex = 0
 	p.synchronized = true
 	go p.tick() // Tick gets its own thread, so the this function can return.
 

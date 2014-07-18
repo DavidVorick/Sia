@@ -8,6 +8,7 @@ import (
 // A Sibling is the public facing information of participants on the quorum.
 // Every quorum contains a list of all siblings.
 type Sibling struct {
+	Active    bool
 	Index     byte
 	Address   network.Address
 	PublicKey siacrypto.PublicKey
@@ -16,16 +17,11 @@ type Sibling struct {
 
 // Removes a sibling from the list of siblings
 func (s *State) TossSibling(i byte) {
-	s.Metadata.Siblings[i] = nil
+	s.Metadata.Siblings[i] = *new(Sibling)
 }
 
 // Sibling returns true if the address and publicKey fields are identical
-func (s0 *Sibling) Compare(s1 *Sibling) bool {
-	// false if either sibling is nil
-	if s0 == nil || s1 == nil {
-		return false
-	}
-
+/*func (s0 Sibling) Compare(s1 Sibling) bool {
 	// return false if the addresses are not equal
 	if s0.Address != s1.Address {
 		return false
@@ -38,4 +34,4 @@ func (s0 *Sibling) Compare(s1 *Sibling) bool {
 	}
 
 	return true
-}
+}*/

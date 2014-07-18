@@ -50,10 +50,11 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	s.InsertWallet(sib0Wallet)
 	sib0 := Sibling{
+		Active:   true,
 		Index:    0,
 		WalletID: 3,
 	}
-	s.Metadata.Siblings[sib0.Index] = &sib0
+	s.Metadata.Siblings[sib0.Index] = sib0
 
 	// Run 'ExecuteCompensation' and see that all the wallets were properly
 	// deducted.
@@ -65,7 +66,7 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	w0ExpectedBalance := NewBalance(0, 100-walletAtomMultiplier)
 	if w0.Balance.Compare(w0ExpectedBalance) != 0 {
-		t.Error("w0 did not have the correct balance after compensation")
+		t.Error("w0 did not have the correct balance after compensation", w0.Balance)
 	}
 
 	w1, err = s.LoadWallet(1)
@@ -103,10 +104,11 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	s.InsertWallet(sib1Wallet)
 	sib1 := Sibling{
+		Active:   true,
 		Index:    1,
 		WalletID: 4,
 	}
-	s.Metadata.Siblings[sib1.Index] = &sib1
+	s.Metadata.Siblings[sib1.Index] = sib1
 	s.Metadata.StoragePrice = NewBalance(0, 3)
 
 	// Run 'ExecuteCompensation' and see that all wallets were properly deducted.

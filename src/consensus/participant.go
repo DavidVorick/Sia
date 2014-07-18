@@ -14,10 +14,12 @@ type Participant struct {
 	engineLock sync.Mutex
 
 	// Variables local to the participant
-	self      *state.Sibling      // the sibling object for this participant
-	secretKey siacrypto.SecretKey // secret key matching self.publicKey
+	siblingIndex byte
+	publicKey    siacrypto.PublicKey
+	secretKey    siacrypto.SecretKey
 
 	// Network Related Variables
+	address       network.Address
 	messageRouter network.MessageRouter
 
 	// Heartbeat Variables
@@ -55,25 +57,19 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p = new(Participant)
 
 	// Create a keypair for the participant.
-	publicKey, secretKey, err := siacrypto.CreateKeyPair()
+	p.publicKey, p.secretKey, err = siacrypto.CreateKeyPair()
 	if err != nil {
 		return
 	}
-	p.secretKey = secretKey
+	p.siblingIndex = ^byte(0)
 
 	// Initialize the network components of the participant.
+	p.address = mr.Address()
+	p.address.ID = mr.RegisterHandler(p)
 	p.messageRouter = mr
-	p.self = &state.Sibling{
-		Address:   mr.Address(),
-		PublicKey: publicKey,
-	}
-	p.self.Address.ID = mr.RegisterHandler(p)
 
 	// Initialize the file prefix
 	p.engine.Initialize(filePrefix)
-
-	// Initialize currentStep to 1
-	p.currentStep = 1
 
 	return
 }
