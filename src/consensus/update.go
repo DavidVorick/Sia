@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"delta"
+	"siacrypto"
 )
 
 // An Update is the set of information sent by each participant during
@@ -9,7 +10,8 @@ import (
 // information for being a part of the quorum, and it contains optional
 // information such as script inputs.
 type Update struct {
-	Heartbeat delta.Heartbeat
+	Heartbeat          delta.Heartbeat
+	HeartbeatSignature siacrypto.Signature
 
 	// optional stuff
 }

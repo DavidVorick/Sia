@@ -155,6 +155,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 			for _, u := range p.updates[i] {
 				// Add the heartbeat
 				b.Heartbeats[i] = u.Heartbeat
+				b.HeartbeatSignatures[i] = u.HeartbeatSignature
 
 				// Add the other stuff (tbi)
 			}
