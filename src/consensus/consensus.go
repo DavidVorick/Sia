@@ -26,7 +26,7 @@ var hsuerrInvalidSignature = errors.New("Update contains a corrupted/invalid sig
 var hsuerrHaveHeartbeat = errors.New("This update has already been processed.")
 var hsuerrManyHeartbeats = errors.New("Multiple heartbeats from this sibling have already been submitted.")
 
-func (p *Participant) NewSignedHeartbeat() {
+func (p *Participant) NewSignedUpdate() {
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
 	randomBytes := siacrypto.RandomByteSlice(state.EntropyVolume)
@@ -57,8 +57,15 @@ func (p *Participant) NewSignedHeartbeat() {
 	su.Signatories[0] = p.siblingIndex
 	su.Signatures[0] = updateSignature
 
+	// Add the heartbeat to our own heartbeat map.
+	updateHash, err := siacrypto.HashObject(update)
+	if err != nil {
+		panic(err)
+	}
+	p.updates[p.siblingIndex][updateHash] = update
+
 	p.broadcast(network.Message{
-		Proc: "Participant.HandleSignedHeartbeat",
+		Proc: "Participant.HandleSignedUpdate",
 		Args: su,
 		Resp: err,
 	})

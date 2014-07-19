@@ -31,4 +31,13 @@ Objects need to be hashed before they are signed or verified. To prevent misuse 
 
 Signatures always go in front of the data that has been signed.
 
+Ports to use:
+
+Live:
+	9000 range
+Testing/Network:
+	10000 range
+Testing/Consensus:
+	11000 range
+
 This is a work in progress.
