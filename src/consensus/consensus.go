@@ -25,11 +25,47 @@ var hsuerrInvalidSignature = errors.New("Update contains a corrupted/invalid sig
 var hsuerrHaveHeartbeat = errors.New("This update has already been processed.")
 var hsuerrManyHeartbeats = errors.New("Multiple heartbeats from this sibling have already been submitted.")
 
+func (p *Participant) NewSignedHeartbeat() {
+	// Generate the entropy for this round of random numbers.
+	var entropy state.Entropy
+	randomBytes := siacrypto.RandomByteSlice(state.EntropyVolume)
+	copy(entropy[:], randomBytes)
+
+	hb := delta.Heartbeat{
+		ParentBlock: p.engine.Metadata().ParentBlock,
+		Entropy:     entropy,
+		// storage proof
+	}
+
+	hbHash, err := siacrypto.HashObject(hb)
+	if err != nil {
+		panic(err)
+	}
+	signedMessage, err := p.secretKey.Sign(hbHash[:])
+	if err != nil {
+		panic(err)
+	}
+
+	update := Update{
+		Heartbeat:          hb,
+		HeartbeatSignature: signedMessage.Signature,
+	}
+	updateSignature, err := p.secretKey.SignObject(update)
+
+	su := SignedUpdate{
+		Update:      update,
+		Signatories: make([]byte, 1),
+		Signatures:  make([]siacrypto.Signature, 1),
+	}
+	su.Signatories[0] = p.siblingIndex
+	su.Signatures[0] = updateSignature
+}
+
 // The series of printlns in this function are purely for debugging.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
 	// Lock the engine for the duration of the function.
-	p.engineLock.Lock()
-	defer p.engineLock.Unlock()
+	p.engineLock.RLock()
+	defer p.engineLock.RUnlock()
 
 	// Lock the updates variable for the duration of the function.
 	p.updatesLock.Lock()
@@ -138,30 +174,5 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	su.Signatories = append(su.Signatories, p.siblingIndex)
 
 	// broadcast the update to the quorum
-	return
-}
-
-// condenseBlock assumes that a heartbeat has a valid signature and that the
-// parent is the correct parent.
-func (p *Participant) condenseBlock() (b delta.Block) {
-	// Set the height and parent of the block.
-	b.Height = p.engine.Metadata().Height
-	b.ParentBlock = p.engine.Metadata().ParentBlock
-
-	// Take each update and condense them into a single non-repetitive block.
-	p.updatesLock.Lock()
-	for i := range p.updates {
-		if len(p.updates[i]) == 1 {
-			for _, u := range p.updates[i] {
-				// Add the heartbeat
-				b.Heartbeats[i] = u.Heartbeat
-				b.HeartbeatSignatures[i] = u.HeartbeatSignature
-
-				// Add the other stuff (tbi)
-			}
-		}
-		p.updates[i] = make(map[siacrypto.Hash]Update) // clear map for next cycle
-	}
-	p.updatesLock.Unlock()
 	return
 }

@@ -44,7 +44,25 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 
+		// proof of storage verification
+
 		// Append the entropy to siblingEntropy.
 		siblingEntropy = append(siblingEntropy, heartbeat.Entropy[:]...)
 	}
+
+	// Hash the siblingEntropy to get the new Germ.
+	e.state.Metadata.Germ = state.Entropy(siacrypto.CalculateHash(siblingEntropy))
+
+	// process 'things'
+
+	// Update the metadata of the quorum.
+	blockHash, err := siacrypto.HashObject(b)
+	if err != nil {
+		panic(err)
+	}
+	e.state.Metadata.ParentBlock = blockHash
+	e.state.Metadata.Height += 1
+
+	// Save the block.
+	e.saveBlock(b)
 }

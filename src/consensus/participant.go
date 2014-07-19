@@ -11,7 +11,7 @@ import (
 
 type Participant struct {
 	engine     delta.Engine
-	engineLock sync.Mutex
+	engineLock sync.RWMutex
 
 	// Variables local to the participant
 	siblingIndex byte
