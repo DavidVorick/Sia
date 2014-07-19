@@ -39,7 +39,7 @@ func TestRPCSendMessage(t *testing.T) {
 	id := rpcs.RegisterHandler(tsh)
 
 	// send a message
-	m := &Message{
+	m := Message{
 		Address{id, "localhost", 9987},
 		"TestStoreHandler.StoreMessage",
 		"hello, world!",
@@ -86,7 +86,7 @@ func TestRPCTimeout(t *testing.T) {
 	id := rpcs.RegisterHandler(tsh)
 
 	// send a message
-	m := &Message{
+	m := Message{
 		Dest: Address{id, "localhost", 9987},
 		Proc: "TestStoreHandler.BlockForever",
 		Args: "hello, world!",
@@ -132,7 +132,7 @@ func TestRPCScheduling(t *testing.T) {
 	id2 := rpcs2.RegisterHandler(tsh2)
 
 	// begin transferring large payload
-	largeChan := rpcs2.SendAsyncMessage(&Message{
+	largeChan := rpcs2.SendAsyncMessage(Message{
 		Dest: Address{id1, "localhost", 9987},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
@@ -140,7 +140,7 @@ func TestRPCScheduling(t *testing.T) {
 	})
 
 	// begin transferring small payload
-	smallChan := rpcs1.SendAsyncMessage(&Message{
+	smallChan := rpcs1.SendAsyncMessage(Message{
 		Dest: Address{id2, "localhost", 9986},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),

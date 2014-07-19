@@ -90,24 +90,15 @@ func (p *Participant) Subscribe(a network.Address, _ *struct{}) (err error) {
 	p.listeners = append(p.listeners, a)
 	p.listenersLock.Unlock()
 	return
-}
+} */
 
-// Takes a message and broadcasts it to every sibling in the quorum and every
-// listener subscribed to the participant
-func (p *Participant) broadcast(m *network.Message) {
+// Sends a message to every sibling in the quorum.
+func (p *Participant) broadcast(message network.Message) {
 	// send the messagea to all of the siblings in the quorum
-	siblings := p.quorum.Siblings()
-	for _, sibling := range siblings {
-		if sibling != nil {
-			nm := *m
-			nm.Dest = sibling.Address()
-			p.messageRouter.SendAsyncMessage(&nm)
+	for _, sibling := range p.engine.Metadata().Siblings {
+		if sibling.Active {
+			message.Dest = sibling.Address
+			p.messageRouter.SendAsyncMessage(message)
 		}
 	}
-
-	for _, listener := range p.listeners {
-		nm := *m
-		nm.Dest = listener
-		p.messageRouter.SendAsyncMessage(&nm)
-	}
-} */
+}

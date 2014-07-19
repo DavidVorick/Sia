@@ -29,4 +29,6 @@ Each time the weight of the quorum is changed in an upward direction, must check
 
 Objects need to be hashed before they are signed or verified. To prevent misuse and mistakes, the functions SignObject and VerifyObject should be used.
 
+Signatures always go in front of the data that has been signed.
+
 This is a work in progress.

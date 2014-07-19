@@ -4,6 +4,7 @@ import (
 	"delta"
 	"errors"
 	"fmt"
+	"network"
 	"siacrypto"
 	"state"
 	"time"
@@ -37,11 +38,7 @@ func (p *Participant) NewSignedHeartbeat() {
 		// storage proof
 	}
 
-	hbHash, err := siacrypto.HashObject(hb)
-	if err != nil {
-		panic(err)
-	}
-	signature, err := p.secretKey.Sign(hbHash[:])
+	signature, err := p.secretKey.SignObject(hb)
 	if err != nil {
 		panic(err)
 	}
@@ -59,6 +56,12 @@ func (p *Participant) NewSignedHeartbeat() {
 	}
 	su.Signatories[0] = p.siblingIndex
 	su.Signatures[0] = updateSignature
+
+	p.broadcast(network.Message{
+		Proc: "Participant.HandleSignedHeartbeat",
+		Args: su,
+		Resp: err,
+	})
 }
 
 // The series of printlns in this function are purely for debugging.

@@ -82,7 +82,7 @@ func (rpcs *RPCServer) serverHandler() {
 
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
 // It times out after waiting for half the step duration.
-func (rpcs *RPCServer) SendMessage(m *Message) error {
+func (rpcs *RPCServer) SendMessage(m Message) error {
 	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (rpcs *RPCServer) SendMessage(m *Message) error {
 
 // SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
 // It returns a channel that will contain an error value when the request completes.
-func (rpcs *RPCServer) SendAsyncMessage(m *Message) chan error {
+func (rpcs *RPCServer) SendAsyncMessage(m Message) chan error {
 	errChan := make(chan error, 2)
 	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
