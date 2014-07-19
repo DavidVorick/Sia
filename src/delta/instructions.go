@@ -2,7 +2,7 @@ package delta
 
 import (
 	"errors"
-	"siacrypto"
+	//"siacrypto"
 	"siaencoding"
 )
 
@@ -644,7 +644,7 @@ func op_send(args []byte) (err error) {
 
 func op_verify(args []byte) (err error) {
 	// get public key
-	var pk siacrypto.PublicKey
+	/*var pk siacrypto.PublicKey
 	copy(pk[:], env.buffers[args[0]])
 	// decode signed message
 	var sm siacrypto.SignedMessage
@@ -654,7 +654,7 @@ func op_verify(args []byte) (err error) {
 	}
 	// verify signature
 	verified := pk.Verify(sm)
-	err = push(b2v(verified))
+	err = push(b2v(verified))*/
 	return
 }
 

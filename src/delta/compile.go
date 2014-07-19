@@ -23,17 +23,12 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 
-		// Verify the signature on the heartbeat.
-		heartbeatBytes, err := siacrypto.HashObject(heartbeat)
+		// Verify the signature on the heartbeat
+		verified, err := e.state.Metadata.Siblings[i].PublicKey.VerifyObject(b.HeartbeatSignatures[i], heartbeat)
 		if err != nil {
-			e.state.TossSibling(byte(i))
 			continue
 		}
-		signedHeartbeatBytes := siacrypto.SignedMessage{
-			Signature: b.HeartbeatSignatures[i],
-			Message:   heartbeatBytes[:],
-		}
-		if !e.state.Metadata.Siblings[i].PublicKey.Verify(signedHeartbeatBytes) {
+		if !verified {
 			e.state.TossSibling(byte(i))
 			continue
 		}

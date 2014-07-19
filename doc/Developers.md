@@ -27,4 +27,6 @@ Marshalling is for objects that go over the wire, or have their hashes compared.
 
 Each time the weight of the quorum is changed in an upward direction, must check that AtomsPerQuorum is not being exceeded.
 
+Objects need to be hashed before they are signed or verified. To prevent misuse and mistakes, the functions SignObject and VerifyObject should be used.
+
 This is a work in progress.

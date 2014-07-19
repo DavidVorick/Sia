@@ -41,14 +41,14 @@ func (p *Participant) NewSignedHeartbeat() {
 	if err != nil {
 		panic(err)
 	}
-	signedMessage, err := p.secretKey.Sign(hbHash[:])
+	signature, err := p.secretKey.Sign(hbHash[:])
 	if err != nil {
 		panic(err)
 	}
 
 	update := Update{
 		Heartbeat:          hb,
-		HeartbeatSignature: signedMessage.Signature,
+		HeartbeatSignature: signature,
 	}
 	updateSignature, err := p.secretKey.SignObject(update)
 
@@ -106,8 +106,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		fmt.Println(err)
 		return
 	}
-	var signedMessage siacrypto.SignedMessage // grows each iteration, as signatures are stacked upon eachother.
-	signedMessage.Message = updateHash[:]
+	message := updateHash[:]
 	previousSignatories := make(map[byte]bool)
 	for i, signatory := range su.Signatories {
 		// Check bounds on current signatory.
@@ -133,8 +132,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		previousSignatories[signatory] = true
 
 		// Verify the signature.
-		signedMessage.Signature = su.Signatures[i]
-		verification := p.engine.Metadata().Siblings[signatory].PublicKey.Verify(signedMessage)
+		verification := p.engine.Metadata().Siblings[signatory].PublicKey.Verify(su.Signatures[i], message)
 		if !verification {
 			err = hsuerrInvalidSignature
 			fmt.Println(err)
@@ -143,10 +141,10 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 		// Extend the signed message so that it contians the proper message for the
 		// next verification.
-		signedMessage.Message = signedMessage.CombinedMessage()
+		message = append(su.Signatures[i][:], message...)
 	}
 
-	// Check if this heartbeat has already been received.
+	// Check if this update has already been received.
 	_, exists := p.updates[su.Signatories[0]][updateHash]
 	if exists {
 		err = hsuerrHaveHeartbeat
@@ -161,16 +159,18 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		return
 	}
 
-	// Add the heartbeat to the list of seen heartbeats.
+	// Add the update to the list of seen updates.
 	p.updates[su.Signatories[0]][updateHash] = su.Update
 
-	// Sign the stack of signatures and append the signature to the stack, then announce the Update to everyone on the quorum
-	signedMessage, err = p.secretKey.Sign(signedMessage.Message)
+	// Sign the stack of signatures and append the signature to the stack, then
+	// announce the Update to everyone on the quorum
+	var signature siacrypto.Signature
+	signature, err = p.secretKey.Sign(message)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	su.Signatures = append(su.Signatures, signedMessage.Signature)
+	su.Signatures = append(su.Signatures, signature)
 	su.Signatories = append(su.Signatories, p.siblingIndex)
 
 	// broadcast the update to the quorum
