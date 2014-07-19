@@ -28,7 +28,7 @@ func (tsh *TestStoreHandler) BlockForever(message string, _ *struct{}) error {
 // SendMessage and SendAsyncMessage must complete successfully.
 func TestRPCSendMessage(t *testing.T) {
 	// create RPCServer
-	rpcs, err := NewRPCServer(9987)
+	rpcs, err := NewRPCServer(10000)
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
@@ -40,7 +40,7 @@ func TestRPCSendMessage(t *testing.T) {
 
 	// send a message
 	m := Message{
-		Address{id, "localhost", 9987},
+		Address{id, "localhost", 10000},
 		"TestStoreHandler.StoreMessage",
 		"hello, world!",
 		nil,
@@ -75,7 +75,7 @@ func TestRPCTimeout(t *testing.T) {
 		t.Skip()
 	}
 	// create RPCServer
-	rpcs, err := NewRPCServer(9987)
+	rpcs, err := NewRPCServer(10001)
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
@@ -87,7 +87,7 @@ func TestRPCTimeout(t *testing.T) {
 
 	// send a message
 	m := Message{
-		Dest: Address{id, "localhost", 9987},
+		Dest: Address{id, "localhost", 10001},
 		Proc: "TestStoreHandler.BlockForever",
 		Args: "hello, world!",
 		Resp: nil,
@@ -114,12 +114,12 @@ func TestRPCScheduling(t *testing.T) {
 		t.Skip()
 	}
 	// create RPCServers
-	rpcs1, err := NewRPCServer(9987)
+	rpcs1, err := NewRPCServer(10002)
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
 	defer rpcs1.Close()
-	rpcs2, err := NewRPCServer(9986)
+	rpcs2, err := NewRPCServer(10003)
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
@@ -133,7 +133,7 @@ func TestRPCScheduling(t *testing.T) {
 
 	// begin transferring large payload
 	largeChan := rpcs2.SendAsyncMessage(Message{
-		Dest: Address{id1, "localhost", 9987},
+		Dest: Address{id1, "localhost", 10002},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
 		Resp: nil,
@@ -141,7 +141,7 @@ func TestRPCScheduling(t *testing.T) {
 
 	// begin transferring small payload
 	smallChan := rpcs1.SendAsyncMessage(Message{
-		Dest: Address{id2, "localhost", 9986},
+		Dest: Address{id2, "localhost", 10003},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),
 		Resp: nil,

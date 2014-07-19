@@ -46,11 +46,11 @@ type Participant struct {
 	//recentHistory     string // file containing SnapshotLen blocks
 }
 
-var npNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
+var nperrNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
 
 func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
 	if mr == nil {
-		err = npNilMessageRouter
+		err = nperrNilMessageRouter
 		return
 	}
 
