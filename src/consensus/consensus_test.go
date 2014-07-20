@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestNewSignedHeartbeat(t *testing.T) {
+func TestNewSignedUpdate(t *testing.T) {
 	// Bootstrap a sibling
 	mr, err := network.NewRPCServer(11100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = CreateBootstrapParticipant(mr, "../../filesCreatedDuringTesting/TestNewSignedHeartbeat")
+	_, err = CreateBootstrapParticipant(mr, "../../filesCreatedDuringTesting/TestNewSignedUpdate", 1)
 	if err != nil {
 		t.Fatal(err)
 	}

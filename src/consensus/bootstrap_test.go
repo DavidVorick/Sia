@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"state"
 	"testing"
 )
 
@@ -11,12 +12,21 @@ func TestCreateParticipantFunctions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions")
+	walletID := state.WalletID(24)
+	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions", walletID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// eventually add a few siblings to the quorum, then do status checks to make
-	// sure they're all still around, and that balances are changing or something
-	// like that.
+	var metadata state.StateMetadata
+	p.Metadata(struct{}{}, &metadata)
+	if !metadata.Siblings[0].Active {
+		t.Error("No sibling in the bootstrap position.")
+	}
+
+	var walletIDs []state.WalletID
+	p.GetWallets(struct{}{}, &walletIDs)
+	if len(walletIDs) != 2 {
+		t.Error("Incorrect number of wallets returned, expeting 2:", len(walletIDs))
+	}
 }

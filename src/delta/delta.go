@@ -73,6 +73,10 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 		Balance: state.NewBalance(0, 1000000),
 		Script:  defaultScript,
 	}
+	err = e.state.InsertWallet(sibWallet)
+	if err != nil {
+		return
+	}
 	e.state.AddSibling(&sibWallet, sib)
 
 	e.SaveSnapshot()

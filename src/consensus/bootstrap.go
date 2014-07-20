@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	"network"
 	"state"
 )
@@ -26,7 +27,12 @@ The Bootstrapping Process
 
 // CreateBootstrapParticipant returns a participant that is participating as
 // the first and only sibling on a new quorum.
-func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
+	if sibID == 0 {
+		err = fmt.Errorf("Cannot use id '0', this id is reserved for the bootstrapping wallet.")
+		return
+	}
+
 	// Call NewParticipant, which gives a participant that has all of the basic fields initialized.
 	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
@@ -39,6 +45,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 	sib := state.Sibling{
 		Address:   p.address,
 		PublicKey: p.publicKey,
+		WalletID:  sibID,
 	}
 	err = p.engine.Bootstrap(sib)
 	if err != nil {
