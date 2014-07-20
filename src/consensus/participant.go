@@ -74,24 +74,6 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	return
 }
 
-/* func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
-	p.scriptInputsLock.Lock()
-	p.scriptInputs = append(p.scriptInputs, si)
-	p.scriptInputsLock.Unlock()
-	return
-}
-
-// Takes an address as input and adds the address to the list of listeners,
-// meaning that the added address will get sent all messages that are broadcast
-// to the quorum.
-func (p *Participant) Subscribe(a network.Address, _ *struct{}) (err error) {
-	// add the address to listeners
-	p.listenersLock.Lock()
-	p.listeners = append(p.listeners, a)
-	p.listenersLock.Unlock()
-	return
-} */
-
 // Sends a message to every sibling in the quorum.
 func (p *Participant) broadcast(message network.Message) {
 	// send the messagea to all of the siblings in the quorum

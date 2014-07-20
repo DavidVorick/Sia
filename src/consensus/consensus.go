@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+// An Update is the set of information sent by each participant during
+// consensus. This information includes the heartbeat, which contains required
+// information for being a part of the quorum, and it contains optional
+// information such as script inputs.
+type Update struct {
+	Heartbeat          delta.Heartbeat
+	HeartbeatSignature siacrypto.Signature
+
+	// optional stuff
+}
+
 type SignedUpdate struct {
 	Update      Update // eventually be replaced with a hash and fetch request
 	Signatories []byte
@@ -26,7 +37,7 @@ var hsuerrInvalidSignature = errors.New("Update contains a corrupted/invalid sig
 var hsuerrHaveHeartbeat = errors.New("This update has already been processed.")
 var hsuerrManyHeartbeats = errors.New("Multiple heartbeats from this sibling have already been submitted.")
 
-func (p *Participant) NewSignedUpdate() {
+func (p *Participant) newSignedUpdate() {
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
 	randomBytes := siacrypto.RandomByteSlice(state.EntropyVolume)

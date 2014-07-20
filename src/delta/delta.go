@@ -41,6 +41,10 @@ func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }
 
+func (e *Engine) WalletList() []state.WalletID {
+	return e.state.WalletList()
+}
+
 func (e *Engine) Initialize(filePrefix string) {
 	e.SetFilePrefix(filePrefix)
 	return

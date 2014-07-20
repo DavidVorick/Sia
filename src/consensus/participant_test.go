@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"network"
+	"siacrypto"
 	"testing"
 )
 
@@ -8,9 +10,18 @@ import (
 // items have been initialized.
 func TestNewParticipant(t *testing.T) {
 	// Test calling NewParticipant with a nil message router.
-	_, err := NewParticipant(nil, "../../filesCreatedDuringTesting/TestNewParticipant")
+	p, err := NewParticipant(nil, "../../filesCreatedDuringTesting/TestNewParticipant")
 	if err == nil {
 		t.Error("Able to create a participant with a nil message router.")
+	}
+
+	mr, err := network.NewRPCServer(11200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = NewParticipant(mr, "../../filesCreatedDuringTesting/TestNewParticipant")
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Test that a keypair exists.
