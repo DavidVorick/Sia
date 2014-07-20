@@ -23,7 +23,7 @@ func (p *Participant) Metadata(_ struct{}, smd *state.StateMetadata) (err error)
 	return
 }
 
-func (p *Participant) GetWallets(_ struct{}, wl *[]state.WalletID) (err error) {
+func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
 	*wl = p.engine.WalletList()
 	return
 }

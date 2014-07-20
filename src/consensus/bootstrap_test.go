@@ -31,7 +31,7 @@ func TestCreateParticipantFunctions(t *testing.T) {
 	p.currentStepLock.RUnlock()
 
 	var walletIDs []state.WalletID
-	p.GetWallets(struct{}{}, &walletIDs)
+	p.WalletIDs(struct{}{}, &walletIDs)
 	if len(walletIDs) != 2 {
 		t.Error("Incorrect number of wallets returned, expeting 2:", len(walletIDs))
 	}
