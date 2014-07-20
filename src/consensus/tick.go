@@ -59,7 +59,8 @@ func (p *Participant) tick() {
 				// p.appendBlock(b)
 			}
 
-			// send a new heartbeat
+			// Broadcast a new update to the quorum.
+			p.newSignedUpdate()
 
 			p.currentStep = 1
 		} else {
