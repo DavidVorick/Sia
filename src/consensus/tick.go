@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	StepDuration = 800 * time.Millisecond
+	StepDuration = 1800 * time.Millisecond
 )
 
 // condenseBlock assumes that a heartbeat has a valid signature and that the

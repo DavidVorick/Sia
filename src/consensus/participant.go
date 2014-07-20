@@ -62,6 +62,7 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 		return
 	}
 	p.siblingIndex = ^byte(0)
+	p.currentStep = 1
 
 	// Initialize the network components of the participant.
 	p.address = mr.Address()

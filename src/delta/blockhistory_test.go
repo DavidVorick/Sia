@@ -14,7 +14,9 @@ import (
 func TestSaveAndLoadBlock(t *testing.T) {
 	var e Engine
 	e.Initialize("../../filesCreatedDuringTesting/TestSaveAndLoad")
-	err := e.Bootstrap(state.Sibling{})
+	err := e.Bootstrap(state.Sibling{
+		WalletID: 1,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
