@@ -46,7 +46,10 @@ func (p *Participant) tick() {
 	for _ = range ticker {
 		p.currentStepLock.Lock()
 		if p.currentStep == state.QuorumSize {
+			// First condense the block, then set the current step to 1. The order
+			// shouldn't matter because currentStep is locked by a mutex.
 			b := p.condenseBlock()
+			p.currentStep = 1
 
 			// If synnchronized, give the block to the engine for processing.
 			// Otherwise, save the block in a map that is used to assist
@@ -55,14 +58,12 @@ func (p *Participant) tick() {
 				p.engineLock.Lock()
 				p.engine.Compile(b)
 				p.engineLock.Unlock()
+
+				// Broadcast a new update to the quorum.
+				p.newSignedUpdate()
 			} else {
 				// p.appendBlock(b)
 			}
-
-			// Broadcast a new update to the quorum.
-			p.newSignedUpdate()
-
-			p.currentStep = 1
 		} else {
 			p.currentStep += 1
 		}
