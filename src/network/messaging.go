@@ -25,7 +25,7 @@ type Message struct {
 type MessageRouter interface {
 	Address() Address
 	RegisterHandler(interface{}) Identifier
-	SendMessage(*Message) error
-	SendAsyncMessage(*Message) chan error
+	SendMessage(Message) error
+	SendAsyncMessage(Message) chan error
 	Close()
 }

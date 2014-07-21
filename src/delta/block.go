@@ -13,9 +13,9 @@ const (
 // every block. Each block contains an array of [state.QuorumSize] heartbeats,
 // and sets the value to 'nil' if nothing was submitted.
 type Heartbeat struct {
-	Entropy state.Entropy
+	ParentBlock siacrypto.Hash
+	Entropy     state.Entropy
 	// storage proof
-	Signature siacrypto.Signature
 }
 
 // A block contains all the data that is necessary to move the quorum from one
@@ -30,9 +30,10 @@ type Block struct {
 	// parentQuorum
 
 	// Heartbeats for each sibling
-	Heartbeats [state.QuorumSize]*Heartbeat // using pointers enables setting Heartbeats to nil
+	Heartbeats          [state.QuorumSize]Heartbeat
+	HeartbeatSignatures [state.QuorumSize]siacrypto.Signature
 
 	// Aggregate of non-required information submitted to the quorum
-	ScriptInputs []ScriptInput
-	//UploadAdvancements []quorum.UploadAdvancement
+	// ScriptInputs []ScriptInput
+	// UploadAdvancements []quorum.UploadAdvancement
 }

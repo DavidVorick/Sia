@@ -25,12 +25,12 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-func SignInput(secretKey *siacrypto.SecretKey, input []byte) (gobSm []byte, err error) {
+func SignInput(secretKey *siacrypto.SecretKey, input []byte) (encSm []byte, err error) {
 	sm, err := secretKey.Sign(input)
 	if err != nil {
 		return
 	}
-	gobSm, err = sm.GobEncode()
+	encSm, err = siaencoding.Marshal(sm)
 	return
 }
 
@@ -81,4 +81,29 @@ func ProposeUploadInput(encUA []byte) []byte {
 		0x3B, 0x01, //       call ProposeUpload
 		0xFF, //             exit
 	}, encUA...)
+}
+
+// The bootstrap script acts as a fountain, and can be called to spawn a new
+// wallet with a minimal starting balance that will the economy to get flowing.
+var BootstrapScript = []byte{
+	0x27, 0x08, //       00 push 8 bytes of input (wallet id)
+	0x01, 0x00, //       02 push 1 (high balance)
+	0x02, 0xA8, 0x61, // 04 push 100 (low balance)
+	0x2E, 0x01, //       08 read rest of input into buffer 1
+	0x32, 0x01, //       10 call create wallet
+	0xFF, //             12 exit
+}
+
+// the default script
+// verifies public key, then transfers control to the input
+func DefaultScript(publicKey siacrypto.PublicKey) []byte {
+	return append([]byte{
+		0x26, 0x10, 0x00, // 00 move data pointer to public key
+		0x39, 0x20, 0x01, // 03 read public key into buffer 1
+		0x2E, 0x02, //       06 read signed message into buffer 2
+		0x34, 0x01, 0x02, // 08 verify signature
+		0x38,             //             11 if invalid signature, reject
+		0x26, 0x70, 0x00, // 12 move data pointer to input body
+		0x2F, //             15 execute input
+	}, publicKey[:]...)
 }

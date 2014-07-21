@@ -1,7 +1,9 @@
 package consensus
 
 import (
+	"fmt"
 	"network"
+	"state"
 )
 
 /*
@@ -25,7 +27,12 @@ The Bootstrapping Process
 
 // CreateBootstrapParticipant returns a participant that is participating as
 // the first and only sibling on a new quorum.
-func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
+	if sibID == 0 {
+		err = fmt.Errorf("Cannot use id '0', this id is reserved for the bootstrapping wallet.")
+		return
+	}
+
 	// Call NewParticipant, which gives a participant that has all of the basic fields initialized.
 	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
@@ -35,19 +42,34 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string) (p 
 	// Call NewBootstrapEngine, which returns an engine that has a quorum with a
 	// bootstrap/fountain wallet, and a sibling as described by p.self. The
 	// sibling has also been given some funds.
-	err = p.engine.BootstrapEngine(p.self)
+	sib := state.Sibling{
+		Address:   p.address,
+		PublicKey: p.publicKey,
+		WalletID:  sibID,
+	}
+	err = p.engine.Bootstrap(sib)
 	if err != nil {
 		return
 	}
 
-	// Set synchronized to true for the ticking.
+	// Set synchronized to true and start ticking.
+	p.siblingIndex = 0
 	p.synchronized = true
+	go p.tick() // Tick gets its own thread, so the this function can return.
+
 	return
 }
 
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
-	// 1. Become a listener on the quorum and begin storing the blocks that get
-	// created.
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, trustedSiblings []network.Address) (p *Participant, err error) {
+	p, err = NewParticipant(mr, filePrefix)
+	if err != nil {
+		return
+	}
+
+	// 1. Submit a join request to the existing quorum.
+
+	// this is being held off on implementation until a single participant is doing full consensus.
+
 	return
 }
 

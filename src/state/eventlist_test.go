@@ -1,6 +1,6 @@
 package state
 
-/* import (
+/*import (
 	"siacrypto"
 	"testing"
 )
@@ -29,7 +29,7 @@ func TestEventList(t *testing.T) {
 		deadline: 5,
 	}
 
-	q := new(Quorum)
+	var s State
 	q.insertEvent(u0)
 
 	en0 := q.eventNode(u0)
@@ -114,4 +114,4 @@ func TestEventList(t *testing.T) {
 	// randomly insert and delete the things
 	// delete all of the things
 	// check sorting each time
-} */
+}*/

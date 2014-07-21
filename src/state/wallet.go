@@ -15,6 +15,8 @@ const (
 // eventually this will be modified to verify a public key before executing
 var genesisScript = []byte{0x28}
 
+type WalletID uint64
+
 type Wallet struct {
 	ID             WalletID
 	Balance        Balance

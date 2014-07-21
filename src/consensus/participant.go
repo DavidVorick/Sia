@@ -10,109 +10,78 @@ import (
 )
 
 type Participant struct {
-	engine delta.Engine
+	engine     delta.Engine
+	engineLock sync.RWMutex
 
 	// Variables local to the participant
-	self      *state.Sibling       // the sibling object for this participant
-	secretKey *siacrypto.SecretKey // secret key matching self.publicKey
+	siblingIndex byte
+	publicKey    siacrypto.PublicKey
+	secretKey    siacrypto.SecretKey
 
 	// Network Related Variables
+	address       network.Address
 	messageRouter network.MessageRouter
-	listeners     []network.Address
-	listenersLock sync.RWMutex
 
 	// Heartbeat Variables
-	scriptInputs     []delta.ScriptInput
-	scriptInputsLock sync.Mutex
+	updates     [state.QuorumSize]map[siacrypto.Hash]Update // list of heartbeats received from siblings
+	updatesLock sync.Mutex
+	//scriptInputs     []delta.ScriptInput
+	//scriptInputsLock sync.Mutex
 	//uploadAdvancements     []quorum.UploadAdvancement
-	uploadAdvancementsLock sync.Mutex
-	//heartbeats             [state.QuorumSize]map[siacrypto.Hash]*heartbeat // list of heartbeats received from siblings
-	heartbeatsLock sync.Mutex
+	//uploadAdvancementsLock sync.Mutex
 
 	// Consensus Algorithm Status
-	ticking     bool
-	tickingLock sync.Mutex
-	currentStep int
-	stepLock    sync.RWMutex // prevents a benign race condition
+	//ticking     bool
+	//tickingLock sync.Mutex
+	currentStep     byte
+	currentStepLock sync.RWMutex // prevents a benign race condition
 
 	// Bootstrap variables
 	synchronized bool
-	recentBlocks map[uint32]*delta.Block
+	//recentBlocks map[uint32]*delta.Block
 
 	// Block history variables
-	activeHistoryStep int
-	activeHistory     string // file currently being appended with new blocks
-	recentHistory     string // file containing SnapshotLen blocks
+	//activeHistoryStep int
+	//activeHistory     string // file currently being appended with new blocks
+	//recentHistory     string // file containing SnapshotLen blocks
 }
 
-var npNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
+var nperrNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
 
 func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
 	if mr == nil {
-		err = npNilMessageRouter
+		err = nperrNilMessageRouter
 		return
 	}
 
 	p = new(Participant)
 
 	// Create a keypair for the participant.
-	publicKey, secretKey, err := siacrypto.CreateKeyPair()
+	p.publicKey, p.secretKey, err = siacrypto.CreateKeyPair()
 	if err != nil {
 		return
 	}
-	p.secretKey = secretKey
-
-	// Initialize the network components of the participant.
-	p.messageRouter = mr
-	p.self = &state.Sibling{
-		Address:   mr.Address(),
-		PublicKey: publicKey,
-	}
-	p.self.Address.ID = mr.RegisterHandler(p)
-
-	// Initialize the file prefix
-	p.engine.SetFilePrefix(filePrefix)
-
-	// Initialize currentStep to 1
+	p.siblingIndex = ^byte(0)
 	p.currentStep = 1
 
+	// Initialize the network components of the participant.
+	p.address = mr.Address()
+	p.address.ID = mr.RegisterHandler(p)
+	p.messageRouter = mr
+
+	// Initialize the file prefix
+	p.engine.Initialize(filePrefix)
+
 	return
 }
 
-/* func (p *Participant) AddScriptInput(si script.ScriptInput, _ *struct{}) (err error) {
-	p.scriptInputsLock.Lock()
-	p.scriptInputs = append(p.scriptInputs, si)
-	p.scriptInputsLock.Unlock()
-	return
-}
-
-// Takes an address as input and adds the address to the list of listeners,
-// meaning that the added address will get sent all messages that are broadcast
-// to the quorum.
-func (p *Participant) Subscribe(a network.Address, _ *struct{}) (err error) {
-	// add the address to listeners
-	p.listenersLock.Lock()
-	p.listeners = append(p.listeners, a)
-	p.listenersLock.Unlock()
-	return
-}
-
-// Takes a message and broadcasts it to every sibling in the quorum and every
-// listener subscribed to the participant
-func (p *Participant) broadcast(m *network.Message) {
+// Sends a message to every sibling in the quorum.
+func (p *Participant) broadcast(message network.Message) {
 	// send the messagea to all of the siblings in the quorum
-	siblings := p.quorum.Siblings()
-	for _, sibling := range siblings {
-		if sibling != nil {
-			nm := *m
-			nm.Dest = sibling.Address()
-			p.messageRouter.SendAsyncMessage(&nm)
+	for _, sibling := range p.engine.Metadata().Siblings {
+		if sibling.Active {
+			message.Dest = sibling.Address
+			p.messageRouter.SendAsyncMessage(message)
 		}
 	}
-
-	for _, listener := range p.listeners {
-		nm := *m
-		nm.Dest = listener
-		p.messageRouter.SendAsyncMessage(&nm)
-	}
-} */
+}

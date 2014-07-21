@@ -64,11 +64,12 @@ func (s *State) CreateWallet(w Wallet, id WalletID, balance Balance, initialScri
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
-func (s *State) AddSibling(w *Wallet, sib *Sibling) (cost int) {
+func (s *State) AddSibling(w *Wallet, sib Sibling) (cost int) {
 	cost = 50
 	for i := byte(0); i < QuorumSize; i++ {
-		if s.Metadata.Siblings[i] == nil {
-			sib.Index = byte(i)
+		if !s.Metadata.Siblings[i].Active {
+			sib.Active = true
+			sib.Index = i
 			sib.WalletID = w.ID
 			s.Metadata.Siblings[i] = sib
 			break

@@ -1,54 +1,46 @@
 package consensus
 
-/* import (
+import (
 	"network"
-	"os"
+	"siacrypto"
 	"testing"
 )
 
-// somewhere in this file we need a test that gob.Register is being called for
-// all updates
+// TestNewParticipnat runs NewParticipant and checks to see that all the basic
+// items have been initialized.
+func TestNewParticipant(t *testing.T) {
+	// Test calling NewParticipant with a nil message router.
+	p, err := NewParticipant(nil, "../../filesCreatedDuringTesting/TestNewParticipant")
+	if err == nil {
+		t.Error("Able to create a participant with a nil message router.")
+	}
 
-func TestSynchronizeEncoding(t *testing.T) {
-	// tbi
+	mr, err := network.NewRPCServer(11200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = NewParticipant(mr, "../../filesCreatedDuringTesting/TestNewParticipant")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test that a keypair exists.
+	var emptyPublicKey siacrypto.PublicKey
+	var emptySecretKey siacrypto.SecretKey
+	if p.publicKey == emptyPublicKey {
+		t.Error("Public key not properly initialized")
+	}
+	if p.secretKey == emptySecretKey {
+		t.Error("Secret key not properly initialized")
+	}
+
+	// Test that the siblingIndex has been set to the non-sibling value.
+	if p.siblingIndex != ^byte(0) {
+		t.Error("siblingIndex not initialized to ^byte(0)")
+	}
+
+	// Test that the address has been initialized, and the handler has been
+	// registered. ???
 }
 
-// Create a state, check the defaults
-func TestCreateParticipant(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	zn := network.NewDebugNetwork()
-	// make sure CreateState does not cause errors
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	wd = wd + "/../../participantStorage/TestCreateParticipant1."
-	p0, err := CreateParticipant(zn, wd, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// sanity check the default values for the bootstrap
-	if p0.self.Index() != 0 {
-		t.Error("p0.self.index initialized to", p0.self.Index())
-	}
-	p0.stepLock.Lock()
-	if p0.currentStep != 1 {
-		t.Error("p0.currentStep should be initialized to 1!")
-	}
-	p0.stepLock.Unlock()
-
-	// check a non-bootstrap
-	p1, err := CreateParticipant(zn, wd, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if p1.self.Index() != 255 {
-		t.Error("p1.self.index initialized to", p1.self.Index())
-	}
-
-	// test creating another participant that doesn't have the bootstrap address
-} */
+// TestBroadcast... don't really know how to write this test.

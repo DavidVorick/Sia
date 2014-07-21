@@ -46,10 +46,6 @@ func (e *Engine) activeHistoryFilename() string {
 // prefix. Each points to the beginning of the next block. For convenience,
 // each block is also prefixed with its own length.
 func (e *Engine) saveBlock(b Block) (err error) {
-	// Lock the history for writing
-	e.historyLock.Lock()
-	defer e.historyLock.Unlock()
-
 	// if e.activeHistoryLen == SnapshotLen, the old complete history is deleted
 	// and replaced by the activeHistory. Then the activeHistory is replaced by a
 	// new history which will start with a single block and be of length 1.
@@ -154,10 +150,6 @@ func (e *Engine) saveBlock(b Block) (err error) {
 // LoadBlock will check if the block in question is stored in one of the block
 // history files, and then either return the block or an error.
 func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
-	// Lock the history for reading.
-	e.historyLock.RLock()
-	defer e.historyLock.RUnlock()
-
 	// Check for the block in active history and recent history, return an error
 	// if it's not found in either location. Recent history may not exist yet, so
 	// that possibility is also checked
@@ -178,7 +170,7 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 		}
 		blockIndex = height - e.recentHistoryHead
 	} else {
-		err = fmt.Errorf("LoadBlock: Block not found in the quorum")
+		err = fmt.Errorf("LoadBlock: Block not in available history.")
 		return
 	}
 

@@ -1,14 +1,25 @@
 package consensus
 
-/* import (
+import (
 	"network"
-	"os"
-	"quorum"
-	"siacrypto"
 	"testing"
 )
 
-// create a participant with a quorum and then generate a new signed heartbeat,
+func TestNewSignedUpdate(t *testing.T) {
+	// Bootstrap a sibling
+	mr, err := network.NewRPCServer(11100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = CreateBootstrapParticipant(mr, "../../filesCreatedDuringTesting/TestNewSignedUpdate", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// more stuff
+}
+
+/*// create a participant with a quorum and then generate a new signed heartbeat,
 // do basic checking to make sure there are no panics and no errors.
 func TestNewSignedHeartbeat(t *testing.T) {
 	p := new(Participant)
@@ -218,4 +229,4 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		p.stepLock.Unlock()
 		time.Sleep(time.Second)
 		time.Sleep(StepDuration)
-} */
+}*/

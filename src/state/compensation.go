@@ -41,7 +41,7 @@ func (s *State) ExecuteCompensation() {
 	// Count the number of siblings receiving compensation.
 	var siblings int
 	for i := range s.Metadata.Siblings {
-		if s.Metadata.Siblings[i] == nil {
+		if !s.Metadata.Siblings[i].Active {
 			continue
 		}
 		siblings++
@@ -57,7 +57,7 @@ func (s *State) ExecuteCompensation() {
 	compensation := s.Metadata.StoragePrice
 	compensation.Multiply(NewBalance(0, uint64(s.walletRoot.weight)))
 	for i := range s.Metadata.Siblings {
-		if s.Metadata.Siblings[i] == nil {
+		if !s.Metadata.Siblings[i].Active {
 			continue
 		}
 

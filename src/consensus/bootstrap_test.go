@@ -2,7 +2,9 @@ package consensus
 
 import (
 	"network"
+	"state"
 	"testing"
+	"time"
 )
 
 func TestCreateParticipantFunctions(t *testing.T) {
@@ -11,12 +13,38 @@ func TestCreateParticipantFunctions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions")
+	walletID := state.WalletID(24)
+	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions", walletID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// eventually add a few siblings to the quorum, then do status checks to make
-	// sure they're all still around, and that balances are changing or something
-	// like that.
+	var metadata state.StateMetadata
+	p.Metadata(struct{}{}, &metadata)
+	if !metadata.Siblings[0].Active {
+		t.Error("No sibling in the bootstrap position.")
+	}
+	p.currentStepLock.RLock()
+	if p.currentStep != 1 {
+		t.Error("p.currentStep needs to be initialized to 1")
+	}
+	p.currentStepLock.RUnlock()
+
+	var walletIDs []state.WalletID
+	p.WalletIDs(struct{}{}, &walletIDs)
+	if len(walletIDs) != 2 {
+		t.Error("Incorrect number of wallets returned, expeting 2:", len(walletIDs))
+	}
+
+	if testing.Short() {
+		t.Skip()
+	}
+
+	time.Sleep(time.Millisecond * 50)
+	time.Sleep(StepDuration)
+	p.currentStepLock.RLock()
+	if p.currentStep != 2 {
+		t.Error("step counter is not increasing after bootstrap.")
+	}
+	p.currentStepLock.RUnlock()
 }

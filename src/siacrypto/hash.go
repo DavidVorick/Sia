@@ -4,6 +4,7 @@ package siacrypto
 
 import (
 	"crypto/sha512"
+	"siaencoding"
 )
 
 const (
@@ -18,5 +19,15 @@ func CalculateHash(data []byte) (hash Hash) {
 	sha.Write(data)
 	hashSlice := sha.Sum(nil)
 	copy(hash[:], hashSlice)
+	return
+}
+
+func HashObject(v interface{}) (h Hash, err error) {
+	bytes, err := siaencoding.Marshal(v)
+	if err != nil {
+		return
+	}
+
+	h = CalculateHash(bytes)
 	return
 }

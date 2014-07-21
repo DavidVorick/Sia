@@ -11,10 +11,11 @@ import (
 // over the wire as a complete entity, without needing to be broken up or
 // buffered.
 type StateMetadata struct {
-	Siblings     [QuorumSize]*Sibling
+	Siblings     [QuorumSize]Sibling
+	Germ         Entropy
 	Seed         Entropy
 	EventCounter uint32
 	StoragePrice Balance
-	Parent       siacrypto.Hash
+	ParentBlock  siacrypto.Hash
 	Height       uint32
 }
