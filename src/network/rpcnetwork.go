@@ -46,6 +46,7 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	// determine our public hostname
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
+		tcpServ.Close()
 		return
 	}
 	host := strings.Split(conn.LocalAddr().String(), ":")[0]
