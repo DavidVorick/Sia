@@ -39,7 +39,7 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	consensus.BootstrapAddress.Host = host
 	consensus.BootstrapAddress.Port = port
 	consensus.BootstrapAddress.ID = network.Identifier(id)
-	err = c.router.Ping(&consensus.BootstrapAddress)
+	err = c.router.Ping(consensus.BootstrapAddress)
 	if err != nil {
 		c.router.Close()
 	}

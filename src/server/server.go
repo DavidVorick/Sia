@@ -30,7 +30,7 @@ func joinQuorum() {
 	fmt.Print("Bootstrap ID: ")
 	fmt.Scanf("%d", &id)
 	consensus.BootstrapAddress = network.Address{id, hostname, port}
-	err = networkServer.Ping(&consensus.BootstrapAddress)
+	err = networkServer.Ping(consensus.BootstrapAddress)
 	if err != nil {
 		fmt.Println("Failed to ping bootstrap:", err)
 		return

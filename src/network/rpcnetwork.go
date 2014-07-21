@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var timeout = time.Second * 5
+
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
 type RPCServer struct {
 	addr     Address
@@ -81,6 +83,23 @@ func (rpcs *RPCServer) serverHandler() {
 	}
 }
 
+// Ping calls the Participant.Ping method on the specified address.
+// It returns false if the host is unreachable or times out.
+func (rpcs *RPCServer) Ping(a Address) bool {
+	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+
+	select {
+	case call := <-conn.Go("Participant"+string(a.ID)+".Ping", struct{}{}, nil, nil).Done:
+		return call.Error == nil
+	case <-time.After(timeout):
+		return false
+	}
+}
+
 // SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
 // It times out after waiting for half the step duration.
 func (rpcs *RPCServer) SendMessage(m Message) error {
@@ -97,7 +116,7 @@ func (rpcs *RPCServer) SendMessage(m Message) error {
 	select {
 	case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
 		return call.Error
-	case <-time.After(time.Second * 5):
+	case <-time.After(timeout):
 		return errors.New("request timed out")
 	}
 }
@@ -122,19 +141,11 @@ func (rpcs *RPCServer) SendAsyncMessage(m Message) chan error {
 		case call := <-conn.Go(name, m.Args, m.Resp, nil).Done:
 			errChan <- call.Error
 			return
-		case <-time.After(time.Second * 5):
+		case <-time.After(timeout):
 			errChan <- errors.New("request timed out")
 			return
 		}
 	}()
 
 	return errChan
-}
-
-func (rpcs *RPCServer) Ping(a *Address) (err error) {
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
-	if err == nil {
-		conn.Close()
-	}
-	return
 }
