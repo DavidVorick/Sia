@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"bytes"
 	"errors"
 	//"siacrypto"
 	"siaencoding"
@@ -47,18 +48,13 @@ var opTable = map[byte]instruction{
 	0x20: instruction{"goto", 2, op_goto, 1},
 	0x21: instruction{"reg_store", 1, op_reg_store, 2},
 	0x22: instruction{"reg_load", 1, op_reg_load, 2},
-	0x23: instruction{"reg_inc", 1, op_reg_inc, 2},
-	0x24: instruction{"reg_dec", 1, op_reg_dec, 2},
 	0x25: instruction{"data_move", 2, op_data_move, 1},
 	0x26: instruction{"data_goto", 2, op_data_goto, 1},
 	0x27: instruction{"data_push", 1, op_data_push, 2},
-	0x28: instruction{"data_reg", 2, op_data_reg, 2},
-	0x29: instruction{"replace_byte", 0, op_replace_byte, 2},
-	0x2A: instruction{"replace_short", 0, op_replace_short, 2},
-	0x2B: instruction{"buf_copy", 1, op_buf_copy, 2},
-	0x2C: instruction{"buf_paste", 1, op_buf_paste, 2},
-	0x2D: instruction{"buf_prefix", 1, op_buf_prefix, 2},
-	0x2E: instruction{"buf_rest", 1, op_buf_rest, 2},
+	0x2B: instruction{"data_copy", 1, op_data_copy, 2},
+	0x2C: instruction{"data_paste", 1, op_data_paste, 2},
+	0x2D: instruction{"data_prefix", 1, op_data_prefix, 2},
+	0x2E: instruction{"data_rest", 1, op_data_rest, 2},
 	0x2F: instruction{"transfer", 0, op_transfer, 1},
 	0x30: instruction{"reject", 0, op_reject, 0},
 	0x31: instruction{"add_sibling", 1, op_add_sibling, 5},
@@ -69,31 +65,30 @@ var opTable = map[byte]instruction{
 	0x36: instruction{"if_move", 2, op_if_move, 2},
 	0x37: instruction{"move", 2, op_move, 1},
 	0x38: instruction{"cond_reject", 0, op_cond_reject, 1},
-	0x39: instruction{"data_buf", 2, op_data_buf, 2},
 	0x3A: instruction{"resize_sec", 1, op_resize_sec, 9},
 	0x3B: instruction{"prop_upload", 1, op_prop_upload, 9},
 	0xFF: instruction{"exit", 0, op_exit, 0},
 }
 
 // helper functions
-func v2i(b value) int64 {
-	return siaencoding.DecInt64(b[:])
+func v2i(b []byte) int64 {
+	p := make([]byte, 8)
+	copy(p, b)
+	return siaencoding.DecInt64(p)
 }
 
-func i2v(i int64) (v value) {
-	b := siaencoding.EncInt64(i)
-	copy(v[:], b)
-	return
+func i2v(i int64) []byte {
+	return siaencoding.EncInt64(i)
 }
 
-func v2f(b value) float64 {
-	return siaencoding.DecFloat64(b[:])
+func v2f(b []byte) float64 {
+	p := make([]byte, 8)
+	copy(p, b)
+	return siaencoding.DecFloat64(p)
 }
 
-func f2v(f float64) (v value) {
-	b := siaencoding.EncFloat64(f)
-	copy(v[:], b)
-	return
+func f2v(f float64) []byte {
+	return siaencoding.EncFloat64(f)
 }
 
 // convert two bytes to signed short
@@ -101,16 +96,16 @@ func s2i(low, high byte) int {
 	return int(int16(low) + int16(high)<<8)
 }
 
-func b2v(b bool) value {
+func b2v(b bool) []byte {
 	if b {
-		return value{0x01}
+		return []byte{0x01}
 	} else {
-		return value{0x00}
+		return []byte{0x00}
 	}
 }
 
-func v2b(v value) bool {
-	return v2i(v) != 0
+func v2b(b []byte) bool {
+	return v2i(b) != 0
 }
 
 // opcodes
@@ -120,12 +115,12 @@ func op_no_op(args []byte) (err error) {
 }
 
 func op_push_byte(args []byte) (err error) {
-	err = push(value{args[0]})
+	err = push(args[:1])
 	return
 }
 
 func op_push_short(args []byte) (err error) {
-	err = push(value{args[0], args[1]})
+	err = push(args[:2])
 	return
 }
 
@@ -323,7 +318,7 @@ func op_equal(args []byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(b2v(a == b))
+	push(b2v(bytes.Equal(a, b)))
 	return
 }
 
@@ -333,7 +328,7 @@ func op_not_equal(args []byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(b2v(a != b))
+	push(b2v(bytes.Equal(a, b)))
 	return
 }
 
@@ -458,16 +453,6 @@ func op_reg_load(args []byte) (err error) {
 	return
 }
 
-func op_reg_inc(args []byte) (err error) {
-	env.registers[args[0]] = i2v(v2i(env.registers[args[0]]) + int64(args[1]))
-	return
-}
-
-func op_reg_dec(args []byte) (err error) {
-	env.registers[args[0]] = i2v(v2i(env.registers[args[0]]) - int64(args[1]))
-	return
-}
-
 func op_data_move(args []byte) (err error) {
 	env.dptr += s2i(args[0], args[1])
 	if env.dptr < 0 || env.dptr > len(env.script) {
@@ -485,54 +470,36 @@ func op_data_goto(args []byte) (err error) {
 }
 
 func op_data_push(args []byte) (err error) {
-	var v value
 	b := make([]byte, args[0])
 	env.dptr += copy(b, env.script[env.dptr:])
-	copy(v[:], b)
-	err = push(v)
+	err = push(b)
 	return
 }
 
-func op_data_reg(args []byte) (err error) {
-	var v value
+func op_data_store(args []byte) (err error) {
 	b := make([]byte, args[0])
 	env.dptr += copy(b, env.script[env.dptr:])
-	copy(v[:], b)
-	env.registers[args[1]] = v
+	env.registers[args[1]] = b
 	return
 }
 
-func op_replace_byte(args []byte) (err error) {
-	a, err := pop()
-	env.script[env.dptr] = a[0]
+func op_replace(args []byte) (err error) {
+	copy(env.script[env.dptr:], env.registers[args[0]])
 	return
 }
 
-func op_replace_short(args []byte) (err error) {
-	a, err := pop()
-	env.script[env.dptr] = a[0]
-	env.script[env.dptr+1] = a[1]
-	return
-}
-
-func op_data_buf(args []byte) (err error) {
-	env.buffers[args[1]] = make([]byte, args[0])
-	env.dptr += copy(env.buffers[args[1]], env.script[env.dptr:])
-	return
-}
-
-func op_buf_copy(args []byte) (err error) {
+func op_data_copy(args []byte) (err error) {
 	lengthv, err := pop()
 	if err != nil {
 		return
 	}
 	length := uint16(v2i(lengthv))
-	env.buffers[args[0]] = make([]byte, length)
-	env.dptr += copy(env.buffers[args[0]], env.script[env.dptr:])
+	env.registers[args[0]] = make([]byte, length)
+	env.dptr += copy(env.registers[args[0]], env.script[env.dptr:])
 	return
 }
 
-func op_buf_paste(args []byte) (err error) {
+func op_data_paste(args []byte) (err error) {
 	lengthv, err := pop()
 	if err != nil {
 		return
@@ -544,23 +511,23 @@ func op_buf_paste(args []byte) (err error) {
 		env.script = append(env.script, ext...)
 	}
 	b := make([]byte, length)
-	copy(b, env.buffers[args[0]])
+	copy(b, env.registers[args[0]])
 	copy(env.script[env.dptr:], b)
 	return
 }
 
-func op_buf_prefix(args []byte) (err error) {
+func op_data_prefix(args []byte) (err error) {
 	err = op_data_push([]byte{0x02})
 	if err != nil {
 		return
 	}
-	err = op_buf_copy(args)
+	err = op_data_copy(args)
 	return
 }
 
-func op_buf_rest(args []byte) (err error) {
-	env.buffers[args[0]] = make([]byte, len(env.script[env.dptr:]))
-	env.dptr += copy(env.buffers[args[0]], env.script[env.dptr:])
+func op_data_rest(args []byte) (err error) {
+	env.registers[args[0]] = make([]byte, len(env.script[env.dptr:]))
+	env.dptr += copy(env.registers[args[0]], env.script[env.dptr:])
 	return
 }
 
