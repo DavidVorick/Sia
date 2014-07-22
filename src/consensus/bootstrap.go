@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"delta"
 	"fmt"
 	"network"
 	"state"
@@ -60,7 +61,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	return
 }
 
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, trustedSiblings []network.Address) (p *Participant, err error) {
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
 	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
 		return
@@ -71,11 +72,26 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, trust
 	// of the snapshot and blocks before you actually attempt to acquire
 	// anything.
 
+	// There is an assumption that the input wallet exists on the quorum with a
+	// balance sufficient to cover the costs of creating the participant.
+
 	// 1. Submit a join request to the existing quorum. This join request will be
 	// added to the heartbeats of the siblings, and will be included in the next
 	// round of consensus. So before the join request gets through, the current
 	// block will need to finish, and then the next block will need to finish as
 	// well. This will take many hours, as block times are very slow.
+	joinRequest := delta.ScriptInput{
+		WalletID: tetherID,
+		Input:    delta.DefaultScript(p.publicKey),
+	}
+	for _, address := range quorumSiblings {
+		mr.SendAsyncMessage(network.Message{
+			Dest: address,
+			Proc: "Participant.AddScriptInput",
+			Args: joinRequest,
+			Resp: nil,
+		})
+	}
 
 	// 2. While waiting for the next block, can download a snapshot and all
 	// blocks following the snapshot. The 3 items of concern are: Metadata,

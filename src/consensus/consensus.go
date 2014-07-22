@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"network"
 	"siacrypto"
+	"sort"
 	"state"
 	"time"
 )
@@ -18,7 +19,7 @@ type Update struct {
 	Heartbeat          delta.Heartbeat
 	HeartbeatSignature siacrypto.Signature
 
-	// optional stuff
+	ScriptInputs []delta.ScriptInput
 }
 
 type SignedUpdate struct {
@@ -52,17 +53,43 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	b.ParentBlock = p.engine.Metadata().ParentBlock
 
 	// Take each update and condense them into a single non-repetitive block.
-	for i := range p.updates {
-		if len(p.updates[i]) == 1 {
-			for _, u := range p.updates[i] {
-				// Add the heartbeat
-				b.Heartbeats[i] = u.Heartbeat
-				b.HeartbeatSignatures[i] = u.HeartbeatSignature
+	{
+		// Create a map containing all ScriptInputs found in a heartbeat.
+		scriptInputMap := make(map[string]delta.ScriptInput)
+		for i := range p.updates {
+			if len(p.updates[i]) == 1 {
+				for _, u := range p.updates[i] {
+					// Add the heartbeat to the block
+					b.Heartbeats[i] = u.Heartbeat
+					b.HeartbeatSignatures[i] = u.HeartbeatSignature
 
-				// Add the other stuff (tbi)
+					// Add all of the script inputs to the script input map.
+					for _, scriptInput := range u.ScriptInputs {
+						scriptInputHash, err := siacrypto.HashObject(scriptInput)
+						if err != nil {
+							continue
+						}
+						scriptInputString := string(scriptInputHash[:])
+						scriptInputMap[scriptInputString] = scriptInput
+					}
+				}
 			}
+
+			// Clear the update map for this sibling, so that it is clean during the
+			// next round of consensus.
+			p.updates[i] = make(map[siacrypto.Hash]Update)
 		}
-		p.updates[i] = make(map[siacrypto.Hash]Update) // clear map for next cycle
+
+		// Sort the scriptInputMap and include the scriptInputs into the block in
+		// sorted order.
+		var sortedKeys []string
+		for k := range scriptInputMap {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sort.Strings(sortedKeys)
+		for _, k := range sortedKeys {
+			b.ScriptInputs = append(b.ScriptInputs, scriptInputMap[k])
+		}
 	}
 	return
 }
@@ -84,12 +111,22 @@ func (p *Participant) newSignedUpdate() {
 		panic(err)
 	}
 
+	// Create the update with the heartbeat and heartbeat signature.
 	update := Update{
 		Heartbeat:          hb,
 		HeartbeatSignature: signature,
 	}
-	updateSignature, err := p.secretKey.SignObject(update)
 
+	// Attatch all of the script inputs to the update, clearing the list of
+	// script inputs in the process.
+	p.scriptInputsLock.Lock()
+	update.ScriptInputs = p.scriptInputs
+	p.scriptInputs = make([]delta.ScriptInput, 0)
+	p.scriptInputsLock.Unlock()
+
+	// Sign the update and create a SignedUpdate object with ourselves as the
+	// first signatory.
+	updateSignature, err := p.secretKey.SignObject(update)
 	su := SignedUpdate{
 		Update:      update,
 		Signatories: make([]byte, 1),
@@ -105,6 +142,7 @@ func (p *Participant) newSignedUpdate() {
 	}
 	p.updates[p.siblingIndex][updateHash] = update
 
+	// Broadcast the SignedUpdate to the network.
 	p.broadcast(network.Message{
 		Proc: "Participant.HandleSignedUpdate",
 		Args: su,
