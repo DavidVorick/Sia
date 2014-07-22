@@ -19,19 +19,3 @@ type Sibling struct {
 func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }
-
-// Sibling returns true if the address and publicKey fields are identical
-/*func (s0 Sibling) Compare(s1 Sibling) bool {
-	// return false if the addresses are not equal
-	if s0.Address != s1.Address {
-		return false
-	}
-
-	// return false if the public keys are not equivalent
-	compare := s0.PublicKey.Compare(s1.PublicKey)
-	if compare != true {
-		return false
-	}
-
-	return true
-}*/

@@ -1,80 +1,70 @@
-package state
+package delta
 
 import (
 	"errors"
+	"state"
 )
 
 const (
-	CreateWalletMaxCost = 8
-	SendMaxCost         = 6
-	AddSiblingMaxCost   = 50
+	CreateWalletCost = 8
+	SendCost         = 6
+	AddSiblingCost   = 500
 )
 
-var cwInsufficientBalance = errors.New("Insufficient balance to create a wallet with the given balance.")
-var cwWalletExists = errors.New("Wallet of given ID already exists.")
-var cwInsufficientAtoms = errors.New("Insufficient atoms in quorum to create the given wallet.")
+var (
+	cwerrInsufficientBalance = errors.New("Insufficient balance to create a wallet with the given balance.")
+
+	aserrNoEmptySiblings = errors.New("There are no empty spots in the quorum.")
+)
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
 // If a wallet of that id already exists then the process aborts.
-func (s *State) CreateWallet(w Wallet, id WalletID, balance Balance, initialScript []byte) (cost int, err error) {
+func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBalance state.Balance, childScript []byte) (err error) {
 	// Check that the wallet making the call has enough funds to deposit into the
-	// wallet being created.
-	cost += 1
-	if w.Balance.Compare(balance) < 0 {
-		err = cwInsufficientBalance
+	// wallet being created, and then subtract the funds from the parent wallet.
+	if w.Balance.Compare(childBalance) < 0 {
+		err = cwerrInsufficientBalance
 		return
 	}
-
-	// check if the new wallet already exists
-	cost += 2
-	wn := s.walletNode(id)
-	if wn != nil {
-		err = cwWalletExists
-		return
-	}
+	w.Balance.Subtract(childBalance)
 
 	// Create a new wallet based on the inputs.
-	cost += 2
-	newWallet := Wallet{
-		ID:      id,
-		Balance: balance,
-		Script:  initialScript,
+	childWallet := state.Wallet{
+		ID:      childID,
+		Balance: childBalance,
+		Script:  childScript,
 	}
 
-	// Create a wallet node and insert it into the wallet tree.
-	wn = new(walletNode)
-	wn.id = id
-	wn.weight = int(newWallet.Weight())
-	if s.walletRoot.weight+wn.weight > AtomsPerQuorum {
-		err = cwInsufficientAtoms
-		return
-	}
-	cost += 3
-	s.insertWalletNode(wn)
-
-	// Save the wallet
-	s.SaveWallet(newWallet)
-
-	w.Balance.Subtract(balance)
-
+	// Save the child wallet.
+	err = e.state.SaveWallet(childWallet)
 	return
 }
 
 // Currently, AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
-func (s *State) AddSibling(w *Wallet, sib Sibling) (cost int) {
-	cost = 50
-	for i := byte(0); i < QuorumSize; i++ {
-		if !s.Metadata.Siblings[i].Active {
+func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
+	// first check that the wallet can afford the down payment.
+
+	// Look through the quorum for an empty sibling.
+	for i := byte(0); i < state.QuorumSize; i++ {
+		if !e.state.Metadata.Siblings[i].Active {
 			sib.Active = true
 			sib.Index = i
 			sib.WalletID = w.ID
-			s.Metadata.Siblings[i] = sib
+			e.state.Metadata.Siblings[i] = sib
 			break
 		}
 	}
+
+	if !sib.Active {
+		err = aserrNoEmptySiblings
+		return
+	}
+
+	// Charge the wallet some volume that's required as a down payment.
+
 	return
 }
 

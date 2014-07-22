@@ -1,8 +1,6 @@
 package consensus
 
 import (
-	"delta"
-	"siacrypto"
 	"state"
 	"time"
 )

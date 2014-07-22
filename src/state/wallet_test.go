@@ -67,9 +67,8 @@ func TestInsertLoadSaveRemoveWallet(t *testing.T) {
 
 	// Test SaveWallet, and then make sure that the saved wallet can be loaded.
 	w.ID = 25
-	s.SaveWallet(w)
-	_, err = s.LoadWallet(w.ID)
-	if err != nil {
-		t.Error("Trouble while calling LoadWallet", err)
+	err = s.SaveWallet(w)
+	if err == nil {
+		t.Error("Able to save a wallet that doesn't exist in the wallet tree.")
 	}
 }
