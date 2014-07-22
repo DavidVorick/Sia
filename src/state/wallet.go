@@ -63,19 +63,29 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 
 // LoadWallet checks the disk for a saved wallet, and loads that wallet into
 // memory. No changes to State are made.
+
+// LoadWallet checks the wallettree for existence of the wallet, and then loads
+// the wallet from disk if the wallet exists.
 func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
+	// Check that the wallet is in the wallettree.
+	wn := s.walletNode(id)
+	if wn == nil {
+		err = fmt.Errorf("LoadWallet: no wallet of that id exists.")
+		return
+	}
+
 	// Fetch the wallet filename and open the file.
 	walletFilename := s.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	// Fetch the size of the wallet from disk.
 	walletLengthBytes := make([]byte, 4)
 	_, err = file.Read(walletLengthBytes)
 	if err != nil {
-		return
+		panic(err)
 	}
 	walletLength := siaencoding.DecUint32(walletLengthBytes)
 
@@ -83,19 +93,34 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	walletBytes := make([]byte, walletLength)
 	_, err = file.Read(walletBytes)
 	if err != nil {
-		return
+		panic(err)
 	}
 	err = siaencoding.Unmarshal(walletBytes, &w)
 	if err != nil {
-		return
+		panic(err)
 	}
 	return
 }
 
-// SaveWallet takes a wallet object and saves it to disk. SaveWallet does not
-// update the corresponding wallet node or make any changes other than saving
-// the wallet to disk.
-func (s *State) SaveWallet(w Wallet) {
+// SaveWallet takes a wallet object and updates the corresponding walletNode,
+// and then saves the wallet to disk.
+func (s *State) SaveWallet(w Wallet) (err error) {
+	// Check that the wallet is in the wallettree.
+	wn := s.walletNode(w.ID)
+	if wn == nil {
+		err = fmt.Errorf("SaveWallet: no wallet of that id exists.")
+		return
+	}
+	weightDelta := int(w.Weight()) - wn.nodeWeight()
+	// Ideally, this would never be triggered. Instead, careful resource
+	// management in the quorum would prevent a too-heavy wallet from ever
+	// getting this far through the insert process.
+	if s.walletRoot.weight+weightDelta > AtomsPerQuorum {
+		err = fmt.Errorf("SaveWallet: wallet is too heavy to fit in the quorum.")
+		return
+	}
+	s.updateWeight(w.ID, weightDelta)
+
 	// Fetch the wallet filename from the state object.
 	walletFilename := s.walletFilename(w.ID)
 	file, err := os.Create(walletFilename)
@@ -121,6 +146,8 @@ func (s *State) SaveWallet(w Wallet) {
 	if err != nil {
 		panic(err)
 	}
+
+	return
 }
 
 func (s *State) RemoveWallet(id WalletID) {
