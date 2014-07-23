@@ -30,8 +30,8 @@ const (
 // 6. Events
 
 type snapshotOffsetTable struct {
-	stateMetaDataOffset uint32
-	stateMetaDataLength uint32
+	stateMetadataOffset uint32
+	stateMetadataLength uint32
 
 	walletLookupTableOffset uint32
 	walletLookupTableLength uint32
@@ -43,10 +43,10 @@ type snapshotOffsetTable struct {
 func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 	b = make([]byte, snapshotOffsetTableLength)
 	var offset int
-	qmdo := siaencoding.EncUint32(s.stateMetaDataOffset)
+	qmdo := siaencoding.EncUint32(s.stateMetadataOffset)
 	copy(b[offset:], qmdo)
 	offset += 4
-	qmdl := siaencoding.EncUint32(s.stateMetaDataLength)
+	qmdl := siaencoding.EncUint32(s.stateMetadataLength)
 	copy(b[offset:], qmdl)
 	offset += 4
 	wlto := siaencoding.EncUint32(s.walletLookupTableOffset)
@@ -70,9 +70,9 @@ func (s *snapshotOffsetTable) decode(b []byte) (err error) {
 	}
 
 	var offset int
-	s.stateMetaDataOffset = siaencoding.DecUint32(b[offset:])
+	s.stateMetadataOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
-	s.stateMetaDataLength = siaencoding.DecUint32(b[offset:])
+	s.stateMetadataLength = siaencoding.DecUint32(b[offset:])
 	offset += 4
 	s.walletLookupTableOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
@@ -119,12 +119,16 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 	return
 }
 
+func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
+	snapshotFilename = fmt.Sprintf("%s.snapshot.%v", e.filePrefix, height)
+	return
+}
+
 // SaveSnapshot takes all of the variables listed at the top of the file,
 // encodes them, and writes to disk.
 func (e *Engine) SaveSnapshot() (err error) {
 	// Determine the filename for the snapshot
-	snapshotFilename := fmt.Sprintf("%s.snapshot.%v", e.filePrefix, e.activeHistoryHead)
-
+	snapshotFilename := e.snapshotFilename(e.activeHistoryHead)
 	file, err := os.Create(snapshotFilename)
 	if err != nil {
 		return
@@ -135,28 +139,28 @@ func (e *Engine) SaveSnapshot() (err error) {
 	var offsetTable snapshotOffsetTable
 	currentOffset := snapshotOffsetTableLength
 
-	// put encodedQuorumMetaData in it's own scope so it can be cleared before
+	// put encodedQuorumMetadata in it's own scope so it can be cleared before
 	// the function returns
 	{
 		// encode the quorum and record the length
-		var encodedQuorumMetaData []byte
-		encodedQuorumMetaData, err = siaencoding.Marshal(e.state.Metadata)
+		var encodedQuorumMetadata []byte
+		encodedQuorumMetadata, err = siaencoding.Marshal(e.state.Metadata)
 		if err != nil {
 			return
 		}
-		offsetTable.stateMetaDataLength = uint32(len(encodedQuorumMetaData))
-		offsetTable.stateMetaDataOffset = uint32(currentOffset)
+		offsetTable.stateMetadataLength = uint32(len(encodedQuorumMetadata))
+		offsetTable.stateMetadataOffset = uint32(currentOffset)
 
 		// Write the encoded quorum to the snapshot file.
-		_, err = file.Seek(int64(offsetTable.stateMetaDataOffset), 0)
+		_, err = file.Seek(int64(offsetTable.stateMetadataOffset), 0)
 		if err != nil {
 			return
 		}
-		_, err = file.Write(encodedQuorumMetaData)
+		_, err = file.Write(encodedQuorumMetadata)
 		if err != nil {
 			return
 		}
-		currentOffset += len(encodedQuorumMetaData)
+		currentOffset += len(encodedQuorumMetadata)
 	}
 
 	// Create the wallet lookup table and save the wallets. This is again in its
@@ -225,5 +229,46 @@ func (e *Engine) SaveSnapshot() (err error) {
 		return
 	}
 	_, err = file.Write(encodedOffset)
+	return
+}
+
+func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.StateMetadata, err error) {
+	// Make sure that the requested snapshot is on disk.
+	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
+		err = fmt.Errorf("Snapshot not found.")
+		return
+	}
+
+	// Open the file associated with the requested snapshot.
+	snapshotFilename := e.snapshotFilename(snapshotHead)
+	file, err := os.Open(snapshotFilename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Read and decode the snapshot offset table.
+	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
+	_, err = file.Read(encodedSnapshotTable)
+	if err != nil {
+		return
+	}
+	var decodedSnapshotTable snapshotOffsetTable
+	err = decodedSnapshotTable.decode(encodedSnapshotTable)
+	if err != nil {
+		return
+	}
+
+	// Determine length and offset of metadata, then load and decode the metadata.
+	encodedSnapshotMetadata := make([]byte, decodedSnapshotTable.stateMetadataLength)
+	_, err = file.Seek(int64(decodedSnapshotTable.stateMetadataOffset), 0)
+	if err != nil {
+		return
+	}
+	_, err = file.Read(encodedSnapshotMetadata)
+	if err != nil {
+		return
+	}
+	err = siaencoding.Unmarshal(encodedSnapshotMetadata, &snapshot)
 	return
 }

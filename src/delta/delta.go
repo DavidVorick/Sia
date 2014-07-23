@@ -16,7 +16,7 @@ const (
 //
 // SaveSnapshot() should be called upon initialzation
 // recentHistoryHead needs to be initialized to ^uint32(0)
-// avtiveHistoryLength should be initialized to SnapshotLength
+// activeHistoryLength should be initialized to SnapshotLength
 // activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
@@ -39,6 +39,10 @@ func (e *Engine) SetFilePrefix(prefix string) {
 
 func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
+}
+
+func (e *Engine) ActiveHistoryHead() uint32 {
+	return e.activeHistoryHead
 }
 
 func (e *Engine) WalletList() []state.WalletID {

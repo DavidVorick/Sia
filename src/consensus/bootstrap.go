@@ -97,6 +97,24 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// blocks following the snapshot. The 3 items of concern are: Metadata,
 	// Wallets, Events.
 
+	// Get height of the most recent snapshot.
+	var snapshotHead uint32
+	mr.SendMessage(network.Message{
+		Dest: quorumSiblings[0],
+		Proc: "Participant.RecentSnapshotHeight",
+		Args: struct{}{},
+		Resp: &snapshotHead,
+	})
+
+	// Get the metadata from the snapshot.
+	var snapshotMetadata state.StateMetadata
+	mr.SendMessage(network.Message{
+		Dest: quorumSiblings[0],
+		Proc: "Participant.SnapshotMetadata",
+		Args: snapshotHead,
+		Resp: &snapshotMetadata,
+	})
+
 	// 3. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
 	// only wallet segements to avoid are the wallet segments with active

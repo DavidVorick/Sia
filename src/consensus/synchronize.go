@@ -27,3 +27,13 @@ func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
 	*wl = p.engine.WalletList()
 	return
 }
+
+func (p *Participant) RecentSnapshot(_ struct{}, height *uint32) (err error) {
+	*height = p.engine.ActiveHistoryHead()
+	return
+}
+
+func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.StateMetadata) (err error) {
+	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
+	return
+}
