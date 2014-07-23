@@ -1,6 +1,8 @@
 package delta
 
 import (
+	"siacrypto"
+	"state"
 	"testing"
 )
 
@@ -9,12 +11,12 @@ import (
 func TestSnapshotOffsetTableEncoding(t *testing.T) {
 	// Create a snapshot offset table with different values for every field.
 	sot := snapshotOffsetTable{
-		stateMetadataOffset: 1,
-		stateMetadataLength: 2,
+		stateMetadataOffset:     1,
+		stateMetadataLength:     2,
 		walletLookupTableOffset: 3,
 		walletLookupTableLength: 4,
-		eventLookupTableOffset: 5,
-		eventLookupTableLength: 6,
+		eventLookupTableOffset:  5,
+		eventLookupTableLength:  6,
 	}
 
 	// Encode and decode the snapshot offset table.
@@ -40,7 +42,7 @@ func TestSnapshotOffsetTableEncoding(t *testing.T) {
 func TestWalletOffsetEncoding(t *testing.T) {
 	// Create a walletOffset with different values for every field.
 	wo := walletOffset{
-		id: 1,
+		id:     1,
 		offset: 2,
 		length: 3,
 	}
@@ -59,5 +61,68 @@ func TestWalletOffsetEncoding(t *testing.T) {
 	// Compare decoded wallet offset to the original.
 	if dwo != wo {
 		t.Error("Encoded and decoded walletOffset does not match the original.")
+	}
+}
+
+// TestSnapshotProcess creates an engine and fills out all the major fields
+// that get saved by a snapshot. Then SaveSnapshot() is called and each piece
+// is loaded individually to test for proper retrieveability.
+func TestSnapshotProcess(t *testing.T) {
+	// Crudely create an engine with all metadata variables filled out.
+	e := Engine{
+		state: state.State{
+			Metadata: state.StateMetadata{
+				Germ:         state.Entropy{1},
+				Seed:         state.Entropy{2},
+				EventCounter: 3,
+				StoragePrice: state.NewBalance(4, 5),
+				ParentBlock:  siacrypto.Hash{6},
+				Height:       7,
+			},
+		},
+		recentHistoryHead: ^uint32(0),
+	}
+	e.Initialize("../../filesCreatedDuringTesting/TestSnapshotProcess")
+
+	// Save a handful of wallets into the quorum.
+	w1 := state.Wallet{
+		ID:      8,
+		Balance: state.NewBalance(9, 10),
+		SectorSettings: state.SectorSettings{
+			Atoms: 11,
+			K:     12,
+			Hash:  siacrypto.Hash{13},
+		},
+		Script: []byte{14, 15, 16},
+	}
+	e.InsertWallet(w1)
+
+	w2 := state.Wallet{
+		ID:      17,
+		Balance: state.NewBalance(18, 19),
+		SectorSettings: state.SectorSettings{
+			Atoms: 20,
+			K:     21,
+			Hash:  siacrypto.Hash{22},
+		},
+		Script: []byte{23, 24, 25},
+	}
+	e.InsertWallet(w2)
+
+	// Events will be implemented later.
+
+	// Save the snapshot.
+	err := e.saveSnapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Load each component of the snapshot and see if it matches the original.
+	metadata, err := e.LoadSnapshotMetadata(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadata != e.state.Metadata {
+		t.Error("Upon loading from snapshot, metadata does not equal original metadata")
 	}
 }

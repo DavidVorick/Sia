@@ -14,7 +14,7 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialzation
+// saveSnapshot() should be called upon initialzation
 // recentHistoryHead needs to be initialized to ^uint32(0)
 // activeHistoryLength should be initialized to SnapshotLength
 // activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
@@ -88,7 +88,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	}
 	e.AddSibling(&sibWallet, sib)
 
-	e.SaveSnapshot()
+	e.saveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
 	e.activeHistoryHead = ^uint32(0) - (SnapshotLength - 1)
 	e.activeHistoryLength = SnapshotLength

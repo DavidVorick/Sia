@@ -124,34 +124,9 @@ func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
 	return
 }
 
-func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
-	// Make sure that the requested snapshot is on disk.
-	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
-		err = fmt.Errorf("Snapshot not found.")
-		return
-	}
-
-	// Open the file associated with the requested snapshot.
-	snapshotFilename := e.snapshotFilename(snapshotHead)
-	file, err = os.Open(snapshotFilename)
-	if err != nil {
-		return
-	}
-
-	// Read and decode the snapshot offset table.
-	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
-	_, err = file.Read(encodedSnapshotTable)
-	if err != nil {
-		return
-	}
-	var decodedSnapshotTable snapshotOffsetTable
-	err = decodedSnapshotTable.decode(encodedSnapshotTable)
-	return
-}
-
-// SaveSnapshot takes all of the variables listed at the top of the file,
+// saveSnapshot takes all of the variables listed at the top of the file,
 // encodes them, and writes to disk.
-func (e *Engine) SaveSnapshot() (err error) {
+func (e *Engine) saveSnapshot() (err error) {
 	// Determine the filename for the snapshot
 	snapshotFilename := e.snapshotFilename(e.activeHistoryHead)
 	file, err := os.Create(snapshotFilename)
@@ -254,6 +229,30 @@ func (e *Engine) SaveSnapshot() (err error) {
 		return
 	}
 	_, err = file.Write(encodedOffset)
+	return
+}
+
+func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
+	// Make sure that the requested snapshot is on disk.
+	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
+		err = fmt.Errorf("Snapshot not found.")
+		return
+	}
+
+	// Open the file associated with the requested snapshot.
+	snapshotFilename := e.snapshotFilename(snapshotHead)
+	file, err = os.Open(snapshotFilename)
+	if err != nil {
+		return
+	}
+
+	// Read and decode the snapshot offset table.
+	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
+	_, err = file.Read(encodedSnapshotTable)
+	if err != nil {
+		return
+	}
+	err = snapshotTable.decode(encodedSnapshotTable)
 	return
 }
 

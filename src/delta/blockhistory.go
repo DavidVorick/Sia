@@ -57,11 +57,11 @@ func (e *Engine) saveBlock(b Block) (err error) {
 
 		// reset activeHistoryLength, and progress the activeHistoryHead, then save
 		// the snapshot. The ordering is important - the activeHistoryHead value
-		// must be progressed before SaveSnapshot() is called, such that the
+		// must be progressed before saveSnapshot() is called, such that the
 		// snapshot is saved to the right filename.
 		e.activeHistoryLength = 0
 		e.activeHistoryHead += SnapshotLength
-		err = e.SaveSnapshot()
+		err = e.saveSnapshot()
 		if err != nil {
 			return
 		}
