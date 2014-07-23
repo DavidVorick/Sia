@@ -84,19 +84,18 @@ func (rpcs *RPCServer) serverHandler() {
 }
 
 // Ping calls the Participant.Ping method on the specified address.
-// It returns false if the host is unreachable or times out.
-func (rpcs *RPCServer) Ping(a Address) bool {
+func (rpcs *RPCServer) Ping(a Address) error {
 	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
 	if err != nil {
-		return false
+		return err
 	}
 	defer conn.Close()
 
 	select {
 	case call := <-conn.Go("Participant"+string(a.ID)+".Ping", struct{}{}, nil, nil).Done:
-		return call.Error == nil
+		return call.Error
 	case <-time.After(timeout):
-		return false
+		return nil
 	}
 }
 

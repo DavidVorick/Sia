@@ -82,7 +82,7 @@ func (p *Participant) Ping(_ struct{}, _ *struct{}) error {
 
 // Sends a message to every sibling in the quorum.
 func (p *Participant) broadcast(message network.Message) {
-	// send the messagea to all of the siblings in the quorum
+	// send the message to all of the siblings in the quorum
 	for _, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Active {
 			message.Dest = sibling.Address

@@ -40,8 +40,9 @@ func TestNewParticipant(t *testing.T) {
 	}
 
 	// Test that the address has been initialized, and the participant is reachable.
-	if !mr.Ping(p.address) {
-		t.Error("participant not reachable")
+	err = mr.Ping(p.address)
+	if err != nil {
+		t.Error("participant not reachable:", err)
 	}
 }
 
