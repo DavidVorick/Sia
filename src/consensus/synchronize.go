@@ -42,3 +42,13 @@ func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]stat
 	*walletList, err = p.engine.LoadSnapshotWalletList(snapshotHead)
 	return
 }
+
+type SnapshotWalletInput struct {
+	SnapshotHead uint32
+	WalletID     state.WalletID
+}
+
+func (p *Participant) SnapshotWallet(swi SnapshotWalletInput, wallet *state.Wallet) (err error) {
+	*wallet, err = p.engine.LoadSnapshotWallet(swi.SnapshotHead, swi.WalletID)
+	return
+}

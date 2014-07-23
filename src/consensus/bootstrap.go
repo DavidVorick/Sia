@@ -93,9 +93,8 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		})
 	}
 
-	// 2. While waiting for the next block, can download a snapshot and all
-	// blocks following the snapshot. The 3 items of concern are: Metadata,
-	// Wallets, Events.
+	// 2. While waiting for the next block, can download a snapshot The 3 items
+	// of concern are: Metadata, Wallets, Events.
 
 	// Get height of the most recent snapshot.
 	var snapshotHead uint32
@@ -124,20 +123,43 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		Resp: &walletList,
 	})
 
-	// Get each wallet individually.
+	// Get each wallet individually and insert it into the quorum.
+	for _, walletID := range walletList {
+		swi := SnapshotWalletInput{
+			SnapshotHead: snapshotHead,
+			WalletID:     walletID,
+		}
+
+		var wallet state.Wallet
+		mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.SnapshotWallet",
+			Args: swi,
+			Resp: &wallet,
+		})
+
+		err = p.engine.InsertWallet(wallet)
+		if err != nil {
+			// ???, panic would be inappropriate
+		}
+	}
 
 	// Events will be implemented at a later time.
 
-	// 3. After bringing the quorum up to date (still missing the latest block,
+	// 3. Download all of the blocks that have been processed since the snapshot,
+	// which will bring the quorum up to date, except for being behind in the
+	// current round of consensus.
+
+	// 4. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
 	// only wallet segements to avoid are the wallet segments with active
 	// uploads. Since you aren't announced to the quorum yet, the uploader won't
 	// know to contact you and upload to you the file diff.
 
-	// 4. After being accepted to the quorum as a full sibling, all downloads are
+	// 5. After being accepted to the quorum as a full sibling, all downloads are
 	// fair game.
 
-	// 5. After collecting all downloads, announce synchronization and switch
+	// 6. After collecting all downloads, announce synchronization and switch
 	// from being an unpaid bootstrapping participant to a paid active
 	// participant.
 

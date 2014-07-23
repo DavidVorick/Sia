@@ -54,6 +54,11 @@ func (e *Engine) Initialize(filePrefix string) {
 	return
 }
 
+func (e *Engine) InsertWallet(w state.Wallet) (err error) {
+	err = e.state.InsertWallet(w)
+	return
+}
+
 // NewBootstrapEngine() returns an engine that has its variables set so that
 // the engine can function as the first sibling in a quorum. This requires a
 // call to NewBootstrapState()
