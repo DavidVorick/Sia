@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"reflect"
 	"siacrypto"
 	"state"
 	"testing"
@@ -109,7 +110,12 @@ func TestSnapshotProcess(t *testing.T) {
 	}
 	e.InsertWallet(w2)
 
-	// Events will be implemented later.
+	// Add some extra wallets to confirm that the binary search works.
+	for i := 0; i < 32; i++ {
+		w := w2
+		w.ID = state.WalletID(i+50)
+		e.InsertWallet(w)
+	}
 
 	// Save the snapshot.
 	err := e.saveSnapshot()
@@ -125,4 +131,47 @@ func TestSnapshotProcess(t *testing.T) {
 	if metadata != e.state.Metadata {
 		t.Error("Upon loading from snapshot, metadata does not equal original metadata")
 	}
+
+	// Load the list of wallets from the snapshot and verify for accuracy.
+	walletList, err := e.LoadSnapshotWalletList(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(walletList) != 34 {
+		t.Error("Expecting 32 wallets in snapshot, got ", len(walletList))
+	}
+	if walletList[0] != 8 {
+		t.Error("Expecting first wallet to have an id of 8, got", walletList[0])
+	}
+	if walletList[1] != 17 {
+		t.Error("Expecting second wallet to have an id of 17, got", walletList[1])
+	}
+
+	// Load each wallet individually and check for reachability.
+	for _, id := range walletList {
+		_, err := e.LoadSnapshotWallet(0, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// For wallets 1 and 2 in particular, do a deep equals check against the
+	// original.
+	wallet1, err := e.LoadSnapshotWallet(0, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wallet1, w1) {
+		t.Error("Wallet does not match its pre-snapshot counterpart.")
+	}
+
+	wallet2, err := e.LoadSnapshotWallet(0, 17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wallet2, w2) {
+		t.Error("Wallet does not match its pre-snapshot counterpart.")
+	}
+
+	// Events will be implemented later.
 }

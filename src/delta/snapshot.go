@@ -174,6 +174,13 @@ func (e *Engine) saveSnapshot() (err error) {
 		walletLookupTable := make([]walletOffset, len(walletList))
 		currentOffset += len(walletList) * walletOffsetLength
 
+		// Seek the file to the current offset, since the offset was changed
+		// without doing a file write.
+		_, err = file.Seek(int64(currentOffset), 0)
+		if err != nil {
+			return
+		}
+
 		// Write wallets, update lookup table.
 		for i := range walletList {
 			var encodedWallet []byte
@@ -186,6 +193,7 @@ func (e *Engine) saveSnapshot() (err error) {
 			if err != nil {
 				return
 			}
+			walletLookupTable[i].id = wallet.ID
 			walletLookupTable[i].length = uint32(len(encodedWallet))
 			walletLookupTable[i].offset = uint32(currentOffset)
 			_, err = file.Write(encodedWallet)
@@ -307,7 +315,7 @@ func (e *Engine) LoadSnapshotWalletList(snapshotHead uint32) (walletList []state
 	// Decode the wallet lookup table into walletList.
 	for i := 0; i < len(walletTable); i += walletOffsetLength {
 		var wo walletOffset
-		err = wo.decode(walletTable[i*walletOffsetLength:])
+		err = wo.decode(walletTable[i:])
 		if err != nil {
 			return
 		}
@@ -326,10 +334,9 @@ func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID
 	defer file.Close()
 
 	// Determine the offset of the wallet in question, via binary search.
-	max := len(walletTable) / walletOffsetLength
+	max := len(walletTable)/walletOffsetLength - 1
 	min := 0
-
-	for max > min {
+	for max >= min {
 		mid := (max + min) / 2
 
 		// Load the wallet associated with the midpoint.
@@ -357,7 +364,7 @@ func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID
 		} else if midID < walletID {
 			min = mid + 1
 		} else {
-			max = min - 1
+			max = mid - 1
 		}
 	}
 
