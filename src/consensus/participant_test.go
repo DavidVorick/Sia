@@ -39,8 +39,11 @@ func TestNewParticipant(t *testing.T) {
 		t.Error("siblingIndex not initialized to ^byte(0)")
 	}
 
-	// Test that the address has been initialized, and the handler has been
-	// registered. ???
+	// Test that the address has been initialized, and the participant is reachable.
+	err = mr.Ping(p.address)
+	if err != nil {
+		t.Error("participant not reachable:", err)
+	}
 }
 
 // TestBroadcast... don't really know how to write this test.

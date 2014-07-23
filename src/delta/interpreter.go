@@ -32,24 +32,23 @@ func (in *instruction) print(args []byte) string {
 	return s
 }
 
-// generic 64-bit value
-type value [8]byte
-
 type stackElem struct {
-	val  value
+	val  []byte
 	next *stackElem
 }
 
-func push(v value) (err error) {
+func push(v []byte) (err error) {
 	if env.stackLen > MaxStackLen {
 		return errors.New("stack overflow")
 	}
-	env.stack = &stackElem{v, env.stack}
+	c := make([]byte, len(v))
+	copy(c, v)
+	env.stack = &stackElem{c, env.stack}
 	env.stackLen++
 	return
 }
 
-func pop() (v value, err error) {
+func pop() (v []byte, err error) {
 	if env.stackLen < 1 {
 		err = errors.New("stack empty")
 		return
@@ -79,8 +78,7 @@ func (s *stackElem) print() string {
 type scriptEnv struct {
 	script     []byte
 	iptr, dptr int
-	registers  [256]value
-	buffers    [256][]byte
+	registers  [256][]byte
 	stack      *stackElem
 	stackLen   int
 	wallet     state.Wallet
@@ -184,11 +182,11 @@ func (env *scriptEnv) run() error {
 			fmt.Println(op.print(fnArgs))
 			fmt.Println("    stack:", env.stack.print())
 			b := make([]byte, 20)
-			copy(b, env.buffers[1])
-			fmt.Println("    buffer 1:", len(env.buffers[1]), b)
+			copy(b, env.registers[1])
+			fmt.Println("    register 1:", len(env.registers[1]), b)
 			b = make([]byte, 20)
-			copy(b, env.buffers[2])
-			fmt.Println("    buffer 2:", len(env.buffers[2]), b)
+			copy(b, env.registers[2])
+			fmt.Println("    register 2:", len(env.registers[2]), b)
 		}
 	}
 	return nil
