@@ -77,7 +77,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	if err != nil {
 		return
 	}
-	e.state.AddSibling(&sibWallet, sib)
+	e.AddSibling(&sibWallet, sib)
 
 	e.SaveSnapshot()
 	e.recentHistoryHead = ^uint32(0)

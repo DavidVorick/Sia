@@ -23,10 +23,10 @@ type Participant struct {
 	messageRouter network.MessageRouter
 
 	// Heartbeat Variables
-	updates     [state.QuorumSize]map[siacrypto.Hash]Update // list of heartbeats received from siblings
-	updatesLock sync.Mutex
-	//scriptInputs     []delta.ScriptInput
-	//scriptInputsLock sync.Mutex
+	updates          [state.QuorumSize]map[siacrypto.Hash]Update // list of heartbeats received from siblings
+	updatesLock      sync.Mutex
+	scriptInputs     []delta.ScriptInput
+	scriptInputsLock sync.Mutex
 	//uploadAdvancements     []quorum.UploadAdvancement
 	//uploadAdvancementsLock sync.Mutex
 
@@ -84,4 +84,11 @@ func (p *Participant) broadcast(message network.Message) {
 			p.messageRouter.SendAsyncMessage(message)
 		}
 	}
+}
+
+func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
+	p.scriptInputsLock.Lock()
+	p.scriptInputs = append(p.scriptInputs, si)
+	p.scriptInputsLock.Unlock()
+	return
 }
