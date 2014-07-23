@@ -64,7 +64,7 @@ func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 }
 
 func (s *snapshotOffsetTable) decode(b []byte) (err error) {
-	if len(b) <= snapshotOffsetTableLength {
+	if len(b) < snapshotOffsetTableLength {
 		err = fmt.Errorf("snapshotOffsetTable decode: input is too small to contain a snapshotOffsetTable.")
 		return
 	}
