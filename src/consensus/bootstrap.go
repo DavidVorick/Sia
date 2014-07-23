@@ -116,6 +116,13 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	})
 
 	// Get the list of wallets in the snapshot.
+	var walletList []state.WalletID
+	mr.SendMessage(network.Message{
+		Dest: quorumSiblings[0],
+		Proc: "Participant.SnapshotWalletList",
+		Args: snapshotHead,
+		Resp: &walletList,
+	})
 
 	// Get each wallet individually.
 
@@ -176,18 +183,6 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// begin processing heartbeats
 	go p.tick()
-
-	// 3. Download a recent quorum snapshot
-	fmt.Println("Getting Quorum Snapshot From Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.RecentSnapshot",
-		Args: struct{}{},
-		Resp: &p.quorum,
-	})
-	if err != nil {
-		return
-	}
 
 	// 4. Download the wallet list
 	var walletList []quorum.WalletID
@@ -273,27 +268,4 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// 9. Wait for next compile
 	time.Sleep(time.Duration(quorum.QuorumSize) * StepDuration)
-
-	// 10. Create and send AddSibling request
-	gobSibling, err := p.self.GobEncode()
-	if err != nil {
-		return
-	}
-	input, err := script.SignInput(p.secretKey, script.AddSiblingInput(gobSibling))
-	if err != nil {
-		return
-	}
-	s = script.ScriptInput{
-		WalletID: quorum.WalletID(walletID),
-		Input:    input,
-	}
-
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.AddScriptInput",
-		Args: s,
-		Resp: nil,
-	})
-
-	return
 }*/

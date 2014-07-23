@@ -37,3 +37,8 @@ func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *st
 	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
 	return
 }
+
+func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]state.WalletID) (err error) {
+	*walletList, err = p.engine.LoadSnapshotWalletList(snapshotHead)
+	return
+}
