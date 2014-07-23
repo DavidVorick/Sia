@@ -124,6 +124,31 @@ func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
 	return
 }
 
+func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
+	// Make sure that the requested snapshot is on disk.
+	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
+		err = fmt.Errorf("Snapshot not found.")
+		return
+	}
+
+	// Open the file associated with the requested snapshot.
+	snapshotFilename := e.snapshotFilename(snapshotHead)
+	file, err = os.Open(snapshotFilename)
+	if err != nil {
+		return
+	}
+
+	// Read and decode the snapshot offset table.
+	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
+	_, err = file.Read(encodedSnapshotTable)
+	if err != nil {
+		return
+	}
+	var decodedSnapshotTable snapshotOffsetTable
+	err = decodedSnapshotTable.decode(encodedSnapshotTable)
+	return
+}
+
 // SaveSnapshot takes all of the variables listed at the top of the file,
 // encodes them, and writes to disk.
 func (e *Engine) SaveSnapshot() (err error) {
@@ -233,35 +258,17 @@ func (e *Engine) SaveSnapshot() (err error) {
 }
 
 func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.StateMetadata, err error) {
-	// Make sure that the requested snapshot is on disk.
-	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
-		err = fmt.Errorf("Snapshot not found.")
-		return
-	}
-
-	// Open the file associated with the requested snapshot.
-	snapshotFilename := e.snapshotFilename(snapshotHead)
-	file, err := os.Open(snapshotFilename)
+	// Open the file holding the desired snapshot. This function also provides
+	// the snapshot table.
+	file, snapshotTable, err := e.openSnapshot(snapshotHead)
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	// Read and decode the snapshot offset table.
-	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
-	_, err = file.Read(encodedSnapshotTable)
-	if err != nil {
-		return
-	}
-	var decodedSnapshotTable snapshotOffsetTable
-	err = decodedSnapshotTable.decode(encodedSnapshotTable)
-	if err != nil {
-		return
-	}
-
 	// Determine length and offset of metadata, then load and decode the metadata.
-	encodedSnapshotMetadata := make([]byte, decodedSnapshotTable.stateMetadataLength)
-	_, err = file.Seek(int64(decodedSnapshotTable.stateMetadataOffset), 0)
+	encodedSnapshotMetadata := make([]byte, snapshotTable.stateMetadataLength)
+	_, err = file.Seek(int64(snapshotTable.stateMetadataOffset), 0)
 	if err != nil {
 		return
 	}
@@ -270,5 +277,37 @@ func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.State
 		return
 	}
 	err = siaencoding.Unmarshal(encodedSnapshotMetadata, &snapshot)
+	return
+}
+
+func (e *Engine) LoadWalletList(snapshotHead uint32) (walletList []state.WalletID, err error) {
+	// Open the snapshot.
+	file, snapshotTable, err := e.openSnapshot(snapshotHead)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Determine the length and offset of the wallet table, then load it.
+	encodedWalletOffsetTable := make([]byte, snapshotTable.walletLookupTableLength)
+	_, err = file.Seek(int64(snapshotTable.walletLookupTableOffset), 0)
+	if err != nil {
+		return
+	}
+	_, err = file.Read(encodedWalletOffsetTable)
+	if err != nil {
+		return
+	}
+
+	// Decode the wallet lookup table into walletList.
+	for i := uint32(0); i < snapshotTable.walletLookupTableLength; i += walletOffsetLength {
+		var wo walletOffset
+		err = wo.decode(encodedWalletOffsetTable[i*walletOffsetLength : i*walletOffsetLength+walletOffsetLength])
+		if err != nil {
+			return
+		}
+		walletList = append(walletList, wo.id)
+	}
+
 	return
 }

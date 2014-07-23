@@ -115,6 +115,12 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		Resp: &snapshotMetadata,
 	})
 
+	// Get the list of wallets in the snapshot.
+
+	// Get each wallet individually.
+
+	// Events will be implemented at a later time.
+
 	// 3. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
 	// only wallet segements to avoid are the wallet segments with active
