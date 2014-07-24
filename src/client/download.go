@@ -1,5 +1,6 @@
 package client
 
+/*
 import (
 	"bytes"
 	"consensus"
@@ -7,8 +8,8 @@ import (
 	"io"
 	"network"
 	"os"
-	"quorum"
 	"siaencoding"
+	"state"
 )
 
 // download every segment
@@ -16,18 +17,18 @@ import (
 // look at the padding value
 // truncate the padding
 
-func (c *Client) Download(id quorum.WalletID, destination string) {
+func (c *Client) Download(id state.WalletID, destination string) {
 	c.RetrieveSiblings()
 
 	// figure out how many atoms this wallet has
 	var err error
-	var w quorum.Wallet
+	var w state.Wallet
 	for i := range c.siblings {
 		if c.siblings[i] == nil {
 			continue
 		}
-		err = c.router.SendMessage(&network.Message{
-			Dest: c.siblings[i].Address(),
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[i].Address,
 			Proc: "Participant.DownloadWallet",
 			Args: id,
 			Resp: &w,
@@ -42,15 +43,15 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 		return
 	}
 
-	if w.SectorAtoms() < 2 {
+	if w.SectorSettings.Atoms < 2 {
 		fmt.Println("Wallet is not storing a file.")
 		return
 	}
 
 	// one at a time, download atoms from every sibling until all atoms have been downloaded
-	segments := make([][][]byte, w.SectorAtoms())
-	for i := uint16(1); i < w.SectorAtoms(); i++ {
-		segments[i] = make([][]byte, quorum.QuorumSize)
+	segments := make([][][]byte, w.SectorSettings.Atoms)
+	for i := uint16(1); i < w.SectorSettings.Atoms; i++ {
+		segments[i] = make([][]byte, state.QuorumSize)
 		ad := consensus.AtomDownload{
 			ID:           id,
 			AtomIndicies: []uint16{i},
@@ -59,8 +60,8 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 			if c.siblings[j] == nil {
 				continue
 			}
-			err := c.router.SendMessage(&network.Message{
-				Dest: c.siblings[j].Address(),
+			err := c.router.SendMessage(network.Message{
+				Dest: c.siblings[j].Address,
 				Proc: "Participant.DownloadSegment",
 				Args: ad,
 				Resp: &segments[i][j],
@@ -73,16 +74,16 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 	}
 
 	// go through the downloaded segments and repair the atoms into a single sector
-	sector := make([][]byte, w.SectorAtoms())
-	for i := uint16(1); i < w.SectorAtoms(); i++ {
-		// read through the downloaded atoms, build and indicies
-		inputSegments := make([]io.Reader, w.SectorM())
-		indicies := make([]byte, w.SectorM())
+	sector := make([][]byte, w.SectorSettings.Atoms)
+	for i := uint16(1); i < w.SectorSettings.Atoms; i++ {
+		// read through the downloaded atoms, build and indices
+		inputSegments := make([]io.Reader, w.SectorSettings.K)
+		indices := make([]byte, w.SectorSettings.K)
 		var j int
 		for k := range segments[i] {
 			if segments[i][k] != nil {
 				inputSegments[j] = bytes.NewBuffer(segments[i][k])
-				indicies[j] = byte(k)
+				indices[j] = byte(k)
 				j++
 			}
 			if j == len(inputSegments) {
@@ -96,7 +97,7 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 		}
 
 		recoveredAtom := new(bytes.Buffer)
-		_, err := quorum.RSRecover(inputSegments, indicies, recoveredAtom, w.SectorM())
+		_, err := state.RSRecover(inputSegments, indices, recoveredAtom, w.SectorSettings.K)
 		if err != nil {
 			fmt.Println("Error while recovering file")
 			fmt.Println(err)
@@ -107,12 +108,12 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 
 	encodedPadding := sector[1][:4]
 	padding := siaencoding.DecUint32(encodedPadding)
-	if padding > uint32(quorum.AtomSize) {
+	if padding > uint32(state.AtomSize) {
 		fmt.Println("unexpected and illegal padding value - probably not a file")
 		return
 	}
 	sector[1] = sector[1][4:]
-	sector[w.SectorAtoms()-1] = sector[w.SectorAtoms()-1][:padding]
+	sector[w.SectorSettings.Atoms-1] = sector[w.SectorSettings.Atoms-1][:padding]
 
 	file, err := os.Create(destination)
 	if err != nil {
@@ -123,3 +124,4 @@ func (c *Client) Download(id quorum.WalletID, destination string) {
 		file.Write(sector[i])
 	}
 }
+*/

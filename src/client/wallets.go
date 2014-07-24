@@ -1,30 +1,16 @@
 package client
 
 import (
-	"fmt"
+	"errors"
 	"os"
-	"quorum"
 	"siacrypto"
 	"siaencoding"
+	"state"
 )
 
-func SaveWallet(id quorum.WalletID, keypair *siacrypto.Keypair, destFile string) (err error) {
+func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
 	if keypair == nil {
-		fmt.Errorf("Cannot encode nil key pair")
-		return
-	}
-	if keypair.PK == nil || keypair.SK == nil {
-		fmt.Errorf("Cannot write nil key to file")
-		return
-	}
-
-	idSlice := siaencoding.EncUint64(uint64(id))
-	pubSlice, err := keypair.PK.GobEncode()
-	if err != nil {
-		return
-	}
-	secSlice, err := keypair.SK.GobEncode()
-	if err != nil {
+		err = errors.New("Cannot encode nil key pair")
 		return
 	}
 
@@ -34,27 +20,27 @@ func SaveWallet(id quorum.WalletID, keypair *siacrypto.Keypair, destFile string)
 	}
 	defer f.Close()
 
-	_, err = f.Write(idSlice)
+	_, err = f.Write(siaencoding.EncUint64(uint64(id)))
 	if err != nil {
 		return
 	}
-	_, err = f.Write(pubSlice)
+	_, err = f.Write(keypair.PK[:])
 	if err != nil {
 		return
 	}
-	_, err = f.Write(secSlice)
+	_, err = f.Write(keypair.SK[:])
 	if err != nil {
 		return
 	}
 	return
 }
 
-func LoadWallet(fileName string) (id quorum.WalletID, keypair *siacrypto.Keypair, err error) {
+func LoadWallet(fileName string) (id state.WalletID, keypair *Keypair, err error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return
 	}
-	idSlice := make([]byte, quorum.WalletIDSize)
+	idSlice := make([]byte, 8)
 	pubSlice := make([]byte, siacrypto.PublicKeySize)
 	secSlice := make([]byte, siacrypto.SecretKeySize)
 	_, err = f.Read(idSlice)
@@ -69,17 +55,16 @@ func LoadWallet(fileName string) (id quorum.WalletID, keypair *siacrypto.Keypair
 	if err != nil {
 		return
 	}
-	id = quorum.WalletID(siaencoding.DecUint64(idSlice))
-	keypair = new(siacrypto.Keypair)
-	keypair.PK = new(siacrypto.PublicKey)
-	keypair.SK = new(siacrypto.SecretKey)
-	err = keypair.PK.GobDecode(pubSlice)
-	if err != nil {
+	id = state.WalletID(siaencoding.DecUint64(idSlice))
+	keypair = new(Keypair)
+	if copy(keypair.PK[:], pubSlice) != siacrypto.PublicKeySize {
+		err = errors.New("bad public key length")
 		return
 	}
-	err = keypair.SK.GobDecode(secSlice)
-	if err != nil {
+	if copy(keypair.SK[:], secSlice) != siacrypto.SecretKeySize {
+		err = errors.New("bad secret key length")
 		return
 	}
+
 	return
 }
