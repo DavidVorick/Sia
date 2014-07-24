@@ -37,6 +37,10 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
+func (e *Engine) SetMetadata(smd state.StateMetadata) {
+	e.state.Metadata = smd
+}
+
 func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }

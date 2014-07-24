@@ -95,52 +95,54 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 	// 2. While waiting for the next block, can download a snapshot The 3 items
 	// of concern are: Metadata, Wallets, Events.
-
-	// Get height of the most recent snapshot.
-	var snapshotHead uint32
-	mr.SendMessage(network.Message{
-		Dest: quorumSiblings[0],
-		Proc: "Participant.RecentSnapshotHeight",
-		Args: struct{}{},
-		Resp: &snapshotHead,
-	})
-
-	// Get the metadata from the snapshot.
-	var snapshotMetadata state.StateMetadata
-	mr.SendMessage(network.Message{
-		Dest: quorumSiblings[0],
-		Proc: "Participant.SnapshotMetadata",
-		Args: snapshotHead,
-		Resp: &snapshotMetadata,
-	})
-
-	// Get the list of wallets in the snapshot.
-	var walletList []state.WalletID
-	mr.SendMessage(network.Message{
-		Dest: quorumSiblings[0],
-		Proc: "Participant.SnapshotWalletList",
-		Args: snapshotHead,
-		Resp: &walletList,
-	})
-
-	// Get each wallet individually and insert it into the quorum.
-	for _, walletID := range walletList {
-		swi := SnapshotWalletInput{
-			SnapshotHead: snapshotHead,
-			WalletID:     walletID,
-		}
-
-		var wallet state.Wallet
+	{
+		// Get height of the most recent snapshot.
+		var snapshotHead uint32
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
-			Proc: "Participant.SnapshotWallet",
-			Args: swi,
-			Resp: &wallet,
+			Proc: "Participant.RecentSnapshotHeight",
+			Args: struct{}{},
+			Resp: &snapshotHead,
 		})
 
-		err = p.engine.InsertWallet(wallet)
-		if err != nil {
-			// ???, panic would be inappropriate
+		// Get the metadata from the snapshot.
+		var snapshotMetadata state.StateMetadata
+		mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.SnapshotMetadata",
+			Args: snapshotHead,
+			Resp: &snapshotMetadata,
+		})
+		p.engine.SetMetadata(snapshotMetadata)
+
+		// Get the list of wallets in the snapshot.
+		var walletList []state.WalletID
+		mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.SnapshotWalletList",
+			Args: snapshotHead,
+			Resp: &walletList,
+		})
+
+		// Get each wallet individually and insert it into the quorum.
+		for _, walletID := range walletList {
+			swi := SnapshotWalletInput{
+				SnapshotHead: snapshotHead,
+				WalletID:     walletID,
+			}
+
+			var wallet state.Wallet
+			mr.SendMessage(network.Message{
+				Dest: quorumSiblings[0],
+				Proc: "Participant.SnapshotWallet",
+				Args: swi,
+				Resp: &wallet,
+			})
+
+			err = p.engine.InsertWallet(wallet)
+			if err != nil {
+				// ???, panic would be inappropriate
+			}
 		}
 	}
 
@@ -149,6 +151,28 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// 3. Download all of the blocks that have been processed since the snapshot,
 	// which will bring the quorum up to date, except for being behind in the
 	// current round of consensus.
+	{
+		// Figure out which block height is the latest height. The height is
+		// contained within the StateMetadata struct.
+		var currentMetadata state.StateMetadata
+		mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.Metadata",
+			Args: struct{}{},
+			Resp: &currentMetadata,
+		})
+
+		for p.engine.Metadata().Height < currentMetadata.Height-1 {
+			var b delta.Block
+			mr.SendMessage(network.Message{
+				Dest: quorumSiblings[0],
+				Proc: "Participant.Block",
+				Args: p.engine.Metadata().Height,
+				Resp: &b,
+			})
+			p.engine.Compile(b)
+		}
+	}
 
 	// 4. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
@@ -205,89 +229,4 @@ func CreateParticipant(messageRouter network.MessageRouter, participantPrefix st
 
 	// begin processing heartbeats
 	go p.tick()
-
-	// 4. Download the wallet list
-	var walletList []quorum.WalletID
-	fmt.Println("Getting List of Wallets From Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.SnapshotWalletList",
-		Args: p.quorum.CurrentSnapshot(),
-		Resp: &walletList,
-	})
-
-	println("got wallet list")
-	fmt.Println(walletList)
-
-	// 5. Download the wallets
-	var encodedWallets [][]byte
-	fmt.Println("Getting all of the Wallets")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.SnapshotWallets",
-		Args: SnapshotWalletsInput{
-			Snapshot: p.quorum.CurrentSnapshot(),
-			Ids:      walletList,
-		},
-		Resp: &encodedWallets,
-	})
-	if err != nil {
-		return
-	}
-
-	for i, encodedWallet := range encodedWallets {
-		err = p.quorum.InsertWallet(encodedWallet, walletList[i])
-		if err != nil {
-			return
-		}
-	}
-
-	fmt.Println("Untouched Snapshot Status():")
-	fmt.Println(p.quorum.Status())
-
-	// 6. Download the blocks
-	var blockList []delta.Block
-	fmt.Println("Getting Blocks Since Snapshot")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.SnapshotBlocks",
-		Args: p.quorum.CurrentSnapshot(),
-		Resp: &blockList,
-	})
-	if err != nil {
-		return
-	}
-
-	// 7. Integrate with blocks built while listening, compile all blocks
-	//for i := range blockList {
-	// p.appendBlock(&blockList[i])
-	//}
-
-	currentHeight := p.quorum.Height()
-	for p.recentBlocks[currentHeight] != nil {
-		fmt.Println("Fast forwarding a block:")
-		p.compile(p.recentBlocks[currentHeight])
-		currentHeight += 1
-	}
-	p.synchronized = true // now compile will be called upon receiving a block
-
-	// 8. Request wallet from bootstrap
-	walletID := siacrypto.RandomUint64()
-	s := script.ScriptInput{
-		WalletID: BootstrapID,
-		Input:    script.CreateWalletInput(walletID, script.DefaultScript(p.self.PublicKey())),
-	}
-
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.AddScriptInput",
-		Args: s,
-		Resp: nil,
-	})
-	if err != nil {
-		return
-	}
-
-	// 9. Wait for next compile
-	time.Sleep(time.Duration(quorum.QuorumSize) * StepDuration)
 }*/

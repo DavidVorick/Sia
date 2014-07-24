@@ -113,7 +113,7 @@ func TestSnapshotProcess(t *testing.T) {
 	// Add some extra wallets to confirm that the binary search works.
 	for i := 0; i < 32; i++ {
 		w := w2
-		w.ID = state.WalletID(i+50)
+		w.ID = state.WalletID(i + 50)
 		e.InsertWallet(w)
 	}
 
