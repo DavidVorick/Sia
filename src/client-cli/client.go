@@ -4,7 +4,7 @@ import (
 	"client"
 	"fmt"
 	"io/ioutil"
-	"quorum"
+	"state"
 )
 
 func displayHelp() {
@@ -48,9 +48,10 @@ func connect(c *client.Client) {
 	}
 }
 
+/*
 func download(c *client.Client) {
 	var dest string
-	var id quorum.WalletID
+	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
 	fmt.Scanf("%x", &id)
 	fmt.Print("Destination Filepath: ")
@@ -58,9 +59,10 @@ func download(c *client.Client) {
 	fmt.Println("Downloading File, please wait a few minutes")
 	c.Download(id, dest)
 }
+*/
 
 func resizeGenericWallet(c *client.Client) {
-	var srcID quorum.WalletID
+	var srcID state.WalletID
 	var atoms uint16
 	var m byte
 	fmt.Print("Wallet ID (hex): ")
@@ -78,7 +80,7 @@ func resizeGenericWallet(c *client.Client) {
 }
 
 func sendScriptInput(c *client.Client) {
-	var id quorum.WalletID
+	var id state.WalletID
 	var filename string
 	fmt.Print("Wallet ID (hex): ")
 	fmt.Scanf("%x", &id)
@@ -99,8 +101,8 @@ func sendScriptInput(c *client.Client) {
 }
 
 func sendFromGenericWallet(c *client.Client) {
-	var srcID quorum.WalletID
-	var dstID quorum.WalletID
+	var srcID state.WalletID
+	var dstID state.WalletID
 	var amount uint64
 	fmt.Print("Source Wallet ID (hex): ")
 	fmt.Scanf("%x", &srcID)
@@ -116,9 +118,10 @@ func sendFromGenericWallet(c *client.Client) {
 	}
 }
 
+/*
 func uploadToGenericWallet(c *client.Client) {
 	var filename string
-	var id quorum.WalletID
+	var id state.WalletID
 	var k byte
 	fmt.Print("Filename: ")
 	fmt.Scanln(&filename)
@@ -135,9 +138,10 @@ func uploadToGenericWallet(c *client.Client) {
 	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
 	c.UploadFile(id, filename, k)
 }
+*/
 
 func createGenericWallet(c *client.Client) {
-	var id quorum.WalletID
+	var id state.WalletID
 	var filename string
 	fmt.Print("Enter desired Wallet ID (hex): ")
 	fmt.Scanf("%x", &id)
@@ -185,7 +189,7 @@ func main() {
 			connect(c)
 
 		case "d", "download":
-			download(c)
+			//download(c)
 
 		case "r", "resize":
 			resizeGenericWallet(c)
@@ -197,7 +201,7 @@ func main() {
 			sendFromGenericWallet(c)
 
 		case "u", "upload":
-			uploadToGenericWallet(c)
+			//uploadToGenericWallet(c)
 
 		case "w", "wallet":
 			createGenericWallet(c)

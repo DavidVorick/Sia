@@ -1,29 +1,34 @@
 package client
 
 import (
-	"consensus"
-	"fmt"
+	"errors"
 	"network"
 	"path/filepath"
-	"quorum"
 	"siacrypto"
+	"state"
 )
+
+type Keypair struct {
+	SK siacrypto.SecretKey
+	PK siacrypto.PublicKey
+}
 
 // Struct Client contains the state for client actions
 type Client struct {
 	router         *network.RPCServer
-	genericWallets map[quorum.WalletID]*siacrypto.Keypair
-	siblings       [quorum.QuorumSize]*quorum.Sibling
+	bootstrap      network.Address
+	genericWallets map[state.WalletID]*Keypair
+	siblings       [state.QuorumSize]state.Sibling
 }
 
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
 func (c *Client) Broadcast(nm network.Message) {
 	for i := range c.siblings {
-		if c.siblings[i] == nil {
+		if c.siblings[i].Address.Host == "" {
 			continue
 		}
-		nm.Dest = c.siblings[i].Address()
-		c.router.SendMessage(&nm)
+		nm.Dest = c.siblings[i].Address
+		c.router.SendMessage(nm)
 		break
 	}
 }
@@ -36,16 +41,27 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 		return
 	}
 	// set bootstrap address
-	consensus.BootstrapAddress.Host = host
-	consensus.BootstrapAddress.Port = port
-	consensus.BootstrapAddress.ID = network.Identifier(id)
-	err = c.router.Ping(consensus.BootstrapAddress)
+	c.bootstrap.Host = host
+	c.bootstrap.Port = port
+	c.bootstrap.ID = network.Identifier(id)
+	err = c.router.Ping(c.bootstrap)
+	if err != nil {
+		c.router.Close()
+		return
+	}
+
+	// populate initial sibling list
+	var metadata state.StateMetadata
+	err = c.router.SendMessage(network.Message{
+		Dest: c.bootstrap,
+		Proc: "Participant.Metadata",
+		Args: struct{}{},
+		Resp: &metadata,
+	})
 	if err != nil {
 		c.router.Close()
 	}
-
-	c.siblings[0] = quorum.NewSibling(consensus.BootstrapAddress, nil)
-	c.RetrieveSiblings()
+	c.siblings = metadata.Siblings
 	return
 }
 
@@ -66,31 +82,27 @@ func (c *Client) Disconnect() {
 func (c *Client) RetrieveSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
-	var gobSiblings []byte
+	var metadata state.StateMetadata
 	for i := range c.siblings {
-		if c.siblings[i] == nil {
+		if c.siblings[i].Address.Host == "" {
 			continue
 		}
-		err = c.router.SendMessage(&network.Message{
-			Dest: c.siblings[i].Address(),
-			Proc: "Participant.Siblings",
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[i].Address,
+			Proc: "Participant.Metadata",
 			Args: struct{}{},
-			Resp: &gobSiblings,
+			Resp: &metadata,
 		})
 		if err == nil {
 			break
 		}
+		c.siblings = metadata.Siblings
 	}
 	if err != nil {
-		err = fmt.Errorf("Could not reach any stored siblings")
+		err = errors.New("Could not reach any stored siblings")
 		return
 	}
 
-	siblings, err := quorum.DecodeSiblings(gobSiblings)
-	if err != nil {
-		return
-	}
-	c.siblings = siblings
 	return
 }
 
@@ -98,7 +110,7 @@ func (c *Client) RetrieveSiblings() (err error) {
 // returning a fully working client.
 func NewClient() (c *Client, err error) {
 	c = new(Client)
-	c.genericWallets = make(map[quorum.WalletID]*siacrypto.Keypair)
+	c.genericWallets = make(map[state.WalletID]*Keypair)
 	filenames, err := filepath.Glob("*.id")
 	if err != nil {
 		panic(err)

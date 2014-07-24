@@ -25,7 +25,7 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-func SignInput(secretKey *siacrypto.SecretKey, input []byte) (encSm []byte, err error) {
+func SignInput(secretKey siacrypto.SecretKey, input []byte) (encSm []byte, err error) {
 	sm, err := secretKey.Sign(input)
 	if err != nil {
 		return
