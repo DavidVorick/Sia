@@ -129,16 +129,15 @@ func NewClient() (c *Client, err error) {
 	f, err := os.Open(".config")
 	r := bufio.NewReader(f)
 	l, err := r.ReadString('\n')
-	if strings.Trim(l, " \n\t") != "directories:" {
+	if strings.TrimSpace(l) != "directories:" {
 		errors.New("Invalid config file")
 		return
 	}
 	l, err = r.ReadString('\n')
-	strings.Trim(l, " \n\t")
+	l = strings.TrimSpace(l)
 	//Read in wallet directories and load wallets
 	for l != "" {
-		os.Chdir(l)
-		filenames, err := filepath.Glob("*.id")
+		filenames, err := filepath.Glob(l + "*.id")
 		if err != nil {
 			panic(err)
 		}
@@ -150,15 +149,15 @@ func NewClient() (c *Client, err error) {
 			c.genericWallets[id] = keypair
 		}
 		l, err = r.ReadString('\n')
-		strings.Trim(l, " \n\t")
+		l = strings.TrimSpace(l)
 	}
 	//Load starting wallet ID, if a starting wallet ID is desired
 	l, err = r.ReadString('\n')
-	if strings.Trim(l, " \n\t") != "wallet:" {
+	if strings.TrimSpace(l) != "wallet:" {
 		return
 	}
 	l, err = r.ReadString('\n')
-	strings.Trim(l, " \n\t")
+	l = strings.TrimSpace(l)
 	_, err = fmt.Sscanf(l, "%x", c.CurID)
 	return
 }
