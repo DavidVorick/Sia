@@ -181,8 +181,8 @@ func enterWallet(c *client.Client) {
 
 func pollWalletActions(c *client.Client) {
 	var input string
+	fmt.Printf("Loaded into wallet #%x\n", c.CurID)
 	for {
-		fmt.Printf("Loaded into wallet #%x\n", c.CurID)
 		fmt.Print("Please enter a wallet action: ")
 		fmt.Scanln(&input)
 
@@ -260,7 +260,6 @@ func main() {
 	}
 	if c.CurID != 0 {
 		pollWalletActions(c)
-	} else {
-		pollStartActions(c)
 	}
+	pollStartActions(c)
 }

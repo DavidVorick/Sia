@@ -158,6 +158,6 @@ func NewClient() (c *Client, err error) {
 	}
 	l, err = r.ReadString('\n')
 	l = strings.TrimSpace(l)
-	_, err = fmt.Sscanf(l, "%x", c.CurID)
+	_, err = fmt.Sscanf(l, "%x", &c.CurID)
 	return
 }
