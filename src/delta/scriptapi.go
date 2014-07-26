@@ -163,14 +163,7 @@ func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, we
 
 	return
 }
-
-type UploadArgs struct {
-	ParentHash    siacrypto.Hash
-	NewHashSet    [QuorumSize]siacrypto.Hash
-	AtomsChanged  uint16
-	Confirmations byte
-	Deadline      uint32
-}
+*/
 
 // First sectors are allocated, and then changes are uploaded to them. This
 // creates a change.
@@ -245,4 +238,4 @@ func (s *State) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [
 	q.updateWeight(w.ID, int(atomsChanged))
 	q.insertEvent(&u)
 	return
-}*/
+}

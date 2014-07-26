@@ -14,7 +14,7 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// saveSnapshot() should be called upon initialzation
+// SaveSnapshot() should be called upon initialzation
 // recentHistoryHead needs to be initialized to ^uint32(0)
 // activeHistoryLength should be initialized to SnapshotLength
 // activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
@@ -29,6 +29,10 @@ type Engine struct {
 	recentHistoryHead   uint32
 	activeHistoryHead   uint32
 	activeHistoryLength uint32
+
+	// Tracks all uploads currently open on the quorum. Each WalletID is
+	// associated with a set of uploads that follow each other sequentially.
+	activeUploads map[state.WalletID][]Upload
 }
 
 func (e *Engine) SetFilePrefix(prefix string) {
@@ -37,16 +41,8 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
-func (e *Engine) SetMetadata(smd state.StateMetadata) {
-	e.state.Metadata = smd
-}
-
 func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
-}
-
-func (e *Engine) ActiveHistoryHead() uint32 {
-	return e.activeHistoryHead
 }
 
 func (e *Engine) WalletList() []state.WalletID {
@@ -55,11 +51,6 @@ func (e *Engine) WalletList() []state.WalletID {
 
 func (e *Engine) Initialize(filePrefix string) {
 	e.SetFilePrefix(filePrefix)
-	return
-}
-
-func (e *Engine) InsertWallet(w state.Wallet) (err error) {
-	err = e.state.InsertWallet(w)
 	return
 }
 
@@ -92,7 +83,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	}
 	e.AddSibling(&sibWallet, sib)
 
-	e.saveSnapshot()
+	e.SaveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
 	e.activeHistoryHead = ^uint32(0) - (SnapshotLength - 1)
 	e.activeHistoryLength = SnapshotLength
