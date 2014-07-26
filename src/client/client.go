@@ -18,6 +18,7 @@ type Client struct {
 	router         *network.RPCServer
 	bootstrap      network.Address
 	genericWallets map[state.WalletID]*Keypair
+	CurID          state.WalletID
 	siblings       [state.QuorumSize]state.Sibling
 }
 

@@ -8,6 +8,26 @@ import (
 	"state"
 )
 
+func (c *Client) GetGenericWallets() (ids []state.WalletID) {
+	ids = make([]state.WalletID, len(c.genericWallets))
+	i := 0
+	for key, _ := range c.genericWallets {
+		ids[i] = key
+		i++
+	}
+	return
+}
+
+func (c *Client) EnterWallet(id state.WalletID) (err error) {
+	_, exists := c.genericWallets[id]
+	if exists {
+		c.CurID = id
+	} else {
+		err = errors.New("Invalid Wallet ID")
+	}
+	return
+}
+
 func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
 	if keypair == nil {
 		err = errors.New("Cannot encode nil key pair")

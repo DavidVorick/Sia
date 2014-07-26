@@ -7,14 +7,23 @@ import (
 	"state"
 )
 
-func displayHelp() {
+//Two states:
+//Start, where you choose a wallet or do stuff not pertaining to a specific wallet
+//Wallet, where you do operations specific to that wallet
+
+func displayHelpStart() {
 	fmt.Println("\nc:\tConnect to Network\n" +
-		"d:\tDownload a file\n" +
+		"w:\tRequest new wallet\n" +
+		"l:\tList stored wallets\n" +
+		"e:\tEnter wallet\n")
+}
+
+func displayHelpWallet() {
+	fmt.Println("\nd:\tDownload a file\n" +
 		"r:\tResize a sector\n" +
 		"s:\tSend a custom script input\n" +
 		"t:\tSubmit transaction\n" +
-		"u:\tUpload a file\n" +
-		"w:\tRequest wallet\n")
+		"u:\tUpload a file\n")
 }
 
 func connect(c *client.Client) {
@@ -164,29 +173,39 @@ func createGenericWallet(c *client.Client) {
 	}
 }
 
-func main() {
-	fmt.Println("Sia Client Version 0.0.1")
-	c, err := client.NewClient()
-	if err == nil {
-		fmt.Println("Connected to local bootstrap")
-	} else {
-		fmt.Println("Autoconnect failed: press c to connect manually")
+func listWallets(c *client.Client) {
+	fmt.Println("All Stored Wallet IDs:")
+	wallets := c.GetGenericWallets()
+	for _, id := range wallets {
+		fmt.Printf("%x\n", id)
 	}
+}
 
+func enterWallet(c *client.Client) {
+	var id state.WalletID
+	fmt.Print("Wallet ID (hex): ")
+	fmt.Scanf("%x", &id)
+	err := c.EnterWallet(id)
+	if err == nil {
+		pollWalletActions(c)
+	} else {
+		fmt.Println(err)
+	}
+}
+
+func pollWalletActions(c *client.Client) {
 	var input string
 	for {
-		fmt.Print("Please enter a command: ")
+		fmt.Printf("Loaded into wallet #%x\n", c.CurID)
+		fmt.Print("Please enter a wallet action: ")
 		fmt.Scanln(&input)
 
 		switch input {
 		default:
 			fmt.Println("unrecognized command")
 
-		case "h", "help":
-			displayHelp()
-
-		case "c", "conncet":
-			connect(c)
+		case "?", "h", "help":
+			displayHelpWallet()
 
 		case "d", "download":
 			//download(c)
@@ -203,11 +222,56 @@ func main() {
 		case "u", "upload":
 			//uploadToGenericWallet(c)
 
+		case "q", "quit":
+			return
+		}
+		input = ""
+	}
+}
+
+func pollStartActions(c *client.Client) {
+	var input string
+	for {
+		fmt.Print("Please enter a command: ")
+		fmt.Scanln(&input)
+
+		switch input {
+		default:
+			fmt.Println("unrecognized command")
+
+		case "?", "h", "help":
+			displayHelpStart()
+
+		case "c", "conncet":
+			connect(c)
+
 		case "w", "wallet":
 			createGenericWallet(c)
+
+		case "l", "ls", "list":
+			listWallets(c)
+
+		case "e", "enter":
+			enterWallet(c)
 
 		case "q", "quit":
 			return
 		}
+		input = ""
+	}
+}
+
+func main() {
+	fmt.Println("Sia Client Version 0.0.1")
+	c, err := client.NewClient()
+	if err == nil {
+		fmt.Println("Connected to local bootstrap")
+	} else {
+		fmt.Println("Autoconnect failed: press c to connect manually")
+	}
+	if c.CurID != 0 {
+		pollWalletActions(c)
+	} else {
+		pollStartActions(c)
 	}
 }
