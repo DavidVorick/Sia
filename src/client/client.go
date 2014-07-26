@@ -1,11 +1,15 @@
 package client
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"network"
+	"os"
 	"path/filepath"
 	"siacrypto"
 	"state"
+	"strings"
 )
 
 type Keypair struct {
@@ -112,17 +116,49 @@ func (c *Client) RetrieveSiblings() (err error) {
 func NewClient() (c *Client, err error) {
 	c = new(Client)
 	c.genericWallets = make(map[state.WalletID]*Keypair)
-	filenames, err := filepath.Glob("*.id")
-	if err != nil {
-		panic(err)
+	err = c.Connect("localhost", 9988, 1) // default bootstrap address
+
+	/* The format for config files
+	directories:
+		/path/to/a/directory/with/wallets/
+		/another/wallet/path/
+		/however/many/paths/you/want/
+	wallet: 						<--This is optional. Only include if you want
+		walletIDinhex				 to automatically load into a specific wallet
+	*/
+	f, err := os.Open(".config")
+	r := bufio.NewReader(f)
+	l, err := r.ReadString('\n')
+	if strings.Trim(l, " \n\t") != "directories:" {
+		errors.New("Invalid config file")
+		return
 	}
-	for _, j := range filenames {
-		id, keypair, err := LoadWallet(j)
+	l, err = r.ReadString('\n')
+	strings.Trim(l, " \n\t")
+	//Read in wallet directories and load wallets
+	for l != "" {
+		os.Chdir(l)
+		filenames, err := filepath.Glob("*.id")
 		if err != nil {
 			panic(err)
 		}
-		c.genericWallets[id] = keypair
+		for _, j := range filenames {
+			id, keypair, err := LoadWallet(j)
+			if err != nil {
+				panic(err)
+			}
+			c.genericWallets[id] = keypair
+		}
+		l, err = r.ReadString('\n')
+		strings.Trim(l, " \n\t")
 	}
-	err = c.Connect("localhost", 9988, 1) // default bootstrap address
+	//Load starting wallet ID, if a starting wallet ID is desired
+	l, err = r.ReadString('\n')
+	if strings.Trim(l, " \n\t") != "wallet:" {
+		return
+	}
+	l, err = r.ReadString('\n')
+	strings.Trim(l, " \n\t")
+	_, err = fmt.Sscanf(l, "%x", c.CurID)
 	return
 }

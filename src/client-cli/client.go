@@ -60,27 +60,21 @@ func connect(c *client.Client) {
 /*
 func download(c *client.Client) {
 	var dest string
-	var id state.WalletID
-	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanf("%x", &id)
 	fmt.Print("Destination Filepath: ")
 	fmt.Scanln(&dest)
 	fmt.Println("Downloading File, please wait a few minutes")
-	c.Download(id, dest)
+	c.Download(c.CurID, dest)
 }
 */
 
 func resizeGenericWallet(c *client.Client) {
-	var srcID state.WalletID
 	var atoms uint16
 	var m byte
-	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanf("%x", &srcID)
 	fmt.Print("New size (in atoms): ")
 	fmt.Scanln(&atoms)
 	fmt.Print("Redundancy: ")
 	fmt.Scanln(&m)
-	err := c.ResizeSector(srcID, atoms, m)
+	err := c.ResizeSector(c.CurID, atoms, m)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -89,10 +83,7 @@ func resizeGenericWallet(c *client.Client) {
 }
 
 func sendScriptInput(c *client.Client) {
-	var id state.WalletID
 	var filename string
-	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanf("%x", &id)
 	fmt.Print("Input file: ")
 	fmt.Scanf("%s", &filename)
 	// read script from file
@@ -101,7 +92,7 @@ func sendScriptInput(c *client.Client) {
 		fmt.Println("Error:", err)
 		return
 	}
-	err = c.SendCustomInput(id, input)
+	err = c.SendCustomInput(c.CurID, input)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -110,16 +101,13 @@ func sendScriptInput(c *client.Client) {
 }
 
 func sendFromGenericWallet(c *client.Client) {
-	var srcID state.WalletID
 	var dstID state.WalletID
 	var amount uint64
-	fmt.Print("Source Wallet ID (hex): ")
-	fmt.Scanf("%x", &srcID)
 	fmt.Print("Dest Wallet ID (hex): ")
 	fmt.Scanf("%x", &dstID)
 	fmt.Print("Amount to send (dec): ")
 	fmt.Scanln(&amount)
-	err := c.SubmitTransaction(srcID, dstID, amount)
+	err := c.SubmitTransaction(c.CurID, dstID, amount)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -130,7 +118,6 @@ func sendFromGenericWallet(c *client.Client) {
 /*
 func uploadToGenericWallet(c *client.Client) {
 	var filename string
-	var id state.WalletID
 	var k byte
 	fmt.Print("Filename: ")
 	fmt.Scanln(&filename)
@@ -142,10 +129,8 @@ func uploadToGenericWallet(c *client.Client) {
 	} else {
 		fmt.Printf("Atoms Required: %v\n", atomsRequired)
 	}
-	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanf("%x", &id)
 	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
-	c.UploadFile(id, filename, k)
+	c.UploadFile(c.CurID, filename, k)
 }
 */
 
