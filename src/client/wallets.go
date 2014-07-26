@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"siacrypto"
 	"siaencoding"
@@ -26,6 +27,14 @@ func (c *Client) EnterWallet(id state.WalletID) (err error) {
 		err = errors.New("Invalid Wallet ID")
 	}
 	return
+}
+
+func (c *Client) SaveAllWallets() {
+	var filename string
+	for id, keypair := range c.genericWallets {
+		filename = fmt.Sprintf("%x.id", id)
+		SaveWallet(id, keypair, filename)
+	}
 }
 
 func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {

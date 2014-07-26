@@ -15,6 +15,7 @@ func displayHelpStart() {
 	fmt.Println("\nc:\tConnect to Network\n" +
 		"w:\tRequest new wallet\n" +
 		"l:\tList stored wallets\n" +
+		"s:\tSave all wallets\n" +
 		"e:\tEnter wallet\n")
 }
 
@@ -235,6 +236,9 @@ func pollStartActions(c *client.Client) {
 
 		case "l", "ls", "list":
 			listWallets(c)
+
+		case "s", "save":
+			c.SaveAllWallets()
 
 		case "e", "enter":
 			enterWallet(c)
