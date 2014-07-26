@@ -11,8 +11,8 @@ import (
 
 const (
 	QuorumSize     byte   = 4        // max siblings per quorum
-	AtomSize       int    = 4096     // in bytes
-	AtomsPerQuorum int    = 16777216 // 64GB
+	AtomSize       int    = 64       // in bytes
+	AtomsPerQuorum int    = 16777216 // 1GB
 	AtomsPerSector uint16 = 200      // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
 )
 
