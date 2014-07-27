@@ -5,9 +5,21 @@
 package state
 
 import (
+	"network"
+	"siacrypto"
 	"siaencoding"
 	"siafiles"
 )
+
+// A Sibling is the public facing information of participants on the quorum.
+// Every quorum contains a list of all siblings.
+type Sibling struct {
+	Active    bool
+	Index     byte
+	Address   network.Address
+	PublicKey siacrypto.PublicKey
+	WalletID  WalletID
+}
 
 const (
 	QuorumSize     byte   = 4        // max siblings per quorum
@@ -47,4 +59,9 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 
 func (s *State) Weight() int {
 	return s.walletRoot.weight
+}
+
+// Removes a sibling from the list of siblings
+func (s *State) TossSibling(i byte) {
+	s.Metadata.Siblings[i] = *new(Sibling)
 }

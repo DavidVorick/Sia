@@ -4,6 +4,29 @@ import (
 	"siacrypto"
 )
 
+const (
+	MaxDeadline = 300
+)
+
+// An event is a task that the quorum will have to perform at a certain block,
+// which is returned by expiration(). Something may trigger the event early, at
+// which point the event will be deleted from the eventList. Each block, all
+// events that expire that block are handled by calling handleEvent() on the
+// event. They are then removed from the eventList. The event list keeps all
+// events in order of expiration, meaning that you only need to check the
+// beginning of the eventList until an event is found that expires at a later
+// block. The internals of the event list are determined randomly and
+// nondeterministically, because the internals do not need to be consistent
+// between siblings. This also prevents an attacker from knowing the internals
+// and being able to provide malicious input to distrupt the order notation of
+// the list.
+type Event interface {
+	Expiration() uint32
+	Counter() uint32
+	SetCounter(uint32)
+	HandleEvent(s *State)
+}
+
 // An eventNode houses an event and a pointer to the top of its pointer stack.
 // The pointer stack is the structure used to implement a skip list.
 type eventNode struct {
@@ -44,10 +67,10 @@ func (ps *pointerStack) bottom() *pointerStack {
 	return ps
 }
 
-func (e Event) counter() (counter uint64) {
-	counter = uint64(e.Expiration)
-	counter = counter << 32
-	counter += uint64(e.Counter)
+func eventIndex(e Event) (index uint64) {
+	index = uint64(e.Expiration())
+	index <<= 32
+	index += uint64(e.Counter())
 	return
 }
 
@@ -59,7 +82,7 @@ func (s *State) InsertEvent(e Event) {
 	// for sorting according to expiration. Then there's the lower 32 bits which
 	// is the eventCounter, and this allows for FCFS unique ordering of events
 	// with the same expiration.
-	e.Counter = s.Metadata.EventCounter
+	e.SetCounter(s.Metadata.EventCounter)
 	s.Metadata.EventCounter += 1
 	freshNode := new(eventNode)
 	freshNode.event = e
@@ -97,7 +120,7 @@ func (s *State) InsertEvent(e Event) {
 	// check if we are behind the root
 	currentPointer := s.eventRoot.top
 	freshPointer := new(pointerStack)
-	if s.eventRoot.event.counter() >= e.counter() {
+	if eventIndex(s.eventRoot.event) >= eventIndex(e) {
 		freshNode.top = s.eventRoot.top
 		s.eventRoot.top = freshPointer
 		for currentHeight > freshHeight {
@@ -121,7 +144,7 @@ func (s *State) InsertEvent(e Event) {
 	freshNode.top = freshPointer
 	for {
 		// Move forward until a larger node is found.
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
+		for currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) < eventIndex(e) {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -190,7 +213,7 @@ func (s *State) DeleteEvent(e Event) {
 	eventPointer := en.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
+		for currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) < eventIndex(e) {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -216,19 +239,19 @@ func (s *State) eventNode(e Event) *eventNode {
 	if s.eventRoot == nil {
 		return nil
 	}
-	if s.eventRoot.event.counter() == e.counter() {
+	if eventIndex(s.eventRoot.event) == eventIndex(e) {
 		return s.eventRoot
 	}
 
 	currentPointer := s.eventRoot.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
+		for currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) < eventIndex(e) {
 			currentPointer = currentPointer.nextNode.top
 		}
 
 		// see if the next node is the desired node
-		if currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() == e.counter() {
+		if currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) == eventIndex(e) {
 			return currentPointer.nextNode
 		}
 

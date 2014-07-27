@@ -38,4 +38,24 @@ type Upload struct {
 	// The number of atoms that are being altered during the diff. This is how
 	// many atoms of temporary space will need to be allocated.
 	AtomsAltered uint16
+
+	// Event variables.
+	EventCounter    uint32
+	EventExpiration uint32
+}
+
+func (u *Upload) Expiration() uint32 {
+	return u.EventExpiration
+}
+
+func (u *Upload) Counter() uint32 {
+	return u.EventCounter
+}
+
+func (u *Upload) SetCounter(counter uint32) {
+	u.EventCounter = counter
+}
+
+func (u *Upload) HandleEvent(s *state.State) {
+	// Subtract
 }

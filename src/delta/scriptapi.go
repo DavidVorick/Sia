@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"siacrypto"
-	"siaencoding"
 	"state"
 )
 
@@ -251,17 +250,7 @@ func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, pare
 		HashSet:               hashSet,
 		AtomsAltered:          atomsAltered,
 	}
-	encodedUpload, err := siaencoding.Marshal(u)
-	if err != nil {
-		panic(err)
-	}
-	event := state.Event{
-		Type:       "Upload",
-		Expiration: deadline,
-		// Counter will be set by InsertEvent.
-		EncodedEvent: encodedUpload,
-	}
-	e.state.InsertEvent(event)
+	e.state.InsertEvent(&u)
 
 	return
 }
