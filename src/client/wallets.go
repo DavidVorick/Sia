@@ -10,11 +10,9 @@ import (
 )
 
 func (c *Client) GetGenericWallets() (ids []state.WalletID) {
-	ids = make([]state.WalletID, len(c.genericWallets))
-	i := 0
-	for key, _ := range c.genericWallets {
-		ids[i] = key
-		i++
+	ids = make([]state.WalletID, 0, len(c.genericWallets))
+	for id, _ := range c.genericWallets {
+		ids = append(ids, id)
 	}
 	return
 }
