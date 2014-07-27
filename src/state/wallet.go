@@ -40,6 +40,7 @@ func (w Wallet) Weight() (weight uint32) {
 
 	// Add non-replicated weight according to the size of the wallet sector.
 	walletAtomCount += float64(w.SectorSettings.Atoms)
+	walletAtomCount += float64(w.SectorSettings.UploadAtoms)
 	return uint32(walletAtomCount)
 }
 
@@ -60,9 +61,6 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 	s.SaveWallet(w)
 	return
 }
-
-// LoadWallet checks the disk for a saved wallet, and loads that wallet into
-// memory. No changes to State are made.
 
 // LoadWallet checks the wallettree for existence of the wallet, and then loads
 // the wallet from disk if the wallet exists.

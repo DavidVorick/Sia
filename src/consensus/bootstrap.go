@@ -113,7 +113,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			Args: snapshotHead,
 			Resp: &snapshotMetadata,
 		})
-		p.engine.SetMetadata(snapshotMetadata)
+		p.engine.BootstrapSetMetadata(snapshotMetadata)
 
 		// Get the list of wallets in the snapshot.
 		var walletList []state.WalletID
@@ -139,7 +139,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 				Resp: &wallet,
 			})
 
-			err = p.engine.InsertWallet(wallet)
+			err = p.engine.BootstrapInsertWallet(wallet)
 			if err != nil {
 				// ???, panic would be inappropriate
 			}

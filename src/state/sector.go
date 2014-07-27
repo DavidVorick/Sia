@@ -1,15 +1,31 @@
 package state
 
 import (
-	//"io"
-	//"os"
 	"siacrypto"
 )
 
 type SectorSettings struct {
+	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
-	K     byte
-	Hash  siacrypto.Hash
+
+	// The number of atoms that are currently allocated for uploading to the
+	// sector.
+	UploadAtoms uint16
+
+	// The minimum number of sibings in the quorum that need to remain
+	// uncorrupted in order for the original data to be recoverable.
+	K byte
+
+	// The minimum number of siblings in the quorum that need to remain
+	// uncorrupted in order for other pieces to be recoverable without using a
+	// large amount of bandwidth.
+	D byte
+
+	// The hash of the hash set of the sector, where hash set is defined as an
+	// ordered list of of hashes of each segment held by each sibling in the
+	// quorum. Hash is kept as a variable so that there is a record in the
+	// blockchain of what the exact appearance of the file should be.
+	Hash siacrypto.Hash
 }
 
 /*
@@ -74,15 +90,16 @@ func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 	}
 	return siacrypto.CalculateHash(atomRepresentation)
 }
+*/
 
 // SectorFilename takes a wallet id and returns the filename of the sector
 // associated with that wallet.
 func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
-	walletFilename := s.walletFilename(id)
-	sectorFilename = walletFilename + ".sector"
+	sectorFilename = s.walletFilename(id) + ".sector"
 	return
 }
 
+/*
 func (s *State) BuildStorageProof(id WalletID, atomIndex int) (proofStack []*siacrypto.Hash) {
 	return
 }
@@ -161,4 +178,5 @@ func (s *State) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, 
 	//return false
 	//}
 	return true
-}*/
+}
+*/

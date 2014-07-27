@@ -28,8 +28,12 @@ type State struct {
 
 // This is the prefix that the state will use when opening wallets as files.
 // Eventually, logic will be implemented to move all of the wallets and files
-// if the prefex is changed.
+// if the prefex is changed. It is permissible to change the wallet prefix in
+// the middle of operation.
 func (s *State) SetWalletPrefix(walletPrefix string) {
+	// Though the header says it's admissible, that isn't actually supported in
+	// the current implementation. But it's on the todo list.
+
 	s.walletPrefix = walletPrefix
 }
 
@@ -39,4 +43,8 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	suffix := siafiles.SafeFilename(suffixBytes)
 	filename = s.walletPrefix + suffix
 	return
+}
+
+func (s *State) Weight() int {
+	return s.walletRoot.weight
 }

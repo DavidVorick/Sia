@@ -96,7 +96,7 @@ func TestSnapshotProcess(t *testing.T) {
 		},
 		Script: []byte{14, 15, 16},
 	}
-	e.InsertWallet(w1)
+	e.BootstrapInsertWallet(w1)
 
 	w2 := state.Wallet{
 		ID:      17,
@@ -108,13 +108,13 @@ func TestSnapshotProcess(t *testing.T) {
 		},
 		Script: []byte{23, 24, 25},
 	}
-	e.InsertWallet(w2)
+	e.BootstrapInsertWallet(w2)
 
 	// Add some extra wallets to confirm that the binary search works.
 	for i := 0; i < 32; i++ {
 		w := w2
 		w.ID = state.WalletID(i + 50)
-		e.InsertWallet(w)
+		e.BootstrapInsertWallet(w)
 	}
 
 	// Save the snapshot.
