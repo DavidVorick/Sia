@@ -44,6 +44,13 @@ func (ps *pointerStack) bottom() *pointerStack {
 	return ps
 }
 
+func (e Event) counter() (counter uint64) {
+	counter = uint64(e.Expiration)
+	counter = counter << 32
+	counter += uint64(e.Counter)
+	return
+}
+
 // InsertEvent takes a new event and inserts it into the event list.
 // InsertEvent does not check that the event already exists inside of the list,
 // as duplicate events are allowed to exist in the event list.
@@ -52,9 +59,7 @@ func (s *State) InsertEvent(e Event) {
 	// for sorting according to expiration. Then there's the lower 32 bits which
 	// is the eventCounter, and this allows for FCFS unique ordering of events
 	// with the same expiration.
-	e.Counter = uint64(e.Expiration)
-	e.Counter = e.Counter << 32
-	e.Counter += uint64(s.Metadata.EventCounter)
+	e.Counter = s.Metadata.EventCounter
 	s.Metadata.EventCounter += 1
 	freshNode := new(eventNode)
 	freshNode.event = e
@@ -92,7 +97,7 @@ func (s *State) InsertEvent(e Event) {
 	// check if we are behind the root
 	currentPointer := s.eventRoot.top
 	freshPointer := new(pointerStack)
-	if s.eventRoot.event.Counter >= e.Counter {
+	if s.eventRoot.event.counter() >= e.counter() {
 		freshNode.top = s.eventRoot.top
 		s.eventRoot.top = freshPointer
 		for currentHeight > freshHeight {
@@ -116,7 +121,7 @@ func (s *State) InsertEvent(e Event) {
 	freshNode.top = freshPointer
 	for {
 		// Move forward until a larger node is found.
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -185,7 +190,7 @@ func (s *State) DeleteEvent(e Event) {
 	eventPointer := en.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
 			currentPointer = currentPointer.nextNode.top
 		}
 
@@ -211,19 +216,19 @@ func (s *State) eventNode(e Event) *eventNode {
 	if s.eventRoot == nil {
 		return nil
 	}
-	if s.eventRoot.event.Counter == e.Counter {
+	if s.eventRoot.event.counter() == e.counter() {
 		return s.eventRoot
 	}
 
 	currentPointer := s.eventRoot.top
 	for {
 		// move forward
-		for currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter < e.Counter {
+		for currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() < e.counter() {
 			currentPointer = currentPointer.nextNode.top
 		}
 
 		// see if the next node is the desired node
-		if currentPointer.nextNode != nil && currentPointer.nextNode.event.Counter == e.Counter {
+		if currentPointer.nextNode != nil && currentPointer.nextNode.event.counter() == e.counter() {
 			return currentPointer.nextNode
 		}
 

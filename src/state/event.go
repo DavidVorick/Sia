@@ -26,6 +26,6 @@ type EventInterface interface {
 type Event struct {
 	Type         string
 	Expiration   uint32
-	Counter      uint64
+	Counter      uint32
 	EncodedEvent []byte
 }
