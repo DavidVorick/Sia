@@ -13,7 +13,7 @@ import (
 // system.
 type Upload struct {
 	// Which wallet is being modified.
-	ID                    state.WalletID
+	ID state.WalletID
 
 	// The number of Siblings that need to receive the file diff before the
 	// changes are accepted by the quorum.
@@ -21,7 +21,7 @@ type Upload struct {
 
 	// An array of bools that indicate which siblings have confirmed that they
 	// have received the upload.
-	Confirmations         [state.QuorumSize]bool
+	Confirmations [state.QuorumSize]bool
 
 	// The hash of the upload that is being changed. This hash must match the
 	// most recent hash in the system, otherwise this upload is rejected as being
@@ -29,13 +29,13 @@ type Upload struct {
 	// synchronization problems. This hash is derived by appending all the hashes
 	// in the HashSet into one set of state.QuorumSize * siacrypto.HashSize bytes and
 	// hashing that.
-	PreviousHash siacrypto.Hash
+	ParentHash siacrypto.Hash
 
 	// The MerkleCollapse value that each sibling should have after the segement
 	// diff has been uploaded to them.
-	HashSet               [state.QuorumSize]siacrypto.Hash
+	HashSet [state.QuorumSize]siacrypto.Hash
 
 	// The number of atoms that are being altered during the diff. This is how
 	// many atoms of temporary space will need to be allocated.
-	AtomsAltered          uint16
+	AtomsAltered uint16
 }

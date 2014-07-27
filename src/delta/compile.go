@@ -56,6 +56,10 @@ func (e *Engine) Compile(b Block) {
 		si.Execute(&e.state)
 	}
 
+	// Charge wallets for the storage they are consuming, and reward sibings for
+	// the storage that is being consumed.
+	e.state.ExecuteCompensation()
+
 	// Update the metadata of the quorum.
 	blockHash, err := siacrypto.HashObject(b)
 	if err != nil {

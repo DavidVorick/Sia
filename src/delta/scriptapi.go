@@ -1,7 +1,9 @@
 package delta
 
 import (
-	"errors"
+	"fmt"
+	"os"
+	"siacrypto"
 	"state"
 )
 
@@ -12,9 +14,18 @@ const (
 )
 
 var (
-	cwerrInsufficientBalance = errors.New("Insufficient balance to create a wallet with the given balance.")
+	cwerrInsufficientBalance = fmt.Errorf("Insufficient balance to create a wallet with the given balance.")
 
-	aserrNoEmptySiblings = errors.New("There are no empty spots in the quorum.")
+	aserrNoEmptySiblings = fmt.Errorf("There are no empty spots in the quorum.")
+
+	puerrUnallocatedSector      = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
+	puerrTooManyConfirmations   = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
+	puerrTooFewConfirmations    = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
+	puerrNonCurrentParentHash   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
+	puerrDeadlineTooDistant     = fmt.Errorf("The deadline provided is more than state.MaxDeadline block into the future.")
+	puerrDeadlineAlreadyExpired = fmt.Errorf("The deadline provided has already expired.")
+	puerrAbsurdAtomsAltered     = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
+	puerrInsufficientAtoms      = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
 )
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
@@ -70,19 +81,16 @@ func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
 
 /*
 func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
-	cost += 1
 	if w.Balance.Compare(amount) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
-	cost += 2
 	destWallet := s.LoadWallet(destID)
 	if destWallet == nil {
 		err = errors.New("destination wallet does not exist")
 		return
 	}
 
-	cost += 3
 	w.Balance.Subtract(amount)
 	destWallet.Balance.Add(amount)
 	s.SaveWallet(destWallet)
@@ -92,7 +100,6 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 // Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
 // or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
 func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
-	cost += 3
 	weightDelta := int(atoms)
 	// weightDelta -= int(w.sectorAtoms)
 	if weightDelta == 0 {
@@ -165,77 +172,77 @@ func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, we
 }
 */
 
-// First sectors are allocated, and then changes are uploaded to them. This
-// creates a change.
-func (s *State) ProposeUpload(w *Wallet, parentHash siacrypto.Hash, newHashSet [QuorumSize]siacrypto.Hash, atomsChanged uint16, confirmations byte, deadline uint32) (cost int, weight uint16, err error) {
-	cost += 2
-
-	// make sure the sector is allocated
-	//if w.sectorAtoms == 0 {
-	//		err = errors.New("Sector is not allocated")
-	//		return
-	//	}
-
-	// make sure that the confirmations value is a reasonable value
-	if confirmations > QuorumSize {
-		err = errors.New("confirmations cannot be greater than quorum size")
-		return
-	}
-	//if confirmations < w.sectorM {
-	//	err = errors.New("confirmations cannot be less than the value of 'm' for the given sector")
-	//		return
-	//	}
-
-	// make sure the deadline is a reasonable value
-	if deadline > MaxDeadline+q.height {
-		err = errors.New("deadline is too far in the future")
-		return
-	}
-	if deadline <= q.height {
-		err = errors.New("deadline has already arrived")
+func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, atomsAltered uint16, deadline uint32) (err error) {
+	// Verify that the wallet in question has an allocated sector.
+	if w.SectorSettings.Atoms < uint16(state.QuorumSize) {
+		err = puerrUnallocatedSector
 		return
 	}
 
-	cost += 2
-	// look up all of the open uploads on this sector, and compare their hashes
-	// to the parent hash of this upload. As soon as one is found (potentially
-	// starting directly from the existing hash), all remaining uploads are
-	// truncated. There can only exist a single chain of potential uploads, all
-	// other get defeated by precedence.
-	if parentHash == w.sectorHash {
-		// clear all existing uploads
-		q.clearUploads(w.id, 0)
+	// Verify that 'confirmationsRequired' is a legal value.
+	if confirmationsRequired > state.QuorumSize {
+		err = puerrTooManyConfirmations
+		return
+	} else if confirmationsRequired < w.SectorSettings.K {
+		err = puerrTooFewConfirmations
+		return
+	}
+
+	// Verify that parentHash applies to this wallet.
+	var expectedParentHash siacrypto.Hash
+	activeUploads, exists := e.activeUploads[w.ID]
+	if !exists {
+		// Open the current wallet's segment and load the first QuorumSize atoms,
+		// which contain the hash set for the current sector.
+		sectorFilename := e.state.SectorFilename(w.ID)
+		var file *os.File
+		file, err = os.Open(sectorFilename)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		// Pull the parent hash set from the local segment.
+		parentHashSet := make([]byte, int(state.QuorumSize)*siacrypto.HashSize)
+		_, err = file.Read(parentHashSet)
+		if err != nil {
+			panic(err)
+		}
+		expectedParentHash = siacrypto.CalculateHash(parentHashSet)
 	} else {
-		var i int
-		for i = 0; i < len(q.uploads[w.id]); i++ {
-			if parentHash == q.uploads[w.id][i].hash {
-				break
-			}
+		// Calculate the hash of the most recently accepted active upload.
+		mostRecentUpload := activeUploads[len(activeUploads)-1]
+		var appendedHashSet []byte
+		for _, hash := range mostRecentUpload.HashSet {
+			appendedHashSet = append(appendedHashSet, hash[:]...)
 		}
-
-		if i == len(q.uploads[w.id]) {
-			err = errors.New("upload has invalid parent hash")
-			return
-		}
-		q.clearUploads(w.id, i)
+		expectedParentHash = siacrypto.CalculateHash(appendedHashSet)
 	}
 
-	uploadHash := SectorHash(newHashSet)
-	u := upload{
-		id: w.ID,
-		requiredConfirmations: confirmations,
-		hashSet:               newHashSet,
-		hash:                  uploadHash,
-		weight:                atomsChanged,
-		deadline:              deadline,
+	// Match the parent hash to the expected hash.
+	if expectedParentHash != parentHash {
+		err = puerrNonCurrentParentHash
+		return
 	}
 
-	weight = atomsChanged
-	if s.uploads[w.ID] == nil {
-		s.uploads[w.ID] = make([]*upload, 0)
+	// Verify that AtomsAltered makes sense.
+	if atomsAltered > w.SectorSettings.Atoms {
+		err = puerrAbsurdAtomsAltered
+		return
 	}
-	q.uploads[w.ID] = append(q.uploads[w.ID], &u)
-	q.updateWeight(w.ID, int(atomsChanged))
-	q.insertEvent(&u)
+
+	// Verify that the quorum has enough atoms to support the upload. Long
+	// term, this check won't be necessary because it'll be a part of the
+	// preallocated resources planning.
+	if e.state.Weight()+int(atomsAltered) > int(state.AtomsPerQuorum) {
+		err = puerrInsufficientAtoms
+		return
+	}
+
+	// Update the wallet to reflect the new upload weight it has gained.
+	w.SectorSettings.UploadAtoms += atomsAltered
+
+	// Update the eventlist to include an upload event.
+
 	return
 }
