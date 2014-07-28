@@ -195,14 +195,20 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 }
 
 // foldHashes traverses a proofStack, hashing elements together to produce the root-level hash.
-// Functional programmers will recognize this is as a simple foldr operation.
-func foldHashes(base siacrypto.Hash, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
+// Care must be taken to ensure that the correct ordering is used when concatenating hashes.
+func foldHashes(base siacrypto.Hash, proofIndex, size uint16, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
 	if len(proofStack) == 0 {
 		return base
 	}
 
-	combinedHash := siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
-	return foldHashes(combinedHash, proofStack[1:])
+	// is base on the left or right branch?
+	var combinedHash siacrypto.Hash
+	if proofIndex%(size*2) < size { // left
+		combinedHash = siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
+	} else {
+		combinedHash = siacrypto.CalculateHash(append(proofStack[0][:], base[:]...))
+	}
+	return foldHashes(combinedHash, proofIndex, size*2, proofStack[1:])
 }
 
 func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
@@ -244,7 +250,7 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 
 	// build the hash up from the base
 	initialHash := siacrypto.CalculateHash(proofBase)
-	finalHash := foldHashes(initialHash, proofStack)
+	finalHash := foldHashes(initialHash, proofIndex, 1, proofStack)
 
 	if finalHash != expectedHash {
 		return false

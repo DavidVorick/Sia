@@ -39,7 +39,7 @@ func TestStorageProof(t *testing.T) {
 	}()
 
 	// generate random data
-	var numAtoms uint16 = 20
+	var numAtoms uint16 = 16
 	data := bytes.NewReader(siacrypto.RandomByteSlice(int(numAtoms) * AtomSize))
 
 	// select random index for storage proof
@@ -49,7 +49,7 @@ func TestStorageProof(t *testing.T) {
 	// no need to call VerifyStorageProof directly; just simulate it
 	expectedHash := MerkleCollapse(data)
 	initialHash := siacrypto.CalculateHash(proofBase)
-	finalHash := foldHashes(initialHash, proofStack)
+	finalHash := foldHashes(initialHash, proofIndex, 1, proofStack)
 
 	if finalHash != expectedHash {
 		t.Fatal("proof verification failed: hashes do not match")
