@@ -123,22 +123,14 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 // (Since this is a binary tree, the sister node is the other node with the same parent as us.)
 // To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
 // This segment will double in size on each iteration until we reach the root.
-func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
-	// read the sector data
-	sectorFilename := s.SectorFilename(id)
-	file, err := os.Open(sectorFilename)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
+func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
 	// get proofBytes
-	_, err = file.Seek(int64(proofIndex)*int64(AtomSize), 0)
+	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
 	if err != nil {
 		panic(err)
 	}
 	proofBytes = make([]byte, AtomSize)
-	_, err = file.Read(proofBytes)
+	_, err = rs.Read(proofBytes)
 	if err != nil {
 		panic(err)
 	}
@@ -149,35 +141,29 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	//   that is one half of a pair. sisterIndex returns the index
 	//   where the other half begins.
 	//   e.g.: (5, 1) -> 4, (5, 2) -> 6, (5, 4) -> 0, ...
-	sisterIndex := func(index, size int) int {
+	sisterIndex := func(index, size uint16) uint16 {
 		if index%(size*2) < size { // left child or right child?
-			return index + size - (index % size)
+			return (index/size + 1) * size
 		} else {
-			return index - size - (index % size)
+			return (index/size - 1) * size
 		}
 	}
 
-	w, err := s.LoadWallet(id)
-	if err != nil {
-		panic(err)
-	}
-	numSegs := int(w.SectorSettings.Atoms) / AtomSize
-
 	// calculate hashes of each sister
-	for size := 1; size < numSegs; size <<= 1 {
+	for size := uint16(1); size < numAtoms; size <<= 1 {
 		// determine index
-		i := sisterIndex(int(proofIndex), size)
-		if i >= numSegs {
-			continue // don't append empty hashes to the proof stack
+		i := sisterIndex(proofIndex, size)
+		if i >= numAtoms {
+			continue
 		}
 
 		// create a bounded reader via Seek and LimitReader
 		// this negates the need for any special processing of imperfectly balanced trees
-		_, err = file.Seek(int64(i)*int64(AtomSize), 0)
+		_, err = rs.Seek(int64(i)*int64(AtomSize), 0)
 		if err != nil {
 			panic(err)
 		}
-		r := io.LimitReader(file, int64(size))
+		r := io.LimitReader(rs, int64(size))
 
 		// calculate and append hash
 		hash := MerkleCollapse(r)
@@ -185,6 +171,26 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	}
 
 	return
+}
+
+// BuildStorageProof is a simple wrapper around buildProof.
+func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+	// read the sector data
+	sectorFilename := s.SectorFilename(id)
+	file, err := os.Open(sectorFilename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// determine numAtoms
+	w, err := s.LoadWallet(id)
+	if err != nil {
+		panic(err)
+	}
+	numAtoms := w.SectorSettings.Atoms
+
+	return buildProof(file, numAtoms, proofIndex)
 }
 
 // Recursive algorithm to take a list of proofs that fall down a merkle tree,
