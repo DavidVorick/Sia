@@ -1,6 +1,8 @@
 package state
 
 import (
+	"io"
+	"os"
 	"siacrypto"
 )
 
@@ -46,7 +48,6 @@ func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
 	s.activeUploads[id] = append(s.activeUploads[id], sm)
 }
 
-/*
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
 // as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
 // doing this keeps in memory the previous hash at each level. Each atom is
@@ -108,7 +109,6 @@ func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 	}
 	return siacrypto.CalculateHash(atomRepresentation)
 }
-*/
 
 // SectorFilename takes a wallet id and returns the filename of the sector
 // associated with that wallet.
@@ -117,8 +117,73 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 	return
 }
 
-/*
-func (s *State) BuildStorageProof(id WalletID, atomIndex int) (proofStack []*siacrypto.Hash) {
+// BuildStorageProof constructs a list of hashes using the following procedure.
+// The storage proof requires traversing the Merkle tree from the proofIndex node to the root.
+// On each level of the tree, we must provide the hash of "sister" node.
+// (Since this is a binary tree, the sister node is the other node with the same parent as us.)
+// To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
+// This segment will double in size on each iteration until we reach the root.
+func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+	// read the sector data
+	sectorFilename := s.SectorFilename(id)
+	file, err := os.Open(sectorFilename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// get proofBytes
+	_, err = file.Seek(int64(proofIndex)*int64(AtomSize), 0)
+	if err != nil {
+		panic(err)
+	}
+	proofBytes = make([]byte, AtomSize)
+	_, err = file.Read(proofBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	// sisterIndex helper function:
+	//   if the sector is divided into segments of length 'size' and
+	//   grouped pairwise, then proofIndex lies inside a segment
+	//   that is one half of a pair. sisterIndex returns the index
+	//   where the other half begins.
+	//   e.g.: (5, 1) -> 4, (5, 2) -> 6, (5, 4) -> 0, ...
+	sisterIndex := func(index, size int) int {
+		if index%(size*2) < size { // left child or right child?
+			return index + size - (index % size)
+		} else {
+			return index - size - (index % size)
+		}
+	}
+
+	w, err := s.LoadWallet(id)
+	if err != nil {
+		panic(err)
+	}
+	numSegs := int(w.SectorSettings.Atoms) / AtomSize
+
+	// calculate hashes of each sister
+	for size := 1; size < numSegs; size <<= 1 {
+		// determine index
+		i := sisterIndex(int(proofIndex), size)
+		if i >= numSegs {
+			continue // don't append empty hashes to the proof stack
+		}
+
+		// create a bounded reader via Seek and LimitReader
+		// this negates the need for any special processing of imperfectly balanced trees
+		_, err = file.Seek(int64(i)*int64(AtomSize), 0)
+		if err != nil {
+			panic(err)
+		}
+		r := io.LimitReader(file, int64(size))
+
+		// calculate and append hash
+		hash := MerkleCollapse(r)
+		proofStack = append(proofStack, &hash)
+	}
+
 	return
 }
 
@@ -153,7 +218,7 @@ func buildMerkleRoot(high uint16, search uint16, base siacrypto.Hash, proofStack
 	}
 }
 
-func (s *State) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
+func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
 	// get the intended hash from the segment stored on disk
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
@@ -174,27 +239,29 @@ func (s *State) VerifyStorageProof(id WalletID, atomIndex uint16, sibling byte, 
 		panic(err)
 	}
 
-	//w := q.LoadWallet(id)
+	w, err := s.LoadWallet(id)
+	if err != nil {
+		panic(err)
+	}
 
 	// determine that proofStack is long enough
-	//var proofsNeeded int
-	//var proofCounter uint32
-	//for proofCounter<<1 <= uint32(w.sectorAtoms) {
-	//	proofsNeeded += 1
-	//	proofCounter <<= 1
-	//}
-	//if len(proofStack) < proofsNeeded {
-	//	return false
-	//}
+	var proofsNeeded int
+	var proofCounter uint32
+	for proofCounter<<1 <= uint32(w.SectorSettings.Atoms) {
+		proofsNeeded += 1
+		proofCounter <<= 1
+	}
+	if len(proofStack) < proofsNeeded {
+		return false
+	}
 
 	// build the hash up from the base
-	//initialHash := siacrypto.CalculateHash(proofBase)
-	//initialHigh := w.sectorAtoms
-	//finalHash := buildMerkleRoot(initialHigh, atomIndex, initialHash, proofStack)
+	initialHash := siacrypto.CalculateHash(proofBase)
+	initialHigh := w.SectorSettings.Atoms
+	finalHash := buildMerkleRoot(initialHigh, proofIndex, initialHash, proofStack)
 
-	//if finalHash != expectedHash {
-	//return false
-	//}
+	if finalHash != expectedHash {
+		return false
+	}
 	return true
 }
-*/
