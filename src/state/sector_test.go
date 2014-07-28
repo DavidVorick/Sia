@@ -44,9 +44,11 @@ func TestStorageProof(t *testing.T) {
 
 	// select random index for storage proof
 	proofIndex := siacrypto.RandomUint16() % numAtoms
+
 	proofBase, proofStack := buildProof(data, numAtoms, proofIndex)
 
 	// no need to call VerifyStorageProof directly; just simulate it
+	data.Seek(0, 0)
 	expectedHash := MerkleCollapse(data)
 	initialHash := siacrypto.CalculateHash(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, 1, proofStack)

@@ -164,7 +164,7 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 		if err != nil {
 			panic(err)
 		}
-		r := io.LimitReader(rs, int64(size))
+		r := io.LimitReader(rs, int64(size)*int64(AtomSize))
 
 		// calculate and append hash
 		hash := MerkleCollapse(r)
