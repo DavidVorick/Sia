@@ -79,9 +79,6 @@ func (u *Upload) HandleEvent(s *State) {
 
 	// If there are sufficient confirmations, update the sector hash values.
 	if u.ConfirmationsRequired <= confirmationsReceived {
-		// Wait diffs and shit... ? How do you know which atom corresponds to whichdiff change???
-		// Right now the number of atomsAltered needs to equal the number of atoms?
-
 		file, err := s.OpenUpload(u.ID, u.ParentHash)
 		if err != nil {
 			panic(err)
