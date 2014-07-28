@@ -2,11 +2,38 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"siacrypto"
 	"siaencoding"
 	"state"
 )
+
+func (c *Client) GetGenericWallets() (ids []state.WalletID) {
+	ids = make([]state.WalletID, 0, len(c.genericWallets))
+	for id, _ := range c.genericWallets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+func (c *Client) EnterWallet(id state.WalletID) (err error) {
+	_, exists := c.genericWallets[id]
+	if exists {
+		c.CurID = id
+	} else {
+		err = errors.New("Invalid Wallet ID")
+	}
+	return
+}
+
+func (c *Client) SaveAllWallets() {
+	var filename string
+	for id, keypair := range c.genericWallets {
+		filename = fmt.Sprintf("%x.id", id)
+		SaveWallet(id, keypair, filename)
+	}
+}
 
 func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
 	if keypair == nil {
