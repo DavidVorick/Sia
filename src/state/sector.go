@@ -157,7 +157,8 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 			continue
 		}
 
-		// create a bounded reader via Seek and LimitReader
+		// create a poor man's SectionReader via Seek and LimitReader
+		// (why doesn't os.File implement SectionReader???)
 		// this negates the need for any special processing of imperfectly balanced trees
 		_, err = rs.Seek(int64(i)*int64(AtomSize), 0)
 		if err != nil {
@@ -193,35 +194,15 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	return buildProof(file, numAtoms, proofIndex)
 }
 
-// Recursive algorithm to take a list of proofs that fall down a merkle tree,
-// get to the bottom, and then hash them in the right order to build back up to
-// the merkle root
-func buildMerkleRoot(high uint16, search uint16, base siacrypto.Hash, proofStack []*siacrypto.Hash) siacrypto.Hash {
-	// base case: does high equal 1 or 0?
-	if high == 1 {
-		if search == 0 {
-			return siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
-		} else {
-			return siacrypto.CalculateHash(append(proofStack[0][:], base[:]...))
-		}
-	}
-	if high == 0 {
+// foldHashes traverses a proofStack, hashing elements together to produce the root-level hash.
+// Functional programmers will recognize this is as a simple foldr operation.
+func foldHashes(base siacrypto.Hash, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
+	if len(proofStack) == 0 {
 		return base
 	}
 
-	// find the highest power of 2 that fits into 'high' (but not completely, so 2^2 for 8, 2^3 for 9)
-	var divider uint16
-	for divider<<1 < high {
-		divider <<= 1
-	}
-
-	if search < divider {
-		nextHash := buildMerkleRoot(divider, search-(high-divider), base, proofStack[1:])
-		return siacrypto.CalculateHash(append(nextHash[:], proofStack[0][:]...))
-	} else {
-		nextHash := buildMerkleRoot(high-divider, search, base, proofStack[1:])
-		return siacrypto.CalculateHash(append(proofStack[0][:], nextHash[:]...))
-	}
+	combinedHash := siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
+	return foldHashes(combinedHash, proofStack[1:])
 }
 
 func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
@@ -263,8 +244,7 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 
 	// build the hash up from the base
 	initialHash := siacrypto.CalculateHash(proofBase)
-	initialHigh := w.SectorSettings.Atoms
-	finalHash := buildMerkleRoot(initialHigh, proofIndex, initialHash, proofStack)
+	finalHash := foldHashes(initialHash, proofStack)
 
 	if finalHash != expectedHash {
 		return false

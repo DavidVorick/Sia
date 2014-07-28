@@ -38,21 +38,20 @@ func TestStorageProof(t *testing.T) {
 		}
 	}()
 
-	// create state and wallet
-	var s State
-	s.SetWalletPrefix("../../fileCreatedDuringTesting/TestStorageProof.")
-	var w Wallet
-	w.Script = siacrypto.RandomByteSlice(20 * AtomSize)
-	err := s.InsertWallet(w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// generate random data
+	var numAtoms uint16 = 20
+	data := bytes.NewReader(siacrypto.RandomByteSlice(int(numAtoms) * AtomSize))
 
 	// select random index for storage proof
-	proofIndex := siacrypto.RandomUint16() % 20
-	proofBase, proofStack := s.BuildStorageProof(w.ID, proofIndex)
+	proofIndex := siacrypto.RandomUint16() % numAtoms
+	proofBase, proofStack := buildProof(data, numAtoms, proofIndex)
 
-	if !s.VerifyStorageProof(w.ID, proofIndex, sibling, proofBase, proofStack) {
-		t.Fatal("proof verification failed")
+	// no need to call VerifyStorageProof directly; just simulate it
+	expectedHash := MerkleCollapse(data)
+	initialHash := siacrypto.CalculateHash(proofBase)
+	finalHash := foldHashes(initialHash, proofStack)
+
+	if finalHash != expectedHash {
+		t.Fatal("proof verification failed: hashes do not match")
 	}
 }
