@@ -50,6 +50,8 @@ type SnapshotWalletInput struct {
 	WalletID     state.WalletID
 }
 
+// SnapshotWallet is an RPC call that returns a specific wallet when presented
+// with a snapshot height and a wallet id.
 func (p *Participant) SnapshotWallet(swi SnapshotWalletInput, wallet *state.Wallet) (err error) {
 	*wallet, err = p.engine.LoadSnapshotWallet(swi.SnapshotHead, swi.WalletID)
 	return

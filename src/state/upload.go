@@ -86,12 +86,14 @@ func (u *Upload) HandleEvent(s *State) {
 
 	// If there are sufficient confirmations, update the sector hash values.
 	if u.ConfirmationsRequired <= confirmationsReceived {
-		file, err := s.OpenUpload(*u)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
+		// Logic to see if we have the file ourselves or not. If we do, simply copy
+		// copy it over. If we don't, download it from the other guys.
 	}
+
+	// Call to delete the file that either did or did not exist.
+
+	// Delete the completed uploads value within the engine..............
+	// ah fudge this function is at the wrong level of abstraction.
 
 	s.DeleteEvent(u)
 }
@@ -100,6 +102,13 @@ func (u Upload) UploadID() (uid UploadID) {
 	hash := u.Hash()
 	uidBytes := append(u.WalletID.Bytes(), hash[:]...)
 	copy(uid[:], uidBytes)
+	return
+}
+
+func (u Upload) ParentUploadID() (puid UploadID) {
+	walletBytes := u.WalletID.Bytes()
+	copy(puid[:], walletBytes)
+	copy(puid[WalletIDSize:], u.ParentHash[:])
 	return
 }
 

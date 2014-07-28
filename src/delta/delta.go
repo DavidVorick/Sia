@@ -32,6 +32,9 @@ type Engine struct {
 	// Engine Variables
 	filePrefix string
 
+	// Upload Variables
+	completedUploads map[state.UploadID]*state.Upload
+
 	// Snapshot Variables
 	recentHistoryHead   uint32
 	activeHistoryHead   uint32
@@ -112,8 +115,4 @@ func (e *Engine) BootstrapSetMetadata(md state.StateMetadata) {
 func (e *Engine) BootstrapInsertWallet(w state.Wallet) (err error) {
 	err = e.state.InsertWallet(w)
 	return
-}
-
-func (e *Engine) ActiveUpload(uid state.UploadID) bool {
-	return e.state.ActiveUpload(uid)
 }

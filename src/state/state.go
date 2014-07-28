@@ -6,7 +6,6 @@ package state
 
 import (
 	"network"
-	"os"
 	"siacrypto"
 	"siaencoding"
 	"siafiles"
@@ -80,13 +79,8 @@ func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }
 
-func (s *State) ActiveUpload(uid UploadID) (exists bool) {
-	_, exists = s.activeUploads[uid]
-	return
-}
-
-func (s *State) OpenUpload(u Upload) (file *os.File, err error) {
-	filename := s.UploadFilename(u)
-	file, err = os.Open(filename)
+func (s *State) ActiveUpload(uid UploadID) (upload Upload, exists bool) {
+	uploadPointer, exists := s.activeUploads[uid]
+	upload = *uploadPointer
 	return
 }
