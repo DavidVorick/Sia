@@ -48,6 +48,8 @@ func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }
 
+// WalletList is a pass-along function so that the wallet list of the state can be accessed
+// by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
@@ -110,4 +112,8 @@ func (e *Engine) BootstrapSetMetadata(md state.StateMetadata) {
 func (e *Engine) BootstrapInsertWallet(w state.Wallet) (err error) {
 	err = e.state.InsertWallet(w)
 	return
+}
+
+func (e *Engine) ActiveUpload(uid state.UploadID) bool {
+	return e.state.ActiveUpload(uid)
 }

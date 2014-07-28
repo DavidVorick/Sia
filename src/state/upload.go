@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"siacrypto"
 )
 
@@ -85,10 +86,7 @@ func (u *Upload) HandleEvent(s *State) {
 
 	// If there are sufficient confirmations, update the sector hash values.
 	if u.ConfirmationsRequired <= confirmationsReceived {
-		// Wait diffs and shit... ? How do you know which atom corresponds to whichdiff change???
-		// Right now the number of atomsAltered needs to equal the number of atoms?
-
-		file, err := s.OpenUpload(u.WalletID, u.ParentHash)
+		file, err := s.OpenUpload(*u)
 		if err != nil {
 			panic(err)
 		}
@@ -98,10 +96,17 @@ func (u *Upload) HandleEvent(s *State) {
 	s.DeleteEvent(u)
 }
 
-func (u *Upload) UploadID() (uid UploadID) {
+func (u Upload) UploadID() (uid UploadID) {
 	hash := u.Hash()
 	uidBytes := append(u.WalletID.Bytes(), hash[:]...)
 	copy(uid[:], uidBytes)
+	return
+}
+
+func (s *State) UploadFilename(u Upload) (filename string) {
+	hash := u.Hash()
+	parentHash := string(hash[:])
+	fmt.Sprintf("%s.upload.%s", s.walletFilename(u.WalletID), parentHash)
 	return
 }
 

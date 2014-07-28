@@ -5,7 +5,6 @@
 package state
 
 import (
-	"fmt"
 	"network"
 	"os"
 	"siacrypto"
@@ -50,7 +49,6 @@ type State struct {
 	// SectorModifiers active for that wallet. To check for a wallets existence,
 	// one must transverse the wallet tree.
 	activeSectors map[WalletID][]SectorModifier
-
 	activeUploads map[UploadID]*Upload
 }
 
@@ -82,8 +80,13 @@ func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }
 
-func (s *State) OpenUpload(id WalletID, parentHash siacrypto.Hash) (file *os.File, err error) {
-	filename := fmt.Sprintf("%s.upload.%s", s.walletFilename(id), string(parentHash[:]))
+func (s *State) ActiveUpload(uid UploadID) (exists bool) {
+	_, exists = s.activeUploads[uid]
+	return
+}
+
+func (s *State) OpenUpload(u Upload) (file *os.File, err error) {
+	filename := s.UploadFilename(u)
 	file, err = os.Open(filename)
 	return
 }
