@@ -29,11 +29,12 @@ type SectorSettings struct {
 }
 
 type SectorModifier interface {
+	WID() WalletID
 	Hash() siacrypto.Hash
 }
 
 func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
-	modifiers, exists := s.activeUploads[w.ID]
+	modifiers, exists := s.activeSectors[w.ID]
 	if exists {
 		latestModifier := modifiers[len(modifiers)-1]
 		return parentHash == latestModifier.Hash()
@@ -42,8 +43,8 @@ func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
 	}
 }
 
-func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
-	s.activeUploads[id] = append(s.activeUploads[id], sm)
+func (s *State) AppendSectorModifier(sm SectorModifier) {
+	s.activeSectors[sm.WID()] = append(s.activeSectors[sm.WID()], sm)
 }
 
 /*

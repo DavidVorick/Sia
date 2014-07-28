@@ -49,7 +49,9 @@ type State struct {
 	// wallet is not represented in the map, it only indicates that there are no
 	// SectorModifiers active for that wallet. To check for a wallets existence,
 	// one must transverse the wallet tree.
-	activeUploads map[WalletID][]SectorModifier
+	activeSectors map[WalletID][]SectorModifier
+
+	activeUploads map[UploadID]*Upload
 }
 
 // This is the prefix that the state will use when opening wallets as files.

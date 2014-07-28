@@ -4,6 +4,8 @@ import (
 	"siacrypto"
 )
 
+type UploadID [siacrypto.HashSize + WalletIDSize]byte
+
 // An Upload is an event, which in particular means that it has an expiration
 // associated with it. Upon expiring, it is checked whether the number of
 // confirmations has reached the number of required confirmations. If yes, the
@@ -12,7 +14,7 @@ import (
 // system.
 type Upload struct {
 	// Which wallet is being modified.
-	ID WalletID
+	WalletID WalletID
 
 	// The number of Siblings that need to receive the file diff before the
 	// changes are accepted by the quorum.
@@ -39,6 +41,10 @@ type Upload struct {
 	EventExpiration uint32
 }
 
+func (u *Upload) WID() WalletID {
+	return u.WalletID
+}
+
 func (u *Upload) Hash() siacrypto.Hash {
 	var hashSetBytes []byte
 	for _, hash := range u.HashSet {
@@ -61,7 +67,7 @@ func (u *Upload) SetCounter(counter uint32) {
 
 func (u *Upload) HandleEvent(s *State) {
 	// Load the wallet associated with the event.
-	w, err := s.LoadWallet(u.ID)
+	w, err := s.LoadWallet(u.WalletID)
 	if err != nil {
 		panic(err)
 	}
@@ -82,7 +88,7 @@ func (u *Upload) HandleEvent(s *State) {
 		// Wait diffs and shit... ? How do you know which atom corresponds to whichdiff change???
 		// Right now the number of atomsAltered needs to equal the number of atoms?
 
-		file, err := s.OpenUpload(u.ID, u.ParentHash)
+		file, err := s.OpenUpload(u.WalletID, u.ParentHash)
 		if err != nil {
 			panic(err)
 		}
@@ -90,4 +96,17 @@ func (u *Upload) HandleEvent(s *State) {
 	}
 
 	s.DeleteEvent(u)
+}
+
+func (u *Upload) UploadID() (uid UploadID) {
+	hash := u.Hash()
+	uidBytes := append(u.WalletID.Bytes(), hash[:]...)
+	copy(uid[:], uidBytes)
+	return
+}
+
+func (s *State) InsertUpload(u Upload) {
+	s.InsertEvent(&u)
+	s.AppendSectorModifier(&u)
+	s.activeUploads[u.UploadID()] = &u
 }

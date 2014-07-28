@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	WalletIDSize         = 8
 	walletAtomMultiplier = 3
 )
 
@@ -22,6 +23,10 @@ type Wallet struct {
 	Balance        Balance
 	SectorSettings SectorSettings
 	Script         []byte
+}
+
+func (id WalletID) Bytes() []byte {
+	return siaencoding.EncUint64(uint64(id))
 }
 
 // Weight calculates and returns the weight of a wallet.

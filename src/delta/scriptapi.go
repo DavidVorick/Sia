@@ -206,15 +206,11 @@ func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, pare
 
 	// Update the eventlist to include an upload event.
 	u := state.Upload{
-		ID: w.ID,
+		WalletID:              w.ID,
 		ConfirmationsRequired: confirmationsRequired,
 		ParentHash:            parentHash,
 		HashSet:               hashSet,
 	}
-	e.state.InsertEvent(&u)
-
-	// Append the upload to the list of wallet sector modifiers.
-	e.state.AppendSectorModifier(w.ID, &u)
-
+	e.state.InsertUpload(u)
 	return
 }
