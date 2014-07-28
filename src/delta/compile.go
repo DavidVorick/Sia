@@ -48,7 +48,17 @@ func (e *Engine) Compile(b Block) {
 	// Hash the siblingEntropy to get the new Germ.
 	e.state.Metadata.Germ = state.Entropy(siacrypto.CalculateHash(siblingEntropy))
 
-	// process 'things'
+	// Process all of the script inputs. Right now, every script input is
+	// processed every block, with only a few protections against inifinite loops
+	// and scripting DOS attacks. The future will hold a probabilistic
+	// distribution of resources based on price paid for tickets.
+	for _, si := range b.ScriptInputs {
+		si.Execute(&e.state)
+	}
+
+	// Charge wallets for the storage they are consuming, and reward sibings for
+	// the storage that is being consumed.
+	e.state.ExecuteCompensation()
 
 	// Update the metadata of the quorum.
 	blockHash, err := siacrypto.HashObject(b)

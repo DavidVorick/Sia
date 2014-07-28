@@ -30,8 +30,8 @@ const (
 // 6. Events
 
 type snapshotOffsetTable struct {
-	stateMetaDataOffset uint32
-	stateMetaDataLength uint32
+	stateMetadataOffset uint32
+	stateMetadataLength uint32
 
 	walletLookupTableOffset uint32
 	walletLookupTableLength uint32
@@ -43,10 +43,10 @@ type snapshotOffsetTable struct {
 func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 	b = make([]byte, snapshotOffsetTableLength)
 	var offset int
-	qmdo := siaencoding.EncUint32(s.stateMetaDataOffset)
+	qmdo := siaencoding.EncUint32(s.stateMetadataOffset)
 	copy(b[offset:], qmdo)
 	offset += 4
-	qmdl := siaencoding.EncUint32(s.stateMetaDataLength)
+	qmdl := siaencoding.EncUint32(s.stateMetadataLength)
 	copy(b[offset:], qmdl)
 	offset += 4
 	wlto := siaencoding.EncUint32(s.walletLookupTableOffset)
@@ -64,15 +64,15 @@ func (s *snapshotOffsetTable) encode() (b []byte, err error) {
 }
 
 func (s *snapshotOffsetTable) decode(b []byte) (err error) {
-	if len(b) <= snapshotOffsetTableLength {
+	if len(b) < snapshotOffsetTableLength {
 		err = fmt.Errorf("snapshotOffsetTable decode: input is too small to contain a snapshotOffsetTable.")
 		return
 	}
 
 	var offset int
-	s.stateMetaDataOffset = siaencoding.DecUint32(b[offset:])
+	s.stateMetadataOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
-	s.stateMetaDataLength = siaencoding.DecUint32(b[offset:])
+	s.stateMetadataLength = siaencoding.DecUint32(b[offset:])
 	offset += 4
 	s.walletLookupTableOffset = siaencoding.DecUint32(b[offset:])
 	offset += 4
@@ -105,7 +105,7 @@ func (wo *walletOffset) encode() (b []byte, err error) {
 }
 
 func (wo *walletOffset) decode(b []byte) (err error) {
-	if len(b) <= walletOffsetLength {
+	if len(b) < walletOffsetLength {
 		err = fmt.Errorf("walletOffset decode: input is too small to contain a walletOffset")
 		return
 	}
@@ -119,12 +119,16 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 	return
 }
 
-// SaveSnapshot takes all of the variables listed at the top of the file,
-// encodes them, and writes to disk.
-func (e *Engine) SaveSnapshot() (err error) {
-	// Determine the filename for the snapshot
-	snapshotFilename := fmt.Sprintf("%s.snapshot.%v", e.filePrefix, e.activeHistoryHead)
+func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
+	snapshotFilename = fmt.Sprintf("%s.snapshot.%v", e.filePrefix, height)
+	return
+}
 
+// saveSnapshot takes all of the variables listed at the top of the file,
+// encodes them, and writes to disk.
+func (e *Engine) saveSnapshot() (err error) {
+	// Determine the filename for the snapshot
+	snapshotFilename := e.snapshotFilename(e.activeHistoryHead)
 	file, err := os.Create(snapshotFilename)
 	if err != nil {
 		return
@@ -135,28 +139,28 @@ func (e *Engine) SaveSnapshot() (err error) {
 	var offsetTable snapshotOffsetTable
 	currentOffset := snapshotOffsetTableLength
 
-	// put encodedQuorumMetaData in it's own scope so it can be cleared before
+	// put encodedQuorumMetadata in it's own scope so it can be cleared before
 	// the function returns
 	{
 		// encode the quorum and record the length
-		var encodedQuorumMetaData []byte
-		encodedQuorumMetaData, err = siaencoding.Marshal(e.state.Metadata)
+		var encodedQuorumMetadata []byte
+		encodedQuorumMetadata, err = siaencoding.Marshal(e.state.Metadata)
 		if err != nil {
 			return
 		}
-		offsetTable.stateMetaDataLength = uint32(len(encodedQuorumMetaData))
-		offsetTable.stateMetaDataOffset = uint32(currentOffset)
+		offsetTable.stateMetadataLength = uint32(len(encodedQuorumMetadata))
+		offsetTable.stateMetadataOffset = uint32(currentOffset)
 
 		// Write the encoded quorum to the snapshot file.
-		_, err = file.Seek(int64(offsetTable.stateMetaDataOffset), 0)
+		_, err = file.Seek(int64(offsetTable.stateMetadataOffset), 0)
 		if err != nil {
 			return
 		}
-		_, err = file.Write(encodedQuorumMetaData)
+		_, err = file.Write(encodedQuorumMetadata)
 		if err != nil {
 			return
 		}
-		currentOffset += len(encodedQuorumMetaData)
+		currentOffset += len(encodedQuorumMetadata)
 	}
 
 	// Create the wallet lookup table and save the wallets. This is again in its
@@ -170,6 +174,13 @@ func (e *Engine) SaveSnapshot() (err error) {
 		walletLookupTable := make([]walletOffset, len(walletList))
 		currentOffset += len(walletList) * walletOffsetLength
 
+		// Seek the file to the current offset, since the offset was changed
+		// without doing a file write.
+		_, err = file.Seek(int64(currentOffset), 0)
+		if err != nil {
+			return
+		}
+
 		// Write wallets, update lookup table.
 		for i := range walletList {
 			var encodedWallet []byte
@@ -182,6 +193,7 @@ func (e *Engine) SaveSnapshot() (err error) {
 			if err != nil {
 				return
 			}
+			walletLookupTable[i].id = wallet.ID
 			walletLookupTable[i].length = uint32(len(encodedWallet))
 			walletLookupTable[i].offset = uint32(currentOffset)
 			_, err = file.Write(encodedWallet)
@@ -225,5 +237,137 @@ func (e *Engine) SaveSnapshot() (err error) {
 		return
 	}
 	_, err = file.Write(encodedOffset)
+	return
+}
+
+func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
+	// Make sure that the requested snapshot is on disk.
+	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
+		err = fmt.Errorf("Snapshot not found.")
+		return
+	}
+
+	// Open the file associated with the requested snapshot.
+	snapshotFilename := e.snapshotFilename(snapshotHead)
+	file, err = os.Open(snapshotFilename)
+	if err != nil {
+		return
+	}
+
+	// Read and decode the snapshot offset table.
+	encodedSnapshotTable := make([]byte, snapshotOffsetTableLength)
+	_, err = file.Read(encodedSnapshotTable)
+	if err != nil {
+		return
+	}
+	err = snapshotTable.decode(encodedSnapshotTable)
+	return
+}
+
+func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.StateMetadata, err error) {
+	// Open the file holding the desired snapshot. This function also provides
+	// the snapshot table.
+	file, snapshotTable, err := e.openSnapshot(snapshotHead)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Determine length and offset of metadata, then load and decode the metadata.
+	encodedSnapshotMetadata := make([]byte, snapshotTable.stateMetadataLength)
+	_, err = file.Seek(int64(snapshotTable.stateMetadataOffset), 0)
+	if err != nil {
+		return
+	}
+	_, err = file.Read(encodedSnapshotMetadata)
+	if err != nil {
+		return
+	}
+	err = siaencoding.Unmarshal(encodedSnapshotMetadata, &snapshot)
+	return
+}
+
+func (e *Engine) openWalletOffsetTable(snapshotHead uint32) (file *os.File, walletTable []byte, err error) {
+	// Open the snapshot.
+	file, snapshotTable, err := e.openSnapshot(snapshotHead)
+	if err != nil {
+		return
+	}
+
+	// Determine the length and offset of the wallet table, then load it.
+	walletTable = make([]byte, snapshotTable.walletLookupTableLength)
+	_, err = file.Seek(int64(snapshotTable.walletLookupTableOffset), 0)
+	if err != nil {
+		return
+	}
+	_, err = file.Read(walletTable)
+	return
+}
+
+func (e *Engine) LoadSnapshotWalletList(snapshotHead uint32) (walletList []state.WalletID, err error) {
+	// Get the wallet table and snapshot file.
+	file, walletTable, err := e.openWalletOffsetTable(snapshotHead)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Decode the wallet lookup table into walletList.
+	for i := 0; i < len(walletTable); i += walletOffsetLength {
+		var wo walletOffset
+		err = wo.decode(walletTable[i:])
+		if err != nil {
+			return
+		}
+		walletList = append(walletList, wo.id)
+	}
+
+	return
+}
+
+func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID) (wallet state.Wallet, err error) {
+	// Open the wallet table and snapshot file.
+	file, walletTable, err := e.openWalletOffsetTable(snapshotHead)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Determine the offset of the wallet in question, via binary search.
+	max := len(walletTable)/walletOffsetLength - 1
+	min := 0
+	for max >= min {
+		mid := (max + min) / 2
+
+		// Load the wallet associated with the midpoint.
+		var midWalletOffset walletOffset
+		err = midWalletOffset.decode(walletTable[mid*walletOffsetLength:])
+		if err != nil {
+			return
+		}
+		midID := midWalletOffset.id
+
+		// Determine which half of the remaining table the wallet resides within.
+		if midID == walletID {
+			// Fetch and decode the wallet.
+			walletBytes := make([]byte, midWalletOffset.length)
+			_, err = file.Seek(int64(midWalletOffset.offset), 0)
+			if err != nil {
+				return
+			}
+			_, err = file.Read(walletBytes)
+			if err != nil {
+				return
+			}
+			err = siaencoding.Unmarshal(walletBytes, &wallet)
+			return
+		} else if midID < walletID {
+			min = mid + 1
+		} else {
+			max = mid - 1
+		}
+	}
+
+	err = fmt.Errorf("Wallet is not stored within this snapshot.")
 	return
 }

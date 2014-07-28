@@ -1,208 +1,93 @@
 package state
 
-/* import (
-	"fmt"
-	"os"
+import (
 	"siacrypto"
-	"siaencoding"
-	"siafiles"
 )
 
-const (
-	UploadAdvancementSize         = WalletIDSize + siacrypto.HashSize + 1 + siacrypto.SignatureSize
-	UnsignedUploadAdvancementSize = UploadAdvancementSize - siacrypto.SignatureSize
-)
+// An Upload is an event, which in particular means that it has an expiration
+// associated with it. Upon expiring, it is checked whether the number of
+// confirmations has reached the number of required confirmations. If yes, the
+// HashSet of the upload becomes the HashSet of the sector, and the sector is
+// successfully updated. If no, the upload is rejected and deleted from the
+// system.
+type Upload struct {
+	// Which wallet is being modified.
+	ID WalletID
 
-type upload struct {
-	id                    WalletID
-	requiredConfirmations byte
-	receivedConfirmations [QuorumSize]bool
-	hashSet               [QuorumSize]siacrypto.Hash
-	hash                  siacrypto.Hash
-	weight                uint16
-	deadline              uint32
-	counter               uint64
+	// The number of Siblings that need to receive the file diff before the
+	// changes are accepted by the quorum.
+	ConfirmationsRequired byte
+
+	// An array of bools that indicate which siblings have confirmed that they
+	// have received the upload.
+	Confirmations [QuorumSize]bool
+
+	// The hash of the upload that is being changed. This hash must match the
+	// most recent hash in the system, otherwise this upload is rejected as being
+	// out-of-order or being out-of-date. This hash is required purely to prevent
+	// synchronization problems. This hash is derived by appending all the hashes
+	// in the HashSet into one set of QuorumSize * siacrypto.HashSize bytes and
+	// hashing that.
+	ParentHash siacrypto.Hash
+
+	// The MerkleCollapse value that each sibling should have after the segement
+	// diff has been uploaded to them.
+	HashSet [QuorumSize]siacrypto.Hash
+
+	// Event variables.
+	EventCounter    uint32
+	EventExpiration uint32
 }
 
-type UploadAdvancement struct {
-	ID        WalletID
-	Hash      siacrypto.Hash
-	Sibling   byte
-	Signature siacrypto.Signature
+func (u *Upload) Hash() siacrypto.Hash {
+	var hashSetBytes []byte
+	for _, hash := range u.HashSet {
+		hashSetBytes = append(hashSetBytes, hash[:]...)
+	}
+	return siacrypto.CalculateHash(hashSetBytes)
 }
 
-func (u *upload) handleEvent(q *Quorum) {
-	if q.uploads[u.id] == nil {
-		return
-	}
-	var i int
-	for i = 0; i < len(q.uploads[u.id]); i++ {
-		if q.uploads[u.id][i].hash == u.hash {
-			break
-		}
-	}
-
-	if i == len(q.uploads[u.id]) {
-		return
-	}
-	q.clearUploads(u.id, i)
+func (u *Upload) Expiration() uint32 {
+	return u.EventExpiration
 }
 
-func (u *upload) expiration() uint32 {
-	return u.deadline
+func (u *Upload) Counter() uint32 {
+	return u.EventCounter
 }
 
-func (u *upload) setCounter(c uint64) {
-	u.counter = c
+func (u *Upload) SetCounter(counter uint32) {
+	u.EventCounter = counter
 }
 
-func (u *upload) fetchCounter() uint64 {
-	return u.counter
-}
-
-func (u *UploadAdvancement) GobEncode() (gobUA []byte, err error) {
-	if u == nil {
-		err = fmt.Errorf("Cannot encode nil UploadAdvancement")
-		return
-	}
-
-	gobUA = make([]byte, UploadAdvancementSize)
-	copy(gobUA, u.ID.Bytes())
-	offset := WalletIDSize
-	copy(gobUA[offset:], u.Hash[:])
-	offset += siacrypto.HashSize
-	gobUA[offset] = u.Sibling
-	offset += 1
-	copy(gobUA[offset:], u.Signature[:])
-	return
-}
-
-func (u *UploadAdvancement) GobDecode(gobUA []byte) (err error) {
-	if u == nil {
-		err = fmt.Errorf("Cannode decode into nil UploadAdvancement")
-		return
-	}
-
-	u.ID = WalletID(siaencoding.DecUint64(gobUA[0:WalletIDSize])) // bad, use GobDecode
-	offset := WalletIDSize
-	copy(u.Hash[:], gobUA[offset:])
-	offset += siacrypto.HashSize
-	u.Sibling = gobUA[offset]
-	offset += 1
-	copy(u.Signature[:], gobUA[offset:])
-	return
-}
-
-func (q *Quorum) ConfirmUpload(id WalletID, h siacrypto.Hash) bool {
-	for i := range q.uploads[id] {
-		if q.uploads[id][i].hash == h {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (q *Quorum) UploadExpectedHash(id WalletID, h siacrypto.Hash, index byte) (expected siacrypto.Hash) {
-	for i := range q.uploads[id] {
-		if q.uploads[id][i].hash == h {
-			expected = q.uploads[id][i].hashSet[index]
-			return
-		}
-	}
-	return
-}
-
-func (q *Quorum) clearUploads(id WalletID, i int) {
-	// if there are no uploads, mission accomplished
-	if q.uploads[id] == nil {
-		return
-	}
-	if i == 0 {
-		q.uploads[id] = nil
-		return
-	}
-
-	// delete all uploads starting with the ith index
-	for i = i; i < len(q.uploads[id]); i++ {
-		// delete the file associated with the upload
-		sectorFilename := q.SectorFilename(id)
-		uploadFilename := sectorFilename + "." + siafiles.SafeFilename(q.uploads[id][i].hash[:])
-		err := os.Remove(uploadFilename)
-		if err != nil {
-			panic(err)
-		}
-
-		// subtract temporary atoms from the wallet
-		err = q.updateWeight(id, int(-q.uploads[id][i].weight))
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// remove the uploads from the slice
-	q.uploads[id] = q.uploads[id][:i]
-}
-
-func (q *Quorum) AdvanceUpload(ua *UploadAdvancement) {
-	// check that all the associated structures exist
-	if q.uploads[ua.ID] == nil {
-		return
-	}
-	if q.siblings[ua.Sibling] == nil {
-		// this should never happen
-		return
-	}
-
-	// find the index associated with this hash
-	var i int
-	for i = range q.uploads[ua.ID] {
-		if q.uploads[ua.ID][i].hash == ua.Hash {
-			break
-		}
-	}
-
-	// see if upload exists in quorum
-	if i == len(q.uploads[ua.ID]) {
-		return
-	}
-
-	// see if this sibling has already confirmed this upload advancement
-	if q.uploads[ua.ID][i].receivedConfirmations[ua.Sibling] == true {
-		return
-	}
-
-	// verify that the signature belongs to the sibling
-	uaBytes, err := ua.GobEncode()
+func (u *Upload) HandleEvent(s *State) {
+	// Load the wallet associated with the event.
+	w, err := s.LoadWallet(u.ID)
 	if err != nil {
 		panic(err)
 	}
-	verified := q.siblings[ua.Sibling].publicKey.Verify(&siacrypto.SignedMessage{
-		Signature: ua.Signature,
-		Message:   uaBytes[:UnsignedUploadAdvancementSize],
-	})
-	if !verified {
-		return
+
+	// Remove the weight on the wallet that the upload consumed.
+	w.SectorSettings.UploadAtoms -= w.SectorSettings.Atoms
+
+	// Count the number of confirmations that the upload has received.
+	var confirmationsReceived byte
+	for _, confirmation := range u.Confirmations {
+		if confirmation == true {
+			confirmationsReceived += 1
+		}
 	}
 
-	q.uploads[ua.ID][i].receivedConfirmations[ua.Sibling] = true
-	q.uploads[ua.ID][i].requiredConfirmations -= 1
-	if q.uploads[ua.ID][i].requiredConfirmations <= 0 && i == 0 {
-		// copy the upload file over to the actual file
-		sectorFilename := q.SectorFilename(ua.ID)
-		uploadFilename := sectorFilename + "." + siafiles.SafeFilename(ua.Hash[:])
-		err := os.Rename(uploadFilename, sectorFilename)
+	// If there are sufficient confirmations, update the sector hash values.
+	if u.ConfirmationsRequired <= confirmationsReceived {
+		// Wait diffs and shit... ? How do you know which atom corresponds to whichdiff change???
+		// Right now the number of atomsAltered needs to equal the number of atoms?
+
+		file, err := s.OpenUpload(u.ID, u.ParentHash)
 		if err != nil {
 			panic(err)
 		}
-
-		// subtract the temporary atoms from the wallet
-		err = q.updateWeight(ua.ID, 0-int(q.uploads[ua.ID][0].weight))
-		if err != nil {
-			panic(err)
-		}
-
-		// take the upload out of the uploads array
-		q.uploads[ua.ID] = q.uploads[ua.ID][1:]
+		defer file.Close()
 	}
-} */
+
+	s.DeleteEvent(u)
+}

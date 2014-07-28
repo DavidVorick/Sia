@@ -2,6 +2,13 @@
 // corresponding changes to the wallet layer.
 package delta
 
+// I don't like many aspects of this file. It's a whole bunch of getters and
+// setters, which I feel largely implies a poor design. I would, in general,
+// consider this file to be the 'junk' file of the delta package, and for the
+// most part I think it's the worst aspect of the reorganization. I hate to say
+// it, but I feel like Sia could use further engineering. It's a complex system
+// and its current designs are passable, but not elegant, clean, or beautiful.
+
 import (
 	"state"
 )
@@ -16,7 +23,7 @@ const (
 //
 // SaveSnapshot() should be called upon initialzation
 // recentHistoryHead needs to be initialized to ^uint32(0)
-// avtiveHistoryLength should be initialized to SnapshotLength
+// activeHistoryLength should be initialized to SnapshotLength
 // activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
@@ -79,9 +86,28 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	}
 	e.AddSibling(&sibWallet, sib)
 
-	e.SaveSnapshot()
+	e.saveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
 	e.activeHistoryHead = ^uint32(0) - (SnapshotLength - 1)
 	e.activeHistoryLength = SnapshotLength
+	return
+}
+
+// BootstrapSetMetadata is functionally equivalent to 'SetMetadata', but it's a
+// function that should _only_ be called during the bootstrapping process,
+// which is why it has the extra word in the name. I wanted to implement
+// something like an initialize that would take a bunch of wallets and a
+// metadata as input, but that could take a massive amount of memory. I wasn't
+// certain about the best way to approach the problem, so this is the solution
+// I've picked for the time being.
+func (e *Engine) BootstrapSetMetadata(md state.StateMetadata) {
+	e.state.Metadata = md
+}
+
+// BootstrapInsertWallet is functionally equivalent to 'InsertWallet', except
+// that this function should _only_ be called during bootstrapping. See
+// 'BootstrapSetMetadata' comment for more details.
+func (e *Engine) BootstrapInsertWallet(w state.Wallet) (err error) {
+	err = e.state.InsertWallet(w)
 	return
 }
