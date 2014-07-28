@@ -5,7 +5,9 @@
 package state
 
 import (
+	"fmt"
 	"network"
+	"os"
 	"siacrypto"
 	"siaencoding"
 	"siafiles"
@@ -25,17 +27,29 @@ const (
 	QuorumSize     byte   = 4        // max siblings per quorum
 	AtomSize       int    = 64       // in bytes
 	AtomsPerQuorum int    = 16777216 // 1GB
-	AtomsPerSector uint16 = 200      // more causes DOS problems, is fixable. Final value likely to be 2^9-2^12
+	AtomsPerSector uint16 = 1024     // more causes DOS problems, is fixable. Final value likely to be 2^13-2^16
 )
 
 type State struct {
+	// A struct containing all of the simple, single-variable data of the quorum.
 	Metadata StateMetadata
 
+	// All of the wallet data on the quorum, including information on how to read
+	// the wallet segments from disk. 'wallets' indicats the number of wallets in
+	// the State, and is placed for convenience. This number could also be
+	// derived by doing a search starting at the walletRoot.
 	walletPrefix string
 	wallets      uint32
 	walletRoot   *walletNode
 
+	// Points to the skip list that contains all of the events.
 	eventRoot *eventNode
+
+	// Maintains a list of all SectorModifiers active on each wallet. If the
+	// wallet is not represented in the map, it only indicates that there are no
+	// SectorModifiers active for that wallet. To check for a wallets existence,
+	// one must transverse the wallet tree.
+	activeUploads map[WalletID][]SectorModifier
 }
 
 // This is the prefix that the state will use when opening wallets as files.
@@ -64,4 +78,10 @@ func (s *State) Weight() int {
 // Removes a sibling from the list of siblings
 func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
+}
+
+func (s *State) OpenUpload(id WalletID, parentHash siacrypto.Hash) (file *os.File, err error) {
+	filename := fmt.Sprintf("%s.upload.%s", s.walletFilename(id), string(parentHash[:]))
+	file, err = os.Open(filename)
+	return
 }

@@ -2,7 +2,6 @@ package delta
 
 import (
 	"fmt"
-	"os"
 	"siacrypto"
 	"state"
 )
@@ -172,7 +171,7 @@ func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, we
 }
 */
 
-func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, atomsAltered uint16, deadline uint32) (err error) {
+func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
 	// Verify that the wallet in question has an allocated sector.
 	if w.SectorSettings.Atoms < uint16(state.QuorumSize) {
 		err = puerrUnallocatedSector
@@ -188,69 +187,34 @@ func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, pare
 		return
 	}
 
-	// Verify that parentHash applies to this wallet.
-	var expectedParentHash siacrypto.Hash
-	activeUploads, exists := e.activeUploads[w.ID]
-	if !exists {
-		// Open the current wallet's segment and load the first QuorumSize atoms,
-		// which contain the hash set for the current sector.
-		sectorFilename := e.state.SectorFilename(w.ID)
-		var file *os.File
-		file, err = os.Open(sectorFilename)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-
-		// Pull the parent hash set from the local segment.
-		parentHashSet := make([]byte, int(state.QuorumSize)*siacrypto.HashSize)
-		_, err = file.Read(parentHashSet)
-		if err != nil {
-			panic(err)
-		}
-		expectedParentHash = siacrypto.CalculateHash(parentHashSet)
-	} else {
-		// Calculate the hash of the most recently accepted active upload.
-		mostRecentUpload := activeUploads[len(activeUploads)-1]
-		var appendedHashSet []byte
-		for _, hash := range mostRecentUpload.HashSet {
-			appendedHashSet = append(appendedHashSet, hash[:]...)
-		}
-		expectedParentHash = siacrypto.CalculateHash(appendedHashSet)
-	}
-
 	// Match the parent hash to the expected hash.
-	if expectedParentHash != parentHash {
+	if e.state.ActiveParentHash(*w, parentHash) {
 		err = puerrNonCurrentParentHash
-		return
-	}
-
-	// Verify that AtomsAltered makes sense.
-	if atomsAltered > w.SectorSettings.Atoms {
-		err = puerrAbsurdAtomsAltered
 		return
 	}
 
 	// Verify that the quorum has enough atoms to support the upload. Long
 	// term, this check won't be necessary because it'll be a part of the
 	// preallocated resources planning.
-	if e.state.Weight()+int(atomsAltered) > int(state.AtomsPerQuorum) {
+	if e.state.Weight()+int(w.SectorSettings.Atoms) > int(state.AtomsPerQuorum) {
 		err = puerrInsufficientAtoms
 		return
 	}
 
 	// Update the wallet to reflect the new upload weight it has gained.
-	w.SectorSettings.UploadAtoms += atomsAltered
+	w.SectorSettings.UploadAtoms += w.SectorSettings.Atoms
 
 	// Update the eventlist to include an upload event.
-	u := Upload{
+	u := state.Upload{
 		ID: w.ID,
 		ConfirmationsRequired: confirmationsRequired,
 		ParentHash:            parentHash,
 		HashSet:               hashSet,
-		AtomsAltered:          atomsAltered,
 	}
 	e.state.InsertEvent(&u)
+
+	// Append the upload to the list of wallet sector modifiers.
+	e.state.AppendSectorModifier(w.ID, &u)
 
 	return
 }

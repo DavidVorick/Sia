@@ -36,10 +36,6 @@ type Engine struct {
 	recentHistoryHead   uint32
 	activeHistoryHead   uint32
 	activeHistoryLength uint32
-
-	// Tracks all uploads currently open on the quorum. Each WalletID is
-	// associated with a set of uploads that follow each other sequentially.
-	activeUploads map[state.WalletID][]Upload
 }
 
 func (e *Engine) SetFilePrefix(prefix string) {

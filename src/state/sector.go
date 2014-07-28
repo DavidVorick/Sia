@@ -28,6 +28,24 @@ type SectorSettings struct {
 	Hash siacrypto.Hash
 }
 
+type SectorModifier interface {
+	Hash() siacrypto.Hash
+}
+
+func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
+	modifiers, exists := s.activeUploads[w.ID]
+	if exists {
+		latestModifier := modifiers[len(modifiers)-1]
+		return parentHash == latestModifier.Hash()
+	} else {
+		return parentHash == w.SectorSettings.Hash
+	}
+}
+
+func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
+	s.activeUploads[id] = append(s.activeUploads[id], sm)
+}
+
 /*
 // MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
 // as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
