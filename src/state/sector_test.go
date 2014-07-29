@@ -49,4 +49,12 @@ func TestStorageProof(t *testing.T) {
 	if finalHash != expectedHash {
 		t.Fatal("proof verification failed: hashes do not match")
 	}
+
+	// run foldHashes without enough proofs
+	data.Seek(0, 0)
+	finalHash = foldHashes(initialHash, proofIndex, proofStack[0:1])
+
+	if finalHash == expectedHash {
+		t.Fatal("invalid proof was verified")
+	}
 }

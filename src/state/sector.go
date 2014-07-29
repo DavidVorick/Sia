@@ -233,22 +233,6 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 		panic(err)
 	}
 
-	w, err := s.LoadWallet(id)
-	if err != nil {
-		panic(err)
-	}
-
-	// determine that proofStack is long enough
-	var proofsNeeded int
-	var proofCounter uint32
-	for proofCounter<<1 <= uint32(w.SectorSettings.Atoms) {
-		proofsNeeded += 1
-		proofCounter <<= 1
-	}
-	if len(proofStack) < proofsNeeded {
-		return false
-	}
-
 	// build the hash up from the base
 	initialHash := siacrypto.CalculateHash(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, proofStack)
