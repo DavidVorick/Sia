@@ -12,10 +12,6 @@ const (
 	walletAtomMultiplier = 3
 )
 
-// the default script for all wallets; simply transfers control to input
-// eventually this will be modified to verify a public key before executing
-var genesisScript = []byte{0x28}
-
 type WalletID uint64
 
 type Wallet struct {
