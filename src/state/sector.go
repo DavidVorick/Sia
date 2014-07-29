@@ -61,7 +61,7 @@ func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
 func MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
 	// Loop through every atom in the reader, building out the Merkle Tree in
 	// linear time.
-	prevHashes := make([]*siacrypto.Hash, 0)
+	var prevHashes []*siacrypto.Hash
 	atom := make([]byte, AtomSize)
 	var atoms int
 	for _, err := reader.Read(atom); err == nil; atoms++ {
@@ -123,7 +123,7 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 // (Since this is a binary tree, the sister node is the other node with the same parent as us.)
 // To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
 // This segment will double in size on each iteration until we reach the root.
-func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []siacrypto.Hash) {
 	// get proofBytes
 	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
 	if err != nil {
@@ -168,14 +168,14 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 
 		// calculate and append hash
 		hash := MerkleCollapse(r)
-		proofStack = append(proofStack, &hash)
+		proofStack = append(proofStack, hash)
 	}
 
 	return
 }
 
 // BuildStorageProof is a simple wrapper around buildProof.
-func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []siacrypto.Hash) {
 	// read the sector data
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
@@ -196,22 +196,23 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 
 // foldHashes traverses a proofStack, hashing elements together to produce the root-level hash.
 // Care must be taken to ensure that the correct ordering is used when concatenating hashes.
-func foldHashes(base siacrypto.Hash, proofIndex, size uint16, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
-	if len(proofStack) == 0 {
-		return base
+func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []siacrypto.Hash) (h siacrypto.Hash) {
+	h = base
+
+	var size uint16 = 1
+	for i := range proofStack {
+		if proofIndex%(size*2) < size { // base is on the left branch
+			h = siacrypto.CalculateHash(append(h[:], proofStack[i][:]...))
+		} else {
+			h = siacrypto.CalculateHash(append(proofStack[i][:], h[:]...))
+		}
+		size *= 2
 	}
 
-	// is base on the left or right branch?
-	var combinedHash siacrypto.Hash
-	if proofIndex%(size*2) < size { // left
-		combinedHash = siacrypto.CalculateHash(append(base[:], proofStack[0][:]...))
-	} else {
-		combinedHash = siacrypto.CalculateHash(append(proofStack[0][:], base[:]...))
-	}
-	return foldHashes(combinedHash, proofIndex, size*2, proofStack[1:])
+	return
 }
 
-func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
+func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []siacrypto.Hash) bool {
 	// get the intended hash from the segment stored on disk
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
@@ -250,7 +251,7 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 
 	// build the hash up from the base
 	initialHash := siacrypto.CalculateHash(proofBase)
-	finalHash := foldHashes(initialHash, proofIndex, 1, proofStack)
+	finalHash := foldHashes(initialHash, proofIndex, proofStack)
 
 	if finalHash != expectedHash {
 		return false
