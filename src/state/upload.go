@@ -17,6 +17,9 @@ type Upload struct {
 	// Which wallet is being modified.
 	WalletID WalletID
 
+	// The number of atoms that the sector will be resized to upon upload.
+	NewAtomCount uint16
+
 	// The MerkleCollapse value that each sibling should have after the segement
 	// diff has been uploaded to them.
 	HashSet [QuorumSize]siacrypto.Hash

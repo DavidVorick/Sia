@@ -33,7 +33,7 @@ type Engine struct {
 	filePrefix string
 
 	// Upload Variables
-	completedUploads map[state.UploadID]*state.Upload
+	completedUploads map[state.UploadID]state.Upload
 
 	// Snapshot Variables
 	recentHistoryHead   uint32

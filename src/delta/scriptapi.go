@@ -17,6 +17,7 @@ var (
 
 	aserrNoEmptySiblings = fmt.Errorf("There are no empty spots in the quorum.")
 
+	puerrTooFewAtoms            = fmt.Errorf("A sector must have more than QuorumSize atoms.")
 	puerrUnallocatedSector      = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
 	puerrTooManyConfirmations   = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
 	puerrTooFewConfirmations    = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
@@ -97,10 +98,12 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 }
 */
 
-func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
-	// Verify that the wallet in question has an allocated sector.
-	if w.SectorSettings.Atoms < uint16(state.QuorumSize) {
-		err = puerrUnallocatedSector
+//func (e *Engine) UpdateSector(w *state.Wallet, parentHash siacrypto.Hash, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, 
+
+func (e *Engine) UpdateSector(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, atomCount uint16, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
+	// Verify that atomCount follows the rules for sector sizes.
+	if atomCount <= uint16(state.QuorumSize) {
+		err = puerrTooFewAtoms
 		return
 	}
 
