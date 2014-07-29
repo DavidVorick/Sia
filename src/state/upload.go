@@ -17,6 +17,10 @@ type Upload struct {
 	// Which wallet is being modified.
 	WalletID WalletID
 
+	// The MerkleCollapse value that each sibling should have after the segement
+	// diff has been uploaded to them.
+	HashSet [QuorumSize]siacrypto.Hash
+
 	// The number of Siblings that need to receive the file diff before the
 	// changes are accepted by the quorum.
 	ConfirmationsRequired byte
@@ -32,10 +36,6 @@ type Upload struct {
 	// in the HashSet into one set of QuorumSize * siacrypto.HashSize bytes and
 	// hashing that.
 	ParentHash siacrypto.Hash
-
-	// The MerkleCollapse value that each sibling should have after the segement
-	// diff has been uploaded to them.
-	HashSet [QuorumSize]siacrypto.Hash
 
 	// Event variables.
 	EventCounter    uint32
