@@ -151,7 +151,7 @@ func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms ui
 	// Update the eventlist to include an upload event.
 	su := state.SectorUpdate{
 		WalletID:              w.ID,
-		ParentID:              parentID,
+		ParentCounter:         parentID.Counter,
 		Atoms:                 atoms,
 		K:                     k,
 		D:                     d,

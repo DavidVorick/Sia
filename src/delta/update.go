@@ -43,9 +43,9 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 	// Verify that the update is active, which is done by verifying that the parent
 	// hash either corresponds to the hash of the sector or has been marked as
 	// completed in the engine.
-	parentID := e.state.UpdateParentID()
+	parentID := update.ParentID()
 	parentCompleted := e.completedUpdates[parentID]
-	if update.ParentHash != wallet.SectorSettings.Hash && !parentCompleted {
+	if update.ParentCounter != wallet.SectorSettings.RecentUpdateCounter && !parentCompleted {
 		err = fmt.Errorf("SectorUpdate is not active yet - please provide the updates for all parents.")
 		return
 	}
@@ -71,22 +71,28 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 	// If the the number of atoms in the sector has been reduced, truncate the
 	// file. If the number of atoms in the file has been increased, write all 0's
 	// to the new space.
-	parentUpdate := e.state.GetSectorUpdate(parentID)
+	var parentAtoms uint16
+	parentUpdate, exists := e.state.GetSectorUpdate(parentID) // Need to account for the possibility that parent update is actually a wallet.
+	if exists {
+		parentAtoms = parentUpdate.Atoms
+	} else {
+		parentAtoms = wallet.SectorSettings.Atoms
+	}
 	if update.Atoms < parentUpdate.Atoms {
-		secErr := file.Truncate(int64(update.Atoms * state.AtomSize))
+		secErr := file.Truncate(int64(int(update.Atoms) * state.AtomSize))
 		if secErr != nil {
 			panic(secErr)
 		}
 	} else if update.Atoms > parentUpdate.Atoms {
 		// Seek to the end of the file.
-		_, secErr := file.Seek(int64(parentUpdate.Atoms*state.AtomSize), 0)
+		_, secErr := file.Seek(int64(int(parentUpdate.Atoms)*state.AtomSize), 0)
 		if secErr != nil {
 			panic(secErr)
 		}
 
 		// Write enough zeros at the end of the file such that it is the correct
 		// segment size.
-		zeroSlice := make([]byte, (update.Atoms-parentUpdate.Atoms)*state.AtomSize)
+		zeroSlice := make([]byte, int(update.Atoms-parentUpdate.Atoms)*state.AtomSize)
 		_, secErr = file.Write(zeroSlice)
 		if secErr != nil {
 			panic(secErr)

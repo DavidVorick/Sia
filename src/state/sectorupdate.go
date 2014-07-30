@@ -6,8 +6,8 @@ import (
 )
 
 type UpdateID struct {
-	WalletID      WalletID
-	ParentCounter uint32
+	WalletID WalletID
+	Counter  uint32
 }
 
 // An Upload is an event, which in particular means that it has an expiration
@@ -26,7 +26,7 @@ type SectorUpdate struct {
 	// synchronization problems. This hash is derived by appending all the hashes
 	// in the HashSet into one set of QuorumSize * siacrypto.HashSize bytes and
 	// hashing that.
-	ParentID UpdateID
+	ParentCounter uint32
 
 	// The updated SectorSettings value.
 	Atoms uint16
@@ -109,7 +109,7 @@ func (s *State) AvailableParentID(parentID UpdateID) bool {
 	if exists {
 		// Compare the counter in the parent to the counter of the latest element
 		// in the update list.
-		if parentID.ParentCounter == updateList[len(updateList)-1].EventCounter {
+		if parentID.Counter == updateList[len(updateList)-1].EventCounter {
 			return true
 		}
 	} else {
@@ -119,11 +119,26 @@ func (s *State) AvailableParentID(parentID UpdateID) bool {
 			return false
 		}
 
-		if parentID.ParentCounter == w.SectorSettings.RecentUpdateCounter {
+		if parentID.Counter == w.SectorSettings.RecentUpdateCounter {
 			return true
 		}
 	}
 	return false
+}
+
+func (s *State) GetSectorUpdate(uid UpdateID) (update SectorUpdate, exists bool) {
+	updateList, exists := s.activeUpdates[uid.WalletID]
+	if !exists {
+		return
+	}
+
+	for _, update = range updateList {
+		if update.EventCounter == uid.Counter {
+			return
+		}
+	}
+	exists = false
+	return
 }
 
 func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
@@ -139,23 +154,22 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	return
 }
 
-/* func (u Upload) UploadID() (uid UploadID) {
-	hash := u.Hash()
-	uidBytes := append(u.WalletID.Bytes(), hash[:]...)
-	copy(uid[:], uidBytes)
-	return
-} */
+func (su SectorUpdate) UpdateID() UpdateID {
+	return UpdateID{
+		WalletID: su.WalletID,
+		Counter:  su.EventCounter,
+	}
+}
 
-/* func (u Upload) ParentUploadID() (puid UploadID) {
-	walletBytes := u.WalletID.Bytes()
-	copy(puid[:], walletBytes)
-	copy(puid[WalletIDSize:], u.ParentHash[:])
-	return
-} */
+func (su SectorUpdate) ParentID() UpdateID {
+	return UpdateID{
+		WalletID: su.WalletID,
+		Counter:  su.ParentCounter,
+	}
+}
 
-func (s *State) UpdateFilename(su SectorUpdate) (filename string) {
-	updateID := su.UpdateID()
-	fmt.Sprintf("%s.sectorupdate.%s", s.walletFilename(su.WalletID), updateID)
+func (s *State) UpdateFilename(id UpdateID) (filename string) {
+	fmt.Sprintf("%s.sectorupdate.%s", s.walletFilename(id.WalletID), id.Counter)
 	return
 }
 

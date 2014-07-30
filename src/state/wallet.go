@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"siaencoding"
 )
@@ -24,8 +25,7 @@ func (id WalletID) Bytes() []byte {
 	return siaencoding.EncUint64(uint64(id))
 }
 
-// Weight calculates and returns the weight of a wallet.
-/* func (w Wallet) Weight() (weight uint32) {
+func (w Wallet) CompensationWeight() uint16 {
 	// Count the number of atoms used by the script.
 	walletByteCount := float64(len(w.Script))
 	walletAtomCount := walletByteCount / float64(AtomSize)
@@ -41,8 +41,9 @@ func (id WalletID) Bytes() []byte {
 	// Add non-replicated weight according to the size of the wallet sector.
 	walletAtomCount += float64(w.SectorSettings.Atoms)
 	walletAtomCount += float64(w.SectorSettings.UpdateAtoms)
-	return uint32(walletAtomCount)
-} */
+
+	return uint16(walletAtomCount)
+}
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
 // InsertWallet returns an error if the wallet already exists within the state.
@@ -55,7 +56,10 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 
 	wn = new(walletNode)
 	wn.id = w.ID
-	wn.weight = int(w.Weight())
+	wn.weight = int(w.SectorSettings.Atoms) - int(QuorumSize)
+	if wn.weight < 0 {
+		wn.weight = 0
+	}
 	s.insertWalletNode(wn)
 
 	s.SaveWallet(w)
@@ -109,7 +113,8 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 		err = fmt.Errorf("SaveWallet: no wallet of that id exists.")
 		return
 	}
-	weightDelta := int(w.Weight()) - wn.nodeWeight()
+	weightDelta := int(w.SectorSettings.Atoms) - wn.nodeWeight()
+
 	// Ideally, this would never be triggered. Instead, careful resource
 	// management in the quorum would prevent a too-heavy wallet from ever
 	// getting this far through the insert process.
