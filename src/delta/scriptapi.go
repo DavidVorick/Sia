@@ -100,9 +100,10 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 */
 
 func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
-	// Verify that the parent hash is found in one of the other uploads.
-	recognized := e.state.RecognizedParentID(parentID)
-	if !recognized {
+	// Verify that the parent hash is available to have an upload attatched to
+	// it.
+	available := e.state.AvailableParentID(parentID)
+	if !available {
 		err = puerrNonCurrentParentID
 		return
 	}
@@ -147,9 +148,6 @@ func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms ui
 		return
 	}
 
-	// Update the wallet to reflect the new upload weight it has gained.
-	e.state.AddUpdateAtoms(w, atoms)
-
 	// Update the eventlist to include an upload event.
 	su := state.SectorUpdate{
 		WalletID:              w.ID,
@@ -160,7 +158,6 @@ func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms ui
 		HashSet:               hashSet,
 		ConfirmationsRequired: confirmationsRequired,
 	}
-	e.state.InsertSectorUpdate(su)
-
+	err = e.state.InsertSectorUpdate(w, su)
 	return
 }

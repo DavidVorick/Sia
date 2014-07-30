@@ -1,7 +1,3 @@
-// A List of Calls Available To Script:
-// 1. Send
-// 2. AddNewSibling
-// 3. CreateWallet
 package state
 
 import (
@@ -23,8 +19,8 @@ type Sibling struct {
 
 const (
 	QuorumSize     byte   = 4        // max siblings per quorum
-	AtomSize       int    = 64       // in bytes
-	AtomsPerQuorum int    = 16777216 // 1GB
+	AtomSize       int    = 32       // in bytes
+	AtomsPerQuorum int    = 16777216 // 512MB
 	AtomsPerSector uint16 = 1024     // more causes DOS problems, is fixable. Final value likely to be 2^13-2^16
 )
 
@@ -47,8 +43,9 @@ type State struct {
 	// wallet is not represented in the map, it only indicates that there are no
 	// SectorModifiers active for that wallet. To check for a wallets existence,
 	// one must transverse the wallet tree.
-	activeSectors map[WalletID][]SectorModifier
-	activeUploads map[UploadID]*Upload
+	// activeSectors map[WalletID][]SectorModifier
+	// activeUploads map[UploadID]*Upload
+	activeUpdates map[WalletID][]SectorUpdate
 }
 
 // This is the prefix that the state will use when opening wallets as files.
@@ -62,6 +59,8 @@ func (s *State) SetWalletPrefix(walletPrefix string) {
 	s.walletPrefix = walletPrefix
 }
 
+// walletFilename returns the filename for a wallet, receiving only the id of
+// the wallet as input.
 func (s *State) walletFilename(id WalletID) (filename string) {
 	// Turn the id into a suffix that will follow the quorum prefix
 	suffixBytes := siaencoding.EncUint64(uint64(id))
@@ -70,7 +69,8 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	return
 }
 
-func (s *State) Weight() int {
+// Returns the number of atoms being consumed by the whole quorum.
+func (s *State) AtomsInUse() int {
 	return s.walletRoot.weight
 }
 
@@ -79,8 +79,10 @@ func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }
 
+/*
 func (s *State) ActiveUpload(uid UploadID) (upload Upload, exists bool) {
 	uploadPointer, exists := s.activeUploads[uid]
 	upload = *uploadPointer
 	return
 }
+*/

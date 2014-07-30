@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"siaencoding"
 )
@@ -26,7 +25,7 @@ func (id WalletID) Bytes() []byte {
 }
 
 // Weight calculates and returns the weight of a wallet.
-func (w Wallet) Weight() (weight uint32) {
+/* func (w Wallet) Weight() (weight uint32) {
 	// Count the number of atoms used by the script.
 	walletByteCount := float64(len(w.Script))
 	walletAtomCount := walletByteCount / float64(AtomSize)
@@ -41,9 +40,9 @@ func (w Wallet) Weight() (weight uint32) {
 
 	// Add non-replicated weight according to the size of the wallet sector.
 	walletAtomCount += float64(w.SectorSettings.Atoms)
-	walletAtomCount += float64(w.SectorSettings.UploadAtoms)
+	walletAtomCount += float64(w.SectorSettings.UpdateAtoms)
 	return uint32(walletAtomCount)
-}
+} */
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
 // InsertWallet returns an error if the wallet already exists within the state.
