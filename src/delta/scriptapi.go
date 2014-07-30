@@ -17,15 +17,16 @@ var (
 
 	aserrNoEmptySiblings = fmt.Errorf("There are no empty spots in the quorum.")
 
-	puerrTooFewAtoms            = fmt.Errorf("A sector must have more than QuorumSize atoms.")
-	puerrUnallocatedSector      = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
-	puerrTooManyConfirmations   = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
-	puerrTooFewConfirmations    = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
-	puerrNonCurrentParentHash   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
-	puerrDeadlineTooDistant     = fmt.Errorf("The deadline provided is more than state.MaxDeadline block into the future.")
-	puerrDeadlineAlreadyExpired = fmt.Errorf("The deadline provided has already expired.")
-	puerrAbsurdAtomsAltered     = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
-	puerrInsufficientAtoms      = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
+	puerrInvalidK             = fmt.Errorf("K must hold either a value of 1 or 2.")
+	puerrTooFewAtoms          = fmt.Errorf("A sector must have more than QuorumSize atoms.")
+	puerrUnallocatedSector    = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
+	puerrTooManyConfirmations = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
+	puerrTooFewConfirmations  = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
+	puerrNonCurrentParentID   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
+	puerrAbsurdAtomsAltered   = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
+	puerrInsufficientAtoms    = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
+	puerrDeadlineTooEarly     = fmt.Errorf("An upload takes at least 2 complete blocks to succeed - deadline too early.")
+	puerrLongDeadline         = fmt.Errorf("The deadline is too far in the future.")
 )
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
@@ -98,48 +99,68 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 }
 */
 
-//func (e *Engine) UpdateSector(w *state.Wallet, parentHash siacrypto.Hash, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, 
+func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
+	// Verify that the parent hash is found in one of the other uploads.
+	recognized := e.state.RecognizedParentID(parentID)
+	if !recognized {
+		err = puerrNonCurrentParentID
+		return
+	}
 
-func (e *Engine) UpdateSector(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, atomCount uint16, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
-	// Verify that atomCount follows the rules for sector sizes.
-	if atomCount <= uint16(state.QuorumSize) {
+	// Verify that 'atoms' follows the rules for sector sizes.
+	if atoms <= uint16(state.QuorumSize) {
 		err = puerrTooFewAtoms
 		return
 	}
+
+	// Verify that 'k' is a sane value.
+	if k > 2 || k == 0 {
+		err = puerrInvalidK
+		return
+	}
+
+	// Right now the role of 'd' is pretty well undefined.
 
 	// Verify that 'confirmationsRequired' is a legal value.
 	if confirmationsRequired > state.QuorumSize {
 		err = puerrTooManyConfirmations
 		return
-	} else if confirmationsRequired < w.SectorSettings.K {
+	} else if confirmationsRequired < k {
 		err = puerrTooFewConfirmations
 		return
 	}
 
-	// Match the parent hash to the expected hash.
-	if e.state.ActiveParentHash(*w, parentHash) {
-		err = puerrNonCurrentParentHash
+	// Verify that the dealine is reasonable.
+	if deadline < e.state.Metadata.Height+2 {
+		err = puerrDeadlineTooEarly
+		return
+	} else if deadline > e.state.Metadata.Height+state.MaxDeadline {
+		err = puerrLongDeadline
 		return
 	}
 
 	// Verify that the quorum has enough atoms to support the upload. Long
 	// term, this check won't be necessary because it'll be a part of the
 	// preallocated resources planning.
-	if e.state.Weight()+int(w.SectorSettings.Atoms) > int(state.AtomsPerQuorum) {
+	if e.state.AtomsInUse()+int(atoms) > int(state.AtomsPerQuorum) {
 		err = puerrInsufficientAtoms
 		return
 	}
 
 	// Update the wallet to reflect the new upload weight it has gained.
-	w.SectorSettings.UploadAtoms += w.SectorSettings.Atoms
+	e.state.AddUpdateAtoms(w, atoms)
 
 	// Update the eventlist to include an upload event.
-	u := state.Upload{
+	su := state.SectorUpdate{
 		WalletID:              w.ID,
-		ConfirmationsRequired: confirmationsRequired,
-		ParentHash:            parentHash,
+		ParentID:              parentID,
+		Atoms:                 atoms,
+		K:                     k,
+		D:                     d,
 		HashSet:               hashSet,
+		ConfirmationsRequired: confirmationsRequired,
 	}
-	e.state.InsertUpload(u)
+	e.state.InsertSectorUpdate(su)
+
 	return
 }
