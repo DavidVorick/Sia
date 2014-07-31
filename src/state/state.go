@@ -78,11 +78,3 @@ func (s *State) AtomsInUse() int {
 func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }
-
-/*
-func (s *State) ActiveUpload(uid UploadID) (upload Upload, exists bool) {
-	uploadPointer, exists := s.activeUploads[uid]
-	upload = *uploadPointer
-	return
-}
-*/
