@@ -127,14 +127,10 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 // (Since this is a binary tree, the sister node is the other node with the same parent as us.)
 // To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
 // This segment will double in size on each iteration until we reach the root.
-func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+func buildProof(rs io.ReaderAt, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
 	// get proofBytes
-	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
-	if err != nil {
-		panic(err)
-	}
 	proofBytes = make([]byte, AtomSize)
-	_, err = rs.Read(proofBytes)
+	_, err := rs.ReadAt(proofBytes, int64(proofIndex)*int64(AtomSize))
 	if err != nil {
 		panic(err)
 	}
@@ -163,14 +159,8 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 			continue
 		}
 
-		// create a poor man's SectionReader via Seek and LimitReader
-		// (why doesn't os.File implement SectionReader???)
-		// this negates the need for any special processing of imperfectly balanced trees
-		_, err = rs.Seek(int64(i)*int64(AtomSize), 0)
-		if err != nil {
-			panic(err)
-		}
-		r := io.LimitReader(rs, int64(size)*int64(AtomSize))
+		// create a new section reader to feed to MerkleCollapse
+		r := io.NewSectionReader(rs, int64(i)*int64(AtomSize), int64(size)*int64(AtomSize))
 
 		// calculate and append hash
 		hash := MerkleCollapse(r)

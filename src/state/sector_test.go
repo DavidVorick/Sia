@@ -64,7 +64,6 @@ func TestStorageProof(t *testing.T) {
 	proofBase, proofStack := buildProof(data, numAtoms, proofIndex)
 
 	// no need to call VerifyStorageProof directly; just simulate it
-	data.Seek(0, 0)
 	expectedHash := MerkleCollapse(data)
 	initialHash := siacrypto.CalculateHash(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, proofStack)
@@ -74,7 +73,6 @@ func TestStorageProof(t *testing.T) {
 	}
 
 	// run foldHashes without enough proofs
-	data.Seek(0, 0)
 	finalHash = foldHashes(initialHash, proofIndex, proofStack[0:1])
 
 	if finalHash == expectedHash {
@@ -91,7 +89,6 @@ func TestStorageProof(t *testing.T) {
 		proofIndex = siacrypto.RandomUint16() % i
 		proofBase, proofStack = buildProof(data, i, proofIndex)
 
-		data.Seek(0, 0)
 		expectedHash = MerkleCollapse(data)
 		initialHash = siacrypto.CalculateHash(proofBase)
 		finalHash = foldHashes(initialHash, proofIndex, proofStack)
