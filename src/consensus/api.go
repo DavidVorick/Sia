@@ -21,9 +21,21 @@ func (p *Participant) Metadata(_ struct{}, smd *state.StateMetadata) (err error)
 }
 
 // UpdateSegment is an RPC call that allows hosts to submit diffs that match
-// uploads that have been confirmed by consensus.
-func (p *Participant) UpdateSegment(sd delta.SegmentDiff, _ *struct{}) (err error) {
-	err = p.engine.UpdateSegment(sd)
+// updates that have been confirmed by consensus.
+func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err error) {
+	*accepted, err = p.engine.UpdateSegment(sd)
+
+	if *accepted {
+		// Submit a notification to the quorum that a match has been uploaded.
+		newAdvancement := state.UpdateAdvancement{
+			Index:    p.engine.SiblingIndex(),
+			UpdateID: sd.UpdateID,
+		}
+		p.updateAdvancementsLock.Lock()
+		p.updateAdvancements = append(p.updateAdvancements, newAdvancement)
+		p.updateAdvancementsLock.Unlock()
+	}
+
 	return
 }
 

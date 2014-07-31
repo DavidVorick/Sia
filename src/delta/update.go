@@ -26,7 +26,9 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 		return
 	}
 
-	// See if the update has already been completed for this sibling.
+	// See if the update has already been completed for this sibling. Completed
+	// uploads is never cleaned out right now, meaning it's a map that's
+	// continuously getting larger. I don't have a great solution.
 	if e.completedUpdates[sd.UpdateID] {
 		err = fmt.Errorf("Update already completed.")
 		return
@@ -78,21 +80,21 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 	} else {
 		parentAtoms = wallet.SectorSettings.Atoms
 	}
-	if update.Atoms < parentUpdate.Atoms {
+	if update.Atoms < parentAtoms {
 		secErr := file.Truncate(int64(int(update.Atoms) * state.AtomSize))
 		if secErr != nil {
 			panic(secErr)
 		}
-	} else if update.Atoms > parentUpdate.Atoms {
+	} else if update.Atoms > parentAtoms {
 		// Seek to the end of the file.
-		_, secErr := file.Seek(int64(int(parentUpdate.Atoms)*state.AtomSize), 0)
+		_, secErr := file.Seek(int64(int(parentAtoms)*state.AtomSize), 0)
 		if secErr != nil {
 			panic(secErr)
 		}
 
 		// Write enough zeros at the end of the file such that it is the correct
 		// segment size.
-		zeroSlice := make([]byte, int(update.Atoms-parentUpdate.Atoms)*state.AtomSize)
+		zeroSlice := make([]byte, int(update.Atoms-parentAtoms)*state.AtomSize)
 		_, secErr = file.Write(zeroSlice)
 		if secErr != nil {
 			panic(secErr)

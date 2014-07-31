@@ -49,6 +49,11 @@ type SectorUpdate struct {
 	EventExpiration uint32
 }
 
+type UpdateAdvancement struct {
+	Index    byte
+	UpdateID UpdateID
+}
+
 func (su *SectorUpdate) Hash() siacrypto.Hash {
 	var hashSetBytes []byte
 	for _, hash := range su.HashSet {
@@ -149,6 +154,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 		return
 	}
 
+	s.InsertEvent(&su)
 	w.SectorSettings.UpdateAtoms += su.Atoms
 	s.activeUpdates[su.WalletID] = append(s.activeUpdates[su.WalletID], su)
 	return
@@ -172,10 +178,3 @@ func (s *State) UpdateFilename(id UpdateID) (filename string) {
 	fmt.Sprintf("%s.sectorupdate.%s", s.walletFilename(id.WalletID), id.Counter)
 	return
 }
-
-/* func (s *State) InsertSectorUpdate(su SectorUpdate) {
-	// dont' forget to set the event counter on the update, though it might happen in InsertEvent
-	s.InsertEvent(&u)
-	s.AppendSectorModifier(&u)
-	s.activeUploads[u.UploadID()] = &u
-} */

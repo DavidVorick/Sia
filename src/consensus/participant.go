@@ -22,13 +22,13 @@ type Participant struct {
 	address       network.Address
 	messageRouter network.MessageRouter
 
-	// Heartbeat Variables
-	updates          [state.QuorumSize]map[siacrypto.Hash]Update // list of heartbeats received from siblings
-	updatesLock      sync.Mutex
-	scriptInputs     []delta.ScriptInput
-	scriptInputsLock sync.Mutex
-	//uploadAdvancements     []quorum.UploadAdvancement
-	//uploadAdvancementsLock sync.Mutex
+	// Update Variables
+	updates                [state.QuorumSize]map[siacrypto.Hash]Update
+	updatesLock            sync.Mutex
+	scriptInputs           []delta.ScriptInput
+	scriptInputsLock       sync.Mutex
+	updateAdvancements     []state.UpdateAdvancement
+	updateAdvancementsLock sync.Mutex
 
 	// Consensus Algorithm Status
 	//ticking     bool
@@ -39,11 +39,6 @@ type Participant struct {
 	// Bootstrap variables
 	synchronized bool
 	//recentBlocks map[uint32]*delta.Block
-
-	// Block history variables
-	//activeHistoryStep int
-	//activeHistory     string // file currently being appended with new blocks
-	//recentHistory     string // file containing SnapshotLen blocks
 }
 
 var nperrNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
@@ -70,7 +65,7 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.messageRouter = mr
 
 	// Initialize the file prefix
-	p.engine.Initialize(filePrefix)
+	p.engine.Initialize(filePrefix, p.siblingIndex)
 
 	return
 }

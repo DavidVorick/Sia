@@ -30,7 +30,8 @@ type Engine struct {
 	state state.State
 
 	// Engine Variables
-	filePrefix string
+	filePrefix   string
+	siblingIndex byte
 
 	// Upload Variables
 	completedUpdates map[state.UpdateID]bool
@@ -51,14 +52,19 @@ func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }
 
+func (e *Engine) SiblingIndex() byte {
+	return e.siblingIndex
+}
+
 // WalletList is a pass-along function so that the wallet list of the state can be accessed
 // by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
 
-func (e *Engine) Initialize(filePrefix string) {
+func (e *Engine) Initialize(filePrefix string, siblingIndex byte) {
 	e.SetFilePrefix(filePrefix)
+	e.siblingIndex = siblingIndex
 	return
 }
 
