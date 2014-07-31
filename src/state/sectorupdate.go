@@ -2,7 +2,9 @@ package state
 
 import (
 	"fmt"
+	"os"
 	"siacrypto"
+	"siafiles"
 )
 
 type UpdateID struct {
@@ -94,14 +96,21 @@ func (su *SectorUpdate) HandleEvent(s *State) {
 
 	// If there are sufficient confirmations, update the sector hash values.
 	if su.ConfirmationsRequired <= confirmationsReceived {
-		// Logic to see if we have the file ourselves or not. If we do, simply copy
-		// copy it over. If we don't, download it from the other guys.
+		// Hash our holding of the upload file and see if it matches the required
+		// file. !! There are probably synchronization issues with doing things
+		// this way.
+		file, err := os.Open(s.UpdateFilename(su.UpdateID()))
+		if err == nil {
+			hash := MerkleCollapse(file)
+			file.Close()
+			if hash == su.HashSet[siblingIndex] {
+				siafiles.Copy(s.SectorFilename(su.WalletID), s.UpdateFilename(su.UpdateID()))
+			}
+		}
 	}
 
 	// Call to delete the file that either did or did not exist.
-
-	// Delete the completed uploads value within the engine..............
-	// ah fudge this function is at the wrong level of abstraction.
+	os.Remove(s.UpdateFilename(su.UpdateID()))
 
 	s.DeleteEvent(su)
 }
