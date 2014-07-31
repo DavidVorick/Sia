@@ -5,7 +5,7 @@ package siacrypto
 import (
 	"crypto/rand"
 	"fmt"
-	"math/big"
+	"siaencoding"
 )
 
 // RandomByte returns a random byte
@@ -34,40 +34,25 @@ func RandomInt(ceiling int) (randInt int, err error) {
 		return
 	}
 
-	bigInt := big.NewInt(int64(ceiling))
-	randBig, err := rand.Int(rand.Reader, bigInt)
-	if err != nil {
-		return
-	}
-	randInt = int(randBig.Int64())
+	randomBytes := make([]byte, 4)
+	rand.Read(randomBytes)
+
+	randInt = int(siaencoding.DecUint32(randomBytes)) % ceiling
 	return
 }
 
-// RandomUint16 returns a random uint16, no ceiling
-func RandomUint16() (randInt uint16) {
-	maxint64 := int64(^uint64(0) >> 1)
-	bigInt := big.NewInt(maxint64)
-	randBig, err := rand.Int(rand.Reader, bigInt)
-	if err != nil {
-		return
-	}
-	randInt = uint16(randBig.Int64())
-	return
+// RandomUint16 returns a random uint16.
+// It accomplishes this by feeding 2 bytes of random data to a binary decoder.
+func RandomUint16() uint16 {
+	randomBytes := make([]byte, 2)
+	rand.Read(randomBytes)
+	return siaencoding.DecUint16(randomBytes)
 }
 
-// RandomUint64() generates a random uint64 of any value
+// RandomUint64 returns a random uint64.
+// It uses the same process as RandomUint16.
 func RandomUint64() (randInt uint64) {
-	maxint64 := int64(^uint64(0) >> 1)
-	bigInt := big.NewInt(maxint64)
-	randBig, err := rand.Int(rand.Reader, bigInt)
-	if err != nil {
-		return
-	}
-	randInt = uint64(randBig.Int64())
-	randBig, err = rand.Int(rand.Reader, bigInt)
-	if err != nil {
-		return
-	}
-	randInt += uint64(randBig.Int64())
-	return
+	randomBytes := make([]byte, 8)
+	rand.Read(randomBytes)
+	return siaencoding.DecUint64(randomBytes)
 }
