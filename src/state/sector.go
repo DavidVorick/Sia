@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"io"
 	"os"
 	"siacrypto"
@@ -48,61 +49,35 @@ func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
 	s.activeUploads[id] = append(s.activeUploads[id], sm)
 }
 
-// MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
-// as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
-// doing this keeps in memory the previous hash at each level. Each atom is
-// hashed as level one, but if there is already a hash stored at level one,
-// then the hash is taken again producing a level two hash. If there is already
-// a hash at level two, the hash is taken again... and so on. Once all the
-// atoms have been read, a cleanup loop is used to append the highest level
-// hash to each lower level hash and arrive at the final value. See the
-// whitepaper for a specification of how to construct Merkle Trees from a
-// sector. This algorithm takes linear time and logarithmic space.
-func MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
-	// Loop through every atom in the reader, building out the Merkle Tree in
-	// linear time.
-	var prevHashes []*siacrypto.Hash
-	atom := make([]byte, AtomSize)
-	var atoms int
-	for _, err := reader.Read(atom); err == nil; atoms++ {
-		// If atoms is a power of 2, increase the length of prevHashes
-		if (atoms+1)&(atoms) == 0 {
-			prevHashes = append(prevHashes, nil)
-		}
+// convenience function for constructing Merkle trees
+func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
+	return siacrypto.CalculateHash(append(left[:], right[:]...))
+}
 
-		// Take the hash of the current atom and merge it with the hashes in
-		// prevHashes, one level at a time until an empty slot in prevHashes is
-		// found. Each time a merge happens at a level, the level is reset to nil.
-		hash := siacrypto.CalculateHash(atom)
-		var i int
-		for i = 0; prevHashes[i] != nil; i++ {
-			hash = siacrypto.CalculateHash(append(prevHashes[i][:], hash[:]...))
-			prevHashes[i] = nil
-		}
-
-		// store the new hash in the first empty slot
-		prevHashes[i] = new(siacrypto.Hash)
-		copy(prevHashes[i][:], hash[:])
-		_, err = reader.Read(atom)
+// MerkleCollapse splits the provided data into segments of size AtomSize.
+// It then recursively transforms these segments into a Merkle tree, and returns the root hash.
+func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err error) {
+	if numAtoms == 0 {
+		err = errors.New("no data")
+		return
 	}
-
-	// check that at least something was read
-	if len(prevHashes) == 0 {
+	if numAtoms == 1 {
+		data := make([]byte, AtomSize)
+		_, err = reader.Read(data)
+		hash = siacrypto.CalculateHash(data)
 		return
 	}
 
-	// Merge the hashes into the final tree, starting with the highest level hash
-	// and working down to the lowest.
-	var i int
-	for prevHashes[i] == nil {
-		i++
+	// locate smallest power of 2 <= numAtoms
+	var mid uint16 = 1
+	for mid < numAtoms/2+numAtoms%2 {
+		mid *= 2
 	}
-	hash = *prevHashes[i]
-	for i++; i < len(prevHashes); i++ {
-		if prevHashes[i] != nil {
-			hash = siacrypto.CalculateHash(append(prevHashes[i][:], hash[:]...))
-		}
-	}
+
+	// since we always read "left to right", no extraneous Seek operations are required
+	left, _ := MerkleCollapse(reader, mid)
+	right, err := MerkleCollapse(reader, numAtoms-mid)
+	hash = joinHash(left, right)
 	return
 }
 
@@ -160,10 +135,17 @@ func buildProof(rs io.ReaderAt, numAtoms, proofIndex uint16) (proofBytes []byte,
 		}
 
 		// create a new section reader to feed to MerkleCollapse
-		r := io.NewSectionReader(rs, int64(i)*int64(AtomSize), int64(size)*int64(AtomSize))
+		truncSize := size
+		if i+truncSize > numAtoms {
+			truncSize -= i + size - numAtoms
+		}
+		r := io.NewSectionReader(rs, int64(i)*int64(AtomSize), int64(truncSize)*int64(AtomSize))
 
 		// calculate and append hash
-		hash := MerkleCollapse(r)
+		hash, err := MerkleCollapse(r, truncSize)
+		if err != nil {
+			panic(err)
+		}
 		proofStack = append(proofStack, &hash)
 	}
 
@@ -202,9 +184,9 @@ func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.
 			continue
 		}
 		if proofIndex%(size*2) < size { // base is on the left branch
-			h = siacrypto.CalculateHash(append(h[:], proofStack[i][:]...))
+			h = joinHash(h, *proofStack[i])
 		} else {
-			h = siacrypto.CalculateHash(append(proofStack[i][:], h[:]...))
+			h = joinHash(*proofStack[i], h)
 		}
 	}
 
