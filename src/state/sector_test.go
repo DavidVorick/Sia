@@ -90,7 +90,7 @@ func TestStorageProof(t *testing.T) {
 		data = bytes.NewReader(siacrypto.RandomByteSlice(int(i) * AtomSize))
 		proofIndex = siacrypto.RandomUint16() % i
 		proofBase, proofStack = buildProof(data, i, proofIndex)
-
+		data.Seek(0, 0)
 		expectedHash, err := MerkleCollapse(data, i)
 		if err != nil {
 			t.Fatal(err)
