@@ -5,8 +5,7 @@ package siacrypto
 import "C"
 
 import (
-	"fmt"
-	"unsafe"
+	"errors"
 )
 
 const (
@@ -15,36 +14,29 @@ const (
 	SignatureSize = 64
 )
 
-// The underlying variables to the keys & signatures should not be exported
 type PublicKey [PublicKeySize]byte
 type SecretKey [SecretKeySize]byte
 type Signature [SignatureSize]byte
 
-// takes as input a public key and a signed message
-// returns whether the signature is valid or not
-func (pk PublicKey) Verify(sig Signature, message []byte) (verified bool) {
-	var messagePointer *C.uchar
+// Verify returns whether a message was signed by the public key 'pk'.
+func (pk PublicKey) Verify(sig Signature, message []byte) bool {
 	messageBytes := make([]byte, len(message)+SignatureSize)
-	if len(message) == 0 {
-		// can't point to a slice of len 0
-		messagePointer = (*C.uchar)(nil)
-	} else {
-		messagePointer = (*C.uchar)(unsafe.Pointer(&messageBytes[0]))
-	}
+	messagePointer := (*C.uchar)(&messageBytes[0])
 
 	var messageLen uint64
-	lenPointer := (*C.ulonglong)(unsafe.Pointer(&messageLen))
+	lenPointer := (*C.ulonglong)(&messageLen)
 
 	signedMessageBytes := append(sig[:], message...)
-	signedMessagePointer := (*C.uchar)(unsafe.Pointer(&signedMessageBytes[0]))
+	signedMessagePointer := (*C.uchar)(&signedMessageBytes[0])
 	signedMessageLen := C.ulonglong(len(signedMessageBytes))
-	pkPointer := (*C.uchar)(unsafe.Pointer(&pk[0]))
+	pkPointer := (*C.uchar)(&pk[0])
 
-	success := C.crypto_sign_open(messagePointer, lenPointer, signedMessagePointer, signedMessageLen, pkPointer)
-	verified = success == 0
-	return
+	errorCode := C.crypto_sign_open(messagePointer, lenPointer, signedMessagePointer, signedMessageLen, pkPointer)
+	return errorCode == 0
 }
 
+// VerifyObject returns whether an object was signed by the public key 'pk'.
+// It does so by first marshalling the object, and then passing the result to Verify().
 func (pk PublicKey) VerifyObject(sig Signature, obj interface{}) (verified bool, err error) {
 	objHash, err := HashObject(obj)
 	if err != nil {
@@ -55,20 +47,18 @@ func (pk PublicKey) VerifyObject(sig Signature, obj interface{}) (verified bool,
 	return
 }
 
-// Sign takes a secret key and a message, and uses the secret key to sign the
-// message,  returning a single SignedMessage struct containing a Message and a
-// Signature
-func (secKey SecretKey) Sign(message []byte) (sig Signature, err error) {
+// Sign returns the signature of a byte slice.
+func (sk SecretKey) Sign(message []byte) (sig Signature, err error) {
 	if message == nil {
-		err = fmt.Errorf("Cannot sign a nil message")
+		err = errors.New("cannot sign a nil message")
 		return
 	}
 
 	signedMessageBytes := make([]byte, len(message)+SignatureSize)
-	signedMessagePointer := (*C.uchar)(unsafe.Pointer(&signedMessageBytes[0]))
+	signedMessagePointer := (*C.uchar)(&signedMessageBytes[0])
 
 	var signatureLen uint64
-	lenPointer := (*C.ulonglong)(unsafe.Pointer(&signatureLen))
+	lenPointer := (*C.ulonglong)(&signatureLen)
 
 	var messagePointer *C.uchar
 	if len(message) == 0 {
@@ -76,15 +66,15 @@ func (secKey SecretKey) Sign(message []byte) (sig Signature, err error) {
 		messagePointer = (*C.uchar)(nil)
 	} else {
 		messageBytes := []byte(message)
-		messagePointer = (*C.uchar)(unsafe.Pointer(&messageBytes[0]))
+		messagePointer = (*C.uchar)(&messageBytes[0])
 	}
 
 	messageLen := C.ulonglong(len(message))
-	sigPointer := (*C.uchar)(unsafe.Pointer(&secKey[0]))
+	skPointer := (*C.uchar)(&sk[0])
 
-	signErr := C.crypto_sign(signedMessagePointer, lenPointer, messagePointer, messageLen, sigPointer)
+	signErr := C.crypto_sign(signedMessagePointer, lenPointer, messagePointer, messageLen, skPointer)
 	if signErr != 0 {
-		err = fmt.Errorf("Signature Failed!")
+		err = errors.New("call to crypto_sign failed")
 		return
 	}
 
@@ -92,21 +82,21 @@ func (secKey SecretKey) Sign(message []byte) (sig Signature, err error) {
 	return
 }
 
-func (secKey SecretKey) SignObject(o interface{}) (s Signature, err error) {
-	objectHash, err := HashObject(o)
+// SignObject returns the signature of an object's hash.
+func (sk SecretKey) SignObject(obj interface{}) (sig Signature, err error) {
+	objectHash, err := HashObject(obj)
 	if err != nil {
 		return
 	}
 
-	s, err = secKey.Sign(objectHash[:])
-	return
+	return sk.Sign(objectHash[:])
 }
 
 // CreateKeyPair needs no input, produces a public key and secret key as output
 func CreateKeyPair() (pubKey PublicKey, secKey SecretKey, err error) {
-	errorCode := C.crypto_sign_keypair((*C.uchar)(unsafe.Pointer(&pubKey[0])), (*C.uchar)(unsafe.Pointer(&secKey[0])))
+	errorCode := C.crypto_sign_keypair((*C.uchar)(&pubKey[0]), (*C.uchar)(&secKey[0]))
 	if errorCode != 0 {
-		err = fmt.Errorf("Key Creation Failed!")
+		err = errors.New("call to crypto_sign_keypair failed")
 	}
 	return
 }
