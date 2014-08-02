@@ -44,7 +44,7 @@ func (u *Upload) Hash() siacrypto.Hash {
 	for _, hash := range u.HashSet {
 		hashSetBytes = append(hashSetBytes, hash[:]...)
 	}
-	return siacrypto.CalculateHash(hashSetBytes)
+	return siacrypto.HashBytes(hashSetBytes)
 }
 
 func (u *Upload) Expiration() uint32 {

@@ -15,11 +15,11 @@ func TestMerkleEmpty(t *testing.T) {
 
 	// manually construct Merkle hash
 	empty := make([]byte, AtomSize)
-	l1 := siacrypto.CalculateHash(empty)
+	l1 := siacrypto.HashBytes(empty)
 	l2 := joinHash(l1, l1)
 	l3 := joinHash(l2, l2)
 
-	r1 := siacrypto.CalculateHash(empty)
+	r1 := siacrypto.HashBytes(empty)
 	r2 := joinHash(r1, r1)
 	r3 := joinHash(r2, r1)
 
@@ -67,7 +67,7 @@ func TestStorageProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	initialHash := siacrypto.CalculateHash(proofBase)
+	initialHash := siacrypto.HashBytes(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, proofStack)
 
 	if finalHash != expectedHash {
@@ -95,7 +95,7 @@ func TestStorageProof(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		initialHash = siacrypto.CalculateHash(proofBase)
+		initialHash = siacrypto.HashBytes(proofBase)
 		finalHash = foldHashes(initialHash, proofIndex, proofStack)
 
 		if finalHash != expectedHash {

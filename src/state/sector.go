@@ -51,7 +51,7 @@ func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
 
 // convenience function for constructing Merkle trees
 func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
-	return siacrypto.CalculateHash(append(left[:], right[:]...))
+	return siacrypto.HashBytes(append(left[:], right[:]...))
 }
 
 // MerkleCollapse splits the provided data into segments of size AtomSize.
@@ -64,7 +64,7 @@ func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err
 	if numAtoms == 1 {
 		data := make([]byte, AtomSize)
 		_, err = reader.Read(data)
-		hash = siacrypto.CalculateHash(data)
+		hash = siacrypto.HashBytes(data)
 		return
 	}
 
@@ -86,7 +86,7 @@ func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 	for i := range hashSet {
 		copy(atomRepresentation[i*siacrypto.HashSize:], hashSet[i][:])
 	}
-	return siacrypto.CalculateHash(atomRepresentation)
+	return siacrypto.HashBytes(atomRepresentation)
 }
 
 // SectorFilename takes a wallet id and returns the filename of the sector
@@ -220,7 +220,7 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 	}
 
 	// build the hash up from the base
-	initialHash := siacrypto.CalculateHash(proofBase)
+	initialHash := siacrypto.HashBytes(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, proofStack)
 
 	return finalHash == expectedHash

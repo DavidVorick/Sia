@@ -14,7 +14,7 @@ const (
 type Hash [HashSize]byte
 
 // returns the first 256 bytes of the sha512 hash of the input []byte
-func CalculateHash(data []byte) (hash Hash) {
+func HashBytes(data []byte) (hash Hash) {
 	sha := sha512.New()
 	sha.Write(data)
 	hashSlice := sha.Sum(nil)
@@ -28,6 +28,6 @@ func HashObject(v interface{}) (h Hash, err error) {
 		return
 	}
 
-	h = CalculateHash(bytes)
+	h = HashBytes(bytes)
 	return
 }

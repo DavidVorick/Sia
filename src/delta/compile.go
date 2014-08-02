@@ -46,7 +46,7 @@ func (e *Engine) Compile(b Block) {
 	}
 
 	// Hash the siblingEntropy to get the new Germ.
-	e.state.Metadata.Germ = state.Entropy(siacrypto.CalculateHash(siblingEntropy))
+	e.state.Metadata.Germ = state.Entropy(siacrypto.HashBytes(siblingEntropy))
 
 	// Process all of the script inputs. Right now, every script input is
 	// processed every block, with only a few protections against inifinite loops

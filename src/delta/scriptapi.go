@@ -165,7 +165,7 @@ func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, we
 	}
 	// w.sectorAtoms = atoms
 	// w.sectorM = k
-	// w.sectorHash = siacrypto.CalculateHash(firstAtom)
+	// w.sectorHash = siacrypto.HashBytes(firstAtom)
 
 	return
 }
