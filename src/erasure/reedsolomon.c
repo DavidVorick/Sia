@@ -2,7 +2,6 @@
 // on the error checking and usage patterns of reedsolomon.go
 #include "longhair/include/cauchy_256.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 // encodeRedundancy takes as input a 'k', the number of nonredundant segments
@@ -15,14 +14,14 @@
 // function.
 static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalBlock) {
 	// Verify that correct library is linked.
-	if(cauchy_256_init()) {
-		exit(1);
+	if (cauchy_256_init()) {
+		return NULL;
 	}
 
 	// Break original data into segments using pointer math.
 	const unsigned char *originalSegments[k];
 	int i;
-	for(i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		originalSegments[i] = (const unsigned char*)&originalBlock[i * bytesPerSegment];
 	}
 
@@ -30,9 +29,8 @@ static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalB
 	char *redundantSegments = calloc(sizeof(unsigned char), m * bytesPerSegment);
 
 	// encode the redundant segments using longhair
-	if(cauchy_256_encode(k, m, originalSegments, redundantSegments, bytesPerSegment)) {
-		fprintf(stderr, "Failed to encode pieces - strange...");
-		exit(1);
+	if (cauchy_256_encode(k, m, originalSegments, redundantSegments, bytesPerSegment)) {
+		return NULL;
 	}
 
 	return redundantSegments;
@@ -48,8 +46,9 @@ static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalB
 // will be the original data in order.
 static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndicies) {
 	// Verify that the longhair library is linked.
-	if(cauchy_256_init()) {
-		exit(1);
+	if (cauchy_256_init()) {
+		remainingSegments = NULL;
+		return;
 	}
 
 	// copy remainingSegments into its own data, which results in much cleaner
@@ -65,14 +64,15 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 	// caughy_256_decode.
 	Block blocks[k];
 	unsigned char i, j;
-	for(i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		blocks[i].data = &workingMemory[i * bytesPerSegment];
 		blocks[i].row = remainingSegmentIndicies[i];
 	}
 	
 	// decode redundant segments into original segments
-	if(cauchy_256_decode(k, m, blocks, bytesPerSegment)) {
-		exit(1);
+	if (cauchy_256_decode(k, m, blocks, bytesPerSegment)) {
+		remainingSegments = NULL;
+		return;
 	}
 
 	// Perform a collpaseSort, which creates an array of len 'k + m' and puts
@@ -82,11 +82,11 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 	// recovered.
 	unsigned char *ordering[k+m];
 	memset(ordering, 0, k+m); // 0 == NULL
-	for(i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		ordering[blocks[i].row] = &i;
 	}
 	j = 0;
-	for(i = 0; i < k+m; i++) {
+	for (i = 0; i < k+m; i++) {
 		if(ordering[i] == NULL) {
 			continue;
 		}
