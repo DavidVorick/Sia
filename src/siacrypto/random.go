@@ -4,7 +4,6 @@ package siacrypto
 
 import (
 	"crypto/rand"
-	"fmt"
 	"siaencoding"
 )
 
@@ -28,17 +27,15 @@ func RandomByteSlice(numBytes int) (randomBytes []byte) {
 }
 
 // RandomInt generates a random int [0, ceiling)
-func RandomInt(ceiling int) (randInt int, err error) {
-	if ceiling < 1 {
-		err = fmt.Errorf("RandomInt: input must be greater than 0")
-		return
+func RandomInt(ceiling int) int {
+	if ceiling <= 0 {
+		return 0
 	}
 
 	randomBytes := make([]byte, 4)
 	rand.Read(randomBytes)
 
-	randInt = int(siaencoding.DecUint32(randomBytes)) % ceiling
-	return
+	return int(siaencoding.DecUint32(randomBytes)) % ceiling
 }
 
 // RandomUint16 returns a random uint16.

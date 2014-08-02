@@ -228,13 +228,8 @@ func TestWalletTree(t *testing.T) {
 		for i := 0; i < n; i++ {
 			found := false
 			var weight int
-			var err error
 			for !found {
-				weight, err = siacrypto.RandomInt(100000)
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				weight = siacrypto.RandomInt(100000)
 				if weights[uint64(weight)] == false {
 					weights[uint64(weight)] = true
 					found = true
@@ -248,18 +243,12 @@ func TestWalletTree(t *testing.T) {
 
 		// randomly choose between inserting and deleting a random item
 		for i := 0; i < n; i++ {
-			insertOrDelete, err := siacrypto.RandomInt(2) // [0, 2)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if insertOrDelete == 0 {
-				// insert
+			if siacrypto.RandomInt(2) == 0 { // insert
 				found := false
 				var weight int
 				var err error
 				for !found {
-					weight, err = siacrypto.RandomInt(100000)
+					weight = siacrypto.RandomInt(100000)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -273,8 +262,7 @@ func TestWalletTree(t *testing.T) {
 				node := createTestWalletNode(weight)
 				s.insertWalletNode(node)
 				checkViolations(4, s.walletRoot, len(weights), t)
-			} else {
-				// delete
+			} else { // delete
 				// turn weights into a slice so that a value can be selected at random
 				j := 0
 				weightSlice := make([]uint64, len(weights))
@@ -283,11 +271,7 @@ func TestWalletTree(t *testing.T) {
 					j++
 				}
 
-				j, err = siacrypto.RandomInt(len(weightSlice))
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				j = siacrypto.RandomInt(len(weightSlice))
 				s.removeWalletNode(WalletID(weightSlice[j]))
 				delete(weights, weightSlice[j])
 				checkViolations(5, s.walletRoot, len(weights), t)
@@ -312,12 +296,7 @@ func TestWalletTree(t *testing.T) {
 
 		// shuffle the slice
 		for i := range weightSlice {
-			newIndex, err := siacrypto.RandomInt(len(weightSlice) - i)
-			if err != nil {
-				t.Fatal(err)
-			}
-			newIndex += i
-
+			newIndex := siacrypto.RandomInt(len(weightSlice)-i) + i
 			tmp := weightSlice[newIndex]
 			weightSlice[newIndex] = weightSlice[i]
 			weightSlice[i] = tmp

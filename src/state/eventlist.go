@@ -103,8 +103,8 @@ func (s *State) InsertEvent(e Event) {
 	// much harder to attack the skip list by inserting events in a malicious
 	// order.
 	freshHeight := 1
-	heightAugmenter, _ := siacrypto.RandomInt(87) // rand from [0, 87)
-	for heightAugmenter < 32 {                    // 32/87 is ~ 1/e, the most efficient probability
+	heightAugmenter := siacrypto.RandomInt(87) // rand from [0, 87)
+	for heightAugmenter < 32 {                 // 32/87 is ~ 1/e, the most efficient probability
 		freshHeight += 1
 		if freshHeight > currentHeight {
 			// increase the height of the root node by one
@@ -114,7 +114,7 @@ func (s *State) InsertEvent(e Event) {
 
 			break // root height can only grow by 1 each insertion
 		}
-		heightAugmenter, _ = siacrypto.RandomInt(87)
+		heightAugmenter = siacrypto.RandomInt(87)
 	}
 
 	// check if we are behind the root
