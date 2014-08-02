@@ -5,9 +5,9 @@ type Identifier byte
 
 // An Address couples an Identifier with its network address.
 type Address struct {
-	ID   Identifier
 	Host string
 	Port int
+	ID   Identifier
 }
 
 // A Message is for sending requests over the network.

@@ -55,7 +55,7 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	conn.Close()
 
 	rpcs = &RPCServer{
-		addr:     Address{0, host, port},
+		addr:     Address{host, port, 0},
 		rpcServ:  rpc.NewServer(),
 		listener: tcpServ,
 		curID:    1, // ID 0 is reserved for the RPCServer itself
