@@ -35,7 +35,7 @@ import (
 // will be of length (len(original) / k). Any 'k' of the encoded pieces can be
 // used to recover 'original'. If there is an error, 'encoded' should be
 // discarded.
-func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err error) {
+func ReedSolomonEncode(k, m int, original []byte) (encoded [][]byte, err error) {
 	// Check for nil and zero values within the input.
 	if original == nil {
 		err = errors.New("received nil input")
@@ -55,18 +55,18 @@ func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err e
 		err = errors.New("m must be at greater than 0")
 		return
 	}
-	if int(k)+int(m) >= 256 {
+	if k+m >= 256 {
 		err = errors.New("k + m must be less than 256")
 		return
 	}
 
 	// Check that 'original' has been correctly padded
-	if len(original)%int((k*8)) != 0 {
-		err = errors.New("input has not been properly padded!")
+	if len(original)%(k*8) != 0 {
+		err = errors.New("input has not been properly padded")
 		return
 	}
 
-	b := len(original) / int(k)
+	b := len(original) / k
 
 	// Call longhair to perform encoding.
 	redundantChunk := C.encodeRedundancy(C.int(k), C.int(m), C.int(b), (*C.char)(unsafe.Pointer(&original[0])))
@@ -74,17 +74,17 @@ func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err e
 		err = errors.New("call to cauchy_256_encode failed")
 		return
 	}
-	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(int(m)*b))
+	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(m*b))
 
 	// Allocate 'encoded'.
 	encoded = make([][]byte, k+m)
 
 	// Slice the data returned from longhair into 'encoded'.
-	for i := 0; i < int(k); i++ {
+	for i := 0; i < k; i++ {
 		encoded[i] = original[i*b : (i+1)*b]
 	}
-	for i := 0; i < int(m); i++ {
-		encoded[i+int(k)] = redundantBytes[i*b : (i+1)*b]
+	for i := 0; i < m; i++ {
+		encoded[i+k] = redundantBytes[i*b : (i+1)*b]
 	}
 
 	// Free the memory allocated by longhair.
@@ -102,7 +102,7 @@ func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err e
 //
 // 'recovered' should be identical to the input 'original from
 // ReedSolomonEncode. If an error is returned, 'recovered' should be discarded.
-func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indices []byte) (recovered []byte, err error) {
+func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered []byte, err error) {
 	// Check for nil values. The length of 'remaining' and 'indices' are checked
 	// after 'k' and 'm' are checked.
 	if remaining == nil || indices == nil {
@@ -119,17 +119,17 @@ func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indices []byte) (rec
 		err = errors.New("m must be at greater than 0")
 		return
 	}
-	if int(k)+int(m) >= 256 {
+	if k+m >= 256 {
 		err = errors.New("k + m must be less than 256")
 		return
 	}
 
 	// Check that 'remaining' and 'indices' contain at least 'k' elements.
-	if len(remaining) < int(k) {
+	if len(remaining) < k {
 		err = errors.New("insufficient pieces to recover original")
 		return
 	}
-	if len(indices) < int(k) {
+	if len(indices) < k {
 		err = errors.New("insufficient indices")
 		return
 	}
@@ -144,11 +144,11 @@ func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indices []byte) (rec
 		err = errors.New("cannot recover empty data")
 		return
 	}
-	if b%(int(k)*8) != 0 {
+	if b%(k*8) != 0 {
 		err = errors.New("remaining pieces do not match padding, should be padded to k*8 bytes")
 		return
 	}
-	for i := 0; i < int(k); i++ {
+	for i := 0; i < k; i++ {
 		if remaining[i] == nil {
 			err = errors.New("received nil slice within set of data")
 			return
@@ -161,8 +161,8 @@ func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indices []byte) (rec
 
 	// Check that indices has a set of unique values.
 	seenIndices := make(map[byte]bool)
-	for i := 0; i < int(k); i++ {
-		if indices[i] >= k+m {
+	for i := 0; i < k; i++ {
+		if int(indices[i]) >= k+m {
 			err = errors.New("received out of bounds index")
 			return
 		}
@@ -174,14 +174,14 @@ func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indices []byte) (rec
 	}
 
 	// Arrange the data so that longhair will order the data into the single slice 'recovered'
-	recovered = make([]byte, int(k)*b)
+	recovered = make([]byte, k*b)
 	remainingIndices := make([]byte, k)
 	for i := 0; i < int(k); i++ {
 		copy(recovered[i*b:(i+1)*b], remaining[i])
-		remainingIndices[i] = byte(indices[i])
+		remainingIndices[i] = indices[i]
 	}
 
-	C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(unsafe.Pointer(&recovered[0])), (*C.uchar)(unsafe.Pointer(&remainingIndices[0])))
+	C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(&recovered[0]), (*C.uchar)(&remainingIndices[0]))
 
 	if recovered == nil {
 		err = errors.New("call to cauchy_256_decode failed")

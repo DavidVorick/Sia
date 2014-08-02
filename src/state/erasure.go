@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms uint16, err error) {
+func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uint16, err error) {
 	// check for nil inputs
 	if input == nil {
 		err = fmt.Errorf("Received nil input!")
@@ -20,11 +20,11 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 	}
 
 	// check k for sane value, then determine m
-	if k < 1 || k >= byte(QuorumSize) {
+	if k < 1 || k >= int(QuorumSize) {
 		err = fmt.Errorf("K must be between zero and %v (exclusive)", QuorumSize)
 		return
 	}
-	m := byte(QuorumSize) - k
+	m := int(QuorumSize) - k
 
 	// read from the reader enough to build 1 atom on the quorum, then encode it
 	// to a single atom, which is then written to all of the writers
@@ -54,8 +54,8 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 	return
 }
 
-func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) (atoms uint16, err error) {
-	if k < 1 || k >= byte(QuorumSize) {
+func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k int) (atoms uint16, err error) {
+	if k < 1 || k >= int(QuorumSize) {
 		err = fmt.Errorf("K must be between zero and %v, have %v", QuorumSize, k)
 		return
 	}
@@ -64,11 +64,11 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 		err = fmt.Errorf("Cannot recover from nil reader slice.")
 		return
 	}
-	if len(segments) < int(k) {
+	if len(segments) < k {
 		err = fmt.Errorf("Insufficient input segments to recover sector.")
 		return
 	}
-	for i := byte(0); i < k; i++ {
+	for i := 0; i < k; i++ {
 		if segments[i] == nil {
 			err = fmt.Errorf("Reader %v is nil, cannot recover from a nil reader.", i)
 			return
@@ -104,7 +104,7 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 
 		// got a bunch of new data, now recover it
 		var recoveredAtom []byte
-		recoveredAtom, err = erasure.ReedSolomonRecover(k, QuorumSize-k, atomsSlice, indicies)
+		recoveredAtom, err = erasure.ReedSolomonRecover(k, int(QuorumSize)-k, atomsSlice, indicies)
 		if err != nil {
 			return
 		}
