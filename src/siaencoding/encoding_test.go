@@ -34,3 +34,14 @@ func TestEncoding(t *testing.T) {
 		t.Fatal("float64 encode/decode mismatch")
 	}
 }
+
+func BenchmarkEncoding(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		DecInt32(EncInt32(i32))
+		DecUint32(EncUint32(u32))
+		DecFloat32(EncFloat32(f32))
+		DecInt64(EncInt64(i64))
+		DecUint64(EncUint64(u64))
+		DecFloat64(EncFloat64(f64))
+	}
+}
