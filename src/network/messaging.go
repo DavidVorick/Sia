@@ -20,10 +20,9 @@ type Message struct {
 }
 
 // A MessageRouter both transmits outgoing messages and processes incoming messages.
-// Objects must register themselves with a MessageRouter to receive an Identifier.
+// Objects must register themselves with a MessageRouter to receive an Address.
 type MessageRouter interface {
-	Address() Address
-	RegisterHandler(interface{}) Identifier
+	RegisterHandler(interface{}) Address
 	SendMessage(Message) error
 	SendAsyncMessage(Message) chan error
 	Close()

@@ -36,11 +36,11 @@ func TestRPCSendMessage(t *testing.T) {
 
 	// add a message handler to the server
 	tsh := new(TestStoreHandler)
-	id := rpcs.RegisterHandler(tsh)
+	addr := rpcs.RegisterHandler(tsh)
 
 	// send a message
 	m := Message{
-		Dest: Address{"localhost", 10000, id},
+		Dest: addr,
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: "hello, world!",
 	}
@@ -82,11 +82,11 @@ func TestRPCTimeout(t *testing.T) {
 
 	// add a message handler to the server
 	tsh := new(TestStoreHandler)
-	id := rpcs.RegisterHandler(tsh)
+	addr := rpcs.RegisterHandler(tsh)
 
 	// send a message
 	m := Message{
-		Dest: Address{"localhost", 10001, id},
+		Dest: addr,
 		Proc: "TestStoreHandler.BlockForever",
 		Args: "hello, world!",
 	}
@@ -125,20 +125,20 @@ func TestRPCScheduling(t *testing.T) {
 
 	// add a mesage handler to the servers
 	tsh1 := new(TestStoreHandler)
-	id1 := rpcs1.RegisterHandler(tsh1)
+	addr1 := rpcs1.RegisterHandler(tsh1)
 	tsh2 := new(TestStoreHandler)
-	id2 := rpcs2.RegisterHandler(tsh2)
+	addr2 := rpcs2.RegisterHandler(tsh2)
 
 	// begin transferring large payload
 	largeChan := rpcs2.SendAsyncMessage(Message{
-		Dest: Address{"localhost", 10002, id1},
+		Dest: addr1,
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
 	})
 
 	// begin transferring small payload
 	smallChan := rpcs1.SendAsyncMessage(Message{
-		Dest: Address{"localhost", 10003, id2},
+		Dest: addr2,
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),
 	})
@@ -169,11 +169,11 @@ func BenchmarkSendMessage(b *testing.B) {
 
 	// add a message handler to the server
 	tsh := new(TestStoreHandler)
-	id := rpcs.RegisterHandler(tsh)
+	addr := rpcs.RegisterHandler(tsh)
 
 	for i := 0; i < b.N; i++ {
 		rpcs.SendMessage(Message{
-			Dest: Address{"localhost", 10000, id},
+			Dest: addr,
 			Proc: "TestStoreHandler.StoreMessage",
 			Args: "hello, world!",
 		})

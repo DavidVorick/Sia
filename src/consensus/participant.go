@@ -65,8 +65,7 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.currentStep = 1
 
 	// Initialize the network components of the participant.
-	p.address = mr.Address()
-	p.address.ID = mr.RegisterHandler(p)
+	p.address = mr.RegisterHandler(p)
 	p.messageRouter = mr
 
 	// Initialize the file prefix

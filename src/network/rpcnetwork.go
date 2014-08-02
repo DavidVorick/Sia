@@ -21,19 +21,15 @@ type RPCServer struct {
 	curID    Identifier
 }
 
-func (rpcs *RPCServer) Address() Address {
-	return rpcs.addr
-}
-
 // RegisterHandler registers a message handler to the RPC server.
 // The handler is assigned an Identifier, which is returned to the caller.
 // The Identifier is appended to the service name before registration.
-func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
-	id = rpcs.curID
+func (rpcs *RPCServer) RegisterHandler(handler interface{}) Address {
+	id := rpcs.curID
 	name := reflect.Indirect(reflect.ValueOf(handler)).Type().Name() + string(id)
 	rpcs.rpcServ.RegisterName(name, handler)
 	rpcs.curID++
-	return
+	return Address{rpcs.addr.Host, rpcs.addr.Port, id}
 }
 
 // NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
