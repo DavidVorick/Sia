@@ -13,17 +13,16 @@ const (
 
 type Hash [HashSize]byte
 
-// returns the first 256 bytes of the sha512 hash of the input []byte
-func HashBytes(data []byte) (hash Hash) {
-	sha := sha512.New()
-	sha.Write(data)
-	hashSlice := sha.Sum(nil)
-	copy(hash[:], hashSlice)
+// HashBytes returns the first 32 bytes of the sha512 hash of the input.
+func HashBytes(data []byte) (h Hash) {
+	hash512 := sha512.Sum512(data)
+	copy(h[:], hash512[:])
 	return
 }
 
-func HashObject(v interface{}) (h Hash, err error) {
-	bytes, err := siaencoding.Marshal(v)
+// HashObject converts an object to a byte slice and returns the hash of the byte slice.
+func HashObject(obj interface{}) (h Hash, err error) {
+	bytes, err := siaencoding.Marshal(obj)
 	if err != nil {
 		return
 	}

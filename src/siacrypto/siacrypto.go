@@ -1,4 +1,4 @@
-// Sia uses a specific set of cryptographic functions across the entire project
+// Sia uses a specific set of cryptographic functions across the entire project.
 // All of those functions are defined and implemented within the siacrypto
 // package to maintain consistency.
 //
