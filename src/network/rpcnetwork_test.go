@@ -40,10 +40,9 @@ func TestRPCSendMessage(t *testing.T) {
 
 	// send a message
 	m := Message{
-		Address{"localhost", 10000, id},
-		"TestStoreHandler.StoreMessage",
-		"hello, world!",
-		nil,
+		Dest: Address{"localhost", 10000, id},
+		Proc: "TestStoreHandler.StoreMessage",
+		Args: "hello, world!",
 	}
 	err = rpcs.SendMessage(m)
 	if err != nil {
@@ -90,7 +89,6 @@ func TestRPCTimeout(t *testing.T) {
 		Dest: Address{"localhost", 10001, id},
 		Proc: "TestStoreHandler.BlockForever",
 		Args: "hello, world!",
-		Resp: nil,
 	}
 	err = rpcs.SendMessage(m)
 	if err == nil {
@@ -136,7 +134,6 @@ func TestRPCScheduling(t *testing.T) {
 		Dest: Address{"localhost", 10002, id1},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
-		Resp: nil,
 	})
 
 	// begin transferring small payload
@@ -144,7 +141,6 @@ func TestRPCScheduling(t *testing.T) {
 		Dest: Address{"localhost", 10003, id2},
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),
-		Resp: nil,
 	})
 
 	// poll until both transfers complete
@@ -160,5 +156,26 @@ func TestRPCScheduling(t *testing.T) {
 
 	if t2.After(t1) {
 		t.Fatal("small transfer was blocked by large transfer")
+	}
+}
+
+func BenchmarkSendMessage(b *testing.B) {
+	// create RPCServer
+	rpcs, err := NewRPCServer(10000)
+	if err != nil {
+		b.Fatal("Failed to initialize RPCServer:", err)
+	}
+	defer rpcs.Close()
+
+	// add a message handler to the server
+	tsh := new(TestStoreHandler)
+	id := rpcs.RegisterHandler(tsh)
+
+	for i := 0; i < b.N; i++ {
+		rpcs.SendMessage(Message{
+			Dest: Address{"localhost", 10000, id},
+			Proc: "TestStoreHandler.StoreMessage",
+			Args: "hello, world!",
+		})
 	}
 }
