@@ -70,3 +70,37 @@ func TestSigning(t *testing.T) {
 		t.Error("Verified a different message with the same signature")
 	}
 }
+
+func BenchmarkSigning(b *testing.B) {
+	_, secretKey, err := CreateKeyPair()
+	if err != nil {
+		b.Fatal("Failed to create keypair:", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		randomMessage := RandomByteSlice(1024)
+		_, err := secretKey.Sign(randomMessage)
+		if err != nil {
+			b.Error("Failed to sign message:", err)
+		}
+	}
+}
+
+func BenchmarkVerifying(b *testing.B) {
+	publicKey, secretKey, err := CreateKeyPair()
+	if err != nil {
+		b.Fatal("Failed to create keypair:", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		// don't run the timer while signature is being generated
+		b.StopTimer()
+		randomMessage := RandomByteSlice(1024)
+		sig, err := secretKey.Sign(randomMessage)
+		if err != nil {
+			b.Error("Failed to sign message:", err)
+		}
+		b.StartTimer()
+		publicKey.Verify(sig, randomMessage)
+	}
+}
