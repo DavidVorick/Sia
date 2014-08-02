@@ -38,7 +38,7 @@ func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
 
 // NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
 // It then spawns a serverHandler with a specified message.
-// It is the caller's responsibility to close the TCP connection, via RPCServer.Close().
+// It is the caller's responsibility to close the TCP listener, via RPCServer.Close().
 func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
@@ -99,8 +99,8 @@ func (rpcs *RPCServer) Ping(a Address) error {
 	}
 }
 
-// SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
-// It times out after waiting for half the step duration.
+// SendMessage synchronously delivers a Message to its recipient and returns any errors.
+// It times out after waiting for 'timeout' seconds.
 func (rpcs *RPCServer) SendMessage(m Message) error {
 	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
 	if err != nil {
@@ -120,8 +120,9 @@ func (rpcs *RPCServer) SendMessage(m Message) error {
 	}
 }
 
-// SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
+// SendAsyncMessage (asynchronously) delivers a Message to its recipient.
 // It returns a channel that will contain an error value when the request completes.
+// Like SendMessage, it times out after 'timeout' seconds.
 func (rpcs *RPCServer) SendAsyncMessage(m Message) chan error {
 	errChan := make(chan error, 2)
 	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))

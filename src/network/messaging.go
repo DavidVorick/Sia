@@ -11,8 +11,7 @@ type Address struct {
 }
 
 // A Message is for sending requests over the network.
-// It consists of an Address and an RPC. It is the MessageRouter's job to
-// route a message to its intended destination.
+// It consists of an Address and an RPC.
 type Message struct {
 	Dest Address
 	Proc string
@@ -21,7 +20,7 @@ type Message struct {
 }
 
 // A MessageRouter both transmits outgoing messages and processes incoming messages.
-// It dispenses Identifiers to objects that register themselves on the server.
+// Objects must register themselves with a MessageRouter to receive an Identifier.
 type MessageRouter interface {
 	Address() Address
 	RegisterHandler(interface{}) Identifier

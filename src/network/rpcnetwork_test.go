@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// a simple message handler
-// stores a received message
+// TestStoreHandler is a simple message handler.
+// Its methods are intended to test various RPC functions.
 type TestStoreHandler struct {
 	message string
 }
@@ -94,14 +94,14 @@ func TestRPCTimeout(t *testing.T) {
 	}
 	err = rpcs.SendMessage(m)
 	if err == nil {
-		t.Fatal("Error: SendMessage did not timeout")
+		t.Fatal("SendMessage did not timeout")
 	}
 
 	// send a message asynchronously
 	tsh.message = ""
 	errChan := rpcs.SendAsyncMessage(m)
 	if <-errChan == nil {
-		t.Fatal("Error: SendAsyncMessage did not timeout")
+		t.Fatal("SendAsyncMessage did not timeout")
 	}
 }
 
