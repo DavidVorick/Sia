@@ -122,7 +122,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// get each wallet individually and insert them into the quorum
 		for _, walletID := range walletList {
-			swi := SnapshotWalletInput{
+			swa := SnapshotWalletArg{
 				SnapshotHead: snapshotHead,
 				WalletID:     walletID,
 			}
@@ -131,7 +131,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			mr.SendMessage(network.Message{
 				Dest: quorumSiblings[0],
 				Proc: "Participant.SnapshotWallet",
-				Args: swi,
+				Args: swa,
 				Resp: &wallet,
 			})
 

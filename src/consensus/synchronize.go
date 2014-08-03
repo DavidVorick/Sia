@@ -5,7 +5,8 @@ import (
 	"state"
 )
 
-type SynchronizeConsensus struct {
+// A SynchronizeConsensusResp is a simple struct used in the SynchronizeConsensus RPC.
+type SynchronizeConsensusResp struct {
 	CurrentStep byte
 	// Heartbeats
 }
@@ -14,8 +15,8 @@ type SynchronizeConsensus struct {
 // with the current round of consensus. This includes all of the heartbeats
 // that have been received as well as the current step that the algorithm is
 // on.
-func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus) (err error) {
-	sc.CurrentStep = p.currentStep
+func (p *Participant) SynchronizeConsensus(_ struct{}, scr *SynchronizeConsensusResp) (err error) {
+	scr.CurrentStep = p.currentStep
 	return
 }
 
@@ -43,15 +44,15 @@ func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]stat
 	return
 }
 
-// A SnapshotWalletInput is a simple struct used in the SnapshotWallet RPC.
-type SnapshotWalletInput struct {
+// A SnapshotWalletArg is a simple struct used in the SnapshotWallet RPC.
+type SnapshotWalletArg struct {
 	SnapshotHead uint32
 	WalletID     state.WalletID
 }
 
 // SnapshotWallet is an RPC that returns the Wallet corresponding to a given snapshot head and WalletID.
-func (p *Participant) SnapshotWallet(swi SnapshotWalletInput, wallet *state.Wallet) (err error) {
-	*wallet, err = p.engine.LoadSnapshotWallet(swi.SnapshotHead, swi.WalletID)
+func (p *Participant) SnapshotWallet(swa SnapshotWalletArg, wallet *state.Wallet) (err error) {
+	*wallet, err = p.engine.LoadSnapshotWallet(swa.SnapshotHead, swa.WalletID)
 	return
 }
 
