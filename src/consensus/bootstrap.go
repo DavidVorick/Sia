@@ -2,7 +2,7 @@ package consensus
 
 import (
 	"delta"
-	"fmt"
+	"errors"
 	"network"
 	"state"
 )
@@ -26,37 +26,33 @@ The Bootstrapping Process
 
 */
 
-// CreateBootstrapParticipant returns a participant that is participating as
-// the first and only sibling on a new quorum.
+// CreateBootstrapParticipant returns a participant that is participating as the first and only sibling on a new quorum.
 func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
 	if sibID == 0 {
-		err = fmt.Errorf("Cannot use id '0', this id is reserved for the bootstrapping wallet.")
+		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
 		return
 	}
 
-	// Call NewParticipant, which gives a participant that has all of the basic fields initialized.
+	// create basic participant
 	p, err = NewParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
+	p.siblingIndex = 0
 
-	// Call NewBootstrapEngine, which returns an engine that has a quorum with a
-	// bootstrap/fountain wallet, and a sibling as described by p.self. The
-	// sibling has also been given some funds.
-	sib := state.Sibling{
+	// create a bootstrap wallet, and a wallet for this participant to use
+	err = p.engine.Bootstrap(state.Sibling{
 		Address:   p.address,
 		PublicKey: p.publicKey,
 		WalletID:  sibID,
-	}
-	err = p.engine.Bootstrap(sib)
+	})
 	if err != nil {
 		return
 	}
 
-	// Set synchronized to true and start ticking.
-	p.siblingIndex = 0
+	// set synchronized to true and start ticking
 	p.synchronized = true
-	go p.tick() // Tick gets its own thread, so the this function can return.
+	go p.tick()
 
 	return
 }
@@ -93,10 +89,10 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		})
 	}
 
-	// 2. While waiting for the next block, can download a snapshot The 3 items
-	// of concern are: Metadata, Wallets, Events.
+	// 2. While waiting for the next block, download a snapshot.
+	// The 3 items of concern are: Metadata, Wallets, Events.
 	{
-		// Get height of the most recent snapshot.
+		// get height of the most recent snapshot
 		var snapshotHead uint32
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
@@ -105,7 +101,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			Resp: &snapshotHead,
 		})
 
-		// Get the metadata from the snapshot.
+		// get the metadata from the snapshot
 		var snapshotMetadata state.StateMetadata
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
@@ -115,7 +111,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		})
 		p.engine.BootstrapSetMetadata(snapshotMetadata)
 
-		// Get the list of wallets in the snapshot.
+		// get the list of wallets in the snapshot
 		var walletList []state.WalletID
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
@@ -124,7 +120,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			Resp: &walletList,
 		})
 
-		// Get each wallet individually and insert it into the quorum.
+		// get each wallet individually and insert them into the quorum
 		for _, walletID := range walletList {
 			swi := SnapshotWalletInput{
 				SnapshotHead: snapshotHead,
@@ -152,8 +148,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// which will bring the quorum up to date, except for being behind in the
 	// current round of consensus.
 	{
-		// Figure out which block height is the latest height. The height is
-		// contained within the StateMetadata struct.
+		// figure out which block height is the latest
 		var currentMetadata state.StateMetadata
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],

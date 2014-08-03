@@ -9,6 +9,7 @@ const (
 	StepDuration = 1800 * time.Millisecond
 )
 
+// TODO: add docstring
 func (p *Participant) tick() {
 	ticker := time.Tick(StepDuration)
 	for _ = range ticker {
@@ -19,7 +20,7 @@ func (p *Participant) tick() {
 			b := p.condenseBlock()
 			p.currentStep = 1
 
-			// If synnchronized, give the block to the engine for processing.
+			// If synchronized, give the block to the engine for processing.
 			// Otherwise, save the block in a map that is used to assist
 			// synchronization.
 			if p.synchronized {
@@ -33,7 +34,7 @@ func (p *Participant) tick() {
 				// p.appendBlock(b)
 			}
 		} else {
-			p.currentStep += 1
+			p.currentStep++
 		}
 		p.currentStepLock.Unlock()
 	}

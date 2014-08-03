@@ -19,38 +19,43 @@ func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus)
 	return
 }
 
+// Metadata is an RPC that returns the engine's StateMetadata object.
 func (p *Participant) Metadata(_ struct{}, smd *state.StateMetadata) (err error) {
 	*smd = p.engine.Metadata()
 	return
 }
 
-// Not sure what the use is for this, mostly wallets are downloaded via
-// snapshots. Doesn't hurt to have it, I just forget the use case.
+// WalletIDs is an RPC that returns the engine's slice of WalletIDs.
 func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
 	*wl = p.engine.WalletList()
 	return
 }
 
+// SnapshotMetadata is an RPC that returns the engine's StateMetadata object corresponding to a given snapshot head.
 func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.StateMetadata) (err error) {
 	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
 	return
 }
 
+// SnapshotWalletList is an RPC that returns the engine's slice of WalletIDs corresponding to a given snapshot head.
 func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]state.WalletID) (err error) {
 	*walletList, err = p.engine.LoadSnapshotWalletList(snapshotHead)
 	return
 }
 
+// A SnapshotWalletInput is a simple struct used in the SnapshotWallet RPC.
 type SnapshotWalletInput struct {
 	SnapshotHead uint32
 	WalletID     state.WalletID
 }
 
+// SnapshotWallet is an RPC that returns the Wallet corresponding to a given snapshot head and WalletID.
 func (p *Participant) SnapshotWallet(swi SnapshotWalletInput, wallet *state.Wallet) (err error) {
 	*wallet, err = p.engine.LoadSnapshotWallet(swi.SnapshotHead, swi.WalletID)
 	return
 }
 
+// Block is an RPC that returns the Block corresponding to a given block height.
 func (p *Participant) Block(blockHeight uint32, block *delta.Block) (err error) {
 	*block, err = p.engine.LoadBlock(blockHeight)
 	return

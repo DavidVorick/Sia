@@ -46,11 +46,13 @@ type Participant struct {
 	//recentHistory     string // file containing SnapshotLen blocks
 }
 
-var nperrNilMessageRouter = errors.New("Cannot create a participant with a nil message router.")
+var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
 
+// NewParticipant initializes a Participant object with the provided MessageRouter and filePrefix.
+// It also creates a keypair and sets default values for the siblingIndex and currentStep.
 func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
 	if mr == nil {
-		err = nperrNilMessageRouter
+		err = errNilMessageRouter
 		return
 	}
 
@@ -74,12 +76,16 @@ func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	return
 }
 
-// Dummy function to test connectivity
+// Ping is the simplest RPC possible. It exists only to confirm that a participant
+// is reachable and listening. Ping should be called via RPCServer.Ping() instead
+// of RPCServer.SendMessage().
 func (p *Participant) Ping(_ struct{}, _ *struct{}) error {
 	return nil
 }
 
-// Sends a message to every sibling in the quorum.
+// broadcast sends a message to every sibling in the quorum.
+// It cannot be used when the response value needs to be checked.
+// It also discards any errors received.
 func (p *Participant) broadcast(message network.Message) {
 	// send the message to all of the siblings in the quorum
 	for _, sibling := range p.engine.Metadata().Siblings {
@@ -90,6 +96,7 @@ func (p *Participant) broadcast(message network.Message) {
 	}
 }
 
+// AddScriptInput is an RPC that appends a script input to Participant.scriptInputs.
 func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
 	p.scriptInputsLock.Lock()
 	p.scriptInputs = append(p.scriptInputs, si)
