@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"siaencoding"
 )
@@ -23,21 +22,22 @@ type Wallet struct {
 // Weight calculates and returns the weight of a wallet.
 func (w Wallet) Weight() (weight uint32) {
 	// Count the number of atoms used by the script.
-	walletByteCount := float64(len(w.Script))
-	walletAtomCount := walletByteCount / float64(AtomSize)
-	walletAtomCount = math.Ceil(walletAtomCount)
+	weight = uint32(len(w.Script) / AtomSize)
+	// math.Ceil()
+	if len(w.Script)%AtomSize != 0 {
+		weight++
+	}
 
 	// Add an additional atom for the wallet itself.
-	walletAtomCount += 1
+	weight += 1
 
 	// Multiply script and wallet weight by the walletAtomMultiplier to account
 	// for the snapshots that the wallet needs to reside in.
-	walletAtomCount *= walletAtomMultiplier
+	weight *= walletAtomMultiplier
 
 	// Add non-replicated weight according to the size of the wallet sector.
-	walletAtomCount += float64(w.SectorSettings.Atoms)
-	walletAtomCount += float64(w.SectorSettings.UploadAtoms)
-	return uint32(walletAtomCount)
+	weight += uint32(w.SectorSettings.Atoms + w.SectorSettings.UploadAtoms)
+	return
 }
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
