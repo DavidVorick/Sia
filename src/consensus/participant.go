@@ -9,6 +9,7 @@ import (
 	"sync"
 )
 
+// TODO: add docstring
 type Participant struct {
 	engine     delta.Engine
 	engineLock sync.RWMutex

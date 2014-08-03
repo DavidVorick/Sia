@@ -21,6 +21,7 @@ type Update struct {
 	ScriptInputs []delta.ScriptInput
 }
 
+// TODO: add docstring
 type SignedUpdate struct {
 	Update      Update // eventually be replaced with a hash and fetch request
 	Signatories []byte
