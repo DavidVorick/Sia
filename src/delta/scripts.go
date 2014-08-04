@@ -59,11 +59,11 @@ func AddSiblingInput(encSibling []byte) []byte {
 func TransactionInput(dst, high, low uint64) []byte {
 	return appendAll(
 		[]byte{
-			0x25, 0x0B, 0x00, // move data pointer to dst
-			0x27, 0x08, //       push 8 bytes of input (id)
-			0x27, 0x08, //       push 8 bytes of input (high balance)
-			0x27, 0x08, //       push 8 bytes of input (low balance)
-			0x33, //             call Send
+			0x33, 0x0B, 0x00, // move data pointer to dst
+			0x34, 0x08, //       push 8 bytes of input (id)
+			0x34, 0x08, //       push 8 bytes of input (high balance)
+			0x34, 0x08, //       push 8 bytes of input (low balance)
+			0x43, //             call Send
 			0xFF, //             exit
 		},
 		siaencoding.EncUint64(dst),
@@ -78,7 +78,7 @@ func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 	l, h := short(int(atoms))
 	return []byte{
 		0x02, l, h, // push number of atoms
-		0x3A, m, //    call resize
+		0x44, m, //    call resize
 	}
 }
 
@@ -86,9 +86,9 @@ func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 // It is intended to be passed to a script that transfers execution to the input.
 func ProposeUploadInput(encUA []byte) []byte {
 	return append([]byte{
-		0x25, 0x08, 0x00, // move data pointer to encoded args
-		0x2E, 0x01, //       read args into buffer 1
-		0x3B, 0x01, //       call ProposeUpload
+		0x33, 0x08, 0x00, // move data pointer to encoded args
+		0xE2, 0x01, //       read args into buffer 1
+		0x45, 0x01, //       call ProposeUpload
 		0xFF, //             exit
 	}, encUA...)
 }

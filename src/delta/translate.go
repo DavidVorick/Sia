@@ -23,7 +23,8 @@ func encodeHex(b []byte) string {
 func findDataSection(script []byte) (index int) {
 	index = len(script)
 	for i, b := range script {
-		if b == 0xFF || b == 0x2F || b == 0x30 || b == 0x38 {
+		// exit, reject, cond_reject, transfer
+		if b == 0xFF || b == 0xFE || b == 0xE3 || b == 0x38 {
 			index = i + 1
 		}
 		// these are good indicators that we're inside a data block
@@ -40,13 +41,13 @@ var shortArg [256]bool
 var opcodeMap map[string]byte
 
 func init() {
-	shortArg[0x02] = true
-	shortArg[0x1F] = true
-	shortArg[0x20] = true
-	shortArg[0x25] = true
-	shortArg[0x26] = true
-	shortArg[0x36] = true
-	shortArg[0x37] = true
+	shortArg[0x02] = true // push_short
+	shortArg[0x1F] = true // if_goto
+	shortArg[0x20] = true // if_move
+	shortArg[0x21] = true // goto
+	shortArg[0x22] = true // move
+	shortArg[0x32] = true // data_goto
+	shortArg[0x33] = true // data_move
 
 	// build name -> opcode map
 	opcodeMap = make(map[string]byte)
