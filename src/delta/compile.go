@@ -53,7 +53,7 @@ func (e *Engine) Compile(b Block) {
 	// and scripting DOS attacks. The future will hold a probabilistic
 	// distribution of resources based on price paid for tickets.
 	for _, si := range b.ScriptInputs {
-		si.Execute(&e.state)
+		e.Execute(si)
 	}
 
 	// Charge wallets for the storage they are consuming, and reward sibings for

@@ -82,7 +82,7 @@ type scriptEnv struct {
 	stack      *stackElem
 	stackLen   int
 	wallet     state.Wallet
-	quorum     *state.State
+	state      *state.State
 	// resource pools
 	instBalance int
 	costBalance int
@@ -106,14 +106,11 @@ func deductResources(op instruction) error {
 	}
 }
 
-// Execute interprets a script on a set of inputs and returns the execution cost.
-func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
-	if si == nil {
-		err = errors.New("nil ScriptInput")
-	}
-
+// Execute loads the requested script, appends the script input data, sets up an execution
+// environment, and interprets bytecodes until a termination condition is reached.
+func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	// load wallet
-	w, err := q.LoadWallet(si.WalletID)
+	w, err := e.state.LoadWallet(si.WalletID)
 	if err != nil {
 		return
 	}
@@ -123,7 +120,7 @@ func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 		script: append(w.Script, si.Input...),
 		dptr:   len(w.Script),
 		wallet: w,
-		quorum: q,
+		state:  &e.state,
 		// these values will likely be stored as part of the wallet
 		instBalance: MaxInstructions,
 		costBalance: 10000,
@@ -135,7 +132,7 @@ func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 		fmt.Println("script execution failed:", err)
 	}
 
-	q.SaveWallet(env.wallet)
+	e.state.SaveWallet(env.wallet)
 	return
 }
 
