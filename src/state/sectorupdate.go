@@ -2,9 +2,9 @@ package state
 
 import (
 	"fmt"
-	"os"
+	//"os"
 	"siacrypto"
-	"siafiles"
+	//"siafiles"
 )
 
 type UpdateID struct {
@@ -77,42 +77,44 @@ func (su *SectorUpdate) SetCounter(counter uint32) {
 }
 
 func (su *SectorUpdate) HandleEvent(s *State) {
-	// Load the wallet associated with the event.
-	w, err := s.LoadWallet(su.WalletID)
-	if err != nil {
-		panic(err)
-	}
-
-	// Remove the weight on the wallet that the upload consumed.
-	w.SectorSettings.UpdateAtoms -= w.SectorSettings.Atoms
-
-	// Count the number of confirmations that the upload has received.
-	var confirmationsReceived byte
-	for _, confirmation := range su.Confirmations {
-		if confirmation == true {
-			confirmationsReceived += 1
+	/*
+		// Load the wallet associated with the event.
+		w, err := s.LoadWallet(su.WalletID)
+		if err != nil {
+			panic(err)
 		}
-	}
 
-	// If there are sufficient confirmations, update the sector hash values.
-	if su.ConfirmationsRequired <= confirmationsReceived {
-		// Hash our holding of the upload file and see if it matches the required
-		// file. !! There are probably synchronization issues with doing things
-		// this way.
-		file, err := os.Open(s.UpdateFilename(su.UpdateID()))
-		if err == nil {
-			hash := MerkleCollapse(file)
-			file.Close()
-			if hash == su.HashSet[siblingIndex] {
-				siafiles.Copy(s.SectorFilename(su.WalletID), s.UpdateFilename(su.UpdateID()))
+		// Remove the weight on the wallet that the upload consumed.
+		w.SectorSettings.UpdateAtoms -= w.SectorSettings.Atoms
+
+		// Count the number of confirmations that the upload has received.
+		var confirmationsReceived byte
+		for _, confirmation := range su.Confirmations {
+			if confirmation == true {
+				confirmationsReceived += 1
 			}
 		}
-	}
 
-	// Call to delete the file that either did or did not exist.
-	os.Remove(s.UpdateFilename(su.UpdateID()))
+		// If there are sufficient confirmations, update the sector hash values.
+		if su.ConfirmationsRequired <= confirmationsReceived {
+			// Hash our holding of the upload file and see if it matches the required
+			// file. !! There are probably synchronization issues with doing things
+			// this way.
+			file, err := os.Open(s.UpdateFilename(su.UpdateID()))
+			if err == nil {
+				hash := MerkleCollapse(file)
+				file.Close()
+				if hash == su.HashSet[siblingIndex] {
+					siafiles.Copy(s.SectorFilename(su.WalletID), s.UpdateFilename(su.UpdateID()))
+				}
+			}
+		}
 
-	s.DeleteEvent(su)
+		// Call to delete the file that either did or did not exist.
+		os.Remove(s.UpdateFilename(su.UpdateID()))
+
+		s.DeleteEvent(su)
+	*/
 }
 
 func (s *State) AvailableParentID(parentID UpdateID) bool {
