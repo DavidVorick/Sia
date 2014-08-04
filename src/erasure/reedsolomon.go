@@ -144,8 +144,8 @@ func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered
 		err = errors.New("cannot recover empty data")
 		return
 	}
-	if b%(k*8) != 0 {
-		err = errors.New("remaining pieces do not match padding, should be padded to k*8 bytes")
+	if b%8 != 0 {
+		err = errors.New("remaining pieces do not match padding, should be padded to 8 bytes")
 		return
 	}
 	for i := 0; i < k; i++ {
