@@ -96,11 +96,11 @@ func ReedSolomonEncode(k, m int, original []byte) (encoded [][]byte, err error) 
 // ReedSolomonRecover takes as input 'k' and 'm', which need to match the 'k'
 // and 'm' used during 'ReedSolomonEncode'. 'remaining' is a set of 'k' pieces
 // that are being used to recover the data used as 'Original' in
-// ReedSolomonEncode. 'inidicies' maps the relationship between the pieces
+// ReedSolomonEncode. 'indices' maps the relationship between the pieces
 // provided in 'remaining' to their original index in 'encoded' from
 // ReedSolomonEncode.
 //
-// 'recovered' should be identical to the input 'original from
+// 'recovered' should be identical to the input 'original' from
 // ReedSolomonEncode. If an error is returned, 'recovered' should be discarded.
 func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered []byte, err error) {
 	// Check for nil values. The length of 'remaining' and 'indices' are checked
