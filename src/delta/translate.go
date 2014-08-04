@@ -125,7 +125,7 @@ func WordsToBytes(script string) (b []byte, err error) {
 		// parse opcode
 		opcode, ok := opcodeMap[tokens[i]]
 		if !ok {
-			err = fmt.Errorf("expected opcode, got ", tokens[i])
+			err = fmt.Errorf("expected opcode, got %v", tokens[i])
 			return
 		}
 		b = append(b, opcode)

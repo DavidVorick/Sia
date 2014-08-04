@@ -19,7 +19,6 @@ func (tsh *TestStoreHandler) StoreMessage(message string, _ *struct{}) error {
 
 func (tsh *TestStoreHandler) BlockForever(message string, _ *struct{}) error {
 	select {}
-	return nil
 }
 
 // TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and Send(Async)Message functions.

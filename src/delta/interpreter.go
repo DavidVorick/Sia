@@ -189,5 +189,4 @@ func (env *scriptEnv) run() error {
 			fmt.Println("    register 2:", len(env.registers[2]), b)
 		}
 	}
-	return nil
 }
