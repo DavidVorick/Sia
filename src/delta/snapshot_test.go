@@ -155,8 +155,7 @@ func TestSnapshotProcess(t *testing.T) {
 		}
 	}
 
-	// For wallets 1 and 2 in particular, do a deep equals check against the
-	// original.
+	// For wallets 1 and 2 in particular, do a deep equals check against the original.
 	wallet1, err := e.LoadSnapshotWallet(0, 8)
 	if err != nil {
 		t.Fatal(err)

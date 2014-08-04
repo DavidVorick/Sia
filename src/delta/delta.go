@@ -1,5 +1,5 @@
-// The delta layer manages inputs determined by the concensus layer and makes
-// corresponding changes to the wallet layer.
+// Package delta manages inputs determined by the consensus layer and makes
+// corresponding changes to the state layer.
 package delta
 
 // I don't like many aspects of this file. It's a whole bunch of getters and
@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// BootstrapWalletID is the wallet ID used by the siacoin 'fountain'.
 	BootstrapWalletID = 0
 )
 
@@ -38,47 +39,49 @@ type Engine struct {
 	activeHistoryLength uint32
 }
 
+// SetFilePrefix is a setter for the Engine.filePrefix field.
+// It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
 	e.filePrefix = prefix
 	walletPrefix := prefix + ".wallet."
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
+// Metadata is a getter that returns the state.Metadata object.
 func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }
 
+// WalletList is a getter that returns the state's wallet list.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
 
+// Initialize sets various fields of the Engine object.
+// It exists mostly as a convenience function.
 func (e *Engine) Initialize(filePrefix string) {
 	e.SetFilePrefix(filePrefix)
 	return
 }
 
-// NewBootstrapEngine() returns an engine that has its variables set so that
-// the engine can function as the first sibling in a quorum. This requires a
-// call to NewBootstrapState()
+// Bootstrap returns an engine that has its variables set so that
+// the engine can function as the first sibling in a quorum.
 func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
-	// Create the bootstrap wallet, which acts as a fountain to get the economy
-	// started.
-	w := state.Wallet{
+	// Create the bootstrap wallet, which acts as a fountain to get the economy started.
+	err = e.state.InsertWallet(state.Wallet{
 		ID:      BootstrapWalletID,
 		Balance: state.NewBalance(0, 25000000),
 		Script:  BootstrapScript,
-	}
-	err = e.state.InsertWallet(w)
+	})
 	if err != nil {
 		return
 	}
 
 	// Create a walle with the default script for the sibling to use.
-	defaultScript := DefaultScript(sib.PublicKey)
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
 		Balance: state.NewBalance(0, 1000000),
-		Script:  defaultScript,
+		Script:  DefaultScript(sib.PublicKey),
 	}
 	err = e.state.InsertWallet(sibWallet)
 	if err != nil {

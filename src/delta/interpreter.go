@@ -7,11 +7,14 @@ import (
 )
 
 const (
-	MaxInstructions = 10000
-	MaxStackLen     = 1 << 16
-	DEBUG           = true
+	maxInstructions = 10000
+	maxStackLen     = 1 << 16
+	debug           = true
 )
 
+// A ScriptInput pairs an input byte slice with the WalletID associated with the recipient.
+// During execution, the WalletID is used to load the script body, and then the Input is
+// appended to the end of the script.
 type ScriptInput struct {
 	WalletID state.WalletID
 	Input    []byte
@@ -38,7 +41,7 @@ type stackElem struct {
 }
 
 func push(v []byte) (err error) {
-	if env.stackLen > MaxStackLen {
+	if env.stackLen > maxStackLen {
 		return errors.New("stack overflow")
 	}
 	c := make([]byte, len(v))
@@ -94,7 +97,7 @@ var env scriptEnv
 // deduct instruction cost from resource pools, and return an error if any pool is exhausted
 // TODO: add memBalance to prevent buffer abuse
 func deductResources(op instruction) error {
-	env.instBalance -= 1
+	env.instBalance--
 	env.costBalance -= op.cost
 	switch {
 	case env.instBalance < 0:
@@ -122,7 +125,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 		wallet: w,
 		state:  &e.state,
 		// these values will likely be stored as part of the wallet
-		instBalance: MaxInstructions,
+		instBalance: maxInstructions,
 		costBalance: 10000,
 	}
 
@@ -136,7 +139,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	return
 }
 
-// execute opcodes until an error is encountered or the script terminates
+// run performs the actual execution of opcodes.
 func (env *scriptEnv) run() error {
 	for {
 		if env.iptr >= len(env.script) {
@@ -175,7 +178,7 @@ func (env *scriptEnv) run() error {
 			}
 		}
 
-		if DEBUG {
+		if debug {
 			fmt.Println(op.print(fnArgs))
 			fmt.Println("    stack:", env.stack.print())
 			b := make([]byte, 20)

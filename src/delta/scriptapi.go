@@ -1,11 +1,13 @@
 package delta
 
 import (
-	"fmt"
+	"errors"
 	"siacrypto"
 	"state"
 )
 
+// TODO: add docstring
+// If these are really constants, they should be moved to instructions.go
 const (
 	CreateWalletCost = 8
 	SendCost         = 6
@@ -13,18 +15,18 @@ const (
 )
 
 var (
-	cwerrInsufficientBalance = fmt.Errorf("Insufficient balance to create a wallet with the given balance.")
+	errInsufficientBalance = errors.New("Insufficient balance to create a wallet with the given balance.")
 
-	aserrNoEmptySiblings = fmt.Errorf("There are no empty spots in the quorum.")
+	errNoEmptySiblings = errors.New("There are no empty spots in the quorum.")
 
-	puerrUnallocatedSector      = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
-	puerrTooManyConfirmations   = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
-	puerrTooFewConfirmations    = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
-	puerrNonCurrentParentHash   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
-	puerrDeadlineTooDistant     = fmt.Errorf("The deadline provided is more than state.MaxDeadline block into the future.")
-	puerrDeadlineAlreadyExpired = fmt.Errorf("The deadline provided has already expired.")
-	puerrAbsurdAtomsAltered     = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
-	puerrInsufficientAtoms      = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
+	errUnallocatedSector      = errors.New("The sector has not been allocated, cannot make upload changes.")
+	errTooManyConfirmations   = errors.New("Cannot require more than QuorumSize confirmations.")
+	errTooFewConfirmations    = errors.New("Must require at least SectorSettings.K confirmations.")
+	errNonCurrentParentHash   = errors.New("The parentHash given does not match the hash of the most recent upload to the quorum.")
+	errDeadlineTooDistant     = errors.New("The deadline provided is more than state.MaxDeadline block into the future.")
+	errDeadlineAlreadyExpired = errors.New("The deadline provided has already expired.")
+	errAbsurdAtomsAltered     = errors.New("The number of atoms altered is greater than the number of atoms allocated.")
+	errInsufficientAtoms      = errors.New("The quorum has insufficient atoms to support this upload.")
 )
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
@@ -34,7 +36,7 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 	// Check that the wallet making the call has enough funds to deposit into the
 	// wallet being created, and then subtract the funds from the parent wallet.
 	if w.Balance.Compare(childBalance) < 0 {
-		err = cwerrInsufficientBalance
+		err = errInsufficientBalance
 		return
 	}
 	w.Balance.Subtract(childBalance)
@@ -51,7 +53,7 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 	return
 }
 
-// Currently, AddSibling tries to add the new sibling to the existing quorum
+// AddSibling tries to add the new sibling to the existing quorum
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
 func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
@@ -69,7 +71,7 @@ func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
 	}
 
 	if !sib.Active {
-		err = aserrNoEmptySiblings
+		err = errNoEmptySiblings
 		return
 	}
 
@@ -171,25 +173,26 @@ func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, we
 }
 */
 
+// TODO: add docstring
 func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
 	// Verify that the wallet in question has an allocated sector.
 	if w.SectorSettings.Atoms < uint16(state.QuorumSize) {
-		err = puerrUnallocatedSector
+		err = errUnallocatedSector
 		return
 	}
 
 	// Verify that 'confirmationsRequired' is a legal value.
 	if confirmationsRequired > state.QuorumSize {
-		err = puerrTooManyConfirmations
+		err = errTooManyConfirmations
 		return
 	} else if confirmationsRequired < w.SectorSettings.K {
-		err = puerrTooFewConfirmations
+		err = errTooFewConfirmations
 		return
 	}
 
 	// Match the parent hash to the expected hash.
 	if e.state.ActiveParentHash(*w, parentHash) {
-		err = puerrNonCurrentParentHash
+		err = errNonCurrentParentHash
 		return
 	}
 
@@ -197,7 +200,7 @@ func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, pare
 	// term, this check won't be necessary because it'll be a part of the
 	// preallocated resources planning.
 	if e.state.Weight()+int(w.SectorSettings.Atoms) > int(state.AtomsPerQuorum) {
-		err = puerrInsufficientAtoms
+		err = errInsufficientAtoms
 		return
 	}
 

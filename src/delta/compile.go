@@ -5,6 +5,7 @@ import (
 	"state"
 )
 
+// TODO: add docstring
 func (e *Engine) Compile(b Block) {
 	// The first thing that happens is the entropy seed for the block is
 	// determined. Though not implemented, this happens by pulling the latest
@@ -66,7 +67,7 @@ func (e *Engine) Compile(b Block) {
 		panic(err)
 	}
 	e.state.Metadata.ParentBlock = blockHash
-	e.state.Metadata.Height += 1
+	e.state.Metadata.Height++
 
 	// Save the block.
 	e.saveBlock(b)
