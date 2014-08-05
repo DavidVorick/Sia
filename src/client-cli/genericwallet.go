@@ -8,7 +8,7 @@ import (
 
 func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
-	fmt.Printf("Loaded into wallet #%x\n", c.CurID)
+	fmt.Printf("Entering Generic Wallet Mode, for wallet id %x\n", id)
 	for {
 		fmt.Print("Please enter a wallet action: ")
 		fmt.Scanln(&input)
@@ -19,6 +19,9 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 
 		case "?", "h", "help":
 			displayHelpWallet()
+
+		case "q", "quit":
+			return
 
 		case "d", "download":
 			//download(c)
@@ -34,9 +37,6 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 
 		case "u", "upload":
 			//uploadToGenericWallet(c)
-
-		case "q", "quit":
-			return
 		}
 		input = ""
 	}

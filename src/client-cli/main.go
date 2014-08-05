@@ -127,14 +127,6 @@ func createGenericWallet(c *client.Client) {
 	}
 }
 
-func listWallets(c *client.Client) {
-	fmt.Println("All Stored Wallet IDs:")
-	wallets := c.GetGenericWallets()
-	for _, id := range wallets {
-		fmt.Printf("%x\n", id)
-	}
-}
-
 func main() {
 	printWelcomeMessage()
 

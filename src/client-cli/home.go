@@ -11,12 +11,13 @@ import (
 func displayHomeHelp() {
 	fmt.Println(
 		"\n",
+		"h:\tHelp\n",
+		"q:\tQuit\n",
 		"c:\tConnect to Network\n",
 		"l:\tLoad wallet\n",
 		"n:\tRequest a new wallet\n",
 		"p:\tPrint wallets\n",
 		"s:\tSave all wallets\n",
-		"q:\tQuit\n",
 	)
 }
 
@@ -89,6 +90,14 @@ func loadWallet(c *client.Client) {
 	}
 }
 
+func printWallets(c *client.Client) {
+	fmt.Println("All Stored Wallet IDs:")
+	wallets := c.GetWalletIDs()
+	for _, id := range wallets {
+		fmt.Printf("%x\n", id)
+	}
+}
+
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.
 func pollHome(c *client.Client) {
 	var input string
@@ -103,6 +112,9 @@ func pollHome(c *client.Client) {
 		case "?", "h", "help":
 			displayHomeHelp()
 
+		case "q", "quit":
+			return
+
 		case "c", "conncet":
 			connectWalkthrough(c)
 
@@ -110,16 +122,16 @@ func pollHome(c *client.Client) {
 			loadWallet(c)
 
 		case "n", "new":
-			createGenericWallet(c)
+			fmt.Println("New Wallet is not currently implemented!.")
+			// createGenericWallet(c)
 
 		case "p", "ls", "print", "list":
-			listWallets(c)
+			printWallets(c)
 
 		case "s", "save":
+			fmt.Println("Saving all wallets...")
 			c.SaveAllWallets()
-
-		case "q", "quit":
-			return
+			fmt.Println("... finished!")
 		}
 		input = ""
 	}

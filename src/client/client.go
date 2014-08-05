@@ -15,13 +15,13 @@ type Keypair struct {
 // Struct Client contains the state for client actions
 type Client struct {
 	// Networking Variables
-	router         *network.RPCServer
-	bootstrap      network.Address
+	router    *network.RPCServer
+	bootstrap network.Address
 
 	// State Variables
-	siblings       [state.QuorumSize]state.Sibling
+	siblings [state.QuorumSize]state.Sibling
 
-	// Local Variables
+	// All Wallets
 	genericWallets map[state.WalletID]*Keypair
 }
 

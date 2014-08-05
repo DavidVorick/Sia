@@ -9,11 +9,13 @@ import (
 	"state"
 )
 
-func (c *Client) GetGenericWallets() (ids []state.WalletID) {
+// Returns a list of all wallets available to the client.
+func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 	ids = make([]state.WalletID, 0, len(c.genericWallets))
 	for id, _ := range c.genericWallets {
 		ids = append(ids, id)
 	}
+	// Add other types of wallets as they are implemented.
 	return
 }
 
@@ -33,12 +35,14 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	return
 }
 
+// Iterates through the client and saves all of the wallets to disk.
 func (c *Client) SaveAllWallets() {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
 		SaveWallet(id, keypair, filename)
 	}
+	// Save other types of wallets as they are implemented.
 }
 
 func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
