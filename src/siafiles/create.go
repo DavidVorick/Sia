@@ -12,7 +12,7 @@ var TempDir string
 func init() {
 	// initialize the temp directory
 	TempDir = os.TempDir() + "/Sia"
-	if err := os.MkdirAll(TempDir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(TempDir, os.ModeDir|os.ModePerm); err != nil {
 		panic(err)
 	}
 }
