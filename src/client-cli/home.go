@@ -76,12 +76,16 @@ func loadWallet(c *client.Client) {
 	// Check that the wallet is available to the client.
 	walletType, err := c.WalletType(id)
 
-	// If the wallet is available, switch to the mode associated with that
-	// wallet type. Otherwise, print the error.
-	if err != nil {
-		pollGenericWallet(c)
-	} else {
+	// If there was an error, print the error (most likely a not-available
+	// error). If the wallet type is recognized, switch to the polling of
+	// that wallet type. If the type is not recognized, print an error and
+	// return to the home menu.
+	if err == nil {
 		fmt.Println(err)
+	} else if walletType == "generic" {
+		pollGenericWallet(c, id)
+	} else {
+		fmt.Println("Wallet is available, but is of an unknown type.")
 	}
 }
 

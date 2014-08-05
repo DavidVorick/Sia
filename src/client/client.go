@@ -14,11 +14,15 @@ type Keypair struct {
 
 // Struct Client contains the state for client actions
 type Client struct {
+	// Networking Variables
 	router         *network.RPCServer
 	bootstrap      network.Address
-	genericWallets map[state.WalletID]*Keypair
-	CurID          state.WalletID
+
+	// State Variables
 	siblings       [state.QuorumSize]state.Sibling
+
+	// Local Variables
+	genericWallets map[state.WalletID]*Keypair
 }
 
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
@@ -36,11 +40,13 @@ func (c *Client) Broadcast(nm network.Message) {
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
 func (c *Client) Connect(host string, port int, id int) (err error) {
+	// Create a new rpc server to connect through.
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
 	}
-	// set bootstrap address
+
+	// Set bootstrap address and ping it, to see if it's a valid device.
 	c.bootstrap.Host = host
 	c.bootstrap.Port = port
 	c.bootstrap.ID = network.Identifier(id)
@@ -50,7 +56,7 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 		return
 	}
 
-	// populate initial sibling list
+	// Fetch the list of siblings and populate the client.
 	var metadata state.StateMetadata
 	err = c.router.SendMessage(network.Message{
 		Dest: c.bootstrap,
@@ -60,6 +66,7 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	})
 	if err != nil {
 		c.router.Close()
+		return
 	}
 	c.siblings = metadata.Siblings
 	return
