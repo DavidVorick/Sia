@@ -1,15 +1,10 @@
 package client
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
 	"network"
-	"os"
-	"path/filepath"
 	"siacrypto"
 	"state"
-	"strings"
 )
 
 type Keypair struct {

@@ -7,17 +7,14 @@ import (
 	"state"
 )
 
+func printWelcomeMessage() {
+	fmt.Println("Sia Client Version 0.0.2")
+	fmt.Println("To Connect to the network, press 'c'.")
+}
+
 //Two states:
 //Start, where you choose a wallet or do stuff not pertaining to a specific wallet
 //Wallet, where you do operations specific to that wallet
-
-func displayHelpStart() {
-	fmt.Println("\nc:\tConnect to Network\n" +
-		"w:\tRequest new wallet\n" +
-		"l:\tList stored wallets\n" +
-		"s:\tSave all wallets\n" +
-		"e:\tEnter wallet\n")
-}
 
 func displayHelpWallet() {
 	fmt.Println("\nd:\tDownload a file\n" +
@@ -27,34 +24,48 @@ func displayHelpWallet() {
 		"u:\tUpload a file\n")
 }
 
-func connect(c *client.Client) {
-	// if we are already connected, disconnect first
+// connectWalkthrough guides the user through providing a hostname, port, and
+// id which can be used to create a Sia address. Then the connection is
+// committed.
+func connectWalkthrough(c *client.Client) {
+	// Eliminate all existing connections.
 	c.Disconnect()
+
+	fmt.Println("Please indicate the hostname, port, and id that you wish to connect to.")
+
+	// Load the hostname.
 	var host string
-	var port, id int
 	fmt.Print("Hostname: ")
 	_, err := fmt.Scanf("%s", &host)
 	if err != nil {
 		fmt.Println("Invalid hostname")
 		return
 	}
+
+	// Load the port number.
+	var port int
 	fmt.Print("Port: ")
 	_, err = fmt.Scanf("%d", &port)
 	if err != nil {
 		fmt.Println("Invalid port")
 		return
 	}
+
+	// Load the participant id.
+	var id int
 	fmt.Print("ID: ")
 	_, err = fmt.Scanf("%d", &id)
 	if err != nil {
 		fmt.Println("Invalid id")
 		return
 	}
+
+	// Call client.Connect using the provided information.
 	err = c.Connect(host, port, id)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {
-		fmt.Println("Successfully Connected!")
+		fmt.Println("Connection successful.")
 	}
 }
 
@@ -167,7 +178,7 @@ func listWallets(c *client.Client) {
 	}
 }
 
-func enterWallet(c *client.Client) {
+func loadWallet(c *client.Client) {
 	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
 	fmt.Scanf("%x", &id)
@@ -215,51 +226,13 @@ func pollWalletActions(c *client.Client) {
 	}
 }
 
-func pollStartActions(c *client.Client) {
-	var input string
-	for {
-		fmt.Print("Please enter a command: ")
-		fmt.Scanln(&input)
-
-		switch input {
-		default:
-			fmt.Println("unrecognized command")
-
-		case "?", "h", "help":
-			displayHelpStart()
-
-		case "c", "conncet":
-			connect(c)
-
-		case "w", "wallet":
-			createGenericWallet(c)
-
-		case "l", "ls", "list":
-			listWallets(c)
-
-		case "s", "save":
-			c.SaveAllWallets()
-
-		case "e", "enter":
-			enterWallet(c)
-
-		case "q", "quit":
-			return
-		}
-		input = ""
-	}
-}
-
 func main() {
-	fmt.Println("Sia Client Version 0.0.1")
+	printWelcomeMessage()
+
 	c, err := client.NewClient()
-	if err == nil {
-		fmt.Println("Connected to local bootstrap")
-	} else {
-		fmt.Println("Autoconnect failed: press c to connect manually")
+	if err != nil {
+		fmt.Println("Error on startup:", err)
 	}
-	if c.CurID != 0 {
-		pollWalletActions(c)
-	}
-	pollStartActions(c)
+
+	pollHome(c)
 }

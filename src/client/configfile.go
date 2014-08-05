@@ -1,5 +1,9 @@
 package client
 
+import (
+	"os"
+)
+
 //The format for config files:
 /*
 directories:
@@ -15,7 +19,7 @@ wallet:
 
 // processConfigFile opens, parses, and processes the config file, which will
 // be stored in the home directory at .config/Sia/config
-func (c *Client) processConfigFile() (openWallet bool, err error) {
+func (c *Client) processConfigFile() (err error) {
 	// Get the filename of the config file. Currently just the relative
 	// path ".config" is used, but this section of code will need to be
 	// updated.
@@ -39,38 +43,39 @@ func (c *Client) processConfigFile() (openWallet bool, err error) {
 	// be written. It seems like we've settled on YAML as our format of
 	// choice.
 	/*
-	file, err := os.Open(".config")
-	configReader := bufio.NewReader(file)
-	l, err := configReader.ReadString('\n')
-	if strings.TrimSpace(l) != "directories:" {
-		errors.New("Invalid config file")
-		return
-	}
-	l, err = r.ReadString('\n')
-	l = strings.TrimSpace(l)
-	//Read in wallet directories and load wallets
-	for l != "" {
-		filenames, err := filepath.Glob(l + "*.id")
-		if err != nil {
-			panic(err)
-		}
-		for _, j := range filenames {
-			id, keypair, err := LoadWallet(j)
-			if err != nil {
-				panic(err)
-			}
-			c.genericWallets[id] = keypair
+		file, err := os.Open(".config")
+		configReader := bufio.NewReader(file)
+		l, err := configReader.ReadString('\n')
+		if strings.TrimSpace(l) != "directories:" {
+			errors.New("Invalid config file")
+			return
 		}
 		l, err = r.ReadString('\n')
 		l = strings.TrimSpace(l)
-	}
+		//Read in wallet directories and load wallets
+		for l != "" {
+			filenames, err := filepath.Glob(l + "*.id")
+			if err != nil {
+				panic(err)
+			}
+			for _, j := range filenames {
+				id, keypair, err := LoadWallet(j)
+				if err != nil {
+					panic(err)
+				}
+				c.genericWallets[id] = keypair
+			}
+			l, err = r.ReadString('\n')
+			l = strings.TrimSpace(l)
+		}
 
-	//Load starting wallet ID, if a starting wallet ID is desired
-	l, err = r.ReadString('\n')
-	if strings.TrimSpace(l) != "wallet:" {
-		return
-	}
-	l, err = r.ReadString('\n')
-	l = strings.TrimSpace(l)
+		//Load starting wallet ID, if a starting wallet ID is desired
+		l, err = r.ReadString('\n')
+		if strings.TrimSpace(l) != "wallet:" {
+			return
+		}
+		l, err = r.ReadString('\n')
+		l = strings.TrimSpace(l)
 	*/
+	return
 }
