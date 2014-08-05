@@ -6,7 +6,7 @@ type Identifier byte
 // An Address couples an Identifier with its network address.
 type Address struct {
 	Host string
-	Port int
+	Port uint16
 	ID   Identifier
 }
 

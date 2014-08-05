@@ -13,6 +13,12 @@ import (
 
 var timeout = time.Second * 5
 
+// addrString is a helper function that converts an Address to a string
+// that can be passed to net.Dial().
+func addrString(a Address) string {
+	return net.JoinHostPort(a.Host, strconv.Itoa(int(a.Port)))
+}
+
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
 type RPCServer struct {
 	addr     Address
@@ -35,8 +41,8 @@ func (rpcs *RPCServer) RegisterHandler(handler interface{}) Address {
 // NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
 // It then spawns a serverHandler with a specified message.
 // It is the caller's responsibility to close the TCP listener, via RPCServer.Close().
-func NewRPCServer(port int) (rpcs *RPCServer, err error) {
-	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+func NewRPCServer(port uint16) (rpcs *RPCServer, err error) {
+	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
 	if err != nil {
 		return
 	}
@@ -81,7 +87,7 @@ func (rpcs *RPCServer) serverHandler() {
 
 // Ping calls the Participant.Ping method on the specified address.
 func (rpcs *RPCServer) Ping(a Address) error {
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(a))
 	if err != nil {
 		return err
 	}
@@ -98,7 +104,7 @@ func (rpcs *RPCServer) Ping(a Address) error {
 // SendMessage synchronously delivers a Message to its recipient and returns any errors.
 // It times out after waiting for 'timeout' seconds.
 func (rpcs *RPCServer) SendMessage(m Message) error {
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(m.Dest))
 	if err != nil {
 		return err
 	}
@@ -121,7 +127,7 @@ func (rpcs *RPCServer) SendMessage(m Message) error {
 // Like SendMessage, it times out after 'timeout' seconds.
 func (rpcs *RPCServer) SendAsyncMessage(m Message) chan error {
 	errChan := make(chan error, 2)
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(m.Dest))
 	if err != nil {
 		errChan <- err
 		return errChan

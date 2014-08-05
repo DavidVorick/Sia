@@ -31,7 +31,8 @@ func connect(c *client.Client) {
 	// if we are already connected, disconnect first
 	c.Disconnect()
 	var host string
-	var port, id int
+	var port uint16
+	var id byte
 	fmt.Print("Hostname: ")
 	_, err := fmt.Scanf("%s", &host)
 	if err != nil {
