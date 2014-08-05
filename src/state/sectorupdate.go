@@ -7,6 +7,7 @@ import (
 	//"siafiles"
 )
 
+// TODO: add docstring
 type UpdateID struct {
 	WalletID WalletID
 	Counter  uint32
@@ -51,11 +52,13 @@ type SectorUpdate struct {
 	EventExpiration uint32
 }
 
+// TODO: add docstring
 type UpdateAdvancement struct {
 	Index    byte
 	UpdateID UpdateID
 }
 
+// Hash returns the hash of a SectorUpdate.
 func (su *SectorUpdate) Hash() siacrypto.Hash {
 	var hashSetBytes []byte
 	for _, hash := range su.HashSet {
@@ -64,18 +67,22 @@ func (su *SectorUpdate) Hash() siacrypto.Hash {
 	return siacrypto.HashBytes(hashSetBytes)
 }
 
+// Expiration is a getter that returns the EventExpiration of the SectorUpdate.
 func (su *SectorUpdate) Expiration() uint32 {
 	return su.EventExpiration
 }
 
+// Expiration is a getter that returns the EventCounter of the SectorUpdate.
 func (su *SectorUpdate) Counter() uint32 {
 	return su.EventCounter
 }
 
+// Expiration is a setter that sets the EventCounter of the SectorUpdate.
 func (su *SectorUpdate) SetCounter(counter uint32) {
 	su.EventCounter = counter
 }
 
+// TODO: add docstring
 func (su *SectorUpdate) HandleEvent(s *State) {
 	/*
 		// Load the wallet associated with the event.
@@ -117,6 +124,7 @@ func (su *SectorUpdate) HandleEvent(s *State) {
 	*/
 }
 
+// TODO: add docstring
 func (s *State) AvailableParentID(parentID UpdateID) bool {
 	// If there is an entry for this wallet in the active updates map, then
 	// that's the only thing that counts. Otherwise, the value of the wallet is
@@ -142,6 +150,7 @@ func (s *State) AvailableParentID(parentID UpdateID) bool {
 	return false
 }
 
+// TODO: add docstring
 func (s *State) GetSectorUpdate(uid UpdateID) (update SectorUpdate, exists bool) {
 	updateList, exists := s.activeUpdates[uid.WalletID]
 	if !exists {
@@ -157,6 +166,7 @@ func (s *State) GetSectorUpdate(uid UpdateID) (update SectorUpdate, exists bool)
 	return
 }
 
+// TODO: add docstring
 func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	// Check that the total atom usage of the wallet is not being overflowed.
 	overflowCheck := uint32(w.CompensationWeight()) + uint32(su.Atoms)
@@ -171,6 +181,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	return
 }
 
+// TODO: add docstring
 func (su SectorUpdate) UpdateID() UpdateID {
 	return UpdateID{
 		WalletID: su.WalletID,
@@ -178,6 +189,7 @@ func (su SectorUpdate) UpdateID() UpdateID {
 	}
 }
 
+// TODO: add docstring
 func (su SectorUpdate) ParentID() UpdateID {
 	return UpdateID{
 		WalletID: su.WalletID,
@@ -185,13 +197,12 @@ func (su SectorUpdate) ParentID() UpdateID {
 	}
 }
 
+// UpdateFilename creates a filename corresponding to a given UpdateID.
 func (s *State) UpdateFilename(id UpdateID) (filename string) {
-	fmt.Sprintf("%s.sectorupdate.%s", s.walletFilename(id.WalletID), id.Counter)
-	return
+	return fmt.Sprintf("%s.sectorupdate.%d", s.walletFilename(id.WalletID), id.Counter)
 }
 
-// Mark that the sibling of the particular index has signaled a completed
-// update.
+// AdvanceUpdate marks that the sibling of the particular index has signaled a completed update.
 func (s *State) AdvanceUpdate(ua UpdateAdvancement) {
 	for i := range s.activeUpdates[ua.UpdateID.WalletID] {
 		if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {

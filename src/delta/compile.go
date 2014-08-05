@@ -24,7 +24,7 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 
-		// Verify the signature on the heartbeat
+		// Verify the signature on the heartbeat.
 		verified, err := e.state.Metadata.Siblings[i].PublicKey.VerifyObject(b.HeartbeatSignatures[i], heartbeat)
 		if err != nil {
 			continue
@@ -57,7 +57,7 @@ func (e *Engine) Compile(b Block) {
 		e.Execute(si)
 	}
 
-	// Process all of the UpdateAdvancements
+	// Process all of the UpdateAdvancements.
 	for i, ua := range b.UpdateAdvancements {
 		verified, err := e.state.Metadata.Siblings[ua.Index].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
 		if err != nil || !verified {

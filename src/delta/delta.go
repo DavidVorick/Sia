@@ -22,7 +22,7 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialzation
+// SaveSnapshot() should be called upon initialization
 // recentHistoryHead needs to be initialized to ^uint32(0)
 // activeHistoryLength should be initialized to SnapshotLength
 // activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
@@ -87,7 +87,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 		return
 	}
 
-	// Create a walle with the default script for the sibling to use.
+	// Create a wallet with the default script for the sibling to use.
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
 		Balance: state.NewBalance(0, 1000000),
