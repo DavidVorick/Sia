@@ -8,8 +8,8 @@ import (
 )
 
 type Keypair struct {
-	SK siacrypto.SecretKey
 	PK siacrypto.PublicKey
+	SK siacrypto.SecretKey
 }
 
 // Struct Client contains the state for client actions
@@ -22,9 +22,10 @@ type Client struct {
 	siblings [state.QuorumSize]state.Sibling
 
 	// All Wallets
-	genericWallets map[state.WalletID]*Keypair
+	genericWallets map[state.WalletID]Keypair
 }
 
+/*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
 func (c *Client) Broadcast(nm network.Message) {
 	for i := range c.siblings {
@@ -36,6 +37,7 @@ func (c *Client) Broadcast(nm network.Message) {
 		break
 	}
 }
+*/
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
@@ -117,7 +119,7 @@ func (c *Client) RetrieveSiblings() (err error) {
 // working client struct.
 func NewClient() (c *Client, err error) {
 	c = new(Client)
-	c.genericWallets = make(map[state.WalletID]*Keypair)
+	c.genericWallets = make(map[state.WalletID]Keypair)
 
 	err = c.processConfigFile()
 	if err != nil {

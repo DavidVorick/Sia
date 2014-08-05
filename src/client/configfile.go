@@ -10,8 +10,6 @@ directories:
 	/path/to/a/directory/with/wallets/
 	/another/wallet/path/
 	/however/many/paths/you/want/
-wallet:
-	walletIDinhex
 */
 
 // In the config file, the wallet variable is optional, and should only be used

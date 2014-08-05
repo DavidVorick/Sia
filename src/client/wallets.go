@@ -45,12 +45,7 @@ func (c *Client) SaveAllWallets() {
 	// Save other types of wallets as they are implemented.
 }
 
-func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
-	if keypair == nil {
-		err = errors.New("Cannot encode nil key pair")
-		return
-	}
-
+func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error) {
 	f, err := os.Create(destFile)
 	if err != nil {
 		return
@@ -72,7 +67,7 @@ func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error
 	return
 }
 
-func LoadWallet(fileName string) (id state.WalletID, keypair *Keypair, err error) {
+func LoadWallet(fileName string) (id state.WalletID, keypair Keypair, err error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return
@@ -93,7 +88,6 @@ func LoadWallet(fileName string) (id state.WalletID, keypair *Keypair, err error
 		return
 	}
 	id = state.WalletID(siaencoding.DecUint64(idSlice))
-	keypair = new(Keypair)
 	if copy(keypair.PK[:], pubSlice) != siacrypto.PublicKeySize {
 		err = errors.New("bad public key length")
 		return
