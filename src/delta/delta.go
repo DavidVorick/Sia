@@ -52,7 +52,7 @@ func (e *Engine) SetFilePrefix(prefix string) {
 }
 
 // Metadata is a getter that returns the state.Metadata object.
-func (e *Engine) Metadata() state.StateMetadata {
+func (e *Engine) Metadata() state.Metadata {
 	return e.state.Metadata
 }
 
@@ -113,7 +113,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 // metadata as input, but that could take a massive amount of memory. I wasn't
 // certain about the best way to approach the problem, so this is the solution
 // I've picked for the time being.
-func (e *Engine) BootstrapSetMetadata(md state.StateMetadata) {
+func (e *Engine) BootstrapSetMetadata(md state.Metadata) {
 	e.state.Metadata = md
 }
 

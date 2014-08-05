@@ -103,7 +103,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		})
 
 		// get the metadata from the snapshot
-		var snapshotMetadata state.StateMetadata
+		var snapshotMetadata state.Metadata
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotMetadata",
@@ -150,7 +150,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// current round of consensus.
 	{
 		// figure out which block height is the latest
-		var currentMetadata state.StateMetadata
+		var currentMetadata state.Metadata
 		mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.Metadata",

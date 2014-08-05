@@ -231,8 +231,8 @@ func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable
 	return
 }
 
-// LoadSnapshotMetadata returns the StateMetadata object corresponding to a given snapshot head.
-func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.StateMetadata, err error) {
+// LoadSnapshotMetadata returns the Metadata object corresponding to a given snapshot head.
+func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.Metadata, err error) {
 	// Open the file holding the desired snapshot. This function also provides
 	// the snapshot table.
 	file, snapshotTable, err := e.openSnapshot(snapshotHead)

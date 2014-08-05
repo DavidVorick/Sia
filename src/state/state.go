@@ -26,7 +26,7 @@ const (
 
 type State struct {
 	// A struct containing all of the simple, single-variable data of the quorum.
-	Metadata StateMetadata
+	Metadata Metadata
 
 	// All of the wallet data on the quorum, including information on how to read
 	// the wallet segments from disk. 'wallets' indicats the number of wallets in

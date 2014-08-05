@@ -28,8 +28,8 @@ func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus)
 }
 */
 
-// SnapshotMetadata is an RPC that returns the engine's StateMetadata object corresponding to a given snapshot head.
-func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.StateMetadata) (err error) {
+// SnapshotMetadata is an RPC that returns the engine's Metadata object corresponding to a given snapshot head.
+func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.Metadata) (err error) {
 	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
 	return
 }

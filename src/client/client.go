@@ -56,7 +56,7 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	}
 
 	// populate initial sibling list
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	err = c.router.SendMessage(network.Message{
 		Dest: c.bootstrap,
 		Proc: "Participant.Metadata",
@@ -87,7 +87,7 @@ func (c *Client) Disconnect() {
 func (c *Client) RetrieveSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue

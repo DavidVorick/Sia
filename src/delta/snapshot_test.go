@@ -73,7 +73,7 @@ func TestSnapshotProcess(t *testing.T) {
 	// Crudely create an engine with all metadata variables filled out.
 	e := Engine{
 		state: state.State{
-			Metadata: state.StateMetadata{
+			Metadata: state.Metadata{
 				Germ:         state.Entropy{1},
 				Seed:         state.Entropy{2},
 				EventCounter: 3,

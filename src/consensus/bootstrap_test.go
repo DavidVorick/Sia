@@ -20,7 +20,7 @@ func TestCreateParticipantFunctions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	p.Metadata(struct{}{}, &metadata)
 	if !metadata.Siblings[0].Active {
 		t.Error("No sibling in the bootstrap position.")

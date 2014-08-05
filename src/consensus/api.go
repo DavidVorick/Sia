@@ -14,7 +14,7 @@ func (p *Participant) Block(blockHeight uint32, block *delta.Block) (err error) 
 }
 
 // Metadata is an RPC that returns the current state metadata.
-func (p *Participant) Metadata(_ struct{}, smd *state.StateMetadata) (err error) {
+func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
 	*smd = p.engine.Metadata()
 	return
 }
