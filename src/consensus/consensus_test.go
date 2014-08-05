@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"siafiles"
 	"testing"
 )
 
@@ -11,7 +12,7 @@ func TestNewSignedUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = CreateBootstrapParticipant(mr, "../../filesCreatedDuringTesting/TestNewSignedUpdate", 1)
+	_, err = CreateBootstrapParticipant(mr, siafiles.TempFilename("TestNewSignedUpdate"), 1)
 	if err != nil {
 		t.Fatal(err)
 	}

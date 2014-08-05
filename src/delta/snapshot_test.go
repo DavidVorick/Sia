@@ -3,6 +3,7 @@ package delta
 import (
 	"reflect"
 	"siacrypto"
+	"siafiles"
 	"state"
 	"testing"
 )
@@ -83,7 +84,7 @@ func TestSnapshotProcess(t *testing.T) {
 		},
 		recentHistoryHead: ^uint32(0),
 	}
-	e.Initialize("../../filesCreatedDuringTesting/TestSnapshotProcess", 0)
+	e.Initialize(siafiles.TempFilename("TestSnapshotProcess"), 0)
 
 	// Save a handful of wallets into the quorum.
 	w1 := state.Wallet{

@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"siafiles"
 	"state"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ func TestCreateParticipantFunctions(t *testing.T) {
 	}
 
 	walletID := state.WalletID(24)
-	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions", walletID)
+	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestCreateParticipantFunctions"), walletID)
 	if err != nil {
 		t.Fatal(err)
 	}

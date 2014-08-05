@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"siafiles"
 	"state"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ func TestSynchronizedTick(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
-	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestSynchronizedTick", 24)
+	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestSynchronizedTick"), 24)
 	if err != nil {
 		t.Fatal("Failed to create bootstrap participant:", err)
 	}
