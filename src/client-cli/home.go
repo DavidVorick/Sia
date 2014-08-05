@@ -33,7 +33,7 @@ func connectWalkthrough(c *client.Client) {
 	// Load the hostname.
 	var host string
 	fmt.Print("Hostname: ")
-	_, err := fmt.Scanf("%s", &host)
+	_, err := fmt.Scanln("%s", &host)
 	if err != nil {
 		fmt.Println("Invalid hostname")
 		return
@@ -42,7 +42,7 @@ func connectWalkthrough(c *client.Client) {
 	// Load the port number.
 	var port int
 	fmt.Print("Port: ")
-	_, err = fmt.Scanf("%d", &port)
+	_, err = fmt.Scanln("%d", &port)
 	if err != nil {
 		fmt.Println("Invalid port")
 		return
@@ -51,7 +51,7 @@ func connectWalkthrough(c *client.Client) {
 	// Load the participant id.
 	var id int
 	fmt.Print("ID: ")
-	_, err = fmt.Scanf("%d", &id)
+	_, err = fmt.Scanln("%d", &id)
 	if err != nil {
 		fmt.Println("Invalid id")
 		return
@@ -72,7 +72,11 @@ func loadWallet(c *client.Client) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
-	fmt.Scanf("%x", &id)
+	_, err := fmt.Scanln("%x", &id)
+	if err != nil {
+		fmt.Println("Invalid ID")
+		return
+	}
 
 	// Check that the wallet is available to the client.
 	walletType, err := c.WalletType(id)
@@ -95,9 +99,9 @@ func createGenericWallet(c *client.Client) {
 	var id state.WalletID
 	var filename string
 	fmt.Print("Enter desired Wallet ID (hex): ")
-	fmt.Scanf("%x", &id)
+	ERR fmt.Scanln("%x", &id)
 	fmt.Print("Script file (blank for default): ")
-	fmt.Scanf("%s", &filename)
+	ERR fmt.Scanln("%s", &filename)
 	var script []byte
 	var err error
 	if filename != "" {
@@ -116,6 +120,7 @@ func createGenericWallet(c *client.Client) {
 }
 */
 
+// printWallets provides a list of every wallet available to the Client.
 func printWallets(c *client.Client) {
 	fmt.Println("All Stored Wallet IDs:")
 	wallets := c.GetWalletIDs()
@@ -129,7 +134,11 @@ func pollHome(c *client.Client) {
 	var input string
 	for {
 		fmt.Print("Please enter a command: ")
-		fmt.Scanln(&input)
+		_, err := fmt.Scanln(&input)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			continue
+		}
 
 		switch input {
 		default:
