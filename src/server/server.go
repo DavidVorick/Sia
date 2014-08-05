@@ -1,27 +1,31 @@
-package main
+package server
 
 import (
-	"consensus"
-	"delta"
-	"fmt"
 	"network"
-	"state"
 )
 
-func joinQuorum() {
-	// read port number
-	var port int
-	fmt.Print("Port to listen on: ")
-	fmt.Scanf("%d", &port)
+// The Server houses all of the participants. It contains a single message
+// router that is shared by all of the participants, it will eventually contain
+// a clock object that will be used and modified by all participants.
+type Server struct {
+	rpcServer *network.RPCServer
+}
 
-	// create a message router
-	networkServer, err := network.NewRPCServer(port)
+// NewServer takes a port number as input and returns a server object that's
+// ready to be populated with participants.
+func NewServer(port int) (s *Server, err error) {
+	s = new(Server)
+
+	// Create the RPCServer
+	s.rpcServer, err = network.NewRPCServer(port)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
-	defer networkServer.Close()
+	return
+}
 
+/*
+func joinQuorum() {
 	// read and set bootstrap address
 	var bootstrap network.Address
 	fmt.Print("Bootstrap hostname: ")
@@ -98,42 +102,4 @@ func establishQuorum() {
 	}
 	select {}
 }
-
-func printHelp() {
-	fmt.Println(`
-h - help
-j - join an existing quorum
-e - establish a new quorum
-q - quit
-`)
-}
-
-func main() {
-	var input string
-	fmt.Println("Sia Server Version 0.0.1")
-	for {
-		// grab some input
-		print("Please enter a command: ")
-		fmt.Scanln(&input)
-
-		switch input {
-		default:
-			fmt.Println("unrecognized command")
-
-		// j: create a participant and bootstrap to a quorum
-		case "j":
-			joinQuorum()
-
-		// e: create a participant and bootstrap to a quorum
-		case "e":
-			establishQuorum()
-
-		// q: quit the program
-		case "q":
-			return
-
-		case "h", "help":
-			printHelp()
-		}
-	}
-}
+*/
