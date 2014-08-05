@@ -21,7 +21,7 @@ func displayGenericWalletHelp() {
 func download(c *client.Client) {
 	var dest string
 	fmt.Print("Destination Filepath: ")
-	fmt.Scanln(&dest)
+	ERR fmt.Scanln(&dest)
 	fmt.Println("Downloading File, please wait a few minutes")
 	c.Download(c.CurID, dest)
 }
@@ -32,9 +32,9 @@ func resizeGenericWallet(c *client.Client) {
 	var atoms uint16
 	var m byte
 	fmt.Print("New size (in atoms): ")
-	fmt.Scanln(&atoms)
+	ERR fmt.Scanln(&atoms)
 	fmt.Print("Redundancy: ")
-	fmt.Scanln(&m)
+	ERR fmt.Scanln(&m)
 	err := c.ResizeSector(c.CurID, atoms, m)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -48,7 +48,7 @@ func resizeGenericWallet(c *client.Client) {
 func sendScriptInput(c *client.Client) {
 	var filename string
 	fmt.Print("Input file: ")
-	fmt.Scanf("%s", &filename)
+	ERR fmt.Scanln("%s", &filename)
 	// read script from file
 	input, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -69,9 +69,9 @@ func sendFromGenericWallet(c *client.Client) {
 	var dstID state.WalletID
 	var amount uint64
 	fmt.Print("Dest Wallet ID (hex): ")
-	fmt.Scanf("%x", &dstID)
+	ERR fmt.Scanln("%x", &dstID)
 	fmt.Print("Amount to send (dec): ")
-	fmt.Scanln(&amount)
+	ERR fmt.Scanln(&amount)
 	err := c.SubmitTransaction(c.CurID, dstID, amount)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -86,9 +86,9 @@ func uploadToGenericWallet(c *client.Client) {
 	var filename string
 	var k byte
 	fmt.Print("Filename: ")
-	fmt.Scanln(&filename)
+	ERR fmt.Scanln(&filename)
 	fmt.Print("K: ")
-	fmt.Scanln(&k)
+	ERR fmt.Scanln(&k)
 	atomsRequired, err := client.CalculateAtoms(filename, k)
 	if err != nil {
 		fmt.Println(err)
@@ -105,7 +105,11 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 	fmt.Printf("Entering Generic Wallet Mode")
 	for {
 		fmt.Print("Please enter an action for wallet %x: ", id)
-		fmt.Scanln(&input)
+		_, err := fmt.Scanln(&input)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			continue
+		}
 
 		switch input {
 		default:
@@ -129,6 +133,5 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 			fmt.Println("Uploading is not currently implemented.")
 			//uploadToGenericWallet(c)
 		}
-		input = ""
 	}
 }
