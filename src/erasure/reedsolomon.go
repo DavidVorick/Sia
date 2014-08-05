@@ -181,9 +181,9 @@ func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered
 		remainingIndices[i] = indices[i]
 	}
 
-	C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(&recovered[0]), (*C.uchar)(&remainingIndices[0]))
+	errCode := C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(&recovered[0]), (*C.uchar)(&remainingIndices[0]))
 
-	if recovered == nil {
+	if errCode != 0 {
 		err = errors.New("call to cauchy_256_decode failed")
 	}
 

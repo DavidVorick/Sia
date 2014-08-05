@@ -44,11 +44,10 @@ static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalB
 //
 // The data is edited and sorted in place. Upon returning, 'remainingSegments'
 // will be the original data in order.
-static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndices) {
+static int recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndices) {
 	// Verify that the longhair library is linked.
 	if (cauchy_256_init()) {
-		remainingSegments = NULL;
-		return;
+		return 1;
 	}
 
 	// copy remainingSegments into its own data, which results in much cleaner
@@ -71,8 +70,7 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 	
 	// decode redundant segments into original segments
 	if (cauchy_256_decode(k, m, blocks, bytesPerSegment)) {
-		remainingSegments = NULL;
-		return;
+		return 2;
 	}
 
 	// Perform a collapseSort, which creates an array of len 'k + m' and puts
@@ -91,4 +89,6 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 			j++;
 		}
 	}
+
+    return 0;
 }
