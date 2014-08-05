@@ -81,7 +81,7 @@ func loadWallet(c *client.Client) {
 	// error). If the wallet type is recognized, switch to the polling of
 	// that wallet type. If the type is not recognized, print an error and
 	// return to the home menu.
-	if err == nil {
+	if err != nil {
 		fmt.Println(err)
 	} else if walletType == "generic" {
 		pollGenericWallet(c, id)
@@ -89,6 +89,32 @@ func loadWallet(c *client.Client) {
 		fmt.Println("Wallet is available, but is of an unknown type.")
 	}
 }
+
+/*
+func createGenericWallet(c *client.Client) {
+	var id state.WalletID
+	var filename string
+	fmt.Print("Enter desired Wallet ID (hex): ")
+	fmt.Scanf("%x", &id)
+	fmt.Print("Script file (blank for default): ")
+	fmt.Scanf("%s", &filename)
+	var script []byte
+	var err error
+	if filename != "" {
+		script, err = ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+		return
+	}
+	err = c.RequestWallet(id, script)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Wallet requested")
+	}
+}
+*/
 
 func printWallets(c *client.Client) {
 	fmt.Println("All Stored Wallet IDs:")
@@ -121,7 +147,7 @@ func pollHome(c *client.Client) {
 		case "l", "load", "enter":
 			loadWallet(c)
 
-		case "n", "new":
+		case "n", "new", "request":
 			fmt.Println("New Wallet is not currently implemented!.")
 			// createGenericWallet(c)
 
@@ -131,7 +157,7 @@ func pollHome(c *client.Client) {
 		case "s", "save":
 			fmt.Println("Saving all wallets...")
 			c.SaveAllWallets()
-			fmt.Println("... finished!")
+			fmt.Println("...finished!")
 		}
 		input = ""
 	}
