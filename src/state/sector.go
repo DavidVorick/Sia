@@ -51,8 +51,9 @@ func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
 	return siacrypto.HashBytes(append(left[:], right[:]...))
 }
 
-// MerkleCollapse splits the provided data into segments of size AtomSize.
-// It then recursively transforms these segments into a Merkle tree, and returns the root hash.
+// MerkleCollapse splits the provided data into segments of size AtomSize. It
+// then recursively transforms these segments into a Merkle tree, and returns
+// the root hash.
 func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err error) {
 	if numAtoms == 0 {
 		err = errors.New("no data")
@@ -71,7 +72,7 @@ func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err
 		mid *= 2
 	}
 
-	// since we always read "left to right", no extraneous Seek operations are required
+	// since we always read "left to right", no extra Seeking is necessary
 	left, _ := MerkleCollapse(reader, mid)
 	right, err := MerkleCollapse(reader, numAtoms-mid)
 	hash = joinHash(left, right)
@@ -95,12 +96,13 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 	return
 }
 
-// buildProof  constructs a list of hashes using the following procedure.
-// The storage proof requires traversing the Merkle tree from the proofIndex node to the root.
-// On each level of the tree, we must provide the hash of "sister" node.
-// (Since this is a binary tree, the sister node is the other node with the same parent as us.)
-// To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
-// This segment will double in size on each iteration until we reach the root.
+// buildProof constructs a list of hashes using the following procedure. The
+// storage proof requires traversing the Merkle tree from the proofIndex node
+// to the root. On each level of the tree, we must provide the hash of "sister"
+// node. (Since this is a binary tree, the sister node is the other node with
+// the same parent as us.) To obtain this hash, we call MerkleCollapse on the
+// segment of data corresponding to the sister. This segment will double in
+// size on each iteration until we reach the root.
 func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
 	// get proofBytes
 	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
@@ -177,8 +179,9 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	return buildProof(file, numAtoms, proofIndex)
 }
 
-// foldHashes traverses a proofStack, hashing elements together to produce the root-level hash.
-// Care must be taken to ensure that the correct ordering is used when concatenating hashes.
+// foldHashes traverses a proofStack, hashing elements together to produce the
+// root-level hash. Care must be taken to ensure that the correct ordering is
+// used when concatenating hashes.
 func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
 	h = base
 
@@ -198,8 +201,9 @@ func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.
 	return
 }
 
-// VerifyStorageProof verifies that a specified atom, along with a corresponding proofStack,
-// can be used to reconstruct the original root Merkle hash.
+// VerifyStorageProof verifies that a specified atom, along with a
+// corresponding proofStack, can be used to reconstruct the original root
+// Merkle hash.
 // TODO: think about removing this function or combining it with foldHashes
 func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
 	// get the intended hash from the segment stored on disk

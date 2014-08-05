@@ -25,8 +25,8 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-// SignInput takes a secret key and an input, and returns the signature of
-// the input followed by input itself.
+// SignInput takes a secret key and an input, and returns the signature of the
+// input followed by input itself.
 func SignInput(secretKey siacrypto.SecretKey, input []byte) ([]byte, error) {
 	sig, err := secretKey.Sign(input)
 	if err != nil {
@@ -40,8 +40,8 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 	return append(siaencoding.EncUint64(walletID), s...)
 }
 
-// AddSiblingInput returns a script that calls the AddSibling function.
-// It is intended to be passed to a script that transfers execution to the input.
+// AddSiblingInput returns a script that calls the AddSibling function. It is
+// intended to be passed to a script that transfers execution to the input.
 func AddSiblingInput(encSibling []byte) []byte {
 	return appendAll(
 		[]byte{
@@ -54,8 +54,8 @@ func AddSiblingInput(encSibling []byte) []byte {
 	)
 }
 
-// TransactionInput returns a script that calls the Send function.
-// It is intended to be passed to a script that transfers execution to the input.
+// TransactionInput returns a script that calls the Send function. It is
+// intended to be passed to a script that transfers execution to the input.
 func TransactionInput(dst, high, low uint64) []byte {
 	return appendAll(
 		[]byte{
@@ -72,8 +72,9 @@ func TransactionInput(dst, high, low uint64) []byte {
 	)
 }
 
-// ResizeSectorEraseInput returns a script that calls the ResizeSectorErase function.
-// It is intended to be passed to a script that transfers execution to the input.
+// ResizeSectorEraseInput returns a script that calls the ResizeSectorErase
+// function. It is intended to be passed to a script that transfers execution
+// to the input.
 func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 	l, h := short(int(atoms))
 	return []byte{
@@ -82,8 +83,9 @@ func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 	}
 }
 
-// ProposeUploadInput returns a script that calls the ProposeUploadInput function.
-// It is intended to be passed to a script that transfers execution to the input.
+// ProposeUploadInput returns a script that calls the ProposeUploadInput
+// function. It is intended to be passed to a script that transfers execution
+// to the input.
 func ProposeUploadInput(encUA []byte) []byte {
 	return append([]byte{
 		0x33, 0x08, 0x00, // move data pointer to encoded args
@@ -104,8 +106,8 @@ var BootstrapScript = []byte{
 	0xFF, //             12 exit
 }
 
-// DefaultScript returns a script that verifies a signature, and transfers control
-// to the input if the verification was successful.
+// DefaultScript returns a script that verifies a signature, and transfers
+// control to the input if the verification was successful.
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	return append([]byte{
 		0x26, 0x10, 0x00, // 00 move data pointer to public key

@@ -202,7 +202,8 @@ func (s *State) UpdateFilename(id UpdateID) (filename string) {
 	return fmt.Sprintf("%s.sectorupdate.%d", s.walletFilename(id.WalletID), id.Counter)
 }
 
-// AdvanceUpdate marks that the sibling of the particular index has signaled a completed update.
+// AdvanceUpdate marks that the sibling of the particular index has signaled a
+// completed update.
 func (s *State) AdvanceUpdate(ua UpdateAdvancement) {
 	for i := range s.activeUpdates[ua.UpdateID.WalletID] {
 		if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {

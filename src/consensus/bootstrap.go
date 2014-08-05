@@ -26,7 +26,8 @@ The Bootstrapping Process
 
 */
 
-// CreateBootstrapParticipant returns a participant that is participating as the first and only sibling on a new quorum.
+// CreateBootstrapParticipant returns a participant that is participating as
+// the first and only sibling on a new quorum.
 func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
 	if sibID == 0 {
 		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
@@ -65,18 +66,18 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	}
 
 	// An important step that is being omitted for this version of Sia (omitted
-	// until Sia has meta-quorums and network-discovery) is verifying the hashes
-	// of the snapshot and blocks before you actually attempt to acquire
+	// until Sia has meta-quorums and network-discovery) is verifying the
+	// hashes of the snapshot and blocks before you actually attempt to acquire
 	// anything.
 
 	// There is an assumption that the input wallet exists on the quorum with a
 	// balance sufficient to cover the costs of creating the participant.
 
-	// 1. Submit a join request to the existing quorum. This join request will be
-	// added to the heartbeats of the siblings, and will be included in the next
-	// round of consensus. So before the join request gets through, the current
-	// block will need to finish, and then the next block will need to finish as
-	// well. This will take many hours, as block times are very slow.
+	// 1. Submit a join request to the existing quorum. This join request will
+	// be added to the heartbeats of the siblings, and will be included in the
+	// next round of consensus. So before the join request gets through, the
+	// current block will need to finish, and then the next block will need to
+	// finish as well. This will take many hours, as block times are very slow.
 	joinRequest := delta.ScriptInput{
 		WalletID: tetherID,
 		Input:    delta.DefaultScript(p.publicKey),
@@ -145,9 +146,9 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 	// Events will be implemented at a later time.
 
-	// 3. Download all of the blocks that have been processed since the snapshot,
-	// which will bring the quorum up to date, except for being behind in the
-	// current round of consensus.
+	// 3. Download all of the blocks that have been processed since the
+	// snapshot, which will bring the quorum up to date, except for being
+	// behind in the current round of consensus.
 	{
 		// figure out which block height is the latest
 		var currentMetadata state.Metadata
@@ -173,11 +174,11 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// 4. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
 	// only wallet segements to avoid are the wallet segments with active
-	// uploads. Since you aren't announced to the quorum yet, the uploader won't
-	// know to contact you and upload to you the file diff.
+	// uploads. Since you aren't announced to the quorum yet, the uploader
+	// won't know to contact you and upload to you the file diff.
 
-	// 5. After being accepted to the quorum as a full sibling, all downloads are
-	// fair game.
+	// 5. After being accepted to the quorum as a full sibling, all downloads
+	// are fair game.
 
 	// 6. After collecting all downloads, announce synchronization and switch
 	// from being an unpaid bootstrapping participant to a paid active

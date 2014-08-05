@@ -8,9 +8,9 @@ import (
 	"errors"
 )
 
-// Public keys, secret keys, and signatures all use a byte slice
-// for their underlying representation. These sizes are the lengths
-// of those types, in bytes.
+// Public keys, secret keys, and signatures all use a byte slice for their
+// underlying representation. These sizes are the lengths of those types, in
+// bytes.
 const (
 	PublicKeySize = 32
 	SecretKeySize = 64
@@ -44,7 +44,7 @@ func (pk PublicKey) Verify(sig Signature, message []byte) bool {
 }
 
 // VerifyObject returns whether an object was signed by the public key 'pk'.
-// It does so by first marshalling the object, and then passing the result to Verify().
+// It does so by marshalling the object, and then passing it to Verify().
 func (pk PublicKey) VerifyObject(sig Signature, obj interface{}) (verified bool, err error) {
 	objHash, err := HashObject(obj)
 	if err != nil {

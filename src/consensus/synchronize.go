@@ -28,13 +28,15 @@ func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus)
 }
 */
 
-// SnapshotMetadata is an RPC that returns the engine's Metadata object corresponding to a given snapshot head.
+// SnapshotMetadata is an RPC that returns the engine's Metadata object
+// corresponding to a given snapshot head.
 func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.Metadata) (err error) {
 	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
 	return
 }
 
-// SnapshotWalletList is an RPC that returns the list of WalletIDs corresponding to a given snapshot head.
+// SnapshotWalletList is an RPC that returns the list of WalletIDs
+// corresponding to a given snapshot head.
 func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]state.WalletID) (err error) {
 	*walletList, err = p.engine.LoadSnapshotWalletList(snapshotHead)
 	return
@@ -46,7 +48,8 @@ type SnapshotWalletArg struct {
 	WalletID     state.WalletID
 }
 
-// SnapshotWallet is an RPC that returns the Wallet corresponding to a given snapshot head and WalletID.
+// SnapshotWallet is an RPC that returns the Wallet corresponding to a given
+// snapshot head and WalletID.
 func (p *Participant) SnapshotWallet(swa SnapshotWalletArg, wallet *state.Wallet) (err error) {
 	*wallet, err = p.engine.LoadSnapshotWallet(swa.SnapshotHead, swa.WalletID)
 	return

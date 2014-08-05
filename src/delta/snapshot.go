@@ -22,7 +22,8 @@ const (
 // large and costly to have in memory all at once.
 //
 // The layout of a snapshot is as follows:
-// 1. A table at the front of the file describing the location of each structure, prefixed by its size
+// 1. A table at the front of the file describing the location of each
+// structure, prefixed by its size.
 //		1a. Offset of quorum meta data + size of quorum meta data
 //		1b. Offset of wallet lookup table + size of wallet lookup table
 //		1c. Offset of event lookup table + size of event lookup table
@@ -119,7 +120,8 @@ func (e *Engine) saveSnapshot() (err error) {
 	var offsetTable snapshotOffsetTable
 	currentOffset := snapshotOffsetTableLength
 
-	// put encodedQuorumMetadata in its own scope so that it can be garbage collected
+	// put encodedQuorumMetadata in its own scope so that it can be garbage
+	// collected
 	{
 		// encode the quorum and record the length
 		var encodedQuorumMetadata []byte
@@ -138,11 +140,12 @@ func (e *Engine) saveSnapshot() (err error) {
 		currentOffset += len(encodedQuorumMetadata)
 	}
 
-	// Create the wallet lookup table and save the wallets. This is again in its
-	// own scope so that the data can be garbage collected before the function
-	// returns.
+	// Create the wallet lookup table and save the wallets. This is again in
+	// its own scope so that the data can be garbage collected before the
+	// function returns.
 	{
-		// Retreive a list of all the wallets stored in the quorum and allocate the wallet lookup table
+		// Retreive a list of all the wallets stored in the quorum and allocate
+		// the wallet lookup table
 		walletList := e.state.WalletList()
 		offsetTable.walletLookupTableOffset = uint32(currentOffset)
 		offsetTable.walletLookupTableLength = uint32(len(walletList) * walletOffsetLength)
@@ -231,7 +234,8 @@ func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable
 	return
 }
 
-// LoadSnapshotMetadata returns the Metadata object corresponding to a given snapshot head.
+// LoadSnapshotMetadata returns the Metadata object corresponding to a given
+// snapshot head.
 func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.Metadata, err error) {
 	// Open the file holding the desired snapshot. This function also provides
 	// the snapshot table.
@@ -241,7 +245,8 @@ func (e *Engine) LoadSnapshotMetadata(snapshotHead uint32) (snapshot state.Metad
 	}
 	defer file.Close()
 
-	// Determine length and offset of metadata, then load and decode the metadata.
+	// Determine length and offset of metadata, then load and decode the
+	// metadata.
 	encodedSnapshotMetadata := make([]byte, snapshotTable.stateMetadataLength)
 	_, err = file.ReadAt(encodedSnapshotMetadata, int64(snapshotTable.stateMetadataOffset))
 	if err != nil {
@@ -264,7 +269,8 @@ func (e *Engine) openWalletOffsetTable(snapshotHead uint32) (file *os.File, wall
 	return
 }
 
-// LoadSnapshotWalletList returns the list of WalletIDs corresponding to a given snapshot head.
+// LoadSnapshotWalletList returns the list of WalletIDs corresponding to a
+// given snapshot head.
 func (e *Engine) LoadSnapshotWalletList(snapshotHead uint32) (walletList []state.WalletID, err error) {
 	// Get the wallet table and snapshot file.
 	file, walletTable, err := e.openWalletOffsetTable(snapshotHead)
@@ -286,7 +292,8 @@ func (e *Engine) LoadSnapshotWalletList(snapshotHead uint32) (walletList []state
 	return
 }
 
-// LoadSnapshotWallet returns the Wallet object corresponding to a given WalletID at a given snapshot head.
+// LoadSnapshotWallet returns the Wallet object corresponding to a given
+// WalletID at a given snapshot head.
 func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID) (wallet state.Wallet, err error) {
 	// Open the wallet table and snapshot file.
 	file, walletTable, err := e.openWalletOffsetTable(snapshotHead)

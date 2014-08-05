@@ -15,9 +15,10 @@ const (
 // A WalletID is a unique identifier that references a Wallet on the network.
 type WalletID uint64
 
-// A Wallet performs three important duties. It contains a Balance, allowing for
-// transactions; a SectorSettings object which manages what storage is associated
-// with the Wallet; and a Script, which can receive inputs and perform actions.
+// A Wallet performs three important duties. It contains a Balance, allowing
+// for transactions; a SectorSettings object which manages what storage is
+// associated with the Wallet; and a Script, which can receive inputs and
+// perform actions.
 type Wallet struct {
 	ID             WalletID
 	Balance        Balance

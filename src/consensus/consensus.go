@@ -229,7 +229,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		}
 	}
 
-	// Check that there are enough signatures in the update to match the current step.
+	// Check that there are enough signatures in the update to match the
+	// current step.
 	p.currentStepLock.Lock()
 	if int(p.currentStep) > len(su.Signatures) {
 		p.currentStepLock.Unlock()
@@ -258,7 +259,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 			return
 		}
 
-		// Check that current signatory has only been seen once in the current SignedUpdate
+		// Check that current signatory has only been seen once in the current
+		// SignedUpdate
 		if previousSignatories[signatory] {
 			err = errDoubleSign
 			return
@@ -272,8 +274,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 			return
 		}
 
-		// Extend the signed message so that it contians the proper message for the
-		// next verification.
+		// Extend the signed message so that it contians the proper message for
+		// the next verification.
 		message = append(su.Signatures[i][:], message...)
 	}
 

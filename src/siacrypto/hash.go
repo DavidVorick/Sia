@@ -22,7 +22,8 @@ func HashBytes(data []byte) (h Hash) {
 	return
 }
 
-// HashObject converts an object to a byte slice and returns the hash of the byte slice.
+// HashObject converts an object to a byte slice and returns the hash of the
+// byte slice.
 func HashObject(obj interface{}) (h Hash, err error) {
 	bytes, err := siaencoding.Marshal(obj)
 	if err != nil {

@@ -21,9 +21,9 @@ func (tsh *TestStoreHandler) BlockForever(message string, _ *struct{}) error {
 	select {}
 }
 
-// TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and Send(Async)Message functions.
-// NewRPCServer must properly initialize a RPC server.
-// RegisterHandler must make an RPC available to the client.
+// TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and
+// Send(Async)Message functions. NewRPCServer must properly initialize a RPC
+// server. RegisterHandler must make an RPC available to the client.
 // SendMessage and SendAsyncMessage must complete successfully.
 func TestRPCSendMessage(t *testing.T) {
 	// create RPCServer
@@ -67,7 +67,8 @@ func TestRPCSendMessage(t *testing.T) {
 
 // TestRPCTimeout tests the timeout functionality of Send(Async)Message.
 // During the test, a message is sent to a handler that does nothing with it.
-// The sender should eventually timeout and return an error instead of continuing to wait.
+// The sender should eventually timeout and return an error instead of
+// continuing to wait.
 func TestRPCTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -102,10 +103,12 @@ func TestRPCTimeout(t *testing.T) {
 	}
 }
 
-// TestRPCScheduling tests the RPC server's ability to process multiple concurrent messages.
-// It is crucial that heartbeat RPCs are not blocked by other calls, such as uploads/downloads.
-// This test starts one large data transfer and then attempts to send multiple smaller RPC messages.
-// The smaller messages should arrive in a timely fashion despite the ongoing data transfer.
+// TestRPCScheduling tests the RPC server's ability to process multiple
+// concurrent messages. It is crucial that heartbeat RPCs are not blocked by
+// other calls, such as uploads/downloads. This test starts one large data
+// transfer and then attempts to send multiple smaller RPC messages. The
+// smaller messages should arrive in a timely fashion despite the ongoing data
+// transfer.
 func TestRPCScheduling(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

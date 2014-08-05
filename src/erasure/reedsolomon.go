@@ -103,8 +103,8 @@ func ReedSolomonEncode(k, m int, original []byte) (encoded [][]byte, err error) 
 // 'recovered' should be identical to the input 'original' from
 // ReedSolomonEncode. If an error is returned, 'recovered' should be discarded.
 func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered []byte, err error) {
-	// Check for nil values. The length of 'remaining' and 'indices' are checked
-	// after 'k' and 'm' are checked.
+	// Check for nil values. The length of 'remaining' and 'indices' are
+	// checked after 'k' and 'm' are checked.
 	if remaining == nil || indices == nil {
 		err = errors.New("received nil input")
 		return
@@ -173,7 +173,8 @@ func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered
 		seenIndices[indices[i]] = true
 	}
 
-	// Arrange the data so that longhair will order the data into the single slice 'recovered'
+	// Arrange the data so that longhair will order the data into the single
+	// slice 'recovered'
 	recovered = make([]byte, k*b)
 	remainingIndices := make([]byte, k)
 	for i := 0; i < int(k); i++ {

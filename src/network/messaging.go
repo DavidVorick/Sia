@@ -19,8 +19,9 @@ type Message struct {
 	Resp interface{}
 }
 
-// A MessageRouter both transmits outgoing messages and processes incoming messages.
-// Objects must register themselves with a MessageRouter to receive an Address.
+// A MessageRouter both transmits outgoing messages and processes incoming
+// messages. Objects must register themselves with a MessageRouter to receive
+// an Address.
 type MessageRouter interface {
 	RegisterHandler(interface{}) Address
 	SendMessage(Message) error

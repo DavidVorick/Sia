@@ -35,7 +35,8 @@ func (w *walletNode) isRed() bool {
 	return w != nil && w.red
 }
 
-// rotate performs a rotation within the red-black tree, while keeping all weights correct.
+// rotate performs a rotation within the red-black tree, while keeping all
+// weights correct.
 func (w *walletNode) rotate(direction int) *walletNode {
 	if w.children[not(direction)] != nil {
 		w.weight -= w.children[not(direction)].weight
@@ -59,7 +60,8 @@ func (w *walletNode) doubleRotate(direction int) *walletNode {
 	return w.rotate(direction)
 }
 
-// insert takes a walletNode and inserts it into the rbw tree held within the quorum.
+// insert takes a walletNode and inserts it into the rbw tree held within the
+// quorum.
 func (s *State) insertWalletNode(w *walletNode) {
 	// exit insertion if given a nil node to insert
 	if w == nil {

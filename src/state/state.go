@@ -22,9 +22,11 @@ const (
 	QuorumSize byte = 4
 	// AtomSize is the number of bytes in an atom.
 	AtomSize int = 32
-	// AtomsPerQuorum is the maximum number of atoms that can be stored on a single quorum.
+	// AtomsPerQuorum is the maximum number of atoms that can be stored on a
+	// single quorum.
 	AtomsPerQuorum int = 16777216
-	// AtomsPerSector is the number of atoms in a sector. Final value likely to be 2^13-2^16
+	// AtomsPerSector is the number of atoms in a sector. Final value likely to
+	// be 2^13-2^16
 	AtomsPerSector uint16 = 1024
 )
 
@@ -33,10 +35,10 @@ type State struct {
 	// A struct containing all of the simple, single-variable data of the quorum.
 	Metadata Metadata
 
-	// All of the wallet data on the quorum, including information on how to read
-	// the wallet segments from disk. 'wallets' indicats the number of wallets in
-	// the State, and is placed for convenience. This number could also be
-	// derived by doing a search starting at the walletRoot.
+	// All of the wallet data on the quorum, including information on how to
+	// read the wallet segments from disk. 'wallets' indicats the number of
+	// wallets in the State, and is placed for convenience. This number could
+	// also be derived by doing a search starting at the walletRoot.
 	walletPrefix string
 	wallets      uint32
 	walletRoot   *walletNode
@@ -45,9 +47,9 @@ type State struct {
 	eventRoot *eventNode
 
 	// Maintains a list of all SectorModifiers active on each wallet. If the
-	// wallet is not represented in the map, it only indicates that there are no
-	// SectorModifiers active for that wallet. To check for a wallets existence,
-	// one must transverse the wallet tree.
+	// wallet is not represented in the map, it only indicates that there are
+	// no SectorModifiers active for that wallet. To check for a wallets
+	// existence, one must transverse the wallet tree.
 	// activeSectors map[WalletID][]SectorModifier
 	// activeUploads map[UploadID]*Upload
 	activeUpdates map[WalletID][]SectorUpdate

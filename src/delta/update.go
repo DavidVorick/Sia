@@ -21,7 +21,8 @@ type SegmentDiff struct {
 
 // TODO: add docstring
 func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
-	// Fetch the update from the state, while verifying that it's a recognized update.
+	// Fetch the update from the state, while verifying that it's a recognized
+	// update.
 	update, exists := e.state.GetSectorUpdate(sd.UpdateID)
 	if !exists {
 		err = errors.New("update is not valid")
@@ -36,7 +37,8 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 		return
 	}
 
-	// Grab the wallet associated with the update to check the hash of the sector being modified.
+	// Grab the wallet associated with the update to check the hash of the
+	// sector being modified.
 	var wallet state.Wallet
 	wallet, err = e.state.LoadWallet(update.WalletID)
 	if err != nil {

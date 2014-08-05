@@ -208,7 +208,8 @@ func (s *State) DeleteEvent(e Event) {
 		return
 	}
 
-	// then go through finding the event, repointing everything that points to the event as a height object
+	// then go through finding the event, repointing everything that points to
+	// the event as a height object
 	eventHeight := en.top.height()
 	eventPointer := en.top
 	for {
@@ -233,7 +234,6 @@ func (s *State) DeleteEvent(e Event) {
 }
 
 // eventNode() retreives an eventNode that corresponds to a specific event.
-// eventNode() is only used internally.
 func (s *State) eventNode(e Event) *eventNode {
 	// check the base cases
 	if s.eventRoot == nil {

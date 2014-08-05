@@ -22,10 +22,11 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialization
-// recentHistoryHead needs to be initialized to ^uint32(0)
-// activeHistoryLength should be initialized to SnapshotLength
-// activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
+// SaveSnapshot() should be called upon initialization. recentHistoryHead needs
+// to be initialized to ^uint32(0). activeHistoryLength should be initialized
+// to SnapshotLength. activeHistoryHead needs to be initialized to ^uint32(0) -
+// (SnapshotLength-1), because the turnover will result in a new blockhistory
+// file being created.
 type Engine struct {
 	// The State
 	state state.State
@@ -61,8 +62,8 @@ func (e *Engine) SiblingIndex() byte {
 	return e.siblingIndex
 }
 
-// WalletList is a pass-along function so that the wallet list of the state can be accessed
-// by instances containing the engine.
+// WalletList is a pass-along function so that the wallet list of the state can
+// be accessed by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
@@ -77,7 +78,8 @@ func (e *Engine) Initialize(filePrefix string, siblingIndex byte) {
 // Bootstrap returns an engine that has its variables set so that
 // the engine can function as the first sibling in a quorum.
 func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
-	// Create the bootstrap wallet, which acts as a fountain to get the economy started.
+	// Create the bootstrap wallet, which acts as a fountain to get the economy
+	// started.
 	err = e.state.InsertWallet(state.Wallet{
 		ID:      BootstrapWalletID,
 		Balance: state.NewBalance(0, 25000000),

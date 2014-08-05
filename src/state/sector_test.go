@@ -51,8 +51,9 @@ func TestMerkleCollapse(t *testing.T) {
 	}
 }
 
-// TestStorageProof tests the BuildStorageProof and VerifyStorageProof functions.
-// It generates a storage using from random data, and verifies that the proof is correct.
+// TestStorageProof tests the BuildStorageProof and VerifyStorageProof
+// functions. It generates a storage using from random data, and verifies that
+// the proof is correct.
 func TestStorageProof(t *testing.T) {
 	// generate random data
 	var numAtoms uint16 = 7

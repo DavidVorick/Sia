@@ -4,7 +4,8 @@ import (
 	"testing"
 )
 
-// TestHashBytes tests that the computed hash of "foo" matches its reference hash.
+// TestHashBytes tests that the computed hash of "foo" matches its reference
+// hash.
 func TestHashBytes(t *testing.T) {
 	referenceHash := Hash{
 		247, 251, 186, 110, 6, 54, 248, 144, 229, 111, 187, 243, 40, 62, 82, 76,
@@ -21,7 +22,8 @@ func TestHashBytes(t *testing.T) {
 	hash = HashBytes(nil)
 }
 
-// TestHashObject tests that HashObject hashes multiple distinct types without error.
+// TestHashObject tests that HashObject hashes multiple distinct types without
+// error.
 func TestHashObject(t *testing.T) {
 	objs := []interface{}{
 		nil,

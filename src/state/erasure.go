@@ -7,8 +7,9 @@ import (
 	"io"
 )
 
-// RSEncode acts as a wrapper around erasure.ReedSolomonEncode for state-specific encoding operations.
-// It is less flexible than erasure.ReedSolomonEncode, and returns the number of atoms per sector.
+// RSEncode acts as a wrapper around erasure.ReedSolomonEncode for
+// state-specific encoding operations. It is less flexible than
+// erasure.ReedSolomonEncode, and returns the number of atoms per sector.
 func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uint16, err error) {
 	// check for nil inputs
 	if input == nil {
@@ -55,8 +56,9 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uin
 	return
 }
 
-// RSRecover acts as a wrapper around erasure.ReedSolomonRecover for state-specific encoding operations.
-// It is less flexible than erasure.ReedSolomonRecover, and returns the number of atoms per sector.
+// RSRecover acts as a wrapper around erasure.ReedSolomonRecover for
+// state-specific encoding operations. It is less flexible than
+// erasure.ReedSolomonRecover, and returns the number of atoms per sector.
 func RSRecover(segments []io.Reader, indices []byte, output io.Writer, k int) (atoms uint16, err error) {
 	if k < 1 || k >= int(QuorumSize) {
 		err = fmt.Errorf("k must be between zero and %v", QuorumSize)

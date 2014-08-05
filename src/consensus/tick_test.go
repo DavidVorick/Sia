@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
-// TestSynchronizedTick checks that all of the required logic for Participant.tick()
-// runs without error when the participant is synchronized to the quorum.
+// TestSynchronizedTick checks that all of the required logic for
+// Participant.tick() runs without error when the participant is synchronized
+// to the quorum.
 func TestSynchronizedTick(t *testing.T) {
 	// Create a bootstrapped participant to test with.
 	rpcs, err := network.NewRPCServer(11025)
@@ -41,7 +42,8 @@ func TestSynchronizedTick(t *testing.T) {
 		t.Error("Quorum height not initialized to 0")
 	}
 
-	// Set the currentStep to trigger a compile and wait for the compile to trigger.
+	// Set the currentStep to trigger a compile and wait for the compile to
+	// trigger.
 	p.currentStepLock.Lock()
 	p.currentStep = state.QuorumSize
 	p.currentStepLock.Unlock()
@@ -54,5 +56,6 @@ func TestSynchronizedTick(t *testing.T) {
 	}
 	p.engineLock.RUnlock()
 
-	// Is there some way to check that a new heartbeat was created and broadcast to the newtork???
+	// Is there some way to check that a new heartbeat was created and
+	// broadcast to the newtork???
 }

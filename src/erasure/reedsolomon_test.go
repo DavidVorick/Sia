@@ -10,9 +10,9 @@ import (
 // test function only checks the general case, and doesn't probe for bugs or
 // errors.
 func TestReedSolomonEncodeAndRecover(t *testing.T) {
-	// Make a random byte slice of length 1080 and encode it into 12 pieces, k=9
-	// and m=3. 1080 has been chosen because it is divisible by 8*12 but not
-	// 64*12. There used to be a bug where all data padded to 64*k was
+	// Make a random byte slice of length 1080 and encode it into 12 pieces,
+	// k=9 and m=3. 1080 has been chosen because it is divisible by 8*12 but
+	// not 64*12. There used to be a bug where all data padded to 64*k was
 	// acceptable, but data padded to 8*k and not 64*k would cause an error.
 	// This checks that the error does not reappear.
 	k, m := 51, 128-51
@@ -42,7 +42,8 @@ func TestReedSolomonEncodeAndRecover(t *testing.T) {
 	}
 }
 
-// BenchmarkReedSolomonEncode tests the throughput of the ReedSolomonEncode function.
+// BenchmarkReedSolomonEncode tests the throughput of the ReedSolomonEncode
+// function.
 func BenchmarkReedSolomonEncode(b *testing.B) {
 	k, m := 51, 128-51
 	data := siacrypto.RandomByteSlice(100032 * k) // ~5 MB
@@ -55,8 +56,8 @@ func BenchmarkReedSolomonEncode(b *testing.B) {
 	}
 }
 
-// BenchmarkReedSolomonEncodeSmall tests the throughput of the ReedSolomonEncode function
-// for small block sizes.
+// BenchmarkReedSolomonEncodeSmall tests the throughput of the
+// ReedSolomonEncode function for small block sizes.
 func BenchmarkReedSolomonEncodeSmall(b *testing.B) {
 	k, m := 51, 128-51
 	data := siacrypto.RandomByteSlice(64 * 51)
@@ -69,7 +70,8 @@ func BenchmarkReedSolomonEncodeSmall(b *testing.B) {
 	}
 }
 
-// BenchmarkReedSolomonRecover tests the throughput of the ReedSolomonRecover function.
+// BenchmarkReedSolomonRecover tests the throughput of the ReedSolomonRecover
+// function.
 func BenchmarkReedSolomonRecover(b *testing.B) {
 	k, m := 51, 128-51
 	data := siacrypto.RandomByteSlice(100032 * k)

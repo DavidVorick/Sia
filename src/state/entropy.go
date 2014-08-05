@@ -9,7 +9,7 @@ const (
 	EntropyVolume int = 32
 )
 
-// Entropy is highly random data that is used to seed a pseudorandom number generator.
+// Entropy is highly random data that is used to seed a PRNG.
 type Entropy [EntropyVolume]byte
 
 // MergeExternalEntropy takes as input some entropy (assumed to be the
