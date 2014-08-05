@@ -34,6 +34,7 @@ type Block struct {
 	HeartbeatSignatures [state.QuorumSize]siacrypto.Signature
 
 	// Aggregate of non-required information submitted to the quorum
-	ScriptInputs []ScriptInput
-	// UploadAdvancements []quorum.UploadAdvancement
+	ScriptInputs          []ScriptInput
+	UpdateAdvancements    []state.UpdateAdvancement
+	AdvancementSignatures []siacrypto.Signature
 }

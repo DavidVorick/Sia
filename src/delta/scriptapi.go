@@ -17,14 +17,16 @@ var (
 
 	aserrNoEmptySiblings = fmt.Errorf("There are no empty spots in the quorum.")
 
-	puerrUnallocatedSector      = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
-	puerrTooManyConfirmations   = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
-	puerrTooFewConfirmations    = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
-	puerrNonCurrentParentHash   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
-	puerrDeadlineTooDistant     = fmt.Errorf("The deadline provided is more than state.MaxDeadline block into the future.")
-	puerrDeadlineAlreadyExpired = fmt.Errorf("The deadline provided has already expired.")
-	puerrAbsurdAtomsAltered     = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
-	puerrInsufficientAtoms      = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
+	puerrInvalidK             = fmt.Errorf("K must hold either a value of 1 or 2.")
+	puerrTooFewAtoms          = fmt.Errorf("A sector must have more than QuorumSize atoms.")
+	puerrUnallocatedSector    = fmt.Errorf("The sector has not been allocated, cannot make upload changes.")
+	puerrTooManyConfirmations = fmt.Errorf("Cannot require more than QuorumSize confirmations.")
+	puerrTooFewConfirmations  = fmt.Errorf("Must require at least SectorSettings.K confirmations.")
+	puerrNonCurrentParentID   = fmt.Errorf("The parentHash given does not match the hash of the most recent upload to the quorum.")
+	puerrAbsurdAtomsAltered   = fmt.Errorf("The number of atoms altered is greater than the number of atoms allocated.")
+	puerrInsufficientAtoms    = fmt.Errorf("The quorum has insufficient atoms to support this upload.")
+	puerrDeadlineTooEarly     = fmt.Errorf("An upload takes at least 2 complete blocks to succeed - deadline too early.")
+	puerrLongDeadline         = fmt.Errorf("The deadline is too far in the future.")
 )
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
@@ -95,126 +97,67 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 	s.SaveWallet(destWallet)
 	return
 }
-
-// Every wallet has a single sector, which can be up to 2^16 atoms of 4kb each,
-// or 32GB total with 0 redundancy. Wallets pay for the size of their sector.
-func (s *State) ResizeSectorErase(w *Wallet, atoms uint16, k byte) (cost int, weight int, err error) {
-	weightDelta := int(atoms)
-	// weightDelta -= int(w.sectorAtoms)
-	if weightDelta == 0 {
-		return
-	}
-
-	// update the weights in the wallet tree
-	s.updateWeight(w.ID, weightDelta)
-	if s.walletRoot.weight > AtomsPerQuorum {
-		s.updateWeight(w.ID, -weightDelta)
-		return
-	}
-	weight = weightDelta
-
-	// remove the file and return if the sector has been resized to length 0
-	walletName := s.walletFilename(w.ID)
-	sectorName := walletName + ".sector"
-	if atoms == 0 {
-		os.Remove(sectorName)
-		return
-	}
-
-	// derive the name of the file housing the sector, and truncate the file
-	file, err := os.Create(sectorName)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	// extend the file to being to proper length
-	err = file.Truncate(int64(atoms) * int64(AtomSize))
-	if err != nil {
-		panic(err)
-	}
-
-	// update the hash associated with the sector
-	_, err = file.Seek(int64(AtomSize), 0) // first atom contains hash information
-	if err != nil {
-		panic(err)
-	}
-	zeroMerkle := MerkleCollapse(file)
-
-	// build the first atom of the file to contain all of the hashes
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		panic(err)
-	}
-	for i := byte(0); i < QuorumSize; i++ {
-		_, err := file.Write(zeroMerkle[:])
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// get the hash of the first atom as the sector hash
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		panic(err)
-	}
-	firstAtom := make([]byte, AtomSize)
-	_, err = file.Read(firstAtom)
-	if err != nil {
-		panic(err)
-	}
-	// w.sectorAtoms = atoms
-	// w.sectorM = k
-	// w.sectorHash = siacrypto.CalculateHash(firstAtom)
-
-	return
-}
 */
 
-func (e *Engine) ProposeUpload(w *state.Wallet, confirmationsRequired byte, parentHash siacrypto.Hash, hashSet [state.QuorumSize]siacrypto.Hash, deadline uint32) (err error) {
-	// Verify that the wallet in question has an allocated sector.
-	if w.SectorSettings.Atoms < uint16(state.QuorumSize) {
-		err = puerrUnallocatedSector
+func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
+	// Verify that the parent hash is available to have an upload attatched to
+	// it.
+	available := e.state.AvailableParentID(parentID)
+	if !available {
+		err = puerrNonCurrentParentID
 		return
 	}
+
+	// Verify that 'atoms' follows the rules for sector sizes.
+	if atoms <= uint16(state.QuorumSize) {
+		err = puerrTooFewAtoms
+		return
+	}
+
+	// Verify that 'k' is a sane value.
+	if k > 2 || k == 0 {
+		err = puerrInvalidK
+		return
+	}
+
+	// Right now the role of 'd' is pretty well undefined.
 
 	// Verify that 'confirmationsRequired' is a legal value.
 	if confirmationsRequired > state.QuorumSize {
 		err = puerrTooManyConfirmations
 		return
-	} else if confirmationsRequired < w.SectorSettings.K {
+	} else if confirmationsRequired < k {
 		err = puerrTooFewConfirmations
 		return
 	}
 
-	// Match the parent hash to the expected hash.
-	if e.state.ActiveParentHash(*w, parentHash) {
-		err = puerrNonCurrentParentHash
+	// Verify that the dealine is reasonable.
+	if deadline < e.state.Metadata.Height+2 {
+		err = puerrDeadlineTooEarly
+		return
+	} else if deadline > e.state.Metadata.Height+state.MaxDeadline {
+		err = puerrLongDeadline
 		return
 	}
 
 	// Verify that the quorum has enough atoms to support the upload. Long
 	// term, this check won't be necessary because it'll be a part of the
 	// preallocated resources planning.
-	if e.state.Weight()+int(w.SectorSettings.Atoms) > int(state.AtomsPerQuorum) {
+	if e.state.AtomsInUse()+int(atoms) > int(state.AtomsPerQuorum) {
 		err = puerrInsufficientAtoms
 		return
 	}
 
-	// Update the wallet to reflect the new upload weight it has gained.
-	w.SectorSettings.UploadAtoms += w.SectorSettings.Atoms
-
 	// Update the eventlist to include an upload event.
-	u := state.Upload{
-		ID: w.ID,
-		ConfirmationsRequired: confirmationsRequired,
-		ParentHash:            parentHash,
+	su := state.SectorUpdate{
+		WalletID:              w.ID,
+		ParentCounter:         parentID.Counter,
+		Atoms:                 atoms,
+		K:                     k,
+		D:                     d,
 		HashSet:               hashSet,
+		ConfirmationsRequired: confirmationsRequired,
 	}
-	e.state.InsertEvent(&u)
-
-	// Append the upload to the list of wallet sector modifiers.
-	e.state.AppendSectorModifier(w.ID, &u)
-
+	err = e.state.InsertSectorUpdate(w, su)
 	return
 }

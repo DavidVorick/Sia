@@ -75,7 +75,7 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	w1ExpectedBalance := NewBalance(0, 100-walletAtomMultiplier*2)
 	if w1.Balance.Compare(w1ExpectedBalance) != 0 {
-		t.Error("w1 did not have the expected balance after compensation")
+		t.Error("w1 did not have the expected balance after compensation", w1.Balance)
 	}
 
 	w2, err = s.LoadWallet(2)
