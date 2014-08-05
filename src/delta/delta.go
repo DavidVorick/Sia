@@ -31,7 +31,11 @@ type Engine struct {
 	state state.State
 
 	// Engine Variables
-	filePrefix string
+	filePrefix   string
+	siblingIndex byte
+
+	// Upload Variables
+	completedUpdates map[state.UpdateID]bool
 
 	// Snapshot Variables
 	recentHistoryHead   uint32
@@ -52,15 +56,21 @@ func (e *Engine) Metadata() state.StateMetadata {
 	return e.state.Metadata
 }
 
-// WalletList is a getter that returns the state's wallet list.
+// SiblingIndex is a getter that returns the engine's sibling index.
+func (e *Engine) SiblingIndex() byte {
+	return e.siblingIndex
+}
+
+// WalletList is a pass-along function so that the wallet list of the state can be accessed
+// by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
 
 // Initialize sets various fields of the Engine object.
-// It exists mostly as a convenience function.
-func (e *Engine) Initialize(filePrefix string) {
+func (e *Engine) Initialize(filePrefix string, siblingIndex byte) {
 	e.SetFilePrefix(filePrefix)
+	e.siblingIndex = siblingIndex
 	return
 }
 

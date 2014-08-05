@@ -18,7 +18,9 @@ type Update struct {
 	Heartbeat          delta.Heartbeat
 	HeartbeatSignature siacrypto.Signature
 
-	ScriptInputs []delta.ScriptInput
+	ScriptInputs          []delta.ScriptInput
+	UpdateAdvancements    []state.UpdateAdvancement
+	AdvancementSignatures []siacrypto.Signature
 }
 
 // TODO: add docstring
@@ -58,6 +60,8 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	{
 		// Create a map containing all ScriptInputs found in a heartbeat.
 		scriptInputMap := make(map[string]delta.ScriptInput)
+		updateAdvancementMap := make(map[string]state.UpdateAdvancement)
+		advancementSignatureMap := make(map[string]siacrypto.Signature)
 		for i := range p.updates {
 			if len(p.updates[i]) == 1 {
 				for _, u := range p.updates[i] {
@@ -72,6 +76,22 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 							continue
 						}
 						scriptInputMap[string(scriptInputHash[:])] = scriptInput
+					}
+
+					// Add all of the update advancements to the hash map.
+					for i, ua := range u.UpdateAdvancements {
+						// Verify the signature on the update advancement.
+						verified, err := p.engine.Metadata().Siblings[ua.Index].PublicKey.VerifyObject(u.AdvancementSignatures[i], ua)
+						if err != nil || !verified {
+							continue
+						}
+						uaHash, err := siacrypto.HashObject(ua)
+						if err != nil {
+							continue
+						}
+						uaString := string(uaHash[:])
+						updateAdvancementMap[uaString] = ua
+						advancementSignatureMap[uaString] = u.AdvancementSignatures[i]
 					}
 				}
 			}
@@ -90,6 +110,18 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 		sort.Strings(sortedKeys)
 		for _, k := range sortedKeys {
 			b.ScriptInputs = append(b.ScriptInputs, scriptInputMap[k])
+		}
+
+		// Sort the updateAdvancementMap and include the advancements into the
+		// block in sorted order.
+		sortedKeys = nil
+		for k := range updateAdvancementMap {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sort.Strings(sortedKeys)
+		for _, k := range sortedKeys {
+			b.UpdateAdvancements = append(b.UpdateAdvancements, updateAdvancementMap[k])
+			b.AdvancementSignatures = append(b.AdvancementSignatures, advancementSignatureMap[k])
 		}
 	}
 	return
@@ -123,6 +155,21 @@ func (p *Participant) newSignedUpdate() {
 	update.ScriptInputs = p.scriptInputs
 	p.scriptInputs = nil
 	p.scriptInputsLock.Unlock()
+
+	// Attach all of the update advancements to the signed heartbeat and sign
+	// them.
+	p.updateAdvancementsLock.Lock()
+	update.UpdateAdvancements = p.updateAdvancements
+	p.updateAdvancements = nil
+	for i, ua := range update.UpdateAdvancements {
+		uas, err := p.secretKey.SignObject(ua)
+		if err != nil {
+			// log an error
+			continue
+		}
+		update.AdvancementSignatures[i] = uas
+	}
+	p.updateAdvancementsLock.Unlock()
 
 	// Sign the update and create a SignedUpdate object with ourselves as the
 	// first signatory.

@@ -57,6 +57,15 @@ func (e *Engine) Compile(b Block) {
 		e.Execute(si)
 	}
 
+	// Process all of the UpdateAdvancements
+	for i, ua := range b.UpdateAdvancements {
+		verified, err := e.state.Metadata.Siblings[ua.Index].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
+		if err != nil || !verified {
+			continue
+		}
+		e.state.AdvanceUpdate(ua)
+	}
+
 	// Charge wallets for the storage they are consuming, and reward sibings for
 	// the storage that is being consumed.
 	e.state.ExecuteCompensation()

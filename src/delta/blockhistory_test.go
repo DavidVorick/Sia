@@ -13,7 +13,7 @@ import (
 // initialization.
 func TestSaveAndLoadBlock(t *testing.T) {
 	var e Engine
-	e.Initialize("../../filesCreatedDuringTesting/TestSaveAndLoad")
+	e.Initialize("../../filesCreatedDuringTesting/TestSaveAndLoad", 0)
 	err := e.Bootstrap(state.Sibling{
 		WalletID: 1,
 	})

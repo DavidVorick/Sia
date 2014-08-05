@@ -13,7 +13,7 @@ type SectorSettings struct {
 
 	// The number of atoms that are currently allocated for uploading to the
 	// sector.
-	UploadAtoms uint16
+	UpdateAtoms uint16
 
 	// The minimum number of sibings in the quorum that need to remain
 	// uncorrupted in order for the original data to be recoverable.
@@ -29,25 +29,21 @@ type SectorSettings struct {
 	// quorum. Hash is kept as a variable so that there is a record in the
 	// blockchain of what the exact appearance of the file should be.
 	Hash siacrypto.Hash
+
+	// The value corresponding to the most recent update, used so new updates can
+	// identify the wallet with an UpdateID.
+	RecentUpdateCounter uint32
 }
 
-type SectorModifier interface {
-	Hash() siacrypto.Hash
-}
-
-func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
-	modifiers, exists := s.activeUploads[w.ID]
+/* func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
+	modifiers, exists := s.activeSectors[w.ID]
 	if exists {
 		latestModifier := modifiers[len(modifiers)-1]
 		return parentHash == latestModifier.Hash()
 	} else {
 		return parentHash == w.SectorSettings.Hash
 	}
-}
-
-func (s *State) AppendSectorModifier(id WalletID, sm SectorModifier) {
-	s.activeUploads[id] = append(s.activeUploads[id], sm)
-}
+} */
 
 // convenience function for constructing Merkle trees
 func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
