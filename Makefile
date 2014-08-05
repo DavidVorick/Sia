@@ -8,9 +8,6 @@ all: submodule-update install
 submodule-update:
 	git submodule update --init
 
-bench:
-	$(govars) go test -run=XXX -bench=. $(packages)
-
 fmt:
 	$(govars) go fmt $(packages)
 
@@ -47,6 +44,9 @@ test-delta:
 
 test-state:
 	$(govars) go test -v -race state
+
+bench:
+	$(govars) go test -run=XXX -bench=. $(packages)
 
 dependencies: submodule-update race-libs
 	cd src/siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig

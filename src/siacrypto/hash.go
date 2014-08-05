@@ -8,12 +8,14 @@ import (
 )
 
 const (
-	HashSize int = 32 // in bytes
+	// HashSize is the size of a Hash in bytes
+	HashSize int = 32
 )
 
+// A Hash is the first 32 bytes of a sha512 checksum.
 type Hash [HashSize]byte
 
-// HashBytes returns the first 32 bytes of the sha512 hash of the input.
+// HashBytes returns the first 32 bytes of the sha512 checksum of the input.
 func HashBytes(data []byte) (h Hash) {
 	hash512 := sha512.Sum512(data)
 	copy(h[:], hash512[:])

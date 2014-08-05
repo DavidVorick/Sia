@@ -101,6 +101,7 @@ func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err 
 }
 */
 
+// TODO: add docstring
 func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
 	// Verify that the parent hash is available to have an upload attatched to
 	// it.

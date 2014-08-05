@@ -8,14 +8,22 @@ import (
 	"errors"
 )
 
+// Public keys, secret keys, and signatures all use a byte slice
+// for their underlying representation. These sizes are the lengths
+// of those types, in bytes.
 const (
 	PublicKeySize = 32
 	SecretKeySize = 64
 	SignatureSize = 64
 )
 
+// A PublicKey is the binary representation of an ECC public key.
 type PublicKey [PublicKeySize]byte
+
+// A SecretKey is the binary representation of an ECC secret key.
 type SecretKey [SecretKeySize]byte
+
+// A Signature is the binary representation of an ECC signature.
 type Signature [SignatureSize]byte
 
 // Verify returns whether a message was signed by the public key 'pk'.

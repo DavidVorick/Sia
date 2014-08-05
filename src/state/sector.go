@@ -7,6 +7,7 @@ import (
 	"siacrypto"
 )
 
+// TODO: add docstring
 type SectorSettings struct {
 	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
@@ -77,6 +78,8 @@ func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err
 	return
 }
 
+// SectorHash returns the combined hash of 'QuorumSize' Hashes.
+// TODO: check that this still make sense for the current AtomSize.
 func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 	atomRepresentation := make([]byte, AtomSize) // regardless of quorumsize, must hash a whole atom
 	for i := range hashSet {
@@ -92,7 +95,7 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 	return
 }
 
-// BuildStorageProof constructs a list of hashes using the following procedure.
+// buildProof  constructs a list of hashes using the following procedure.
 // The storage proof requires traversing the Merkle tree from the proofIndex node to the root.
 // On each level of the tree, we must provide the hash of "sister" node.
 // (Since this is a binary tree, the sister node is the other node with the same parent as us.)
