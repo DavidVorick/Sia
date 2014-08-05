@@ -17,13 +17,19 @@ func (c *Client) GetGenericWallets() (ids []state.WalletID) {
 	return
 }
 
-func (c *Client) EnterWallet(id state.WalletID) (err error) {
+// Wallet type takes an id as input and returns the wallet type. An error is
+// returned if the wallet is not found by the client.
+func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
+	// Check if the wallet is a generic type.
 	_, exists := c.genericWallets[id]
 	if exists {
-		c.CurID = id
-	} else {
-		err = errors.New("Invalid Wallet ID")
+		walletType = "generic"
+		return
 	}
+
+	// Check for other types of wallets.
+
+	err = fmt.Errorf("Wallet is not available.")
 	return
 }
 
