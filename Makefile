@@ -11,6 +11,9 @@ submodule-update:
 directories:
 	mkdir -p filesCreatedDuringTesting
 
+bench:
+	$(govars) go test -run=XXX -bench=. $(packages)
+
 fmt:
 	$(govars) go fmt $(packages)
 
