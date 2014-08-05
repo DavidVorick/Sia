@@ -14,9 +14,8 @@ func countReachableNodes(w *walletNode) (i int) {
 		return
 	}
 
-	i += 1
-	i += countReachableNodes(w.children[0])
-	i += countReachableNodes(w.children[1])
+	i = countReachableNodes(w.children[0]) +
+		countReachableNodes(w.children[1]) + 1
 	return i
 }
 
@@ -46,13 +45,13 @@ func findRedViolations(w *walletNode) (violations int) {
 	if w.isRed() {
 		if w.children[0] != nil {
 			if w.children[0].isRed() {
-				violations += 1
+				violations++
 			}
 		}
 
 		if w.children[1] != nil {
 			if w.children[1].isRed() {
-				violations += 1
+				violations++
 			}
 		}
 	}
@@ -79,12 +78,12 @@ func findBlackViolations(w *walletNode) (height, violations int) {
 	violations += rightViolations
 
 	if leftHeight != rightHeight {
-		violations += 1
+		violations++
 	}
 
 	height = leftHeight
 	if !w.isRed() {
-		height += 1
+		height++
 	}
 
 	return
@@ -98,10 +97,10 @@ func findSortViolations(w *walletNode) (violations int) {
 	}
 
 	if w.children[0] != nil && w.children[0].id >= w.id {
-		violations += 1
+		violations++
 	}
 	if w.children[1] != nil && w.children[1].id <= w.id {
-		violations += 1
+		violations++
 	}
 
 	violations += findSortViolations(w.children[0])
@@ -126,7 +125,7 @@ func findWeightViolations(w *walletNode) (violations int) {
 		selfWeight -= w.children[1].weight
 	}
 	if uint64(selfWeight) != uint64(w.id) {
-		violations += 1
+		violations++
 	}
 
 	leftViolations := findWeightViolations(w.children[0])

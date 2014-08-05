@@ -138,7 +138,7 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 		rs.Seek(int64(i)*int64(AtomSize), 0)
 
 		// truncate number of atoms to read, if necessary
-		var truncSize uint16 = size
+		truncSize := size
 		if i+size > numAtoms {
 			truncSize = numAtoms - i
 		}

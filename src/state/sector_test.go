@@ -58,7 +58,7 @@ func TestStorageProof(t *testing.T) {
 	var numAtoms uint16 = 7
 	data := bytes.NewReader(siacrypto.RandomByteSlice(int(numAtoms) * AtomSize))
 
-	var proofIndex uint16 = 0
+	var proofIndex uint16 = 6
 	proofBase, proofStack := buildProof(data, numAtoms, proofIndex)
 
 	// no need to call VerifyStorageProof directly; just simulate it

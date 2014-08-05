@@ -18,12 +18,17 @@ type Sibling struct {
 }
 
 const (
-	QuorumSize     byte   = 4        // max siblings per quorum
-	AtomSize       int    = 32       // in bytes
-	AtomsPerQuorum int    = 16777216 // 512MB
-	AtomsPerSector uint16 = 1024     // more causes DOS problems, is fixable. Final value likely to be 2^13-2^16
+	// QuorumSize is the maximum number of siblings in a quorum.
+	QuorumSize byte = 4
+	// AtomSize is the number of bytes in an atom.
+	AtomSize int = 32
+	// AtomsPerQuorum is the maximum number of atoms that can be stored on a single quorum.
+	AtomsPerQuorum int = 16777216
+	// AtomsPerSector is the number of atoms in a sector. Final value likely to be 2^13-2^16
+	AtomsPerSector uint16 = 1024
 )
 
+// TODO: add docstring
 type State struct {
 	// A struct containing all of the simple, single-variable data of the quorum.
 	Metadata Metadata
@@ -48,6 +53,8 @@ type State struct {
 	activeUpdates map[WalletID][]SectorUpdate
 }
 
+// SetWalletPrefix is a setter that sets the state walletPrefix field.
+// TODO: move this documentation to package docstring?
 // This is the prefix that the state will use when opening wallets as files.
 // Eventually, logic will be implemented to move all of the wallets and files
 // if the prefex is changed. It is permissible to change the wallet prefix in
@@ -69,12 +76,12 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	return
 }
 
-// Returns the number of atoms being consumed by the whole quorum.
+// AtomsInUse returns the number of atoms being consumed by the whole quorum.
 func (s *State) AtomsInUse() int {
 	return s.walletRoot.weight
 }
 
-// Removes a sibling from the list of siblings
+// TossSibling removes a sibling from the list of siblings.
 func (s *State) TossSibling(i byte) {
 	s.Metadata.Siblings[i] = *new(Sibling)
 }

@@ -5,14 +5,16 @@ import (
 )
 
 const (
-	EntropyVolume int = 32 // in bytes
+	// EntropyVolume is the size of the Entropy type in byte.
+	EntropyVolume int = 32
 )
 
+// Entropy is highly random data that is used to seed a pseudorandom number generator.
 type Entropy [EntropyVolume]byte
 
-// State.MergeExternalEntropy takes as input some entropy (assumed to be the
+// MergeExternalEntropy takes as input some entropy (assumed to be the
 // external source of entropy) and appends it to the Germ. The Germ then
-// becomes the new seed.
+// becomes the new Seed.
 func (s *State) MergeExternalEntropy(e Entropy) {
 	s.Metadata.Seed = Entropy(siacrypto.HashBytes(append(s.Metadata.Germ[:], e[:]...)))
 }

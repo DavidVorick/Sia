@@ -5,10 +5,11 @@ import (
 )
 
 const (
+	// MaxDeadline is the maximum allowed expiration deadline for Events.
 	MaxDeadline = 300
 )
 
-// An event is a task that the quorum will have to perform at a certain block,
+// An Event is a task that the quorum will have to perform at a certain block,
 // which is returned by expiration(). Something may trigger the event early, at
 // which point the event will be deleted from the eventList. Each block, all
 // events that expire that block are handled by calling handleEvent() on the
@@ -45,20 +46,20 @@ type pointerStack struct {
 	nextPointer *pointerStack
 }
 
-// height() returns the number of elements in the linked list of pointerStacks,
+// height returns the number of elements in the linked list of pointerStacks,
 // including the one used to call height().
 func (ps *pointerStack) height() (i int) {
 	if ps != nil {
-		i += 1
+		i++
 	}
 	for ps.nextPointer != nil {
-		i += 1
+		i++
 		ps = ps.nextPointer
 	}
 	return
 }
 
-// bottom() takes a pointerStack and finds the bottom pointerStack, which is
+// bottom takes a pointerStack and finds the bottom pointerStack, which is
 // guaranteed to point only one event forward.
 func (ps *pointerStack) bottom() *pointerStack {
 	for ps.nextPointer != nil {
@@ -68,14 +69,13 @@ func (ps *pointerStack) bottom() *pointerStack {
 }
 
 func eventIndex(e Event) (index uint64) {
-	index = uint64(e.Expiration())
-	index <<= 32
+	index = uint64(e.Expiration()) << 32
 	index += uint64(e.Counter())
 	return
 }
 
 // InsertEvent takes a new event and inserts it into the event list.
-// InsertEvent does not check that the event already exists inside of the list,
+// It does not check that the event already exists inside of the list,
 // as duplicate events are allowed to exist in the event list.
 func (s *State) InsertEvent(e Event) {
 	// counter has the high 32 bits as the expiration of the event, which allows
@@ -83,7 +83,7 @@ func (s *State) InsertEvent(e Event) {
 	// is the eventCounter, and this allows for FCFS unique ordering of events
 	// with the same expiration.
 	e.SetCounter(s.Metadata.EventCounter)
-	s.Metadata.EventCounter += 1
+	s.Metadata.EventCounter++
 	freshNode := new(eventNode)
 	freshNode.event = e
 
@@ -105,7 +105,7 @@ func (s *State) InsertEvent(e Event) {
 	freshHeight := 1
 	heightAugmenter := siacrypto.RandomInt(87) // rand from [0, 87)
 	for heightAugmenter < 32 {                 // 32/87 is ~ 1/e, the most efficient probability
-		freshHeight += 1
+		freshHeight++
 		if freshHeight > currentHeight {
 			// increase the height of the root node by one
 			newTop := new(pointerStack)
@@ -125,7 +125,7 @@ func (s *State) InsertEvent(e Event) {
 		s.eventRoot.top = freshPointer
 		for currentHeight > freshHeight {
 			currentPointer = currentPointer.nextPointer
-			currentHeight -= 1
+			currentHeight--
 		}
 
 		for currentPointer.nextPointer != nil {
@@ -166,11 +166,11 @@ func (s *State) InsertEvent(e Event) {
 
 		// move down
 		currentPointer = currentPointer.nextPointer
-		currentHeight -= 1
+		currentHeight--
 	}
 }
 
-// deleteEvent takes an event, finds it in the event list, and then deletes the
+// DeleteEvent takes an event, finds it in the event list, and then deletes the
 // event. This is called after an event expires, and is also called if an event
 // is triggered before its expiration.
 func (s *State) DeleteEvent(e Event) {
@@ -198,7 +198,7 @@ func (s *State) DeleteEvent(e Event) {
 				currentPointer.nextNode = nPointer.nextNode
 				nPointer = nPointer.nextPointer
 			}
-			currentHeight -= 1
+			currentHeight--
 			currentPointer = currentPointer.nextPointer
 		}
 
@@ -228,7 +228,7 @@ func (s *State) DeleteEvent(e Event) {
 
 		// move down
 		currentPointer = currentPointer.nextPointer
-		currentHeight -= 1
+		currentHeight--
 	}
 }
 

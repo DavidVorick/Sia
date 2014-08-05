@@ -1,18 +1,23 @@
 package state
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"siaencoding"
 )
 
 const (
+	// WalletIDSize is the size of a WalletID in bytes.
 	WalletIDSize         = 8
 	walletAtomMultiplier = 3
 )
 
+// A WalletID is a unique identifier that references a Wallet on the network.
 type WalletID uint64
 
+// A Wallet performs three important duties. It contains a Balance, allowing for
+// transactions; a SectorSettings object which manages what storage is associated
+// with the Wallet; and a Script, which can receive inputs and perform actions.
 type Wallet struct {
 	ID             WalletID
 	Balance        Balance
@@ -20,10 +25,12 @@ type Wallet struct {
 	Script         []byte
 }
 
+// Bytes returns the WalletID as a byte slice.
 func (id WalletID) Bytes() []byte {
 	return siaencoding.EncUint64(uint64(id))
 }
 
+// TODO: add docstring
 func (w Wallet) CompensationWeight() uint16 {
 	// Count the number of atoms used by the script.
 	weight := uint16(len(w.Script) / AtomSize)
@@ -33,7 +40,7 @@ func (w Wallet) CompensationWeight() uint16 {
 	}
 
 	// Add an additional atom for the wallet itself.
-	weight += 1
+	weight++
 
 	// Multiply script and wallet weight by the walletAtomMultiplier to account
 	// for the snapshots that the wallet needs to reside in.
@@ -46,11 +53,11 @@ func (w Wallet) CompensationWeight() uint16 {
 }
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
-// InsertWallet returns an error if the wallet already exists within the state.
+// It returns an error if the wallet already exists within the state.
 func (s *State) InsertWallet(w Wallet) (err error) {
 	wn := s.walletNode(w.ID)
 	if wn != nil {
-		err = fmt.Errorf("InsertWallet: wallet of that id already exists in quorum")
+		err = errors.New("wallet of that id already exists in quorum")
 		return
 	}
 
@@ -72,7 +79,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(id)
 	if wn == nil {
-		err = fmt.Errorf("LoadWallet: no wallet of that id exists.")
+		err = errors.New("no wallet of that id exists")
 		return
 	}
 
@@ -110,7 +117,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(w.ID)
 	if wn == nil {
-		err = fmt.Errorf("SaveWallet: no wallet of that id exists.")
+		err = errors.New("no wallet of that id exists")
 		return
 	}
 	weightDelta := int(w.SectorSettings.Atoms) - wn.nodeWeight()
@@ -119,7 +126,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// management in the quorum would prevent a too-heavy wallet from ever
 	// getting this far through the insert process.
 	if s.walletRoot.weight+weightDelta > AtomsPerQuorum {
-		err = fmt.Errorf("SaveWallet: wallet is too heavy to fit in the quorum.")
+		err = errors.New("wallet is too heavy to fit in the quorum")
 		return
 	}
 	s.updateWeight(w.ID, weightDelta)
@@ -153,14 +160,13 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	return
 }
 
+// RemoveWallet removes a Wallet from the wallet tree, and deletes
+// the file that contains the wallet.
 func (s *State) RemoveWallet(id WalletID) {
-	// Delete the file that contains the wallet on disk.
 	filename := s.walletFilename(id)
 	err := os.Remove(filename)
 	if err != nil {
 		panic(err)
 	}
-
-	// Delete from wallet tree.
 	s.removeWalletNode(id)
 }
