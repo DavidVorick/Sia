@@ -8,9 +8,12 @@ import (
 	"testing"
 )
 
+// Two things. First, this nees to be better commented. Second, there should be
+// more spaces, breaking the tests into logical units are are 1 thought/test
+// each. Usually this means 3-5 lines, though it can be more or less.
 func TestSaveLoadWallet(t *testing.T) {
 	var id1, id2 state.WalletID
-	keypair1, keypair2 := new(Keypair), new(Keypair)
+	var keypair1, keypair2 Keypair
 	id1 = state.WalletID(siacrypto.RandomUint64())
 	var err error
 	keypair1.PK, keypair1.SK, err = siacrypto.CreateKeyPair()
