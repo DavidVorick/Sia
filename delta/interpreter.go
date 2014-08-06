@@ -3,7 +3,8 @@ package delta
 import (
 	"errors"
 	"fmt"
-	"state"
+
+	"github.com/NebulousLabs/Sia/state"
 )
 
 const (

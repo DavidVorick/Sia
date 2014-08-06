@@ -2,9 +2,10 @@ package client
 
 import (
 	"errors"
-	"network"
-	"siacrypto"
-	"state"
+
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 type Keypair struct {

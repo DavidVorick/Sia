@@ -1,12 +1,13 @@
 package consensus
 
 import (
-	"delta"
 	"errors"
-	"network"
-	"siacrypto"
-	"state"
 	"sync"
+
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TODO: add docstring

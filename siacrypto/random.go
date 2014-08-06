@@ -4,7 +4,8 @@ package siacrypto
 
 import (
 	"crypto/rand"
-	"siaencoding"
+
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 // RandomByte returns a random byte

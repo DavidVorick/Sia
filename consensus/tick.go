@@ -1,8 +1,9 @@
 package consensus
 
 import (
-	"state"
 	"time"
+
+	"github.com/NebulousLabs/Sia/state"
 )
 
 const (

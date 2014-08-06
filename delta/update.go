@@ -3,8 +3,9 @@ package delta
 import (
 	"errors"
 	"os"
-	"siafiles"
-	"state"
+
+	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TODO: add docstring

@@ -3,9 +3,10 @@ package client
 import (
 	"bytes"
 	"os"
-	"siacrypto"
-	"state"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // Two things. First, this nees to be better commented. Second, there should be

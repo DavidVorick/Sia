@@ -1,9 +1,10 @@
 package delta
 
 import (
-	"siafiles"
-	"state"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TestSaveAndLoadBlock saves SnapshotLength+2 blocks, and after saving each

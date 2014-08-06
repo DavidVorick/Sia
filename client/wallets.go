@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"siacrypto"
-	"siaencoding"
-	"state"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // Returns a list of all wallets available to the client.

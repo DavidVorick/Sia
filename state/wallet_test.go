@@ -1,9 +1,10 @@
 package state
 
 import (
-	"siacrypto"
-	"siafiles"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TestWalletWeight runs some edge case testing on Wallet.Weight()

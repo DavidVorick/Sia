@@ -1,7 +1,7 @@
 package consensus
 
 import (
-	"state"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // Many of the synchronize RPC calls take a height as input, corresponding to

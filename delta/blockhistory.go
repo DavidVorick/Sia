@@ -3,7 +3,8 @@ package delta
 import (
 	"fmt"
 	"os"
-	"siaencoding"
+
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 const (

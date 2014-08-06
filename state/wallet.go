@@ -3,7 +3,8 @@ package state
 import (
 	"errors"
 	"os"
-	"siaencoding"
+
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 const (

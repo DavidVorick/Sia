@@ -4,7 +4,8 @@ package siacrypto
 
 import (
 	"crypto/sha512"
-	"siaencoding"
+
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 const (

@@ -1,10 +1,11 @@
 package consensus
 
 import (
-	"network"
-	"siacrypto"
-	"siafiles"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TestNewParticipnat runs NewParticipant and checks to see that all the basic

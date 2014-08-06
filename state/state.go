@@ -1,10 +1,10 @@
 package state
 
 import (
-	"network"
-	"siacrypto"
-	"siaencoding"
-	"siafiles"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // A Sibling is the public facing information of participants on the quorum.

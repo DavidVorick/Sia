@@ -1,10 +1,11 @@
 package consensus
 
 import (
-	"delta"
 	"errors"
-	"network"
-	"state"
+
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 /*

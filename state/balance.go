@@ -1,7 +1,7 @@
 package state
 
 import (
-	"siaencoding"
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 // A Balance is a 128-bit integer representing a volume of siacoins.

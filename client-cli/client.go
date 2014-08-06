@@ -1,10 +1,11 @@
 package main
 
 import (
-	"client"
 	"fmt"
 	"io/ioutil"
-	"state"
+
+	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 //Two states:

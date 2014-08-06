@@ -1,7 +1,7 @@
 package state
 
 import (
-	"siacrypto"
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 // Metadata contains all of the general data for a quorum, and is an object

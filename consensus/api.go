@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	"delta"
-	"state"
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // Block is an RPC that returns a block of a specific height. Participants only

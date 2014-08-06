@@ -1,9 +1,10 @@
 package consensus
 
 import (
-	"network"
-	"siafiles"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 func TestNewSignedUpdate(t *testing.T) {

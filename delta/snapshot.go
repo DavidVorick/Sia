@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"siaencoding"
-	"state"
+
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 const (

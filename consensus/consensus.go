@@ -1,13 +1,14 @@
 package consensus
 
 import (
-	"delta"
 	"errors"
-	"network"
-	"siacrypto"
 	"sort"
-	"state"
 	"time"
+
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // An Update is the set of information sent by each participant during

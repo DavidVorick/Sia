@@ -3,8 +3,9 @@ package state
 import (
 	"fmt"
 	//"os"
-	"siacrypto"
-	//"siafiles"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	//"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TODO: add docstring

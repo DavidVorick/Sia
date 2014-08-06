@@ -1,8 +1,8 @@
 package delta
 
 import (
-	"siacrypto"
-	"state"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TODO: add docstring

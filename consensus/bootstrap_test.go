@@ -1,11 +1,12 @@
 package consensus
 
 import (
-	"network"
-	"siafiles"
-	"state"
 	"testing"
 	"time"
+
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 func TestCreateParticipantFunctions(t *testing.T) {

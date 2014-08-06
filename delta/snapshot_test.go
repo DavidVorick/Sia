@@ -2,10 +2,11 @@ package delta
 
 import (
 	"reflect"
-	"siacrypto"
-	"siafiles"
-	"state"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TestSnapshotOffsetTableEncoding creates, encodes, and then decodes a

@@ -1,8 +1,9 @@
 package erasure
 
 import (
-	"siacrypto"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 // TestReedSolomonEncode creates a random byte slice, encodes a set of 12

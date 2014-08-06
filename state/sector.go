@@ -4,7 +4,8 @@ import (
 	"errors"
 	"io"
 	"os"
-	"siacrypto"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 // TODO: add docstring

@@ -2,8 +2,9 @@ package delta
 
 import (
 	"errors"
-	"siacrypto"
-	"state"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TODO: add docstring

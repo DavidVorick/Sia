@@ -3,8 +3,9 @@ package delta
 import (
 	"bytes"
 	"errors"
-	//"siacrypto"
-	"siaencoding"
+
+	//"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 var (

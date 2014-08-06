@@ -2,8 +2,9 @@ package state
 
 import (
 	"bytes"
-	"siacrypto"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 func TestMerkleEmpty(t *testing.T) {

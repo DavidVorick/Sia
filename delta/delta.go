@@ -10,7 +10,7 @@ package delta
 // and its current designs are passable, but not elegant, clean, or beautiful.
 
 import (
-	"state"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 const (

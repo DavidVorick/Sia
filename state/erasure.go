@@ -1,10 +1,11 @@
 package state
 
 import (
-	"erasure"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/NebulousLabs/Sia/erasure"
 )
 
 // RSEncode acts as a wrapper around erasure.ReedSolomonEncode for

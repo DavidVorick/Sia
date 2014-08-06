@@ -1,7 +1,7 @@
 package state
 
 import (
-	"siacrypto"
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 const (

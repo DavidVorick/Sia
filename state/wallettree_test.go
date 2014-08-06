@@ -2,8 +2,9 @@ package state
 
 import (
 	"fmt"
-	"siacrypto"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
 // countReachableNodes iterates through the rbw tree and counts how many nodes

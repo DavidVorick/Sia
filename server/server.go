@@ -1,11 +1,12 @@
 package main
 
 import (
-	"consensus"
-	"delta"
 	"fmt"
-	"network"
-	"state"
+
+	"github.com/NebulousLabs/Sia/consensus"
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 func joinQuorum() {

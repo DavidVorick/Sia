@@ -1,9 +1,10 @@
 package state
 
 import (
-	"siacrypto"
-	"siafiles"
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TestExecuteCompensation creates 3 wallets and a sibling, and tests

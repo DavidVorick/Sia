@@ -1,9 +1,9 @@
 package client
 
 import (
-	"delta"
-	"network"
-	"state"
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // send a user-specified script input

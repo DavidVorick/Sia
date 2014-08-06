@@ -1,8 +1,8 @@
 package delta
 
 import (
-	"siacrypto"
-	"siaencoding"
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 func short(length int) (l, h byte) {
