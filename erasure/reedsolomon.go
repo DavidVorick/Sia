@@ -16,6 +16,14 @@ package erasure
 // reedsolomon.go and reedsolomon.c should be viewed as one file. reedsolomon.c
 // should never be accessed or used by a file other than reedsolomon.go.
 
+// TODO:
+// Ideally we would be able to specify the necessary LDFLAGS here, i.e.:
+//      #cgo LDFLAGS: longhair/bin/liblonghair.a -lstdc++
+// However, cgo does not yet support relative paths in these declarations. This
+// unfortunately means that the LDFLAGS must be supplied in the Makefile. One
+// workaround would be to export the environment variable, but that's not a
+// great solution either. Hopefully this bug gets fixed soon.
+
 // #include "reedsolomon.c"
 import "C"
 
