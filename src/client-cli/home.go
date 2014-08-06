@@ -35,7 +35,7 @@ func connectWalkthrough(c *client.Client) {
 
 	// Load the hostname.
 	fmt.Print("Hostname: ")
-	_, err := fmt.Scanln("%s", &connectAddress.Host)
+	_, err := fmt.Scanln(&connectAddress.Host)
 	if err != nil {
 		fmt.Println("Invalid hostname")
 		return
@@ -43,7 +43,7 @@ func connectWalkthrough(c *client.Client) {
 
 	// Load the port number.
 	fmt.Print("Port: ")
-	_, err = fmt.Scanln("%d", &connectAddress.Port)
+	_, err = fmt.Scanln(&connectAddress.Port)
 	if err != nil {
 		fmt.Println("Invalid port")
 		return
@@ -51,7 +51,7 @@ func connectWalkthrough(c *client.Client) {
 
 	// Load the participant id.
 	fmt.Print("ID: ")
-	_, err = fmt.Scanln("%d", &connectAddress.ID)
+	_, err = fmt.Scanln(&connectAddress.ID)
 	if err != nil {
 		fmt.Println("Invalid id")
 		return
@@ -72,7 +72,7 @@ func loadWallet(c *client.Client) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
-	_, err := fmt.Scanln("%x", &id)
+	_, err := fmt.Scanln(&id)
 	if err != nil {
 		fmt.Println("Invalid ID")
 		return

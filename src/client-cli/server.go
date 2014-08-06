@@ -19,12 +19,12 @@ func displayServerHelp() {
 // serverCreationWalkthrough gets a bunch of input from the user and uses it to
 // create a new server.
 func serverCreationWalkthrough(c *client.Client) (err error) {
-	fmt.Println("Creating a server...")
+	fmt.Println("No server exists, starting server creation.")
 
 	// Get a port number for the RPCServer to listen on.
 	var port int
-	fmt.Print("What port would you like the server to listen on?")
-	_, err = fmt.Scanln("%d", &port)
+	fmt.Print("Which port should the server listen on: ")
+	_, err = fmt.Scanln(&port)
 	if err != nil {
 		return
 	}
@@ -48,19 +48,19 @@ func joinQuorumWalkthrough(c *client.Client) {
 	// Request and load the bootstrap address.
 	var bootstrap network.Address
 	fmt.Print("Hostname: ")
-	_, err := fmt.Scanln("%s", &bootstrap.Host)
+	_, err := fmt.Scanln(&bootstrap.Host)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 	fmt.Print("Port: ")
-	_, err = fmt.Scanln("%v", &bootstrap.Port)
+	_, err = fmt.Scanln(&bootstrap.Port)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 	fmt.Print("Participant ID: ")
-	_, err = fmt.Scanln("%v", &bootstrap.ID)
+	_, err = fmt.Scanln(&bootstrap.ID)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
@@ -76,14 +76,6 @@ func joinQuorumWalkthrough(c *client.Client) {
 
 /*
 func joinQuorum() {
-	// read and set bootstrap address
-	var bootstrap network.Address
-	fmt.Print("Bootstrap hostname: ")
-	fmt.Scanf("%s", &bootstrap.Host)
-	fmt.Print("Bootstrap port: ")
-	fmt.Scanf("%d", &bootstrap.Port)
-	fmt.Print("Bootstrap ID: ")
-	fmt.Scanf("%d", &bootstrap.ID)
 	err = networkServer.Ping(bootstrap)
 	if err != nil {
 		fmt.Println("Failed to ping bootstrap:", err)
