@@ -18,7 +18,7 @@ func displayHomeHelp() {
 		"l:\tLoad wallet\n",
 		"n:\tRequest a new wallet\n",
 		"p:\tPrint wallets\n",
-		"s:\tSwitch to server mode, creating a server if none yet exists.\n.",
+		"s:\tSwitch to server mode, creating a server if none yet exists.\n",
 		"S:\tSave all wallets\n",
 	)
 }
@@ -122,6 +122,7 @@ func createGenericWallet(c *client.Client) {
 
 // printWallets provides a list of every wallet available to the Client.
 func printWallets(c *client.Client) {
+	fmt.Println()
 	fmt.Println("All Stored Wallet IDs:")
 	wallets := c.GetWalletIDs()
 	for _, id := range wallets {
@@ -148,7 +149,7 @@ func serverModeSwitch(c *client.Client) {
 func pollHome(c *client.Client) {
 	var input string
 	for {
-		fmt.Print("Please enter a command: ")
+		fmt.Print("(Home) Please enter a command: ")
 		_, err := fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)

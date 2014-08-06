@@ -158,7 +158,7 @@ func establishQuorum() {
 func pollServer(c *client.Client) {
 	var input string
 	for {
-		fmt.Print("Please enter a command: ")
+		fmt.Print("(Server Mode) Please enter a command: ")
 		_, err := fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
@@ -170,7 +170,7 @@ func pollServer(c *client.Client) {
 			fmt.Println("unrecognized command")
 
 		case "h", "help":
-			displayHomeHelp()
+			displayServerHelp()
 
 		case "q", "quit", "return":
 			return
