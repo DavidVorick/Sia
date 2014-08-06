@@ -27,9 +27,6 @@ func displayHomeHelp() {
 // id which can be used to create a Sia address. Then the connection is
 // committed.
 func connectWalkthrough(c *client.Client) {
-	// Eliminate all existing connections.
-	c.Disconnect()
-
 	fmt.Println("Please indicate the hostname, port, and id that you wish to connect to.")
 	var connectAddress network.Address
 

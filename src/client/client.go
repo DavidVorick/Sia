@@ -14,10 +14,7 @@ type Keypair struct {
 // Struct Client contains the state for client actions
 type Client struct {
 	// Networking Variables
-	router         *network.RPCServer
-	connectAddress network.Address
-
-	// State Variables
+	router   *network.RPCServer
 	siblings [state.QuorumSize]state.Sibling
 
 	// All Wallets
@@ -44,36 +41,36 @@ func (c *Client) Broadcast(nm network.Message) {
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
 func (c *Client) Connect(connectAddress network.Address) (err error) {
-	// Create a new rpc server to connect through.
-	c.router, err = network.NewRPCServer(9989)
-	if err != nil {
-		return
+	// If no network server exists, create a one.
+	if c.router == nil {
+		c.router, err = network.NewRPCServer(9989)
+		if err != nil {
+			return
+		}
 	}
 
-	// Set bootstrap address and ping it, to see if it's a valid device.
-	c.connectAddress = connectAddress
-	err = c.router.Ping(c.connectAddress)
+	// Ping the connectAddress to verify alive-ness.
+	err = c.router.Ping(connectAddress)
 	if err != nil {
-		c.router.Close()
 		return
 	}
 
 	// Fetch the list of siblings and populate the client.
 	var metadata state.StateMetadata
 	err = c.router.SendMessage(network.Message{
-		Dest: c.connectAddress,
+		Dest: connectAddress,
 		Proc: "Participant.Metadata",
 		Args: struct{}{},
 		Resp: &metadata,
 	})
 	if err != nil {
-		c.router.Close()
 		return
 	}
 	c.siblings = metadata.Siblings
 	return
 }
 
+/*
 // Closes and destroys the client's RPC server
 func (c *Client) Disconnect() {
 	if c.router == nil {
@@ -82,6 +79,7 @@ func (c *Client) Disconnect() {
 	c.router.Close()
 	c.router = nil
 }
+*/
 
 func (c *Client) IsServerInitialized() bool {
 	return c.participantServer != nil
