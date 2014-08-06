@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"network"
 	"siacrypto"
 	"state"
@@ -26,7 +27,7 @@ type Client struct {
 
 /*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
-func (c *Client) Broadcast(nm network.Message) {
+unc (c *Client) Broadcast(nm network.Message) {
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue
@@ -38,15 +39,27 @@ func (c *Client) Broadcast(nm network.Message) {
 }
 */
 
+// Creates a new router where none exists.
+func (c *Client) Connect(port int) (err error) {
+	if c.router != nil {
+		err = errors.New("network router has already been initialized")
+		return
+	}
+
+	c.router, err = network.NewRPCServer(port)
+	if err != nil {
+		return
+	}
+	return
+}
+
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(connectAddress network.Address) (err error) {
-	// If no network server exists, create a one.
+func (c *Client) BootstrapConnection(connectAddress network.Address) (err error) {
+	// A network server needs to exist in order to connect to the network.
 	if c.router == nil {
-		c.router, err = network.NewRPCServer(9989)
-		if err != nil {
-			return
-		}
+		err = errors.New("network router is nil")
+		return
 	}
 
 	// Ping the connectAddress to verify alive-ness.
@@ -80,6 +93,10 @@ func (c *Client) Disconnect() {
 	c.router = nil
 }
 */
+
+func (c *Client) IsRouterInitialized() bool {
+	return c.router != nil
+}
 
 func (c *Client) IsServerInitialized() bool {
 	return c.participantServer != nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"client"
+	"errors"
 	"fmt"
 	"network"
 	"state"
@@ -23,11 +24,42 @@ func displayHomeHelp() {
 	)
 }
 
+// connectWalkthrough requests a port and then calls client.Connect(port),
+// initializing the client network router.
+func connectWalkthrough(c *client.Client) (err error) {
+	// Do nothing if the router is already initialized.
+	if c.IsRouterInitialized() {
+		err = errors.New("router is already initialized")
+		return
+	}
+
+	// Get a port.
+	var port int
+	fmt.Println("What port should the client listen on: ")
+	_, err = fmt.Scanln(&port)
+	if err != nil {
+		err = errors.New("invalid port")
+		return
+	}
+
+	c.Connect(port)
+	return
+}
+
 // connectWalkthrough guides the user through providing a hostname, port, and
 // id which can be used to create a Sia address. Then the connection is
 // committed.
-func connectWalkthrough(c *client.Client) {
-	fmt.Println("Please indicate the hostname, port, and id that you wish to connect to.")
+func bootstrapToNetworkWalkthrough(c *client.Client) {
+	fmt.Println("Starting connect walkthrough.")
+	if !c.IsRouterInitialized() {
+		err := connectWalkthrough(c)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			return
+		}
+	}
+
+	fmt.Println("Please indicate the hostname, port, and id that you wish to connect through.")
 	var connectAddress network.Address
 
 	// Load the hostname.
@@ -55,7 +87,7 @@ func connectWalkthrough(c *client.Client) {
 	}
 
 	// Call client.Connect using the provided information.
-	err = c.Connect(connectAddress)
+	err = c.BootstrapConnection(connectAddress)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {
@@ -163,8 +195,8 @@ func pollHome(c *client.Client) {
 		case "q", "quit":
 			return
 
-		case "c", "conncet":
-			connectWalkthrough(c)
+		case "b", "bootstrap":
+			bootstrapToNetworkWalkthrough(c)
 
 		case "l", "load", "enter":
 			loadWallet(c)

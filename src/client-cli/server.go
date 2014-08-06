@@ -3,7 +3,6 @@ package main
 import (
 	"client"
 	"fmt"
-	"network"
 )
 
 func displayServerHelp() {
@@ -21,6 +20,10 @@ func displayServerHelp() {
 func serverCreationWalkthrough(c *client.Client) (err error) {
 	fmt.Println("No server exists, starting server creation.")
 
+	if !c.IsRouterInitialized() {
+		connectWalkthrough(c)
+	}
+
 	// Get a port number for the RPCServer to listen on.
 	var port int
 	fmt.Print("Which port should the server listen on: ")
@@ -30,7 +33,7 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 	}
 
 	// Create the server.
-	err = c.NewServer(port)
+	err = c.NewServer()
 	if err != nil {
 		return
 	}
@@ -39,40 +42,14 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 	return
 }
 
+/*
 // joinQuorumWalkthrough gets input about the bootstrap address, the file
 // prefix for the particpant, etc. Then the participant is created and
 // bootstrapped to an existing quorum.
 func joinQuorumWalkthrough(c *client.Client) {
-	fmt.Println("Creating a participant to join a quorum. Please provide an address to join against:")
-
-	// Request and load the bootstrap address.
-	var bootstrap network.Address
-	fmt.Print("Hostname: ")
-	_, err := fmt.Scanln(&bootstrap.Host)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return
-	}
-	fmt.Print("Port: ")
-	_, err = fmt.Scanln(&bootstrap.Port)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return
-	}
-	fmt.Print("Participant ID: ")
-	_, err = fmt.Scanln(&bootstrap.ID)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return
-	}
-
-	// Ping the bootstrap to verify accessibility.
-	//err = s.netwrokServer.Ping(bootstrap)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return
-	}
+	// ...heh
 }
+*/
 
 /*
 func joinQuorum() {
@@ -168,7 +145,8 @@ func pollServer(c *client.Client) {
 			return
 
 		case "j", "join":
-			joinQuorumWalkthrough(c)
+			fmt.Println("This feature has not been implemented.")
+			//joinQuorumWalkthrough(c)
 
 		case "n", "new", "bootstrap":
 			fmt.Println("This feature has not been implemented.")
