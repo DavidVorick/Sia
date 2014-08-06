@@ -3,6 +3,7 @@ package main
 import (
 	"client"
 	"fmt"
+	"network"
 	"state"
 )
 
@@ -30,36 +31,34 @@ func connectWalkthrough(c *client.Client) {
 	c.Disconnect()
 
 	fmt.Println("Please indicate the hostname, port, and id that you wish to connect to.")
+	var connectAddress network.Address
 
 	// Load the hostname.
-	var host string
 	fmt.Print("Hostname: ")
-	_, err := fmt.Scanln("%s", &host)
+	_, err := fmt.Scanln("%s", &connectAddress.Host)
 	if err != nil {
 		fmt.Println("Invalid hostname")
 		return
 	}
 
 	// Load the port number.
-	var port int
 	fmt.Print("Port: ")
-	_, err = fmt.Scanln("%d", &port)
+	_, err = fmt.Scanln("%d", &connectAddress.Port)
 	if err != nil {
 		fmt.Println("Invalid port")
 		return
 	}
 
 	// Load the participant id.
-	var id int
 	fmt.Print("ID: ")
-	_, err = fmt.Scanln("%d", &id)
+	_, err = fmt.Scanln("%d", &connectAddress.ID)
 	if err != nil {
 		fmt.Println("Invalid id")
 		return
 	}
 
 	// Call client.Connect using the provided information.
-	err = c.Connect(host, port, id)
+	err = c.Connect(connectAddress)
 	if err != nil {
 		fmt.Println("Error while connecting:", err)
 	} else {

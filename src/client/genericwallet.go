@@ -1,15 +1,10 @@
 package client
 
-import (
-	"delta"
-	"network"
-	"state"
-)
-
+/*
 // send a user-specified script input
 func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 	return c.router.SendMessage(network.Message{
-		Dest: c.bootstrap,
+		Dest: c.connectAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
 			WalletID: id,
@@ -18,6 +13,7 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 		Resp: nil,
 	})
 }
+*/
 
 /*
 // Submit a wallet request to the bootstrap wallet.

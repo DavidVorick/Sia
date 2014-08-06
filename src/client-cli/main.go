@@ -14,7 +14,6 @@ import (
 
 func printWelcomeMessage() {
 	fmt.Println("Sia Client Version 0.0.2")
-	fmt.Println("To Connect to the network, press 'c'.")
 }
 
 func main() {
@@ -24,6 +23,10 @@ func main() {
 	if err != nil {
 		fmt.Println("Error on startup:", err)
 	}
+
+	// Check if new client has connected to the network (this would be
+	// managed by the config file loader), if not, post some message about
+	// not being connected.
 
 	pollHome(c)
 }

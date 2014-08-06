@@ -14,8 +14,8 @@ type Keypair struct {
 // Struct Client contains the state for client actions
 type Client struct {
 	// Networking Variables
-	router    *network.RPCServer
-	bootstrap network.Address
+	router         *network.RPCServer
+	connectAddress network.Address
 
 	// State Variables
 	siblings [state.QuorumSize]state.Sibling
@@ -43,7 +43,7 @@ func (c *Client) Broadcast(nm network.Message) {
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(host string, port int, id int) (err error) {
+func (c *Client) Connect(connectAddress network.Address) (err error) {
 	// Create a new rpc server to connect through.
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
@@ -51,10 +51,8 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	}
 
 	// Set bootstrap address and ping it, to see if it's a valid device.
-	c.bootstrap.Host = host
-	c.bootstrap.Port = port
-	c.bootstrap.ID = network.Identifier(id)
-	err = c.router.Ping(c.bootstrap)
+	c.connectAddress = connectAddress
+	err = c.router.Ping(c.connectAddress)
 	if err != nil {
 		c.router.Close()
 		return
@@ -63,7 +61,7 @@ func (c *Client) Connect(host string, port int, id int) (err error) {
 	// Fetch the list of siblings and populate the client.
 	var metadata state.StateMetadata
 	err = c.router.SendMessage(network.Message{
-		Dest: c.bootstrap,
+		Dest: c.connectAddress,
 		Proc: "Participant.Metadata",
 		Args: struct{}{},
 		Resp: &metadata,
