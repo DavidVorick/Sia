@@ -22,11 +22,11 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialization. recentHistoryHead needs
-// to be initialized to ^uint32(0). activeHistoryLength should be initialized
-// to SnapshotLength. activeHistoryHead needs to be initialized to ^uint32(0) -
-// (SnapshotLength-1), because the turnover will result in a new blockhistory
-// file being created.
+// SaveSnapshot() should be called upon initialization.
+// - recentHistoryHead needs to be initialized to ^uint32(0).
+// - activeHistoryLength should be initialized to SnapshotLength.
+// - activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1),
+//   because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
 	state state.State

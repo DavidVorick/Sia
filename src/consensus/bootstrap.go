@@ -87,7 +87,6 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			Dest: address,
 			Proc: "Participant.AddScriptInput",
 			Args: joinRequest,
-			Resp: nil,
 		})
 	}
 
