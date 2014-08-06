@@ -1,7 +1,6 @@
 package client
 
 import (
-	"errors"
 	"network"
 	"siacrypto"
 	"state"
@@ -23,6 +22,9 @@ type Client struct {
 
 	// All Wallets
 	genericWallets map[state.WalletID]Keypair
+
+	// Participant Server
+	participantServer *Server
 }
 
 /*
@@ -83,6 +85,11 @@ func (c *Client) Disconnect() {
 	c.router = nil
 }
 
+func (c *Client) IsServerInitialized() bool {
+	return c.participantServer != nil
+}
+
+/*
 // Get siblings so that each can be uploaded to individually.  This should be
 // moved to a (c *Client) function that updates the current siblings. I'm
 // actually considering that a client should listen on a quorum, or somehow
@@ -114,6 +121,7 @@ func (c *Client) RetrieveSiblings() (err error) {
 
 	return
 }
+*/
 
 // Creates a client, follows the instructions of the config file, and returns a
 // working client struct.

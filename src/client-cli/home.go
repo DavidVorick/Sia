@@ -17,7 +17,8 @@ func displayHomeHelp() {
 		"l:\tLoad wallet\n",
 		"n:\tRequest a new wallet\n",
 		"p:\tPrint wallets\n",
-		"s:\tSave all wallets\n",
+		"s:\tSwitch to server mode, creating a server if none yet exists.\n.",
+		"S:\tSave all wallets\n",
 	)
 }
 
@@ -129,6 +130,21 @@ func printWallets(c *client.Client) {
 	}
 }
 
+// If there is already a server in the client, switch directly into server
+// mode. Otherwise, create a new server via the walkthrough and then switch to
+// server mode.
+func serverModeSwitch(c *client.Client) {
+	init := c.IsServerInitialized()
+	if !init {
+		err := serverCreationWalkthrough(c)
+		if err != nil {
+			fmt.Println("Error creating server: ", err)
+			return
+		}
+	}
+	pollServer(c)
+}
+
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.
 func pollHome(c *client.Client) {
 	var input string
@@ -163,11 +179,13 @@ func pollHome(c *client.Client) {
 		case "p", "ls", "print", "list":
 			printWallets(c)
 
-		case "s", "save":
+		case "s", "server":
+			serverModeSwitch(c)
+
+		case "S", "save":
 			fmt.Println("Saving all wallets...")
 			c.SaveAllWallets()
 			fmt.Println("...finished!")
 		}
-		input = ""
 	}
 }
