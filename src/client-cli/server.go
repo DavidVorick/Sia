@@ -15,6 +15,37 @@ func displayServerHelp() {
 	)
 }
 
+// newQuorumWalkthrough walks the user through creating a new quorum.
+func newQuorumWalkthrough(c *client.Client) (err error) {
+	fmt.Println("Entering 'New Quorum' walkthorugh")
+
+	// Get a name for the server, this is what will be used to query the
+	// server for status updates in the future.
+	var name string
+	fmt.Print("Please provide a name for the server: ")
+	_, err = fmt.Scanln(&name)
+	if err != nil {
+		return
+	}
+
+	// Get a file prefix for the server. It's possible that one will be
+	// specified in the config file, but that's not implemented right now.
+	var filepath string
+	fmt.Print("Please provide an absolute filepath for the server file directory: ")
+	_, err = fmt.Scanln(&filepath)
+	if err != nil {
+		return
+	}
+
+	// Create the participant.
+	err = c.NewParticipant(name, filepath)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 // serverCreationWalkthrough gets a bunch of input from the user and uses it to
 // create a new server.
 func serverCreationWalkthrough(c *client.Client) (err error) {
@@ -82,37 +113,6 @@ func joinQuorum() {
 	// block forever
 	select {}
 }
-
-func establishQuorum() {
-	// read and set port number
-	var port uint16
-	fmt.Print("Port to listen on: ")
-	fmt.Scanf("%d", &port)
-
-	// create a message router
-	networkServer, err := network.NewRPCServer(port)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer networkServer.Close()
-
-	var directory string
-	fmt.Print("participant directory: ")
-	fmt.Scanf("%s", &directory)
-
-	var sibID state.WalletID
-	fmt.Print("Wallet ID: ")
-	fmt.Scanf("%d", &sibID)
-
-	// create a participant
-	_, err = consensus.CreateBootstrapParticipant(networkServer, directory, sibID)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	select {}
-}
 */
 
 // pollHome is a loop asking users for questions about managing participants.
@@ -141,8 +141,11 @@ func pollServer(c *client.Client) {
 			//joinQuorumWalkthrough(c)
 
 		case "n", "new", "bootstrap":
-			fmt.Println("This feature has not been implemented.")
-			//newQuorumWalkthrough(s)
+			fmt.Println("Warning: this feature is incomplete.")
+			err := newQuorumWalkthrough(c)
+			if err != nil {
+				fmt.Println("Error: ", err)
+			}
 		}
 	}
 }

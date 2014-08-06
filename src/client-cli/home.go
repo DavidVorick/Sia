@@ -15,6 +15,7 @@ func displayHomeHelp() {
 		"\n",
 		"h:\tHelp\n",
 		"q:\tQuit\n",
+		"b:\tBootstrap through an address\n",
 		"c:\tConnect to Network\n",
 		"l:\tLoad wallet\n",
 		"n:\tRequest a new wallet\n",
@@ -35,7 +36,7 @@ func connectWalkthrough(c *client.Client) (err error) {
 
 	// Get a port.
 	var port uint16
-	fmt.Println("What port should the client listen on: ")
+	fmt.Print("Port the client should listen on: ")
 	_, err = fmt.Scanln(&port)
 	if err != nil {
 		err = errors.New("invalid port")
