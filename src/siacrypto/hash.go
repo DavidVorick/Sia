@@ -8,26 +8,28 @@ import (
 )
 
 const (
-	HashSize int = 32 // in bytes
+	// HashSize is the size of a Hash in bytes
+	HashSize int = 32
 )
 
+// A Hash is the first 32 bytes of a sha512 checksum.
 type Hash [HashSize]byte
 
-// returns the first 256 bytes of the sha512 hash of the input []byte
-func CalculateHash(data []byte) (hash Hash) {
-	sha := sha512.New()
-	sha.Write(data)
-	hashSlice := sha.Sum(nil)
-	copy(hash[:], hashSlice)
+// HashBytes returns the first 32 bytes of the sha512 checksum of the input.
+func HashBytes(data []byte) (h Hash) {
+	hash512 := sha512.Sum512(data)
+	copy(h[:], hash512[:])
 	return
 }
 
-func HashObject(v interface{}) (h Hash, err error) {
-	bytes, err := siaencoding.Marshal(v)
+// HashObject converts an object to a byte slice and returns the hash of the
+// byte slice.
+func HashObject(obj interface{}) (h Hash, err error) {
+	bytes, err := siaencoding.Marshal(obj)
 	if err != nil {
 		return
 	}
 
-	h = CalculateHash(bytes)
+	h = HashBytes(bytes)
 	return
 }

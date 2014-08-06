@@ -2,6 +2,7 @@ package state
 
 import (
 	"siacrypto"
+	"siafiles"
 	"testing"
 )
 
@@ -52,7 +53,7 @@ func TestWalletCompensationWeight(t *testing.T) {
 func TestInsertLoadSaveRemoveWallet(t *testing.T) {
 	// Test InsertWallet.
 	var s State
-	s.SetWalletPrefix("../../filesCreatedDuringTesting/TestInsertWallet.")
+	s.SetWalletPrefix(siafiles.TempFilename("TestInsertWallet."))
 	var w Wallet
 	err := s.InsertWallet(w)
 	if err != nil {

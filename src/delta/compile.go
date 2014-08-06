@@ -5,6 +5,7 @@ import (
 	"state"
 )
 
+// TODO: add docstring
 func (e *Engine) Compile(b Block) {
 	// The first thing that happens is the entropy seed for the block is
 	// determined. Though not implemented, this happens by pulling the latest
@@ -23,7 +24,7 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 
-		// Verify the signature on the heartbeat
+		// Verify the signature on the heartbeat.
 		verified, err := e.state.Metadata.Siblings[i].PublicKey.VerifyObject(b.HeartbeatSignatures[i], heartbeat)
 		if err != nil {
 			continue
@@ -46,17 +47,17 @@ func (e *Engine) Compile(b Block) {
 	}
 
 	// Hash the siblingEntropy to get the new Germ.
-	e.state.Metadata.Germ = state.Entropy(siacrypto.CalculateHash(siblingEntropy))
+	e.state.Metadata.Germ = state.Entropy(siacrypto.HashBytes(siblingEntropy))
 
 	// Process all of the script inputs. Right now, every script input is
 	// processed every block, with only a few protections against inifinite loops
 	// and scripting DOS attacks. The future will hold a probabilistic
 	// distribution of resources based on price paid for tickets.
 	for _, si := range b.ScriptInputs {
-		si.Execute(&e.state)
+		e.Execute(si)
 	}
 
-	// Process all of the UpdateAdvancements
+	// Process all of the UpdateAdvancements.
 	for i, ua := range b.UpdateAdvancements {
 		verified, err := e.state.Metadata.Siblings[ua.Index].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
 		if err != nil || !verified {
@@ -75,7 +76,7 @@ func (e *Engine) Compile(b Block) {
 		panic(err)
 	}
 	e.state.Metadata.ParentBlock = blockHash
-	e.state.Metadata.Height += 1
+	e.state.Metadata.Height++
 
 	// Save the block.
 	e.saveBlock(b)

@@ -2,37 +2,41 @@ package state
 
 import (
 	"erasure"
+	"errors"
 	"fmt"
 	"io"
 )
 
-func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms uint16, err error) {
+// RSEncode acts as a wrapper around erasure.ReedSolomonEncode for
+// state-specific encoding operations. It is less flexible than
+// erasure.ReedSolomonEncode, and returns the number of atoms per sector.
+func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uint16, err error) {
 	// check for nil inputs
 	if input == nil {
-		err = fmt.Errorf("Received nil input!")
+		err = errors.New("received nil input")
 		return
 	}
 	for i := range segments {
 		if segments[i] == nil {
-			err = fmt.Errorf("Received nil input within segments slice!")
+			err = fmt.Errorf("segment %d is nil", i)
 			return
 		}
 	}
 
 	// check k for sane value, then determine m
-	if k < 1 || k >= byte(QuorumSize) {
-		err = fmt.Errorf("K must be between zero and %v (exclusive)", QuorumSize)
+	if k < 1 || k >= int(QuorumSize) {
+		err = fmt.Errorf("k must be between zero and %v (exclusive)", QuorumSize)
 		return
 	}
-	m := byte(QuorumSize) - k
+	m := int(QuorumSize) - k
 
 	// read from the reader enough to build 1 atom on the quorum, then encode it
 	// to a single atom, which is then written to all of the writers
 	atom := make([]byte, AtomSize*int(k))
-	var n int
-	for n, err = input.Read(atom); err == nil || n > 0; atoms++ {
+	var readErr error
+	for n, readErr := input.Read(atom); readErr == nil || n > 0; atoms++ {
 		if atoms == AtomsPerSector {
-			err = fmt.Errorf("Exceeded max atoms per sector")
+			err = errors.New("exceeded max atoms per sector")
 			return
 		}
 
@@ -41,45 +45,42 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k byte) (atoms ui
 		for i := range segments {
 			segments[i].Write(encodedSegments[i])
 		}
-		n, err = input.Read(atom)
+		n, readErr = input.Read(atom)
 	}
 
-	// check that at least 1 atom was created, and return
+	// check that at least 1 atom was created
 	if atoms == 0 {
-		fmt.Println(err)
-		err = fmt.Errorf("No data read from reader!")
-	} else {
-		err = nil
+		fmt.Println(readErr) // remove?
+		err = errors.New("no data read from reader")
 	}
 	return
 }
 
-func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) (atoms uint16, err error) {
-	if k < 1 || k >= byte(QuorumSize) {
-		err = fmt.Errorf("K must be between zero and %v, have %v", QuorumSize, k)
+// RSRecover acts as a wrapper around erasure.ReedSolomonRecover for
+// state-specific encoding operations. It is less flexible than
+// erasure.ReedSolomonRecover, and returns the number of atoms per sector.
+func RSRecover(segments []io.Reader, indices []byte, output io.Writer, k int) (atoms uint16, err error) {
+	if k < 1 || k >= int(QuorumSize) {
+		err = fmt.Errorf("k must be between zero and %v", QuorumSize)
 		return
 	}
 
-	if segments == nil {
-		err = fmt.Errorf("Cannot recover from nil reader slice.")
+	if len(segments) < k {
+		err = errors.New("insufficient input segments to recover sector")
 		return
 	}
-	if len(segments) < int(k) {
-		err = fmt.Errorf("Insufficient input segments to recover sector.")
-		return
-	}
-	for i := byte(0); i < k; i++ {
+	for i := 0; i < k; i++ {
 		if segments[i] == nil {
-			err = fmt.Errorf("Reader %v is nil, cannot recover from a nil reader.", i)
+			err = fmt.Errorf("Reader %v is nil", i)
 			return
 		}
 	}
 	if output == nil {
-		err = fmt.Errorf("Cannot recover to nil io writer.")
+		err = errors.New("cannot write to nil output")
 		return
 	}
 
-	// inidicies gets error checked during call to erasure.Recover
+	// indices gets error-checked during call to erasure.Recover
 
 	// create k atoms that are read into from segments
 	atomsSlice := make([][]byte, k)
@@ -88,23 +89,19 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 	}
 
 	// in a loop, read into atoms and call recover
-	var n int
-	var finished bool
+loop:
 	for {
 		atoms++
 		for i := range atomsSlice {
-			n, err = segments[i].Read(atomsSlice[i])
-			if err != nil && n == 0 {
-				finished = true
+			n, _ := segments[i].Read(atomsSlice[i])
+			if n != AtomSize {
+				break loop
 			}
-		}
-		if finished {
-			break
 		}
 
 		// got a bunch of new data, now recover it
 		var recoveredAtom []byte
-		recoveredAtom, err = erasure.ReedSolomonRecover(k, QuorumSize-k, atomsSlice, indicies)
+		recoveredAtom, err = erasure.ReedSolomonRecover(k, int(QuorumSize)-k, atomsSlice, indices)
 		if err != nil {
 			return
 		}
@@ -112,9 +109,7 @@ func RSRecover(segments []io.Reader, indicies []byte, output io.Writer, k byte) 
 	}
 
 	if atoms == 0 {
-		err = fmt.Errorf("Unable to read from all Readers")
-	} else {
-		err = nil
+		err = errors.New("unable to read from all Readers")
 	}
 	return
 }

@@ -32,7 +32,7 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) (quorumWeight uint
 	return
 }
 
-// ExecuteCompensation() is called between each block. Money is deducted from
+// ExecuteCompensation is called between each block. Money is deducted from
 // wallets according to how much storage they are using, and money is added to
 // siblings according to how much storage is in use.
 func (s *State) ExecuteCompensation() {
@@ -43,10 +43,9 @@ func (s *State) ExecuteCompensation() {
 	// Count the number of siblings receiving compensation.
 	var siblings int
 	for i := range s.Metadata.Siblings {
-		if !s.Metadata.Siblings[i].Active {
-			continue
+		if s.Metadata.Siblings[i].Active {
+			siblings++
 		}
-		siblings++
 	}
 
 	// Call a helper function to charge all the wallets for the storage they have

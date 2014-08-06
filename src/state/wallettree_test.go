@@ -14,9 +14,8 @@ func countReachableNodes(w *walletNode) (i int) {
 		return
 	}
 
-	i += 1
-	i += countReachableNodes(w.children[0])
-	i += countReachableNodes(w.children[1])
+	i = countReachableNodes(w.children[0]) +
+		countReachableNodes(w.children[1]) + 1
 	return i
 }
 
@@ -46,13 +45,13 @@ func findRedViolations(w *walletNode) (violations int) {
 	if w.isRed() {
 		if w.children[0] != nil {
 			if w.children[0].isRed() {
-				violations += 1
+				violations++
 			}
 		}
 
 		if w.children[1] != nil {
 			if w.children[1].isRed() {
-				violations += 1
+				violations++
 			}
 		}
 	}
@@ -79,12 +78,12 @@ func findBlackViolations(w *walletNode) (height, violations int) {
 	violations += rightViolations
 
 	if leftHeight != rightHeight {
-		violations += 1
+		violations++
 	}
 
 	height = leftHeight
 	if !w.isRed() {
-		height += 1
+		height++
 	}
 
 	return
@@ -98,10 +97,10 @@ func findSortViolations(w *walletNode) (violations int) {
 	}
 
 	if w.children[0] != nil && w.children[0].id >= w.id {
-		violations += 1
+		violations++
 	}
 	if w.children[1] != nil && w.children[1].id <= w.id {
-		violations += 1
+		violations++
 	}
 
 	violations += findSortViolations(w.children[0])
@@ -126,7 +125,7 @@ func findWeightViolations(w *walletNode) (violations int) {
 		selfWeight -= w.children[1].weight
 	}
 	if uint64(selfWeight) != uint64(w.id) {
-		violations += 1
+		violations++
 	}
 
 	leftViolations := findWeightViolations(w.children[0])
@@ -228,13 +227,8 @@ func TestWalletTree(t *testing.T) {
 		for i := 0; i < n; i++ {
 			found := false
 			var weight int
-			var err error
 			for !found {
-				weight, err = siacrypto.RandomInt(100000)
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				weight = siacrypto.RandomInt(100000)
 				if weights[uint64(weight)] == false {
 					weights[uint64(weight)] = true
 					found = true
@@ -248,18 +242,12 @@ func TestWalletTree(t *testing.T) {
 
 		// randomly choose between inserting and deleting a random item
 		for i := 0; i < n; i++ {
-			insertOrDelete, err := siacrypto.RandomInt(2) // [0, 2)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if insertOrDelete == 0 {
-				// insert
+			if siacrypto.RandomInt(2) == 0 { // insert
 				found := false
 				var weight int
 				var err error
 				for !found {
-					weight, err = siacrypto.RandomInt(100000)
+					weight = siacrypto.RandomInt(100000)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -273,8 +261,7 @@ func TestWalletTree(t *testing.T) {
 				node := createTestWalletNode(weight)
 				s.insertWalletNode(node)
 				checkViolations(4, s.walletRoot, len(weights), t)
-			} else {
-				// delete
+			} else { // delete
 				// turn weights into a slice so that a value can be selected at random
 				j := 0
 				weightSlice := make([]uint64, len(weights))
@@ -283,11 +270,7 @@ func TestWalletTree(t *testing.T) {
 					j++
 				}
 
-				j, err = siacrypto.RandomInt(len(weightSlice))
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				j = siacrypto.RandomInt(len(weightSlice))
 				s.removeWalletNode(WalletID(weightSlice[j]))
 				delete(weights, weightSlice[j])
 				checkViolations(5, s.walletRoot, len(weights), t)
@@ -312,12 +295,7 @@ func TestWalletTree(t *testing.T) {
 
 		// shuffle the slice
 		for i := range weightSlice {
-			newIndex, err := siacrypto.RandomInt(len(weightSlice) - i)
-			if err != nil {
-				t.Fatal(err)
-			}
-			newIndex += i
-
+			newIndex := siacrypto.RandomInt(len(weightSlice)-i) + i
 			tmp := weightSlice[newIndex]
 			weightSlice[newIndex] = weightSlice[i]
 			weightSlice[i] = tmp

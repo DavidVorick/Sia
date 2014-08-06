@@ -22,17 +22,9 @@ func TestRandomByteSlice(t *testing.T) {
 
 func TestRandomInt(t *testing.T) {
 	// test 1 as a ceiling in range [0, 1)
-	zero, err := RandomInt(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	zero := RandomInt(1)
 	if zero != 0 {
 		t.Fatal("Expecting rng to produce 0!")
-	}
-
-	zero, err = RandomInt(0)
-	if err == nil {
-		t.Error("Expecting RandomInt(0) to produce an error!")
 	}
 
 	// a series of tests that stastically checks for randomness

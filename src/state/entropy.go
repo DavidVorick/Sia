@@ -5,16 +5,18 @@ import (
 )
 
 const (
-	EntropyVolume int = 32 // in bytes
+	// EntropyVolume is the size of the Entropy type in byte.
+	EntropyVolume int = 32
 )
 
+// Entropy is highly random data that is used to seed a PRNG.
 type Entropy [EntropyVolume]byte
 
-// State.MergeExternalEntropy takes as input some entropy (assumed to be the
+// MergeExternalEntropy takes as input some entropy (assumed to be the
 // external source of entropy) and appends it to the Germ. The Germ then
-// becomes the new seed.
+// becomes the new Seed.
 func (s *State) MergeExternalEntropy(e Entropy) {
-	s.Metadata.Seed = Entropy(siacrypto.CalculateHash(append(s.Metadata.Germ[:], e[:]...)))
+	s.Metadata.Seed = Entropy(siacrypto.HashBytes(append(s.Metadata.Germ[:], e[:]...)))
 }
 
 // Use the entropy stored in the state to generate a random integer [low, high)
@@ -36,7 +38,7 @@ func (s *State) MergeExternalEntropy(e Entropy) {
 	randInt = (rollingInt % (high - low)) + low
 
 	// Convert random number seed to next value
-	hash := siacrypto.CalculateHash(s.Metadata.Seed[:])
+	hash := siacrypto.HashBytes(s.Metadata.Seed[:])
 	s.Metadata.Seed = Entropy(hash)
 	return
 }*/

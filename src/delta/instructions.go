@@ -13,6 +13,7 @@ var (
 )
 
 var opTable = map[byte]instruction{
+	// general opcodes
 	0x00: instruction{"no_op", 0, op_no_op, 1},
 	0x01: instruction{"push_byte", 1, op_push_byte, 2},
 	0x02: instruction{"push_short", 2, op_push_short, 2},
@@ -45,28 +46,33 @@ var opTable = map[byte]instruction{
 	0x1D: instruction{"logical_or", 0, op_logical_or, 2},
 	0x1E: instruction{"logical_and", 0, op_logical_and, 2},
 	0x1F: instruction{"if_goto", 2, op_if_goto, 2},
-	0x20: instruction{"goto", 2, op_goto, 1},
-	0x21: instruction{"reg_store", 1, op_reg_store, 2},
-	0x22: instruction{"reg_load", 1, op_reg_load, 2},
-	0x25: instruction{"data_move", 2, op_data_move, 1},
-	0x26: instruction{"data_goto", 2, op_data_goto, 1},
-	0x27: instruction{"data_push", 1, op_data_push, 2},
-	0x2B: instruction{"data_copy", 1, op_data_copy, 2},
-	0x2C: instruction{"data_paste", 1, op_data_paste, 2},
-	0x2D: instruction{"data_prefix", 1, op_data_prefix, 2},
-	0x2E: instruction{"data_rest", 1, op_data_rest, 2},
-	0x2F: instruction{"transfer", 0, op_transfer, 1},
-	0x30: instruction{"reject", 0, op_reject, 0},
-	0x31: instruction{"add_sibling", 1, op_add_sibling, 5},
-	0x32: instruction{"add_wallet", 1, op_add_wallet, 5},
-	0x33: instruction{"send", 0, op_send, 5},
-	0x34: instruction{"verify", 2, op_verify, 9},
-	0x35: instruction{"switch", 2, op_switch, 3},
-	0x36: instruction{"if_move", 2, op_if_move, 2},
-	0x37: instruction{"move", 2, op_move, 1},
-	0x38: instruction{"cond_reject", 0, op_cond_reject, 1},
-	0x3A: instruction{"resize_sec", 1, op_resize_sec, 9},
-	0x3B: instruction{"prop_upload", 1, op_prop_upload, 9},
+	0x20: instruction{"if_move", 2, op_if_move, 2},
+	0x21: instruction{"goto", 2, op_goto, 1},
+	0x22: instruction{"move", 2, op_move, 1},
+	// data pointer and register opcodes
+	0x30: instruction{"reg_store", 1, op_reg_store, 2},
+	0x31: instruction{"reg_load", 1, op_reg_load, 2},
+	0x32: instruction{"data_goto", 2, op_data_goto, 1},
+	0x33: instruction{"data_move", 2, op_data_move, 1},
+	0x34: instruction{"data_push", 1, op_data_push, 2},
+	0x35: instruction{"data_store", 2, op_data_store, 2},
+	0x36: instruction{"data_copy", 1, op_data_copy, 2},
+	0x37: instruction{"data_paste", 1, op_data_paste, 2},
+	0x38: instruction{"transfer", 0, op_transfer, 1},
+	// function opcodes
+	0x40: instruction{"verify", 2, op_verify, 9},
+	0x41: instruction{"add_sibling", 1, op_add_sibling, 5},
+	0x42: instruction{"add_wallet", 1, op_add_wallet, 5},
+	0x43: instruction{"send", 0, op_send, 5},
+	0x44: instruction{"resize_sec", 1, op_resize_sec, 9},
+	0x45: instruction{"prop_upload", 1, op_prop_upload, 9},
+	// convenience opcodes
+	0xE0: instruction{"switch", 2, op_switch, 3},
+	0xE1: instruction{"data_prefix", 1, op_data_prefix, 2},
+	0xE2: instruction{"data_rest", 1, op_data_rest, 2},
+	0xE3: instruction{"cond_reject", 0, op_cond_reject, 1},
+	// termination opcodes
+	0xFE: instruction{"reject", 0, op_reject, 0},
 	0xFF: instruction{"exit", 0, op_exit, 0},
 }
 
@@ -99,9 +105,8 @@ func s2i(low, high byte) int {
 func b2v(b bool) []byte {
 	if b {
 		return []byte{0x01}
-	} else {
-		return []byte{0x00}
 	}
+	return []byte{0x00}
 }
 
 func v2b(b []byte) bool {

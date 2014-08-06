@@ -20,7 +20,7 @@ package erasure
 import "C"
 
 import (
-	"fmt"
+	"errors"
 	"unsafe"
 )
 
@@ -35,48 +35,56 @@ import (
 // will be of length (len(original) / k). Any 'k' of the encoded pieces can be
 // used to recover 'original'. If there is an error, 'encoded' should be
 // discarded.
-func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err error) {
+func ReedSolomonEncode(k, m int, original []byte) (encoded [][]byte, err error) {
 	// Check for nil and zero values within the input.
 	if original == nil {
-		err = fmt.Errorf("ReedSolomonEncdoe: received nil input!")
+		err = errors.New("received nil input")
 		return
 	}
 	if len(original) == 0 {
-		err = fmt.Errorf("ReedSolomonEncode: Cannot encode a slice of lenth 0")
+		err = errors.New("cannot encode a slice of length 0")
 		return
 	}
 
 	// Check that k and m fit the function requirements.
-	if k < 1 || m < 0 {
-		err = fmt.Errorf("ReedSolomonEncode: minimum value for k is 1 and for m is 0")
+	if k < 1 {
+		err = errors.New("k must be at least 1")
 		return
 	}
-	if int(k)+int(m) > 255 {
-		err = fmt.Errorf("EncodeRedundancy: k + m must be less than 256")
+	if m < 0 {
+		err = errors.New("m must be at greater than 0")
+		return
+	}
+	if k+m >= 256 {
+		err = errors.New("k + m must be less than 256")
 		return
 	}
 
 	// Check that 'original' has been correctly padded
-	if len(original)%int((k*8)) != 0 {
-		err = fmt.Errorf("EncodeRedundancy: input has not been properly padded!")
+	if len(original)%(k*8) != 0 {
+		err = errors.New("input has not been properly padded")
 		return
 	}
 
-	b := len(original) / int(k)
+	b := len(original) / k
 
 	// Call longhair to perform encoding.
 	redundantChunk := C.encodeRedundancy(C.int(k), C.int(m), C.int(b), (*C.char)(unsafe.Pointer(&original[0])))
-	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(int(m)*b))
+	if redundantChunk == nil {
+		err = errors.New("call to cauchy_256_encode failed")
+		return
+	}
+	redundantBytes := C.GoBytes(unsafe.Pointer(redundantChunk), C.int(m*b))
 
 	// Allocate 'encoded'.
 	encoded = make([][]byte, k+m)
 
 	// Slice the data returned from longhair into 'encoded'.
-	for i := 0; i < int(k); i++ {
+	for i := 0; i < k; i++ {
 		encoded[i] = original[i*b : (i+1)*b]
 	}
-	for i := 0; i < int(m); i++ {
-		encoded[i+int(k)] = redundantBytes[i*b : (i+1)*b]
+	for i := 0; i < m; i++ {
+		encoded[i+k] = redundantBytes[i*b : (i+1)*b]
 	}
 
 	// Free the memory allocated by longhair.
@@ -88,88 +96,97 @@ func ReedSolomonEncode(k byte, m byte, original []byte) (encoded [][]byte, err e
 // ReedSolomonRecover takes as input 'k' and 'm', which need to match the 'k'
 // and 'm' used during 'ReedSolomonEncode'. 'remaining' is a set of 'k' pieces
 // that are being used to recover the data used as 'Original' in
-// ReedSolomonEncode. 'inidicies' maps the relationship between the pieces
+// ReedSolomonEncode. 'indices' maps the relationship between the pieces
 // provided in 'remaining' to their original index in 'encoded' from
 // ReedSolomonEncode.
 //
-// 'recovered' should be identical to the input 'original from
+// 'recovered' should be identical to the input 'original' from
 // ReedSolomonEncode. If an error is returned, 'recovered' should be discarded.
-func ReedSolomonRecover(k byte, m byte, remaining [][]byte, indicies []byte) (recovered []byte, err error) {
-	// Check for nil values. The length of 'remaining' and 'indicies' are checked
-	// after 'k' and 'm' are checked.
-	if remaining == nil || indicies == nil {
-		err = fmt.Errorf("Recover: received nil input")
+func ReedSolomonRecover(k, m int, remaining [][]byte, indices []byte) (recovered []byte, err error) {
+	// Check for nil values. The length of 'remaining' and 'indices' are
+	// checked after 'k' and 'm' are checked.
+	if remaining == nil || indices == nil {
+		err = errors.New("received nil input")
 		return
 	}
 
-	// Check that k and m meet the function requirements.
-	if k < 1 || m < 0 {
-		err = fmt.Errorf("ReedSolomonRecover: minimum value for k is 1 and m is 0")
+	// Check that k and m fit the function requirements.
+	if k < 1 {
+		err = errors.New("k must be at least 1")
 		return
 	}
-	if int(k)+int(m) > 255 {
-		err = fmt.Errorf("ReedSolomonRecover: k + m must be less than 256")
+	if m < 0 {
+		err = errors.New("m must be at greater than 0")
+		return
+	}
+	if k+m >= 256 {
+		err = errors.New("k + m must be less than 256")
 		return
 	}
 
-	// Check that 'remaining' and 'inidicies' contain at least 'k' elements.
-	if len(remaining) < int(k) {
-		err = fmt.Errorf("ReedSolomonRecover: insufficient pieces to recover original")
+	// Check that 'remaining' and 'indices' contain at least 'k' elements.
+	if len(remaining) < k {
+		err = errors.New("insufficient pieces to recover original")
 		return
 	}
-	if len(indicies) < int(k) {
-		err = fmt.Errorf("Recover: Indicies does not contain enough indexes")
+	if len(indices) < k {
+		err = errors.New("insufficient indices")
 		return
 	}
 
 	// Check that 'remaining' has legal values and will not panic the program.
 	if remaining[0] == nil {
-		err = fmt.Errorf("ReedSolomonRecover: received nil slice within set of data")
+		err = errors.New("received nil slice within set of data")
 		return
 	}
 	b := len(remaining[0])
 	if b == 0 {
-		err = fmt.Errorf("ReedSolomonRecover: cannot recover empty data")
+		err = errors.New("cannot recover empty data")
 		return
 	}
-	if b%(int(k)*8) != 0 {
-		err = fmt.Errorf("ReedSolomonRecover: remaining pieces do not match padding, should be padded to k*8 bytes")
+	if b%8 != 0 {
+		err = errors.New("remaining pieces do not match padding, should be padded to 8 bytes")
 		return
 	}
-	for i := byte(0); i < k; i++ {
+	for i := 0; i < k; i++ {
 		if remaining[i] == nil {
-			err = fmt.Errorf("ReedSolomonRecover: received nil slice within set of data")
+			err = errors.New("received nil slice within set of data")
 			return
 		}
 		if len(remaining[i]) != b {
-			err = fmt.Errorf("ReedSolomonRecover: the sizes of remaining pieces are not consistent")
+			err = errors.New("sizes of remaining pieces are not consistent")
 			return
 		}
 	}
 
-	// Check that indicies has a set of unique values.
-	seenIndicies := make(map[byte]bool)
-	for i := byte(0); i < k; i++ {
-		if indicies[i] >= k+m {
-			err = fmt.Errorf("ReedSolomonRecover: out of bounds index.")
+	// Check that indices has a set of unique values.
+	seenIndices := make(map[byte]bool)
+	for i := 0; i < k; i++ {
+		if int(indices[i]) >= k+m {
+			err = errors.New("received out of bounds index")
 			return
 		}
-		if seenIndicies[indicies[i]] {
-			err = fmt.Errorf("ReedSolomonRecover: repeat indicies presented")
+		if seenIndices[indices[i]] {
+			err = errors.New("received duplicate index")
 			return
 		}
-		seenIndicies[indicies[i]] = true
+		seenIndices[indices[i]] = true
 	}
 
-	// Arrange the data so that longhair will order the data into the single slice 'recovered'
-	recovered = make([]byte, int(k)*b)
-	remainingIndicies := make([]byte, k)
+	// Arrange the data so that longhair will order the data into the single
+	// slice 'recovered'
+	recovered = make([]byte, k*b)
+	remainingIndices := make([]byte, k)
 	for i := 0; i < int(k); i++ {
 		copy(recovered[i*b:(i+1)*b], remaining[i])
-		remainingIndicies[i] = byte(indicies[i])
+		remainingIndices[i] = indices[i]
 	}
 
-	C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(unsafe.Pointer(&recovered[0])), (*C.uchar)(unsafe.Pointer(&remainingIndicies[0])))
+	errCode := C.recover(C.int(k), C.int(m), C.int(b), (*C.uchar)(&recovered[0]), (*C.uchar)(&remainingIndices[0]))
+
+	if errCode != 0 {
+		err = errors.New("call to cauchy_256_decode failed")
+	}
 
 	return
 }

@@ -13,6 +13,12 @@ import (
 
 var timeout = time.Second * 5
 
+// addrString is a helper function that converts an Address to a string
+// that can be passed to net.Dial().
+func addrString(a Address) string {
+	return net.JoinHostPort(a.Host, strconv.Itoa(int(a.Port)))
+}
+
 // RPCServer is a MessageRouter that communicates using RPC over TCP.
 type RPCServer struct {
 	addr     Address
@@ -21,26 +27,23 @@ type RPCServer struct {
 	curID    Identifier
 }
 
-func (rpcs *RPCServer) Address() Address {
-	return rpcs.addr
-}
-
-// RegisterHandler registers a message handler to the RPC server.
-// The handler is assigned an Identifier, which is returned to the caller.
-// The Identifier is appended to the service name before registration.
-func (rpcs *RPCServer) RegisterHandler(handler interface{}) (id Identifier) {
-	id = rpcs.curID
+// RegisterHandler registers a message handler to the RPC server. The handler
+// is assigned an Identifier, which is returned to the caller. The Identifier
+// is appended to the service name before registration.
+func (rpcs *RPCServer) RegisterHandler(handler interface{}) Address {
+	id := rpcs.curID
 	name := reflect.Indirect(reflect.ValueOf(handler)).Type().Name() + string(id)
 	rpcs.rpcServ.RegisterName(name, handler)
 	rpcs.curID++
-	return
+	return Address{rpcs.addr.Host, rpcs.addr.Port, id}
 }
 
-// NewRPCServer creates and initializes a server that listens for TCP connections on a specified port.
-// It then spawns a serverHandler with a specified message.
-// It is the caller's responsibility to close the TCP connection, via RPCServer.Close().
-func NewRPCServer(port int) (rpcs *RPCServer, err error) {
-	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+// NewRPCServer creates and initializes a server that listens for TCP
+// connections on a specified port. It then spawns a serverHandler with a
+// specified message. It is the caller's responsibility to close the TCP
+// listener, via RPCServer.Close().
+func NewRPCServer(port uint16) (rpcs *RPCServer, err error) {
+	tcpServ, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
 	if err != nil {
 		return
 	}
@@ -55,7 +58,7 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	conn.Close()
 
 	rpcs = &RPCServer{
-		addr:     Address{0, host, port},
+		addr:     Address{host, port, 0},
 		rpcServ:  rpc.NewServer(),
 		listener: tcpServ,
 		curID:    1, // ID 0 is reserved for the RPCServer itself
@@ -65,14 +68,15 @@ func NewRPCServer(port int) (rpcs *RPCServer, err error) {
 	return
 }
 
-// Close closes the connection associated with the TCP server.
-// This causes tcpServ.Accept() to return an err, ending the serverHandler process.
+// Close closes the connection associated with the TCP server. This causes
+// tcpServ.Accept() to return an err, ending the serverHandler process.
 func (rpcs *RPCServer) Close() {
 	rpcs.listener.Close()
 }
 
-// serverHandler runs in the background, accepting incoming RPCs, serving them, and closing the connection.
-// It is automatically terminated when Close() is called.
+// serverHandler runs in the background, accepting incoming RPCs, serving them,
+// and closing the connection. It is automatically terminated when Close() is
+// called.
 func (rpcs *RPCServer) serverHandler() {
 	for {
 		conn, err := rpcs.listener.Accept()
@@ -85,7 +89,7 @@ func (rpcs *RPCServer) serverHandler() {
 
 // Ping calls the Participant.Ping method on the specified address.
 func (rpcs *RPCServer) Ping(a Address) error {
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(a.Host, strconv.Itoa(a.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(a))
 	if err != nil {
 		return err
 	}
@@ -99,10 +103,10 @@ func (rpcs *RPCServer) Ping(a Address) error {
 	}
 }
 
-// SendRPCMessage (synchronously) delivers a Message to its recipient and returns any errors.
-// It times out after waiting for half the step duration.
+// SendMessage synchronously delivers a Message to its recipient and returns
+// any errors. It times out after waiting for 'timeout' seconds.
 func (rpcs *RPCServer) SendMessage(m Message) error {
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(m.Dest))
 	if err != nil {
 		return err
 	}
@@ -120,11 +124,12 @@ func (rpcs *RPCServer) SendMessage(m Message) error {
 	}
 }
 
-// SendAsyncRPCMessage (asynchronously) delivers a Message to its recipient.
-// It returns a channel that will contain an error value when the request completes.
+// SendAsyncMessage (asynchronously) delivers a Message to its recipient. It
+// returns a channel that will contain an error value when the request
+// completes. Like SendMessage, it times out after 'timeout' seconds.
 func (rpcs *RPCServer) SendAsyncMessage(m Message) chan error {
 	errChan := make(chan error, 2)
-	conn, err := jsonrpc.Dial("tcp", net.JoinHostPort(m.Dest.Host, strconv.Itoa(m.Dest.Port)))
+	conn, err := jsonrpc.Dial("tcp", addrString(m.Dest))
 	if err != nil {
 		errChan <- err
 		return errChan

@@ -4,69 +4,103 @@ import (
 	"testing"
 )
 
-// Test takes .4 seconds to run, which is too long
+// TestSigning tests various cryptographic signing functions.
 func TestSigning(t *testing.T) {
-	// Create a keypair
+	// create a keypair
 	publicKey, secretKey, err := CreateKeyPair()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Failed to create keypair:", err)
 	}
 
-	// sign a nil message
+	// attempt to sign a nil message
 	_, err = secretKey.Sign(nil)
 	if err == nil {
-		t.Error("Signed a nil message!")
+		t.Error("Signed a nil message")
 	}
 
 	// sign an empty message
 	empty := make([]byte, 0)
 	sig, err := secretKey.Sign(empty)
 	if err != nil {
-		t.Error("Error returned when signing an empty message")
+		t.Error("Failed to sign an empty message:", err)
 	}
 
 	// verify the empty message
 	verified := publicKey.Verify(sig, empty)
 	if !verified {
-		t.Error("Signed empty message did not verify!")
+		t.Error("Failed to verify signed empty message")
 	}
 
 	if testing.Short() {
 		t.Skip()
 	}
 
-	// verify empty message when signature is bad
+	// attempt to verify empty message with bad signature
 	sig[0] = ^sig[0] // flip the bits on the first byte to guarantee corruption
 	verified = publicKey.Verify(sig, empty)
 	if verified {
-		t.Error("Verified a signed empty message with forged signature")
+		t.Error("Verified a signed empty message with bad signature")
 	}
 
-	// sign the message
+	// create and sign a random message
 	randomMessage := RandomByteSlice(100)
 	sig, err = secretKey.Sign(randomMessage)
 	if err != nil {
-		return
+		t.Fatal("Failed to sign message:", err)
 	}
 
 	// verify the signature
 	verification := publicKey.Verify(sig, randomMessage)
 	if !verification {
-		t.Error("failed to verify a valid message")
+		t.Error("Failed to verify a valid signature")
 	}
 
-	// verify an imposter signature
+	// attempt to verify bad signature
 	sig[0] = ^sig[0]
 	verification = publicKey.Verify(sig, randomMessage)
 	if verification {
-		t.Error("sucessfully verified an invalid message")
+		t.Error("Verified a message with bad signature")
 	}
 
-	// restore the signature and fake a message
+	// restore the signature, but use a different message
 	sig[0] = ^sig[0]
 	randomMessage[0] = ^randomMessage[0]
 	verification = publicKey.Verify(sig, randomMessage)
 	if verification {
-		t.Error("successfully verified a corrupted message")
+		t.Error("Verified a different message with the same signature")
+	}
+}
+
+func BenchmarkSigning(b *testing.B) {
+	_, secretKey, err := CreateKeyPair()
+	if err != nil {
+		b.Fatal("Failed to create keypair:", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		randomMessage := RandomByteSlice(1024)
+		_, err := secretKey.Sign(randomMessage)
+		if err != nil {
+			b.Error("Failed to sign message:", err)
+		}
+	}
+}
+
+func BenchmarkVerifying(b *testing.B) {
+	publicKey, secretKey, err := CreateKeyPair()
+	if err != nil {
+		b.Fatal("Failed to create keypair:", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		// don't run the timer while signature is being generated
+		b.StopTimer()
+		randomMessage := RandomByteSlice(1024)
+		sig, err := secretKey.Sign(randomMessage)
+		if err != nil {
+			b.Error("Failed to sign message:", err)
+		}
+		b.StartTimer()
+		publicKey.Verify(sig, randomMessage)
 	}
 }

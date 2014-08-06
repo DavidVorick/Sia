@@ -23,7 +23,8 @@ func encodeHex(b []byte) string {
 func findDataSection(script []byte) (index int) {
 	index = len(script)
 	for i, b := range script {
-		if b == 0xFF || b == 0x2F || b == 0x30 || b == 0x38 {
+		// exit, reject, cond_reject, transfer
+		if b == 0xFF || b == 0xFE || b == 0xE3 || b == 0x38 {
 			index = i + 1
 		}
 		// these are good indicators that we're inside a data block
@@ -40,13 +41,13 @@ var shortArg [256]bool
 var opcodeMap map[string]byte
 
 func init() {
-	shortArg[0x02] = true
-	shortArg[0x1F] = true
-	shortArg[0x20] = true
-	shortArg[0x25] = true
-	shortArg[0x26] = true
-	shortArg[0x36] = true
-	shortArg[0x37] = true
+	shortArg[0x02] = true // push_short
+	shortArg[0x1F] = true // if_goto
+	shortArg[0x20] = true // if_move
+	shortArg[0x21] = true // goto
+	shortArg[0x22] = true // move
+	shortArg[0x32] = true // data_goto
+	shortArg[0x33] = true // data_move
 
 	// build name -> opcode map
 	opcodeMap = make(map[string]byte)
@@ -55,6 +56,9 @@ func init() {
 	}
 }
 
+// BytesToWords converts a script to human-readable opcodes.
+// If a 'data section' is located, it is separated from the opcodes
+// by a divider. This is not always accurate.
 func BytesToWords(script []byte) (s string, err error) {
 	// locate data section, if there is one
 	dataIndex := findDataSection(script)
@@ -100,6 +104,9 @@ func BytesToWords(script []byte) (s string, err error) {
 	return
 }
 
+// WordsToBytes converts human-readable opcodes to their bytecode equivalents.
+// If a 'data section' separator is encountered, the remaining input is parsed
+// as hex literals and converted to bytes directly.
 func WordsToBytes(script string) (b []byte, err error) {
 	// simple tokenization using a whitespace separator
 	tokens := strings.Fields(script)
@@ -118,7 +125,7 @@ func WordsToBytes(script string) (b []byte, err error) {
 		// parse opcode
 		opcode, ok := opcodeMap[tokens[i]]
 		if !ok {
-			err = errors.New(fmt.Sprint("expected opcode, got ", tokens[i]))
+			err = fmt.Errorf("expected opcode, got %v", tokens[i])
 			return
 		}
 		b = append(b, opcode)
@@ -135,7 +142,7 @@ func WordsToBytes(script string) (b []byte, err error) {
 		for j := 1; j <= numArgs; j++ {
 			arg, convErr := strconv.Atoi(tokens[i+j])
 			if convErr != nil {
-				err = errors.New(fmt.Sprintf("invalid argument \"%s\" to opcode %s", tokens[i+j], tokens[i]))
+				err = fmt.Errorf("invalid argument \"%s\" to opcode %s", tokens[i+j], tokens[i])
 				return
 			}
 			// convert single number to two bytes
