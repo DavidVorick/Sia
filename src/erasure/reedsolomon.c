@@ -2,7 +2,6 @@
 // on the error checking and usage patterns of reedsolomon.go
 #include "longhair/include/cauchy_256.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 // encodeRedundancy takes as input a 'k', the number of nonredundant segments
@@ -15,14 +14,14 @@
 // function.
 static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalBlock) {
 	// Verify that correct library is linked.
-	if(cauchy_256_init()) {
-		exit(1);
+	if (cauchy_256_init()) {
+		return NULL;
 	}
 
 	// Break original data into segments using pointer math.
 	const unsigned char *originalSegments[k];
 	int i;
-	for(i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		originalSegments[i] = (const unsigned char*)&originalBlock[i * bytesPerSegment];
 	}
 
@@ -30,9 +29,8 @@ static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalB
 	char *redundantSegments = calloc(sizeof(unsigned char), m * bytesPerSegment);
 
 	// encode the redundant segments using longhair
-	if(cauchy_256_encode(k, m, originalSegments, redundantSegments, bytesPerSegment)) {
-		fprintf(stderr, "Failed to encode pieces - strange...");
-		exit(1);
+	if (cauchy_256_encode(k, m, originalSegments, redundantSegments, bytesPerSegment)) {
+		return NULL;
 	}
 
 	return redundantSegments;
@@ -41,21 +39,21 @@ static char *encodeRedundancy(int k, int m, int bytesPerSegment, char *originalB
 // recoverData takes as input 'k', the number of nonredundant segments and 'm',
 // the number of redundant segments. 'bytesPerSegment' indicates how large each
 // segment is. remainingSegments is a pointer to a block of data that contains
-// exactly 'k' uncorrupted segments. 'remainingSegmentIndicies' indicate which
+// exactly 'k' uncorrupted segments. 'remainingSegmentIndices' indicate which
 // segments of the original set the uncorrupted ones correspond with.
 //
 // The data is edited and sorted in place. Upon returning, 'remainingSegments'
 // will be the original data in order.
-static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndicies) {
+static int recover(int k, int m, int bytesPerSegment, unsigned char *remainingSegments, unsigned char *remainingSegmentIndices) {
 	// Verify that the longhair library is linked.
-	if(cauchy_256_init()) {
-		exit(1);
+	if (cauchy_256_init()) {
+		return 1;
 	}
 
 	// copy remainingSegments into its own data, which results in much cleaner
 	// code during the sorting phase.
-	unsigned char *workingMemory = malloc((k+m)*bytesPerSegment);
-	memcpy(workingMemory, remainingSegments, (k+m)*bytesPerSegment);
+	unsigned char *workingMemory = calloc(k+m, bytesPerSegment);
+	memcpy(workingMemory, remainingSegments, k*bytesPerSegment);
 
 	// Longhair has a block data structure, which is composed of a pointer to
 	// data, and a row. It recovers the file into the blocks, but doesn't do any
@@ -65,32 +63,32 @@ static void recover(int k, int m, int bytesPerSegment, unsigned char *remainingS
 	// caughy_256_decode.
 	Block blocks[k];
 	unsigned char i, j;
-	for(i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		blocks[i].data = &workingMemory[i * bytesPerSegment];
-		blocks[i].row = remainingSegmentIndicies[i];
+		blocks[i].row = remainingSegmentIndices[i];
 	}
 	
 	// decode redundant segments into original segments
-	if(cauchy_256_decode(k, m, blocks, bytesPerSegment)) {
-		exit(1);
+	if (cauchy_256_decode(k, m, blocks, bytesPerSegment)) {
+		return 2;
 	}
 
-	// Perform a collpaseSort, which creates an array of len 'k + m' and puts
+	// Perform a collapseSort, which creates an array of len 'k + m' and puts
 	// each index in its corresponding location. This sorts the data, but leaves
 	// m gaps. Then the array is iterated through and 'collapsed', removing the
 	// gaps. This puts the blocks into order and copies the memory into
 	// recovered.
-	unsigned char *ordering[k+m];
-	memset(ordering, 0, k+m); // 0 == NULL
-	for(i = 0; i < k; i++) {
-		ordering[blocks[i].row] = &i;
+	int *ordering = calloc(k+m, sizeof(int));
+	for (i = 0; i < k; i++) {
+		ordering[blocks[i].row] = (int)i + 1; // little hack to avoid initializing the array to -1
 	}
 	j = 0;
-	for(i = 0; i < k+m; i++) {
-		if(ordering[i] == NULL) {
-			continue;
+	for (i = 0; i < k+m; i++) {
+		if (ordering[i]) {
+			memcpy(&remainingSegments[j * bytesPerSegment], blocks[ordering[i]-1].data, bytesPerSegment);
+			j++;
 		}
-		memcpy(&remainingSegments[j * bytesPerSegment], blocks[*ordering[i]].data, bytesPerSegment);
-		j++;
 	}
+
+    return 0;
 }

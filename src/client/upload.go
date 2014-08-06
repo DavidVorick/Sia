@@ -130,7 +130,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string, k byte) {
 	for i := 0; i < int(state.QuorumSize); i++ {
 		copy(emptyAtom[i*siacrypto.HashSize:], zeroMerkle[:])
 	}
-	parentHash := siacrypto.CalculateHash(emptyAtom)
+	parentHash := siacrypto.HashBytes(emptyAtom)
 
 	// fetch the current block to determine a reasonable deadline
 	deadline := state.MaxDeadline // cheating right now... will implement rest of deadline soon

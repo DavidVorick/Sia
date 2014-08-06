@@ -16,7 +16,7 @@ type SynchronizeConsensus struct {
 */
 
 /*
-// SynchronizeConsensus is an RPC call that returns all of the variables needed
+// SynchronizeConsensus is an RPC that returns all of the variables needed
 // to be up-to-speed with the current round of consensus. This includes all of
 // the heartbeats that have been received as well as the current step that the
 // algorithm is on.
@@ -28,31 +28,29 @@ func (p *Participant) SynchronizeConsensus(_ struct{}, sc *SynchronizeConsensus)
 }
 */
 
-// SnapshotMetadata is an RPC call that returns the metadata of the snapshot
-// associated with the input height.
-func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.StateMetadata) (err error) {
+// SnapshotMetadata is an RPC that returns the engine's Metadata object
+// corresponding to a given snapshot head.
+func (p *Participant) SnapshotMetadata(snapshotHead uint32, snapshotMetadata *state.Metadata) (err error) {
 	*snapshotMetadata, err = p.engine.LoadSnapshotMetadata(snapshotHead)
 	return
 }
 
-// SnapshotWalletList is an RPC call that returns a list of the WalletIDs of
-// every single wallet contained within the snapshot.
+// SnapshotWalletList is an RPC that returns the list of WalletIDs
+// corresponding to a given snapshot head.
 func (p *Participant) SnapshotWalletList(snapshotHead uint32, walletList *[]state.WalletID) (err error) {
 	*walletList, err = p.engine.LoadSnapshotWalletList(snapshotHead)
 	return
 }
 
-//  SnapshotWalletInput asks for a particular wallet from a particular
-//  snapshot. RPC only supports a single variable as input, so a separate
-//  struct is needed to support both variables in the RPC call.
-type SnapshotWalletInput struct {
+// A SnapshotWalletArg is a simple struct used in the SnapshotWallet RPC.
+type SnapshotWalletArg struct {
 	SnapshotHead uint32
 	WalletID     state.WalletID
 }
 
-// SnapshotWallet is an RPC call that returns a specific wallet when presented
-// with a snapshot height and a wallet id.
-func (p *Participant) SnapshotWallet(swi SnapshotWalletInput, wallet *state.Wallet) (err error) {
-	*wallet, err = p.engine.LoadSnapshotWallet(swi.SnapshotHead, swi.WalletID)
+// SnapshotWallet is an RPC that returns the Wallet corresponding to a given
+// snapshot head and WalletID.
+func (p *Participant) SnapshotWallet(swa SnapshotWalletArg, wallet *state.Wallet) (err error) {
+	*wallet, err = p.engine.LoadSnapshotWallet(swa.SnapshotHead, swa.WalletID)
 	return
 }

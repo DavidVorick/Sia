@@ -40,7 +40,7 @@ func connectWalkthrough(c *client.Client) {
 	}
 
 	// Load the port number.
-	var port int
+	var port uint16
 	fmt.Print("Port: ")
 	_, err = fmt.Scanln("%d", &port)
 	if err != nil {
@@ -49,7 +49,7 @@ func connectWalkthrough(c *client.Client) {
 	}
 
 	// Load the participant id.
-	var id int
+	var id byte
 	fmt.Print("ID: ")
 	_, err = fmt.Scanln("%d", &id)
 	if err != nil {

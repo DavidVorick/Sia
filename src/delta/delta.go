@@ -1,5 +1,5 @@
-// The delta layer manages inputs determined by the concensus layer and makes
-// corresponding changes to the wallet layer.
+// Package delta manages inputs determined by the consensus layer and makes
+// corresponding changes to the state layer.
 package delta
 
 // I don't like many aspects of this file. It's a whole bunch of getters and
@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// BootstrapWalletID is the wallet ID used by the siacoin 'fountain'.
 	BootstrapWalletID = 0
 )
 
@@ -21,10 +22,11 @@ const (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialzation
-// recentHistoryHead needs to be initialized to ^uint32(0)
-// activeHistoryLength should be initialized to SnapshotLength
-// activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1), because the turnover will result in a new blockhistory file being created.
+// SaveSnapshot() should be called upon initialization.
+// - recentHistoryHead needs to be initialized to ^uint32(0).
+// - activeHistoryLength should be initialized to SnapshotLength.
+// - activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1),
+//   because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
 	state state.State
@@ -42,54 +44,56 @@ type Engine struct {
 	activeHistoryLength uint32
 }
 
+// SetFilePrefix is a setter for the Engine.filePrefix field.
+// It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
 	e.filePrefix = prefix
 	walletPrefix := prefix + ".wallet."
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
-func (e *Engine) Metadata() state.StateMetadata {
+// Metadata is a getter that returns the state.Metadata object.
+func (e *Engine) Metadata() state.Metadata {
 	return e.state.Metadata
 }
 
+// SiblingIndex is a getter that returns the engine's sibling index.
 func (e *Engine) SiblingIndex() byte {
 	return e.siblingIndex
 }
 
-// WalletList is a pass-along function so that the wallet list of the state can be accessed
-// by instances containing the engine.
+// WalletList is a pass-along function so that the wallet list of the state can
+// be accessed by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
 }
 
+// Initialize sets various fields of the Engine object.
 func (e *Engine) Initialize(filePrefix string, siblingIndex byte) {
 	e.SetFilePrefix(filePrefix)
 	e.siblingIndex = siblingIndex
 	return
 }
 
-// NewBootstrapEngine() returns an engine that has its variables set so that
-// the engine can function as the first sibling in a quorum. This requires a
-// call to NewBootstrapState()
+// Bootstrap returns an engine that has its variables set so that
+// the engine can function as the first sibling in a quorum.
 func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	// Create the bootstrap wallet, which acts as a fountain to get the economy
 	// started.
-	w := state.Wallet{
+	err = e.state.InsertWallet(state.Wallet{
 		ID:      BootstrapWalletID,
 		Balance: state.NewBalance(0, 25000000),
 		Script:  BootstrapScript,
-	}
-	err = e.state.InsertWallet(w)
+	})
 	if err != nil {
 		return
 	}
 
-	// Create a walle with the default script for the sibling to use.
-	defaultScript := DefaultScript(sib.PublicKey)
+	// Create a wallet with the default script for the sibling to use.
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
 		Balance: state.NewBalance(0, 1000000),
-		Script:  defaultScript,
+		Script:  DefaultScript(sib.PublicKey),
 	}
 	err = e.state.InsertWallet(sibWallet)
 	if err != nil {
@@ -111,7 +115,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 // metadata as input, but that could take a massive amount of memory. I wasn't
 // certain about the best way to approach the problem, so this is the solution
 // I've picked for the time being.
-func (e *Engine) BootstrapSetMetadata(md state.StateMetadata) {
+func (e *Engine) BootstrapSetMetadata(md state.Metadata) {
 	e.state.Metadata = md
 }
 

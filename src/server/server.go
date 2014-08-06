@@ -10,7 +10,7 @@ import (
 
 func joinQuorum() {
 	// read port number
-	var port int
+	var port uint16
 	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
 
@@ -70,7 +70,7 @@ func joinQuorum() {
 
 func establishQuorum() {
 	// read and set port number
-	var port int
+	var port uint16
 	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
 

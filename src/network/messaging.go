@@ -5,14 +5,13 @@ type Identifier byte
 
 // An Address couples an Identifier with its network address.
 type Address struct {
-	ID   Identifier
 	Host string
-	Port int
+	Port uint16
+	ID   Identifier
 }
 
 // A Message is for sending requests over the network.
-// It consists of an Address and an RPC. It is the MessageRouter's job to
-// route a message to its intended destination.
+// It consists of an Address and an RPC.
 type Message struct {
 	Dest Address
 	Proc string
@@ -20,11 +19,11 @@ type Message struct {
 	Resp interface{}
 }
 
-// A MessageRouter both transmits outgoing messages and processes incoming messages.
-// It dispenses Identifiers to objects that register themselves on the server.
+// A MessageRouter both transmits outgoing messages and processes incoming
+// messages. Objects must register themselves with a MessageRouter to receive
+// an Address.
 type MessageRouter interface {
-	Address() Address
-	RegisterHandler(interface{}) Identifier
+	RegisterHandler(interface{}) Address
 	SendMessage(Message) error
 	SendAsyncMessage(Message) chan error
 	Close()

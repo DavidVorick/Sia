@@ -3,6 +3,7 @@ package consensus
 import (
 	"network"
 	"siacrypto"
+	"siafiles"
 	"testing"
 )
 
@@ -10,18 +11,18 @@ import (
 // items have been initialized.
 func TestNewParticipant(t *testing.T) {
 	// Test calling NewParticipant with a nil message router.
-	p, err := NewParticipant(nil, "../../filesCreatedDuringTesting/TestNewParticipant")
+	p, err := NewParticipant(nil, siafiles.TempFilename("TestNewParticipant"))
 	if err == nil {
-		t.Error("Able to create a participant with a nil message router.")
+		t.Error("Created a participant with a nil message router")
 	}
 
 	mr, err := network.NewRPCServer(11200)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Failed to initialize RPCServer:", err)
 	}
-	p, err = NewParticipant(mr, "../../filesCreatedDuringTesting/TestNewParticipant")
+	p, err = NewParticipant(mr, siafiles.TempFilename("TestNewParticipant"))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Failed to create participant:", err)
 	}
 
 	// Test that a keypair exists.
@@ -39,10 +40,11 @@ func TestNewParticipant(t *testing.T) {
 		t.Error("siblingIndex not initialized to ^byte(0)")
 	}
 
-	// Test that the address has been initialized, and the participant is reachable.
+	// Test that the address has been initialized, and the participant is
+	// reachable.
 	err = mr.Ping(p.address)
 	if err != nil {
-		t.Error("participant not reachable:", err)
+		t.Error("Participant not reachable:", err)
 	}
 }
 

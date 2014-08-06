@@ -41,25 +41,28 @@ func (c *Client) Broadcast(nm network.Message) {
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
-func (c *Client) Connect(host string, port int, id int) (err error) {
-	// Create a new rpc server to connect through.
+func (c *Client) Connect(host string, port uint16, id byte) (err error) {
 	c.router, err = network.NewRPCServer(9989)
 	if err != nil {
 		return
 	}
 
-	// Set bootstrap address and ping it, to see if it's a valid device.
-	c.bootstrap.Host = host
-	c.bootstrap.Port = port
-	c.bootstrap.ID = network.Identifier(id)
+	// Set the bootstrap address.
+	c.bootstrap = network.Address{
+		Host: host,
+		Port: port,
+		ID:   network.Identifier(id),
+	}
+
+	// Check that the address is valid.
 	err = c.router.Ping(c.bootstrap)
 	if err != nil {
 		c.router.Close()
 		return
 	}
 
-	// Fetch the list of siblings and populate the client.
-	var metadata state.StateMetadata
+	// populate initial sibling list
+	var metadata state.Metadata
 	err = c.router.SendMessage(network.Message{
 		Dest: c.bootstrap,
 		Proc: "Participant.Metadata",
@@ -91,7 +94,7 @@ func (c *Client) Disconnect() {
 func (c *Client) RetrieveSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue
