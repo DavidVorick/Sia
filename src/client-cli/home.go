@@ -34,7 +34,7 @@ func connectWalkthrough(c *client.Client) (err error) {
 	}
 
 	// Get a port.
-	var port int
+	var port uint16
 	fmt.Println("What port should the client listen on: ")
 	_, err = fmt.Scanln(&port)
 	if err != nil {

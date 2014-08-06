@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// a simple message handler
-// stores a received message
+// TestStoreHandler is a simple message handler.
+// Its methods are intended to test various RPC functions.
 type TestStoreHandler struct {
 	message string
 }
@@ -19,12 +19,11 @@ func (tsh *TestStoreHandler) StoreMessage(message string, _ *struct{}) error {
 
 func (tsh *TestStoreHandler) BlockForever(message string, _ *struct{}) error {
 	select {}
-	return nil
 }
 
-// TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and Send(Async)Message functions.
-// NewRPCServer must properly initialize a RPC server.
-// RegisterHandler must make an RPC available to the client.
+// TestRPCSendMessage tests the NewRPCServer, RegisterHandler, and
+// Send(Async)Message functions. NewRPCServer must properly initialize a RPC
+// server. RegisterHandler must make an RPC available to the client.
 // SendMessage and SendAsyncMessage must complete successfully.
 func TestRPCSendMessage(t *testing.T) {
 	// create RPCServer
@@ -36,14 +35,13 @@ func TestRPCSendMessage(t *testing.T) {
 
 	// add a message handler to the server
 	tsh := new(TestStoreHandler)
-	id := rpcs.RegisterHandler(tsh)
+	addr := rpcs.RegisterHandler(tsh)
 
 	// send a message
 	m := Message{
-		Address{id, "localhost", 10000},
-		"TestStoreHandler.StoreMessage",
-		"hello, world!",
-		nil,
+		Dest: addr,
+		Proc: "TestStoreHandler.StoreMessage",
+		Args: "hello, world!",
 	}
 	err = rpcs.SendMessage(m)
 	if err != nil {
@@ -69,7 +67,8 @@ func TestRPCSendMessage(t *testing.T) {
 
 // TestRPCTimeout tests the timeout functionality of Send(Async)Message.
 // During the test, a message is sent to a handler that does nothing with it.
-// The sender should eventually timeout and return an error instead of continuing to wait.
+// The sender should eventually timeout and return an error instead of
+// continuing to wait.
 func TestRPCTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -83,32 +82,33 @@ func TestRPCTimeout(t *testing.T) {
 
 	// add a message handler to the server
 	tsh := new(TestStoreHandler)
-	id := rpcs.RegisterHandler(tsh)
+	addr := rpcs.RegisterHandler(tsh)
 
 	// send a message
 	m := Message{
-		Dest: Address{id, "localhost", 10001},
+		Dest: addr,
 		Proc: "TestStoreHandler.BlockForever",
 		Args: "hello, world!",
-		Resp: nil,
 	}
 	err = rpcs.SendMessage(m)
 	if err == nil {
-		t.Fatal("Error: SendMessage did not timeout")
+		t.Fatal("SendMessage did not timeout")
 	}
 
 	// send a message asynchronously
 	tsh.message = ""
 	errChan := rpcs.SendAsyncMessage(m)
 	if <-errChan == nil {
-		t.Fatal("Error: SendAsyncMessage did not timeout")
+		t.Fatal("SendAsyncMessage did not timeout")
 	}
 }
 
-// TestRPCScheduling tests the RPC server's ability to process multiple concurrent messages.
-// It is crucial that heartbeat RPCs are not blocked by other calls, such as uploads/downloads.
-// This test starts one large data transfer and then attempts to send multiple smaller RPC messages.
-// The smaller messages should arrive in a timely fashion despite the ongoing data transfer.
+// TestRPCScheduling tests the RPC server's ability to process multiple
+// concurrent messages. It is crucial that heartbeat RPCs are not blocked by
+// other calls, such as uploads/downloads. This test starts one large data
+// transfer and then attempts to send multiple smaller RPC messages. The
+// smaller messages should arrive in a timely fashion despite the ongoing data
+// transfer.
 func TestRPCScheduling(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -127,24 +127,22 @@ func TestRPCScheduling(t *testing.T) {
 
 	// add a mesage handler to the servers
 	tsh1 := new(TestStoreHandler)
-	id1 := rpcs1.RegisterHandler(tsh1)
+	addr1 := rpcs1.RegisterHandler(tsh1)
 	tsh2 := new(TestStoreHandler)
-	id2 := rpcs2.RegisterHandler(tsh2)
+	addr2 := rpcs2.RegisterHandler(tsh2)
 
 	// begin transferring large payload
 	largeChan := rpcs2.SendAsyncMessage(Message{
-		Dest: Address{id1, "localhost", 10002},
+		Dest: addr1,
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<20)),
-		Resp: nil,
 	})
 
 	// begin transferring small payload
 	smallChan := rpcs1.SendAsyncMessage(Message{
-		Dest: Address{id2, "localhost", 10003},
+		Dest: addr2,
 		Proc: "TestStoreHandler.StoreMessage",
 		Args: string(bytes.Repeat([]byte{0x10}, 1<<16)),
-		Resp: nil,
 	})
 
 	// poll until both transfers complete
@@ -160,5 +158,26 @@ func TestRPCScheduling(t *testing.T) {
 
 	if t2.After(t1) {
 		t.Fatal("small transfer was blocked by large transfer")
+	}
+}
+
+func BenchmarkSendMessage(b *testing.B) {
+	// create RPCServer
+	rpcs, err := NewRPCServer(10000)
+	if err != nil {
+		b.Fatal("Failed to initialize RPCServer:", err)
+	}
+	defer rpcs.Close()
+
+	// add a message handler to the server
+	tsh := new(TestStoreHandler)
+	addr := rpcs.RegisterHandler(tsh)
+
+	for i := 0; i < b.N; i++ {
+		rpcs.SendMessage(Message{
+			Dest: addr,
+			Proc: "TestStoreHandler.StoreMessage",
+			Args: "hello, world!",
+		})
 	}
 }

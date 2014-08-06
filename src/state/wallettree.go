@@ -21,9 +21,8 @@ type walletNode struct {
 	weight int
 }
 
-// not prevents redundant code for symmetrical cases. Theres a direction, and then
-// there's the opposite of a direction. This function returns the opposite of
-// that direction.
+// not is a helper function that emulates C's '!' for integers.
+// It prevents redundant code for symmetrical cases.
 func not(direction int) int {
 	if direction == 0 {
 		return 1
@@ -74,7 +73,7 @@ func (s *State) insertWalletNode(w *walletNode) {
 	if s.walletRoot == nil {
 		s.walletRoot = w
 		s.walletRoot.red = false
-		s.wallets += 1
+		s.wallets++
 		return
 	}
 
@@ -161,7 +160,7 @@ func (s *State) insertWalletNode(w *walletNode) {
 	// restore the root wallet and set it to black
 	s.walletRoot = falseRoot.children[1]
 	s.walletRoot.red = false
-	s.wallets += 1
+	s.wallets++
 }
 
 // remove removes the presented key from the wallet tree.
@@ -173,8 +172,7 @@ func (s *State) removeWalletNode(id WalletID) (target *walletNode) {
 
 	// initialize helper variables
 	falseRoot := new(walletNode)
-	var grandparent *walletNode
-	var parent *walletNode
+	var parent, grandparent *walletNode
 	current := falseRoot
 	current.children[1] = s.walletRoot
 	direction := 1
@@ -294,7 +292,7 @@ func (s *State) removeWalletNode(id WalletID) (target *walletNode) {
 	if s.walletRoot != nil {
 		s.walletRoot.red = false
 	}
-	s.wallets -= 1
+	s.wallets--
 
 	return
 }

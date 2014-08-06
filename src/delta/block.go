@@ -6,10 +6,11 @@ import (
 )
 
 const (
-	SnapshotLength = 3 // blocks separating each snapshot (probably needs a different name)
+	// SnapshotLength is the number of blocks separating each snapshot
+	SnapshotLength = 3
 )
 
-// The heartbeat is the set of information that siblings are required to submit
+// A Heartbeat is the set of information that siblings are required to submit
 // every block. Each block contains an array of [state.QuorumSize] heartbeats,
 // and sets the value to 'nil' if nothing was submitted.
 type Heartbeat struct {
@@ -18,7 +19,7 @@ type Heartbeat struct {
 	// storage proof
 }
 
-// A block contains all the data that is necessary to move the quorum from one
+// A Block contains all the data that is necessary to move the quorum from one
 // state to the next. It contains a height and a parent block, as well as a
 // parent quorum. These values enable the quorum to verify that the block is
 // consistent with the current quorum and is not a block that is targeted

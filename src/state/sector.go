@@ -1,11 +1,13 @@
 package state
 
 import (
+	"errors"
 	"io"
 	"os"
 	"siacrypto"
 )
 
+// TODO: add docstring
 type SectorSettings struct {
 	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
@@ -44,70 +46,47 @@ type SectorSettings struct {
 	}
 } */
 
-// MerkleCollapse takes a reader as input and treats each set of AtomSize bytes
-// as an atom. It then creates a Merkle Tree of the atoms. The algorithm for
-// doing this keeps in memory the previous hash at each level. Each atom is
-// hashed as level one, but if there is already a hash stored at level one,
-// then the hash is taken again producing a level two hash. If there is already
-// a hash at level two, the hash is taken again... and so on. Once all the
-// atoms have been read, a cleanup loop is used to append the highest level
-// hash to each lower level hash and arrive at the final value. See the
-// whitepaper for a specification of how to construct Merkle Trees from a
-// sector. This algorithm takes linear time and logarithmic space.
-func MerkleCollapse(reader io.Reader) (hash siacrypto.Hash) {
-	// Loop through every atom in the reader, building out the Merkle Tree in
-	// linear time.
-	var prevHashes []*siacrypto.Hash
-	atom := make([]byte, AtomSize)
-	var atoms int
-	for _, err := reader.Read(atom); err == nil; atoms++ {
-		// If atoms is a power of 2, increase the length of prevHashes
-		if (atoms+1)&(atoms) == 0 {
-			prevHashes = append(prevHashes, nil)
-		}
+// convenience function for constructing Merkle trees
+func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
+	return siacrypto.HashBytes(append(left[:], right[:]...))
+}
 
-		// Take the hash of the current atom and merge it with the hashes in
-		// prevHashes, one level at a time until an empty slot in prevHashes is
-		// found. Each time a merge happens at a level, the level is reset to nil.
-		hash := siacrypto.CalculateHash(atom)
-		var i int
-		for i = 0; prevHashes[i] != nil; i++ {
-			hash = siacrypto.CalculateHash(append(prevHashes[i][:], hash[:]...))
-			prevHashes[i] = nil
-		}
-
-		// store the new hash in the first empty slot
-		prevHashes[i] = new(siacrypto.Hash)
-		copy(prevHashes[i][:], hash[:])
-		_, err = reader.Read(atom)
+// MerkleCollapse splits the provided data into segments of size AtomSize. It
+// then recursively transforms these segments into a Merkle tree, and returns
+// the root hash.
+func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err error) {
+	if numAtoms == 0 {
+		err = errors.New("no data")
+		return
 	}
-
-	// check that at least something was read
-	if len(prevHashes) == 0 {
+	if numAtoms == 1 {
+		data := make([]byte, AtomSize)
+		_, err = reader.Read(data)
+		hash = siacrypto.HashBytes(data)
 		return
 	}
 
-	// Merge the hashes into the final tree, starting with the highest level hash
-	// and working down to the lowest.
-	var i int
-	for prevHashes[i] == nil {
-		i++
+	// locate smallest power of 2 <= numAtoms
+	var mid uint16 = 1
+	for mid < numAtoms/2+numAtoms%2 {
+		mid *= 2
 	}
-	hash = *prevHashes[i]
-	for i++; i < len(prevHashes); i++ {
-		if prevHashes[i] != nil {
-			hash = siacrypto.CalculateHash(append(prevHashes[i][:], hash[:]...))
-		}
-	}
+
+	// since we always read "left to right", no extra Seeking is necessary
+	left, _ := MerkleCollapse(reader, mid)
+	right, err := MerkleCollapse(reader, numAtoms-mid)
+	hash = joinHash(left, right)
 	return
 }
 
+// SectorHash returns the combined hash of 'QuorumSize' Hashes.
+// TODO: check that this still make sense for the current AtomSize.
 func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
 	atomRepresentation := make([]byte, AtomSize) // regardless of quorumsize, must hash a whole atom
 	for i := range hashSet {
 		copy(atomRepresentation[i*siacrypto.HashSize:], hashSet[i][:])
 	}
-	return siacrypto.CalculateHash(atomRepresentation)
+	return siacrypto.HashBytes(atomRepresentation)
 }
 
 // SectorFilename takes a wallet id and returns the filename of the sector
@@ -117,12 +96,13 @@ func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
 	return
 }
 
-// BuildStorageProof constructs a list of hashes using the following procedure.
-// The storage proof requires traversing the Merkle tree from the proofIndex node to the root.
-// On each level of the tree, we must provide the hash of "sister" node.
-// (Since this is a binary tree, the sister node is the other node with the same parent as us.)
-// To obtain this hash, we call MerkleCollapse on the segment of data corresponding to the sister.
-// This segment will double in size on each iteration until we reach the root.
+// buildProof constructs a list of hashes using the following procedure. The
+// storage proof requires traversing the Merkle tree from the proofIndex node
+// to the root. On each level of the tree, we must provide the hash of "sister"
+// node. (Since this is a binary tree, the sister node is the other node with
+// the same parent as us.) To obtain this hash, we call MerkleCollapse on the
+// segment of data corresponding to the sister. This segment will double in
+// size on each iteration until we reach the root.
 func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
 	// get proofBytes
 	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
@@ -159,17 +139,20 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 			continue
 		}
 
-		// create a poor man's SectionReader via Seek and LimitReader
-		// (why doesn't os.File implement SectionReader???)
-		// this negates the need for any special processing of imperfectly balanced trees
-		_, err = rs.Seek(int64(i)*int64(AtomSize), 0)
+		// seek to beginning of segment
+		rs.Seek(int64(i)*int64(AtomSize), 0)
+
+		// truncate number of atoms to read, if necessary
+		truncSize := size
+		if i+size > numAtoms {
+			truncSize = numAtoms - i
+		}
+
+		// calculate and append hash
+		hash, err := MerkleCollapse(rs, truncSize)
 		if err != nil {
 			panic(err)
 		}
-		r := io.LimitReader(rs, int64(size)*int64(AtomSize))
-
-		// calculate and append hash
-		hash := MerkleCollapse(r)
 		proofStack = append(proofStack, &hash)
 	}
 
@@ -196,8 +179,9 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	return buildProof(file, numAtoms, proofIndex)
 }
 
-// foldHashes traverses a proofStack, hashing elements together to produce the root-level hash.
-// Care must be taken to ensure that the correct ordering is used when concatenating hashes.
+// foldHashes traverses a proofStack, hashing elements together to produce the
+// root-level hash. Care must be taken to ensure that the correct ordering is
+// used when concatenating hashes.
 func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
 	h = base
 
@@ -208,15 +192,19 @@ func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.
 			continue
 		}
 		if proofIndex%(size*2) < size { // base is on the left branch
-			h = siacrypto.CalculateHash(append(h[:], proofStack[i][:]...))
+			h = joinHash(h, *proofStack[i])
 		} else {
-			h = siacrypto.CalculateHash(append(proofStack[i][:], h[:]...))
+			h = joinHash(*proofStack[i], h)
 		}
 	}
 
 	return
 }
 
+// VerifyStorageProof verifies that a specified atom, along with a
+// corresponding proofStack, can be used to reconstruct the original root
+// Merkle hash.
+// TODO: think about removing this function or combining it with foldHashes
 func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
 	// get the intended hash from the segment stored on disk
 	sectorFilename := s.SectorFilename(id)
@@ -228,22 +216,15 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 
 	// seek to the location where this particular siblings hash is stored
 	hashLocation := int64(sibling) * int64(siacrypto.HashSize)
-	_, err = file.Seek(hashLocation, 0)
-	if err != nil {
-		panic(err)
-	}
 	var expectedHash siacrypto.Hash
-	_, err = file.Read(expectedHash[:])
+	_, err = file.ReadAt(expectedHash[:], hashLocation)
 	if err != nil {
 		panic(err)
 	}
 
 	// build the hash up from the base
-	initialHash := siacrypto.CalculateHash(proofBase)
+	initialHash := siacrypto.HashBytes(proofBase)
 	finalHash := foldHashes(initialHash, proofIndex, proofStack)
 
-	if finalHash != expectedHash {
-		return false
-	}
-	return true
+	return finalHash == expectedHash
 }

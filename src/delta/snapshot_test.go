@@ -3,6 +3,7 @@ package delta
 import (
 	"reflect"
 	"siacrypto"
+	"siafiles"
 	"state"
 	"testing"
 )
@@ -72,7 +73,7 @@ func TestSnapshotProcess(t *testing.T) {
 	// Crudely create an engine with all metadata variables filled out.
 	e := Engine{
 		state: state.State{
-			Metadata: state.StateMetadata{
+			Metadata: state.Metadata{
 				Germ:         state.Entropy{1},
 				Seed:         state.Entropy{2},
 				EventCounter: 3,
@@ -83,7 +84,7 @@ func TestSnapshotProcess(t *testing.T) {
 		},
 		recentHistoryHead: ^uint32(0),
 	}
-	e.Initialize("../../filesCreatedDuringTesting/TestSnapshotProcess", 0)
+	e.Initialize(siafiles.TempFilename("TestSnapshotProcess"), 0)
 
 	// Save a handful of wallets into the quorum.
 	w1 := state.Wallet{

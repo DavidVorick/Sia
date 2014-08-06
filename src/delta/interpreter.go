@@ -7,11 +7,14 @@ import (
 )
 
 const (
-	MaxInstructions = 10000
-	MaxStackLen     = 1 << 16
-	DEBUG           = true
+	maxInstructions = 10000
+	maxStackLen     = 1 << 16
+	debug           = true
 )
 
+// A ScriptInput pairs an input byte slice with the WalletID associated with
+// the recipient. During execution, the WalletID is used to load the script
+// body, and then the Input is appended to the end of the script.
 type ScriptInput struct {
 	WalletID state.WalletID
 	Input    []byte
@@ -38,7 +41,7 @@ type stackElem struct {
 }
 
 func push(v []byte) (err error) {
-	if env.stackLen > MaxStackLen {
+	if env.stackLen > maxStackLen {
 		return errors.New("stack overflow")
 	}
 	c := make([]byte, len(v))
@@ -82,7 +85,7 @@ type scriptEnv struct {
 	stack      *stackElem
 	stackLen   int
 	wallet     state.Wallet
-	quorum     *state.State
+	state      *state.State
 	// resource pools
 	instBalance int
 	costBalance int
@@ -91,10 +94,11 @@ type scriptEnv struct {
 // global execution environment
 var env scriptEnv
 
-// deduct instruction cost from resource pools, and return an error if any pool is exhausted
+// deduct instruction cost from resource pools, and return an error if any pool
+// is exhausted.
 // TODO: add memBalance to prevent buffer abuse
 func deductResources(op instruction) error {
-	env.instBalance -= 1
+	env.instBalance--
 	env.costBalance -= op.cost
 	switch {
 	case env.instBalance < 0:
@@ -106,14 +110,12 @@ func deductResources(op instruction) error {
 	}
 }
 
-// Execute interprets a script on a set of inputs and returns the execution cost.
-func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
-	if si == nil {
-		err = errors.New("nil ScriptInput")
-	}
-
+// Execute loads the requested script, appends the script input data, sets up
+// an execution environment, and interprets bytecodes until a termination
+// condition is reached.
+func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	// load wallet
-	w, err := q.LoadWallet(si.WalletID)
+	w, err := e.state.LoadWallet(si.WalletID)
 	if err != nil {
 		return
 	}
@@ -123,9 +125,9 @@ func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 		script: append(w.Script, si.Input...),
 		dptr:   len(w.Script),
 		wallet: w,
-		quorum: q,
+		state:  &e.state,
 		// these values will likely be stored as part of the wallet
-		instBalance: MaxInstructions,
+		instBalance: maxInstructions,
 		costBalance: 10000,
 	}
 
@@ -135,11 +137,11 @@ func (si *ScriptInput) Execute(q *state.State) (totalCost int, err error) {
 		fmt.Println("script execution failed:", err)
 	}
 
-	q.SaveWallet(env.wallet)
+	e.state.SaveWallet(env.wallet)
 	return
 }
 
-// execute opcodes until an error is encountered or the script terminates
+// run performs the actual execution of opcodes.
 func (env *scriptEnv) run() error {
 	for {
 		if env.iptr >= len(env.script) {
@@ -178,7 +180,7 @@ func (env *scriptEnv) run() error {
 			}
 		}
 
-		if DEBUG {
+		if debug {
 			fmt.Println(op.print(fnArgs))
 			fmt.Println("    stack:", env.stack.print())
 			b := make([]byte, 20)
@@ -189,5 +191,4 @@ func (env *scriptEnv) run() error {
 			fmt.Println("    register 2:", len(env.registers[2]), b)
 		}
 	}
-	return nil
 }

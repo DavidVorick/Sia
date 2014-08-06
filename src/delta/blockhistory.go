@@ -1,7 +1,6 @@
 package delta
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"siaencoding"
@@ -33,7 +32,7 @@ func (e *Engine) activeHistoryFilename() string {
 	return e.historyFilename(e.activeHistoryHead)
 }
 
-// SaveBlock takes a block and saves it to disk. Blocks are saved in chains of
+// saveBlock takes a block and saves it to disk. Blocks are saved in chains of
 // SnapshotLen, after which a new chain is created and the oldest is deleted.
 // Two chains total are kept, one complete chain and one yet-incomplete chain.
 // Two chains are kept so that hosts synchronizing to the network can have
@@ -143,7 +142,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		return
 	}
 
-	e.activeHistoryLength += 1
+	e.activeHistoryLength++
 	return
 }
 
@@ -200,6 +199,6 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(encodedBlock, &b)
+	err = siaencoding.Unmarshal(encodedBlock, &b)
 	return
 }

@@ -40,7 +40,7 @@ unc (c *Client) Broadcast(nm network.Message) {
 */
 
 // Creates a new router where none exists.
-func (c *Client) Connect(port int) (err error) {
+func (c *Client) Connect(port uint16) (err error) {
 	if c.router != nil {
 		err = errors.New("network router has already been initialized")
 		return
@@ -68,8 +68,8 @@ func (c *Client) BootstrapConnection(connectAddress network.Address) (err error)
 		return
 	}
 
-	// Fetch the list of siblings and populate the client.
-	var metadata state.StateMetadata
+	// populate initial sibling list
+	var metadata state.Metadata
 	err = c.router.SendMessage(network.Message{
 		Dest: connectAddress,
 		Proc: "Participant.Metadata",
@@ -111,7 +111,7 @@ func (c *Client) IsServerInitialized() bool {
 func (c *Client) RetrieveSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue

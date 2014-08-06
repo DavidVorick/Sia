@@ -8,9 +8,6 @@ all: submodule-update install
 submodule-update:
 	git submodule update --init
 
-directories:
-	mkdir -p filesCreatedDuringTesting
-
 fmt:
 	$(govars) go fmt $(packages)
 
@@ -48,7 +45,10 @@ test-delta:
 test-state:
 	$(govars) go test -v -race state
 
-dependencies: submodule-update race-libs directories
+bench:
+	$(govars) go test -run=XXX -bench=. $(packages)
+
+dependencies: submodule-update race-libs
 	cd src/siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
 
 race-libs:
@@ -57,4 +57,4 @@ race-libs:
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
 
-.PHONY: all submodule-update fmt install test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs directories
+.PHONY: all submodule-update fmt install test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs

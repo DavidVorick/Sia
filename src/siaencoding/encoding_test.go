@@ -13,6 +13,8 @@ var (
 	f64 float64 = 0x0102030405060708
 )
 
+// TestEncoding checks that the Enc/Dec function pairs are proper inverses of
+// each other.
 func TestEncoding(t *testing.T) {
 	if DecInt32(EncInt32(i32)) != i32 {
 		t.Fatal("int32 encode/decode mismatch")
@@ -31,5 +33,16 @@ func TestEncoding(t *testing.T) {
 	}
 	if DecFloat64(EncFloat64(f64)) != f64 {
 		t.Fatal("float64 encode/decode mismatch")
+	}
+}
+
+func BenchmarkEncoding(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		DecInt32(EncInt32(i32))
+		DecUint32(EncUint32(u32))
+		DecFloat32(EncFloat32(f32))
+		DecInt64(EncInt64(i64))
+		DecUint64(EncUint64(u64))
+		DecFloat64(EncFloat64(f64))
 	}
 }

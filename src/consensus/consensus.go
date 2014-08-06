@@ -3,7 +3,6 @@ package consensus
 import (
 	"delta"
 	"errors"
-	"fmt"
 	"network"
 	"siacrypto"
 	"sort"
@@ -24,21 +23,24 @@ type Update struct {
 	AdvancementSignatures []siacrypto.Signature
 }
 
+// TODO: add docstring
 type SignedUpdate struct {
 	Update      Update // eventually be replaced with a hash and fetch request
 	Signatories []byte
 	Signatures  []siacrypto.Signature
 }
 
-var hsuerrSignatureSignatoryMismatch = errors.New("SignedUpdate has different number of signatures and signatories.")
-var hsuerrInvalidParent = errors.New("SignedUpdate targets a different block and/or quorum than the parent of this participant.")
-var hsuerrOutOfSync = errors.New("Update is late - not enough signatures given the current step of consensus.")
-var hsuerrBounds = errors.New("Update contains a signature from an out-of-bounds signatory.")
-var hsuerrNonSibling = errors.New("Update contains a signature from a non-sibling.")
-var hsuerrDoubleSign = errors.New("Update contains two signatures from the same signatory.")
-var hsuerrInvalidSignature = errors.New("Update contains a corrupted/invalid signature.")
-var hsuerrHaveHeartbeat = errors.New("This update has already been processed.")
-var hsuerrManyHeartbeats = errors.New("Multiple heartbeats from this sibling have already been submitted.")
+var (
+	errSignatoryMismatch = errors.New("signedUpdate has different number of signatures and signatories")
+	errInvalidParent     = errors.New("signedUpdate targets a different block and/or quorum than the parent of this participant")
+	errOutOfSync         = errors.New("update is late - not enough signatures given the current step of consensus")
+	errBounds            = errors.New("update contains a signature from an out-of-bounds signatory")
+	errNonSibling        = errors.New("update contains a signature from a non-sibling")
+	errDoubleSign        = errors.New("update contains two signatures from the same signatory")
+	errInvalidSignature  = errors.New("update contains a corrupted/invalid signature")
+	errHaveHeartbeat     = errors.New("update has already been processed")
+	errManyHeartbeats    = errors.New("multiple heartbeats from this sibling have already been submitted")
+)
 
 // condenseBlock assumes that a heartbeat has a valid signature and that the
 // parent is the correct parent.
@@ -54,7 +56,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	b.Height = p.engine.Metadata().Height
 	b.ParentBlock = p.engine.Metadata().ParentBlock
 
-	// Take each update and condense them into a single non-repetitive block.
+	// Condense updates into a single non-repetitive block.
 	{
 		// Create a map containing all ScriptInputs found in a heartbeat.
 		scriptInputMap := make(map[string]delta.ScriptInput)
@@ -73,8 +75,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 						if err != nil {
 							continue
 						}
-						scriptInputString := string(scriptInputHash[:])
-						scriptInputMap[scriptInputString] = scriptInput
+						scriptInputMap[string(scriptInputHash[:])] = scriptInput
 					}
 
 					// Add all of the update advancements to the hash map.
@@ -129,8 +130,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 func (p *Participant) newSignedUpdate() {
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
-	randomBytes := siacrypto.RandomByteSlice(state.EntropyVolume)
-	copy(entropy[:], randomBytes)
+	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))
 
 	hb := delta.Heartbeat{
 		ParentBlock: p.engine.Metadata().ParentBlock,
@@ -153,7 +153,7 @@ func (p *Participant) newSignedUpdate() {
 	// script inputs in the process.
 	p.scriptInputsLock.Lock()
 	update.ScriptInputs = p.scriptInputs
-	p.scriptInputs = make([]delta.ScriptInput, 0)
+	p.scriptInputs = nil
 	p.scriptInputsLock.Unlock()
 
 	// Attach all of the update advancements to the signed heartbeat and sign
@@ -193,12 +193,18 @@ func (p *Participant) newSignedUpdate() {
 	p.broadcast(network.Message{
 		Proc: "Participant.HandleSignedUpdate",
 		Args: su,
-		Resp: err,
 	})
 }
 
-// The series of printlns in this function are purely for debugging.
+// TODO: add docstring
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
+	// for debugging purposes
+	defer func() {
+		if err != nil && err != errHaveHeartbeat {
+			println(err.Error())
+		}
+	}()
+
 	// Lock the engine for the duration of the function.
 	p.engineLock.RLock()
 	defer p.engineLock.RUnlock()
@@ -209,29 +215,26 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Check that there is a signatory for every signature.
 	if len(su.Signatories) != len(su.Signatures) {
-		err = hsuerrSignatureSignatoryMismatch
-		fmt.Println(err)
+		err = errSignatoryMismatch
 		return
 	}
 
-	// Check that the Update matches the current block. If it doesn't, it has one
-	// step to match the next block.
+	// Check that the Update matches the current block.
+	// If it doesn't, it has one step to match the next block.
 	if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
 		time.Sleep(StepDuration)
 		if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
-			err = hsuerrInvalidParent
-			fmt.Println(err)
+			err = errInvalidParent
 			return
 		}
 	}
 
-	// Check that there are enough signatures in the update to match the current
-	// step.
+	// Check that there are enough signatures in the update to match the
+	// current step.
 	p.currentStepLock.Lock()
 	if int(p.currentStep) > len(su.Signatures) {
 		p.currentStepLock.Unlock()
-		err = hsuerrOutOfSync
-		fmt.Println(err)
+		err = errOutOfSync
 		return
 	}
 	p.currentStepLock.Unlock()
@@ -239,7 +242,6 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	// Check that all of the signatures are valid, and that there are no repeats.
 	updateHash, err := siacrypto.HashObject(su.Update)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	message := updateHash[:]
@@ -247,22 +249,20 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	for i, signatory := range su.Signatories {
 		// Check bounds on current signatory.
 		if signatory >= state.QuorumSize {
-			err = hsuerrBounds
-			fmt.Println(err)
+			err = errBounds
 			return
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
 		if !p.engine.Metadata().Siblings[signatory].Active {
-			err = hsuerrNonSibling
-			fmt.Println(err)
+			err = errNonSibling
 			return
 		}
 
-		// Check that current signatory has only been seen once in the current SignedUpdate
+		// Check that current signatory has only been seen once in the current
+		// SignedUpdate
 		if previousSignatories[signatory] {
-			err = hsuerrDoubleSign
-			fmt.Println(err)
+			err = errDoubleSign
 			return
 		}
 		previousSignatories[signatory] = true
@@ -270,28 +270,25 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// Verify the signature.
 		verification := p.engine.Metadata().Siblings[signatory].PublicKey.Verify(su.Signatures[i], message)
 		if !verification {
-			err = hsuerrInvalidSignature
-			fmt.Println(err)
+			err = errInvalidSignature
 			return
 		}
 
-		// Extend the signed message so that it contians the proper message for the
-		// next verification.
+		// Extend the signed message so that it contians the proper message for
+		// the next verification.
 		message = append(su.Signatures[i][:], message...)
 	}
 
 	// Check if this update has already been received.
 	_, exists := p.updates[su.Signatories[0]][updateHash]
 	if exists {
-		err = hsuerrHaveHeartbeat
-		// no printing because this will happen a lot
+		err = errHaveHeartbeat
 		return
 	}
 
 	// Check that there are less than two heartbeats from this host yet seen.
 	if len(p.updates[su.Signatories[0]]) >= 2 {
-		err = hsuerrManyHeartbeats
-		fmt.Println(err)
+		err = errManyHeartbeats
 		return
 	}
 
@@ -300,10 +297,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Sign the stack of signatures and append the signature to the stack, then
 	// announce the Update to everyone on the quorum
-	var signature siacrypto.Signature
-	signature, err = p.secretKey.Sign(message)
+	signature, err := p.secretKey.Sign(message)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	su.Signatures = append(su.Signatures, signature)

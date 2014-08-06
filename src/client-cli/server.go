@@ -24,14 +24,6 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 		connectWalkthrough(c)
 	}
 
-	// Get a port number for the RPCServer to listen on.
-	var port int
-	fmt.Print("Which port should the server listen on: ")
-	_, err = fmt.Scanln(&port)
-	if err != nil {
-		return
-	}
-
 	// Create the server.
 	err = c.NewServer()
 	if err != nil {
@@ -93,7 +85,7 @@ func joinQuorum() {
 
 func establishQuorum() {
 	// read and set port number
-	var port int
+	var port uint16
 	fmt.Print("Port to listen on: ")
 	fmt.Scanf("%d", &port)
 

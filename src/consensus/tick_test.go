@@ -1,9 +1,8 @@
 package consensus
 
-// Package uses port range 11000 - 11025
-
 import (
 	"network"
+	"siafiles"
 	"state"
 	"testing"
 	"time"
@@ -16,11 +15,11 @@ func TestSynchronizedTick(t *testing.T) {
 	// Create a bootstrapped participant to test with.
 	rpcs, err := network.NewRPCServer(11025)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Failed to initialize RPCServer:", err)
 	}
-	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestSynchronizedTick", 24)
+	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestSynchronizedTick"), 24)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Failed to create bootstrap participant:", err)
 	}
 
 	// Check that current step is initialized to 1.
@@ -31,8 +30,7 @@ func TestSynchronizedTick(t *testing.T) {
 	p.currentStepLock.RUnlock()
 
 	// Sleep for 1 step and see if current step has increased.
-	time.Sleep(25 * time.Millisecond)
-	time.Sleep(StepDuration)
+	time.Sleep(StepDuration + 25*time.Millisecond)
 	p.currentStepLock.RLock()
 	if p.currentStep != 2 {
 		t.Error("p.currentStep is not incrementing correctly each StepDuration")
@@ -58,6 +56,6 @@ func TestSynchronizedTick(t *testing.T) {
 	}
 	p.engineLock.RUnlock()
 
-	// Is there some way to check that a new heartbeat was created and broadcast
-	// to the newtork???
+	// Is there some way to check that a new heartbeat was created and
+	// broadcast to the newtork???
 }

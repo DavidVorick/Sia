@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"network"
+	"siafiles"
 	"state"
 	"testing"
 	"time"
@@ -14,12 +15,12 @@ func TestCreateParticipantFunctions(t *testing.T) {
 	}
 
 	walletID := state.WalletID(24)
-	p, err := CreateBootstrapParticipant(rpcs, "../../filesCreatedDuringTesting/TestCreateParticipantFunctions", walletID)
+	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestCreateParticipantFunctions"), walletID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var metadata state.StateMetadata
+	var metadata state.Metadata
 	p.Metadata(struct{}{}, &metadata)
 	if !metadata.Siblings[0].Active {
 		t.Error("No sibling in the bootstrap position.")
