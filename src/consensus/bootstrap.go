@@ -35,7 +35,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	}
 
 	// create basic participant
-	p, err = NewParticipant(mr, filePrefix)
+	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
@@ -60,7 +60,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 
 // TODO: add docstring
 func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
-	p, err = NewParticipant(mr, filePrefix)
+	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}

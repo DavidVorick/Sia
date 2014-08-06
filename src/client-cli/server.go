@@ -3,6 +3,7 @@ package main
 import (
 	"client"
 	"fmt"
+	"state"
 )
 
 func displayServerHelp() {
@@ -18,6 +19,7 @@ func displayServerHelp() {
 // newQuorumWalkthrough walks the user through creating a new quorum.
 func newQuorumWalkthrough(c *client.Client) (err error) {
 	fmt.Println("Entering 'New Quorum' walkthorugh")
+	fmt.Println("Warning: The client you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
 
 	// Get a name for the server, this is what will be used to query the
 	// server for status updates in the future.
@@ -37,8 +39,19 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 		return
 	}
 
+	// Establish a wallet for the first participant in the quorum.
+	var sibID state.WalletID
+	fmt.Println("Now creating a wallet for the participant to use. Pick an id (hex):")
+	_, err = fmt.Scanln(&sibID)
+	if err != nil {
+		return
+	}
+
+	// Add the wallet as a generic wallet to the client.
+	fmt.Println("...Wallet created. It is a generic wallet.")
+
 	// Create the participant.
-	err = c.NewParticipant(name, filepath)
+	err = c.NewParticipant(name, filepath, sibID)
 	if err != nil {
 		return
 	}

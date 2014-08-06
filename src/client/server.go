@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path"
+	"state"
 )
 
 // The Server houses all of the participants. It contains a single message
@@ -37,7 +38,7 @@ func (c *Client) NewServer() (err error) {
 
 // NewParticipant creates a directory 'name' at location 'filepath' and then
 // creates a participant that will use that directory for its files.
-func (c *Client) NewParticipant(name string, filepath string) (err error) {
+func (c *Client) NewParticipant(name string, filepath string, sibID state.WalletID) (err error) {
 	// Check that a participant of the given name does not already exist.
 	_, exists := c.participantServer.participants[name]
 	if exists {
@@ -54,7 +55,7 @@ func (c *Client) NewParticipant(name string, filepath string) (err error) {
 	}
 
 	// Create the participant and add it to the server map.
-	newParticipant, err := consensus.NewParticipant(c.router, fullname)
+	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID)
 	if err != nil {
 		return
 	}
