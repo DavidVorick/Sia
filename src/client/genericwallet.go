@@ -2,9 +2,7 @@ package client
 
 import (
 	"delta"
-	"fmt"
 	"network"
-	"siacrypto"
 	"state"
 )
 
@@ -21,21 +19,20 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 	})
 }
 
-// request a new wallet from the bootstrap
+/*
+// Submit a wallet request to the bootstrap wallet.
 func (c *Client) RequestWallet(id state.WalletID, s []byte) (err error) {
-	// Create a generic wallet with a keypair for the request
+	// Create a generic wallet with a keypair for the request.
 	pk, sk, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		return
 	}
-	c.genericWallets[id] = new(Keypair)
-	c.genericWallets[id].PK = pk
-	c.genericWallets[id].SK = sk
 
-	// use default script if none provided
-	if s == nil {
-		s = delta.CreateWalletInput(uint64(id), delta.DefaultScript(c.genericWallets[id].PK))
-	}
+	// Fill out a keypair object and insert it into the generic wallet map.
+	var kp Keypair
+	kp.PK = pk
+	kp.SK = sk
+	c.genericWallets[id] = kp
 
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
@@ -47,10 +44,13 @@ func (c *Client) RequestWallet(id state.WalletID, s []byte) (err error) {
 	})
 	return
 }
+*/
 
+/*
 // send coins from one wallet to another
 func (c *Client) SubmitTransaction(src, dst state.WalletID, amount uint64) (err error) {
-	if c.genericWallets[src] == nil {
+	_, exists := c.genericWallets[src]
+	if !exists {
 		err = fmt.Errorf("Could not access source wallet")
 		return
 	}
@@ -71,10 +71,13 @@ func (c *Client) SubmitTransaction(src, dst state.WalletID, amount uint64) (err 
 	})
 	return
 }
+*/
 
+/*
 // resize sector associated with wallet
 func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error) {
-	if c.genericWallets[w] == nil {
+	_, exists := c.genericWallets[src]
+	if !exists {
 		err = fmt.Errorf("Could not access wallet")
 		return
 	}
@@ -95,3 +98,4 @@ func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error
 	})
 	return
 }
+*/

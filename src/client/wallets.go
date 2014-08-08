@@ -9,38 +9,43 @@ import (
 	"state"
 )
 
-func (c *Client) GetGenericWallets() (ids []state.WalletID) {
+// Returns a list of all wallets available to the client.
+func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 	ids = make([]state.WalletID, 0, len(c.genericWallets))
 	for id, _ := range c.genericWallets {
 		ids = append(ids, id)
 	}
+	// Add other types of wallets as they are implemented.
 	return
 }
 
-func (c *Client) EnterWallet(id state.WalletID) (err error) {
+// Wallet type takes an id as input and returns the wallet type. An error is
+// returned if the wallet is not found by the client.
+func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
+	// Check if the wallet is a generic type.
 	_, exists := c.genericWallets[id]
 	if exists {
-		c.CurID = id
-	} else {
-		err = errors.New("Invalid Wallet ID")
+		walletType = "generic"
+		return
 	}
+
+	// Check for other types of wallets.
+
+	err = fmt.Errorf("Wallet is not available.")
 	return
 }
 
+// Iterates through the client and saves all of the wallets to disk.
 func (c *Client) SaveAllWallets() {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
 		SaveWallet(id, keypair, filename)
 	}
+	// Save other types of wallets as they are implemented.
 }
 
-func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error) {
-	if keypair == nil {
-		err = errors.New("Cannot encode nil key pair")
-		return
-	}
-
+func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error) {
 	f, err := os.Create(destFile)
 	if err != nil {
 		return
@@ -62,7 +67,7 @@ func SaveWallet(id state.WalletID, keypair *Keypair, destFile string) (err error
 	return
 }
 
-func LoadWallet(fileName string) (id state.WalletID, keypair *Keypair, err error) {
+func LoadWallet(fileName string) (id state.WalletID, keypair Keypair, err error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return
@@ -83,7 +88,6 @@ func LoadWallet(fileName string) (id state.WalletID, keypair *Keypair, err error
 		return
 	}
 	id = state.WalletID(siaencoding.DecUint64(idSlice))
-	keypair = new(Keypair)
 	if copy(keypair.PK[:], pubSlice) != siacrypto.PublicKeySize {
 		err = errors.New("bad public key length")
 		return

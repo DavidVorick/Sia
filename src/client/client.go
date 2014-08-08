@@ -1,31 +1,31 @@
 package client
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
 	"network"
-	"os"
-	"path/filepath"
 	"siacrypto"
 	"state"
-	"strings"
 )
 
 type Keypair struct {
-	SK siacrypto.SecretKey
 	PK siacrypto.PublicKey
+	SK siacrypto.SecretKey
 }
 
 // Struct Client contains the state for client actions
 type Client struct {
-	router         *network.RPCServer
-	bootstrap      network.Address
-	genericWallets map[state.WalletID]*Keypair
-	CurID          state.WalletID
-	siblings       [state.QuorumSize]state.Sibling
+	// Networking Variables
+	router    *network.RPCServer
+	bootstrap network.Address
+
+	// State Variables
+	siblings [state.QuorumSize]state.Sibling
+
+	// All Wallets
+	genericWallets map[state.WalletID]Keypair
 }
 
+/*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
 func (c *Client) Broadcast(nm network.Message) {
 	for i := range c.siblings {
@@ -37,6 +37,7 @@ func (c *Client) Broadcast(nm network.Message) {
 		break
 	}
 }
+*/
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.
@@ -45,12 +46,15 @@ func (c *Client) Connect(host string, port uint16, id byte) (err error) {
 	if err != nil {
 		return
 	}
-	// set bootstrap address
+
+	// Set the bootstrap address.
 	c.bootstrap = network.Address{
 		Host: host,
 		Port: port,
 		ID:   network.Identifier(id),
 	}
+
+	// Check that the address is valid.
 	err = c.router.Ping(c.bootstrap)
 	if err != nil {
 		c.router.Close()
@@ -67,6 +71,7 @@ func (c *Client) Connect(host string, port uint16, id byte) (err error) {
 	})
 	if err != nil {
 		c.router.Close()
+		return
 	}
 	c.siblings = metadata.Siblings
 	return
@@ -113,53 +118,21 @@ func (c *Client) RetrieveSiblings() (err error) {
 	return
 }
 
-// This new function is a bit unique because it can return an error while also
-// returning a fully working client.
+// Creates a client, follows the instructions of the config file, and returns a
+// working client struct.
 func NewClient() (c *Client, err error) {
 	c = new(Client)
-	c.genericWallets = make(map[state.WalletID]*Keypair)
-	err = c.Connect("localhost", 9988, 1) // default bootstrap address
+	c.genericWallets = make(map[state.WalletID]Keypair)
 
-	/* The format for config files
-	directories:
-		/path/to/a/directory/with/wallets/
-		/another/wallet/path/
-		/however/many/paths/you/want/
-	wallet: 						<--This is optional. Only include if you want
-		walletIDinhex				 to automatically load into a specific wallet
-	*/
-	f, err := os.Open(".config")
-	r := bufio.NewReader(f)
-	l, err := r.ReadString('\n')
-	if strings.TrimSpace(l) != "directories:" {
-		errors.New("Invalid config file")
+	err = c.processConfigFile()
+	if err != nil {
 		return
 	}
-	l, err = r.ReadString('\n')
-	l = strings.TrimSpace(l)
-	//Read in wallet directories and load wallets
-	for l != "" {
-		filenames, err := filepath.Glob(l + "*.id")
-		if err != nil {
-			panic(err)
-		}
-		for _, j := range filenames {
-			id, keypair, err := LoadWallet(j)
-			if err != nil {
-				panic(err)
-			}
-			c.genericWallets[id] = keypair
-		}
-		l, err = r.ReadString('\n')
-		l = strings.TrimSpace(l)
-	}
-	//Load starting wallet ID, if a starting wallet ID is desired
-	l, err = r.ReadString('\n')
-	if strings.TrimSpace(l) != "wallet:" {
-		return
-	}
-	l, err = r.ReadString('\n')
-	l = strings.TrimSpace(l)
-	_, err = fmt.Sscanf(l, "%x", &c.CurID)
+
+	// If there is an auto-connect feature, it should be specified in the
+	// config file, and managed by processConfigFile
+
+	// More stuff may go here.
+
 	return
 }
