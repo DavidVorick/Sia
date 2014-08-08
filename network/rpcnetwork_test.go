@@ -163,7 +163,7 @@ func TestRPCScheduling(t *testing.T) {
 
 func BenchmarkSendMessage(b *testing.B) {
 	// create RPCServer
-	rpcs, err := NewRPCServer(10000)
+	rpcs, err := NewRPCServer(10004 + uint16(b.N))
 	if err != nil {
 		b.Fatal("Failed to initialize RPCServer:", err)
 	}
