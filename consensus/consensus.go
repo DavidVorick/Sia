@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -202,7 +203,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	// for debugging purposes
 	defer func() {
 		if err != nil && err != errHaveHeartbeat {
-			println(err.Error())
+			fmt.Println(err.Error())
 		}
 	}()
 

@@ -103,9 +103,8 @@ func uploadToGenericWallet(c *client.Client) {
 
 func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
-	fmt.Printf("Entering Generic Wallet Mode")
 	for {
-		fmt.Print("Please enter an action for wallet %x: ", id)
+		fmt.Print("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
 		_, err := fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)

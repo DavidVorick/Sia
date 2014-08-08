@@ -25,7 +25,7 @@ func (c *Client) processConfigFile() (err error) {
 	if err != nil {
 		return
 	}
-	filefolder := userObj.HomeDir + ".config/Sia/"
+	filefolder := userObj.HomeDir + "/.config/Sia/"
 	filename := filefolder + ".config"
 
 	// Make the folder, in case it does not yet exist.

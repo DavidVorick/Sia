@@ -15,7 +15,7 @@ const (
 // activeHistoryFilename, and should only be called by these two functions.
 // Other history filenames are not guaranteed to exist.
 func (e *Engine) historyFilename(head uint32) string {
-	return fmt.Sprintf("%s.blockHistory.%v", e.filePrefix, head)
+	return fmt.Sprintf("%sblockHistory.%v", e.filePrefix, head)
 }
 
 // recentHistoryFilename returns the name of the file containing the

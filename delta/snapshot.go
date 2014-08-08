@@ -102,7 +102,7 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 }
 
 func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
-	snapshotFilename = fmt.Sprintf("%s.snapshot.%v", e.filePrefix, height)
+	snapshotFilename = fmt.Sprintf("%ssnapshot.%v", e.filePrefix, height)
 	return
 }
 
@@ -208,6 +208,14 @@ func (e *Engine) saveSnapshot() (err error) {
 		return
 	}
 	_, err = file.WriteAt(encodedOffset, 0)
+
+	// Delete the oldest snapshot.
+	oldSnapshotFilename := e.snapshotFilename(e.activeHistoryHead - 2*SnapshotLength)
+	err = os.RemoveAll(oldSnapshotFilename) // os.RemoveAll returns nil if the file does not exist.
+	if err != nil {
+		return
+	}
+
 	return
 }
 
