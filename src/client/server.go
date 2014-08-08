@@ -48,7 +48,7 @@ func (c *Client) NewParticipant(name string, filepath string, sibID state.Wallet
 
 	// Create a directory 'name' at location 'filepath' for use of the
 	// participant.
-	fullname := path.Join(filepath, name)
+	fullname := path.Join(filepath, name) + "/"
 	err = os.MkdirAll(fullname, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return
