@@ -1,7 +1,4 @@
-gopath = GOPATH=$(CURDIR)
-cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/src/erasure/longhair/bin/liblonghair.a -lstdc++"
-govars = $(gopath) $(cgo_ldflags)
-packages = logger network siacrypto siaencoding siafiles erasure state delta consensus client client-cli
+cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/erasure/longhair/bin/liblonghair.a -lstdc++"
 
 all: submodule-update install
 
@@ -9,50 +6,51 @@ submodule-update:
 	git submodule update --init
 
 fmt:
-	$(govars) go fmt $(packages)
+	$(cgo_ldflags) go fmt ./...
 
 install: fmt
-	$(govars) go install $(packages)
+	$(cgo_ldflags) go install ./...
 
 release: fmt
-	$(govars) go install -ldflags '-extldflags "-static"' $(packages)
-	tar -cJvf release.xz bin
+	$(cgo_ldflags) go install -ldflags '-extldflags "-static"' ./...
+	cd $(GOPATH) && tar -cJvf release.xz bin/server bin/client-cli
+	mv $(GOPATH)/release.xz .
 
 test:
-	$(govars) go test -short $(packages)
+	$(cgo_ldflags) go test -short ./...
 
 test-verbose:
-	$(govars) go test -short -v $(packages)
+	$(cgo_ldflags) go test -short -v ./...
 
 test-race:
-	$(govars) go test -short -race $(packages)
+	$(cgo_ldflags) go test -short -race ./...
 
 test-race-verbose:
-	$(govars) go test -short -race -v $(packages)
+	$(cgo_ldflags) go test -short -race -v ./...
 
 test-long:
-	$(govars) go test -race $(packages)
+	$(cgo_ldflags) go test -race ./...
 
 test-long-verbose:
-	$(govars) go test -v -race $(packages)
+	$(cgo_ldflags) go test -v -race ./...
 
 test-consensus:
-	$(govars) go test -v -race consensus
+	$(cgo_ldflags) go test -v -race consensus
 
 test-delta:
-	$(govars) go test -v -race delta
+	$(cgo_ldflags) go test -v -race delta
 
 test-state:
-	$(govars) go test -v -race state
+	$(cgo_ldflags) go test -v -race state
 
 bench:
-	$(govars) go test -run=XXX -bench=. $(packages)
+	$(cgo_ldflags) go test -run=XXX -bench=. ./...
 
 dependencies: submodule-update race-libs
-	cd src/siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
+	cd siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
 
 race-libs:
-	$(govars) go install -race std
+	go install -race std
 
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
