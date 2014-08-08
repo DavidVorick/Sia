@@ -1,6 +1,6 @@
-[submodule "src/erasure/longhair"]
-	path = src/erasure/longhair
+[submodule "erasure/longhair"]
+	path = erasure/longhair
 	url = git://github.com/NebulousLabs/longhair.git
-[submodule "src/siacrypto/libsodium"]
-	path = src/siacrypto/libsodium
+[submodule "siacrypto/libsodium"]
+	path = siacrypto/libsodium
 	url = git://github.com/NebulousLabs/libsodium.git
