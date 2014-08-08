@@ -2,6 +2,7 @@ package client
 
 import (
 	"os"
+	"os/user"
 )
 
 //The format for config files:
@@ -18,17 +19,20 @@ directories:
 // processConfigFile opens, parses, and processes the config file, which will
 // be stored in the home directory at .config/Sia/config
 func (c *Client) processConfigFile() (err error) {
-	// Get the filename of the config file. Currently just the relative
-	// path ".config" is used, but this section of code will need to be
-	// updated.
-	//
-	// I believe that there is an environment variable somewhere indicating
-	// the absolute path of the home folder. That should be used instead of
-	// '~', because not all operating systems (IE Windows) are guaranteed
-	// to recognize the intention of the '~' symbol. Read up online about
-	// the proper way to open the home folder. The config file should go
-	// in: "($HOME_FOLDER).config/Sia/clientConfig".
-	filename := ".config"
+	// Get the filename of the config file, which will be stored in
+	// $HOME/.config/Sia/config
+	userObj, err := user.Current()
+	if err != nil {
+		return
+	}
+	filefolder := userObj.HomeDir + ".config/Sia/"
+	filename := filefolder + ".config"
+
+	// Make the folder, in case it does not yet exist.
+	err = os.MkdirAll(filefolder, os.ModeDir|os.ModePerm)
+	if err != nil {
+		return
+	}
 
 	// Open the file
 	file, err := os.Open(filename)

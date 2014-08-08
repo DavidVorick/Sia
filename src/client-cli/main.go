@@ -1,4 +1,4 @@
-// Cli Convetions: 'help' is always at the top, followed by quit. All other
+// Cli Conventions: 'help' is always at the top, followed by quit. All other
 // actions are listed in alphabetic order.
 package main
 
