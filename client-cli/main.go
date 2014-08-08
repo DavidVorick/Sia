@@ -3,8 +3,9 @@
 package main
 
 import (
-	"client"
 	"fmt"
+
+	"github.com/NebulousLabs/Sia/client"
 )
 
 // The client cli is modal, currently having two states. The first state is the

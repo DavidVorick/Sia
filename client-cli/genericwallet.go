@@ -1,9 +1,10 @@
 package main
 
 import (
-	"client"
 	"fmt"
-	"state"
+
+	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 func displayGenericWalletHelp() {
