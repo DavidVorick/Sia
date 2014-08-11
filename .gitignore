@@ -1,8 +1,6 @@
-pkg
-bin
+servers
 todo
 *.swp
 doc/*.log
 doc/*.aux
 doc/*.toc
-servers/*
