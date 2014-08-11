@@ -6,6 +6,7 @@ import (
 
 	//"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 var (
@@ -558,17 +559,20 @@ func op_cond_reject(args []byte) (err error) {
 }
 
 func op_add_sibling(args []byte) (err error) {
-	/*
-		// decode sibling
-		sib := new(quorum.Sibling)
-		err = sib.GobDecode(env.buffers[args[0]])
-		if err != nil {
-			return
-		}
+	// pop encoded sibling
+	encSib, err := pop()
+	if err != nil {
+		return
+	}
+	// decode sibling
+	var sib state.Sibling
+	err = siaencoding.Unmarshal(encSib, &sib)
+	if err != nil {
+		return
+	}
 
-		// add sibling
-		env.quorum.AddSibling(env.wallet, sib)
-	*/
+	// add sibling
+	env.engine.AddSibling(env.wallet, sib)
 	return
 }
 

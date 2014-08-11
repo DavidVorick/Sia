@@ -3,6 +3,7 @@ package delta
 import (
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 func short(length int) (l, h byte) {
@@ -42,15 +43,16 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 
 // AddSiblingInput returns a script that calls the AddSibling function. It is
 // intended to be passed to a script that transfers execution to the input.
-func AddSiblingInput(encSibling []byte) []byte {
+func AddSiblingInput(sib *state.Sibling) []byte {
+	encSib, _ := siaencoding.Marshal(sib) // TODO: check error
 	return appendAll(
 		[]byte{
 			0x25, 0x08, 0x00, // move data pointer to encoded sibling
-			0x2E, 0x01, //       read sibling into buffer 1
-			0x31, 0x01, //       call AddSibling
+			0xE3, //             push encoded sibling
+			0x31, //             call AddSibling
 			0xFF, //             exit
 		},
-		encSibling,
+		encSib,
 	)
 }
 
