@@ -12,7 +12,7 @@ import (
 // items have been initialized.
 func TestNewParticipant(t *testing.T) {
 	// Test calling NewParticipant with a nil message router.
-	p, err := NewParticipant(nil, siafiles.TempFilename("TestNewParticipant"))
+	p, err := newParticipant(nil, siafiles.TempFilename("TestNewParticipant"))
 	if err == nil {
 		t.Error("Created a participant with a nil message router")
 	}
@@ -21,7 +21,7 @@ func TestNewParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to initialize RPCServer:", err)
 	}
-	p, err = NewParticipant(mr, siafiles.TempFilename("TestNewParticipant"))
+	p, err = newParticipant(mr, siafiles.TempFilename("TestNewParticipant"))
 	if err != nil {
 		t.Fatal("Failed to create participant:", err)
 	}

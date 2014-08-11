@@ -48,7 +48,7 @@ var errNilMessageRouter = errors.New("cannot create a participant with a nil mes
 // NewParticipant initializes a Participant object with the provided
 // MessageRouter and filePrefix. It also creates a keypair and sets default
 // values for the siblingIndex and currentStep.
-func NewParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
+func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
 	if mr == nil {
 		err = errNilMessageRouter
 		return

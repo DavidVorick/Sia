@@ -16,19 +16,19 @@ type Keypair struct {
 // Struct Client contains the state for client actions
 type Client struct {
 	// Networking Variables
-	router    *network.RPCServer
-	bootstrap network.Address
-
-	// State Variables
+	router   *network.RPCServer
 	siblings [state.QuorumSize]state.Sibling
 
 	// All Wallets
 	genericWallets map[state.WalletID]Keypair
+
+	// Participant Server
+	participantServer *Server
 }
 
 /*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
-func (c *Client) Broadcast(nm network.Message) {
+unc (c *Client) Broadcast(nm network.Message) {
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue
@@ -40,44 +40,51 @@ func (c *Client) Broadcast(nm network.Message) {
 }
 */
 
-// Initializes the client message router and pings the bootstrap to verify
-// connectivity.
-func (c *Client) Connect(host string, port uint16, id byte) (err error) {
-	c.router, err = network.NewRPCServer(9989)
-	if err != nil {
+// Creates a new router where none exists.
+func (c *Client) Connect(port uint16) (err error) {
+	if c.router != nil {
+		err = errors.New("network router has already been initialized")
 		return
 	}
 
-	// Set the bootstrap address.
-	c.bootstrap = network.Address{
-		Host: host,
-		Port: port,
-		ID:   network.Identifier(id),
+	c.router, err = network.NewRPCServer(port)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// Initializes the client message router and pings the bootstrap to verify
+// connectivity.
+func (c *Client) BootstrapConnection(connectAddress network.Address) (err error) {
+	// A network server needs to exist in order to connect to the network.
+	if c.router == nil {
+		err = errors.New("network router is nil")
+		return
 	}
 
-	// Check that the address is valid.
-	err = c.router.Ping(c.bootstrap)
+	// Ping the connectAddress to verify alive-ness.
+	err = c.router.Ping(connectAddress)
 	if err != nil {
-		c.router.Close()
 		return
 	}
 
 	// populate initial sibling list
 	var metadata state.Metadata
 	err = c.router.SendMessage(network.Message{
-		Dest: c.bootstrap,
+		Dest: connectAddress,
 		Proc: "Participant.Metadata",
 		Args: struct{}{},
 		Resp: &metadata,
 	})
 	if err != nil {
-		c.router.Close()
 		return
 	}
 	c.siblings = metadata.Siblings
 	return
 }
 
+/*
 // Closes and destroys the client's RPC server
 func (c *Client) Disconnect() {
 	if c.router == nil {
@@ -86,7 +93,17 @@ func (c *Client) Disconnect() {
 	c.router.Close()
 	c.router = nil
 }
+*/
 
+func (c *Client) IsRouterInitialized() bool {
+	return c.router != nil
+}
+
+func (c *Client) IsServerInitialized() bool {
+	return c.participantServer != nil
+}
+
+/*
 // Get siblings so that each can be uploaded to individually.  This should be
 // moved to a (c *Client) function that updates the current siblings. I'm
 // actually considering that a client should listen on a quorum, or somehow
@@ -118,6 +135,7 @@ func (c *Client) RetrieveSiblings() (err error) {
 
 	return
 }
+*/
 
 // Creates a client, follows the instructions of the config file, and returns a
 // working client struct.
