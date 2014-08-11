@@ -9,9 +9,8 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// The Server houses all of the participants. It contains a single message
-// router that is shared by all of the participants, it will eventually contain
-// a clock object that will be used and modified by all participants.
+// The Server houses all of the participants. It will eventually contain a
+// clock object that will be used and modified by all participants.
 type Server struct {
 	participants map[string]*consensus.Participant
 }
@@ -64,6 +63,8 @@ func (c *Client) NewParticipant(name string, filepath string, sibID state.Wallet
 	return
 }
 
+// ParticipantMetadata returns the metadata for the participant with the given
+// name. If no participant of that name exists, an error is returned.
 func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) {
 	participant, exists := c.participantServer.participants[name]
 	if !exists {

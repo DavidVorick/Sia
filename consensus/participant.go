@@ -64,6 +64,11 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.siblingIndex = ^byte(0)
 	p.currentStep = 1
 
+	// Create the update maps.
+	for i := range p.updates {
+		p.updates[i] = make(map[siacrypto.Hash]Update)
+	}
+
 	// Initialize the network components of the participant.
 	p.address = mr.RegisterHandler(p)
 	p.messageRouter = mr

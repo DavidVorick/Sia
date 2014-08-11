@@ -35,14 +35,14 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 		return
 	}
 
-	// create basic participant
+	// Create basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
 	p.siblingIndex = 0
 
-	// create a bootstrap wallet, and a wallet for this participant to use
+	// Create a bootstrap wallet, and a wallet for this participant to use.
 	err = p.engine.Bootstrap(state.Sibling{
 		Address:   p.address,
 		PublicKey: p.publicKey,
@@ -52,7 +52,10 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 		return
 	}
 
-	// set synchronized to true and start ticking
+	// Create the first update.
+	p.newSignedUpdate()
+
+	// Set synchronized to true and start ticking.
 	p.synchronized = true
 	go p.tick()
 

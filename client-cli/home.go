@@ -161,9 +161,8 @@ func printWallets(c *client.Client) {
 	}
 }
 
-// If there is already a server in the client, switch directly into server
-// mode. Otherwise, create a new server via the walkthrough and then switch to
-// server mode.
+// serverModeSwitch will transition the client from being in home mode to being
+// in server mode, creating a new server and a new router if necessary.
 func serverModeSwitch(c *client.Client) {
 	init := c.IsServerInitialized()
 	if !init {
