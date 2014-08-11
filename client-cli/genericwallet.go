@@ -7,6 +7,8 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+// displayGenericWalletHelp prints a list of commands that are available in
+// generic wallet mode.
 func displayGenericWalletHelp() {
 	fmt.Println(
 		"\n",

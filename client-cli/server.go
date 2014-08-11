@@ -14,7 +14,41 @@ func displayServerHelp() {
 		"q:\tReturn to home mode.\n",
 		"j:\tCreate a new participant and join an existing quorum.\n",
 		"n:\tCreate a new quorum with a bootstrap participant.\n",
+		"p:\tPrint the status of a server.\n",
 	)
+}
+
+func serverMetadataWalkthrough(c *client.Client) (err error) {
+	fmt.Print("Name of server to fetch status from: ")
+	var name string
+	_, err = fmt.Scanln(&name)
+	if err != nil {
+		return
+	}
+
+	metadata, err := c.ParticipantMetadata(name)
+	if err != nil {
+		return
+	}
+
+	var siblingString string
+	for i := range metadata.Siblings {
+		if metadata.Siblings[i].Active {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Active\n", siblingString, i)
+		} else {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
+		}
+	}
+
+	fmt.Println(
+		"\n",
+		name, "status:\n",
+		"\tSiblings: \n",
+		siblingString,
+		"\tHeight:", metadata.Height, "\n",
+	)
+
+	return
 }
 
 // newQuorumWalkthrough walks the user through creating a new quorum.
@@ -156,6 +190,12 @@ func pollServer(c *client.Client) {
 		case "n", "new", "bootstrap":
 			fmt.Println("Warning: this feature is incomplete.")
 			err := newQuorumWalkthrough(c)
+			if err != nil {
+				fmt.Println("Error: ", err)
+			}
+
+		case "p", "print", "status":
+			err := serverMetadataWalkthrough(c)
 			if err != nil {
 				fmt.Println("Error: ", err)
 			}
