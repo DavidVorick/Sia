@@ -85,8 +85,8 @@ type scriptEnv struct {
 	registers  [256][]byte
 	stack      *stackElem
 	stackLen   int
-	wallet     state.Wallet
-	state      *state.State
+	wallet     *state.Wallet
+	engine     *Engine
 	// resource pools
 	instBalance int
 	costBalance int
@@ -125,8 +125,8 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	env = scriptEnv{
 		script: append(w.Script, si.Input...),
 		dptr:   len(w.Script),
-		wallet: w,
-		state:  &e.state,
+		wallet: &w,
+		engine: e,
 		// these values will likely be stored as part of the wallet
 		instBalance: maxInstructions,
 		costBalance: 10000,
@@ -138,7 +138,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 		fmt.Println("script execution failed:", err)
 	}
 
-	e.state.SaveWallet(env.wallet)
+	e.state.SaveWallet(w)
 	return
 }
 
