@@ -63,3 +63,18 @@ func (c *Client) NewParticipant(name string, filepath string, sibID state.Wallet
 	c.participantServer.participants[name] = newParticipant
 	return
 }
+
+func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) {
+	participant, exists := c.participantServer.participants[name]
+	if !exists {
+		err = errors.New("no participant of that name found")
+		return
+	}
+
+	err = participant.Metadata(struct{}{}, &m)
+	if err != nil {
+		return
+	}
+
+	return
+}
