@@ -131,6 +131,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	return
 }
 
+//TODO: add docstring
 func (p *Participant) newSignedUpdate() {
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
@@ -200,7 +201,10 @@ func (p *Participant) newSignedUpdate() {
 	})
 }
 
-// TODO: add docstring
+// HandleSignedUpdate is an RPC that allows other hosts to submit updates with
+// signatures to this host. They will be processed according to the rules of
+// concensus, blocking late updates and waiting on early updates, and throwing
+// out anything that does not follow the rules for legal signatures.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
 	if !p.ticking {
 		err = errNotReady

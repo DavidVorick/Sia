@@ -18,9 +18,6 @@ const (
 // counter that tells the participant which Updates and Blocks are acceptable,
 // which are early, and which are late.
 func (p *Participant) tick() {
-	// Clear all of the heartbeats and whatnot in the participant. This
-	// will be its own function.
-
 	// Verify that tick() has not already been called.
 	if p.ticking {
 		return
