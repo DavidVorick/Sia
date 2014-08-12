@@ -34,9 +34,10 @@ type SignedUpdate struct {
 }
 
 var (
+	errNotReady          = errors.New("not ready to receive heartbeats yet")
 	errSignatoryMismatch = errors.New("signedUpdate has different number of signatures and signatories")
 	errInvalidParent     = errors.New("signedUpdate targets a different block and/or quorum than the parent of this participant")
-	errOutOfSync         = errors.New("update is late - not enough signatures given the current step of consensus")
+	errLateUpdate        = errors.New("update is late - not enough signatures given the current step of consensus")
 	errBounds            = errors.New("update contains a signature from an out-of-bounds signatory")
 	errNonSibling        = errors.New("update contains a signature from a non-sibling")
 	errDoubleSign        = errors.New("update contains two signatures from the same signatory")
@@ -201,7 +202,13 @@ func (p *Participant) newSignedUpdate() {
 
 // TODO: add docstring
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
-	// Printing errors helps with debugging.
+	if !p.ticking {
+		err = errNotReady
+		return
+	}
+
+	// Printing errors helps with debugging. Production code for this
+	// package should never print, only log.
 	defer func() {
 		if err != nil && err != errHaveHeartbeat {
 			fmt.Println(err.Error())
@@ -218,40 +225,37 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	p.engineLock.RLock()
 	defer p.engineLock.RUnlock()
 
+	// Check that the update is not late.
+	p.currentStepLock.Lock()
+	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
+		p.currentStepLock.Unlock()
+		err = errLateUpdate
+		return
+	}
+
+	// Wait for the update if the update has arrived early. Ideally, we
+	// want to wait until exactly the beginning of step 2. The function
+	// will sleep until step 2 is reached, and then the for loop will kill
+	// if the block has arrived.
+	//
+	// Additionally, stall all updates from being processed until the
+	// beginning of step 2, which will prevent newcomers from being lost.
+	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
+		// Sleep until the beginning of step 2.
+		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
+		timeRemainingThisStep := time.Since(p.tickStart) % StepDuration
+		sleepDuration := (time.Duration(fullStepsToSleepThrough) * StepDuration) + timeRemainingThisStep
+
+		// Unlock all mutexes, sleep, and then relock all mutexes.
+		p.engineLock.RUnlock()
+		time.Sleep(sleepDuration)
+		p.engineLock.Lock()
+	}
+	p.currentStepLock.Unlock()
+
 	// Lock the updates variable for the duration of the function.
 	p.updatesLock.Lock()
 	defer p.updatesLock.Unlock()
-
-	// Check that the height of the update matches the height of the
-	// current block. If the height is greater than the current block, wait
-	// until step 2 of the block for the height of the update is created.
-	// This will insure that this host is all caught up, without putting
-	// the host behind on consensus.
-	if su.Update.Height > p.engine.Metadata().Height {
-		// Calculate the amount of time that is needed to sleep.
-
-		// That's going to be (StepDuration * state.QuorumSize) * (su.Update.Height - p.engine.Metadata().Height + 1) + StepDuration * (state.QuorumSize - CurrentStep)
-	}
-
-	// Check that the Update matches the current block.
-	// If it doesn't, it has one step to match the next block.
-	if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
-		time.Sleep(StepDuration)
-		if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
-			err = errInvalidParent
-			return
-		}
-	}
-
-	// Check that there are enough signatures in the update to match the
-	// current step.
-	p.currentStepLock.Lock()
-	if int(p.currentStep) > len(su.Signatures) {
-		p.currentStepLock.Unlock()
-		err = errOutOfSync
-		return
-	}
-	p.currentStepLock.Unlock()
 
 	// Check that all of the signatures are valid, and that there are no repeats.
 	updateHash, err := siacrypto.HashObject(su.Update)

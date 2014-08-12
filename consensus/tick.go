@@ -18,7 +18,23 @@ const (
 // counter that tells the participant which Updates and Blocks are acceptable,
 // which are early, and which are late.
 func (p *Participant) tick() {
+	// Clear all of the heartbeats and whatnot in the participant. This
+	// will be its own function.
+
+	// Verify that tick() has not already been called.
+	if p.ticking {
+		return
+	}
+	p.ticking = true
+
+	// Set the step to '0', and assume that tick was called at a time where
+	// the rest of the network has also reset to step 0.
+	p.currentStepLock.Lock()
+	p.currentStep = 0
+	p.currentStepLock.Unlock()
+
 	// Create a ticker that will pulse every StepDuration
+	p.tickStart = time.Now()
 	ticker := time.Tick(StepDuration)
 	for _ = range ticker {
 		// Once cryptographic synchronization is implemented, there
@@ -30,7 +46,10 @@ func (p *Participant) tick() {
 		if p.currentStep == state.QuorumSize {
 			p.currentStep = 0
 
-			// Have the engine compile and integrate the block.
+			// Have the engine condense and integrate the block,
+			// then send a new heartbeat. This is done in a
+			// separate thread so that the timing is not disrupted
+			// in the parent thread.
 			go func() {
 				// First condense the block, then set the current step to 1. The order
 				// shouldn't matter because currentStep is locked by a mutex.

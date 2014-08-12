@@ -13,6 +13,23 @@ func (p *Participant) Block(blockHeight uint32, block *delta.Block) (err error) 
 	return
 }
 
+// ConsensusProgressStruct is a struct that indicates how far progressed through the
+// current round of consensus the current participant is.
+type ConsensusProgressStruct struct {
+	SecondsRemaining uint16 // Seconds remaining for _this_step_only_
+	CurrentStep      byte
+}
+
+// ConsensusProgress is an RPC that returns the progress of the participant and
+// quorum through the current round of consensus. It is useful for indicating
+// when the next block will be ready.
+func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct) (err error) {
+	p.currentStepLock.RLock()
+	cps.CurrentStep = p.currentStep
+	p.currentStepLock.RUnlock()
+	return
+}
+
 // Metadata is an RPC that returns the current state metadata.
 func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
 	*smd = p.engine.Metadata()

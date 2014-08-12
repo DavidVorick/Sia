@@ -63,6 +63,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 
 // TODO: add docstring
 func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
+	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
@@ -81,16 +82,26 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// next round of consensus. So before the join request gets through, the
 	// current block will need to finish, and then the next block will need to
 	// finish as well. This will take many hours, as block times are very slow.
-	joinRequest := delta.ScriptInput{
-		WalletID: tetherID,
-		Input:    delta.DefaultScript(p.publicKey),
-	}
-	for _, address := range quorumSiblings {
-		mr.SendAsyncMessage(network.Message{
-			Dest: address,
-			Proc: "Participant.AddScriptInput",
-			Args: joinRequest,
-		})
+	{
+		// Create the sibling object that will be submitted to the
+		// quorum.
+		//inputSibling := state.Sibling{
+		//	Address:   p.address,
+		//	PublicKey: p.publicKey,
+		//}
+
+		// Create the join request and send it to the quorum.
+		joinRequest := delta.ScriptInput{
+			WalletID: tetherID,
+			Input:    delta.AddSiblingInput(nil), //(inputSibling),
+		}
+		for _, address := range quorumSiblings {
+			mr.SendAsyncMessage(network.Message{
+				Dest: address,
+				Proc: "Participant.AddScriptInput",
+				Args: joinRequest,
+			})
+		}
 	}
 
 	// 2. While waiting for the next block, download a snapshot.
@@ -144,9 +155,31 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 				// ???, panic would be inappropriate
 			}
 		}
+
+		// Event downloading will be implemented later.
 	}
 
-	// Events will be implemented at a later time.
+	// Synchronize to the quorum (this implementation is non-cryptographic)
+	// and being ticking. The first block will be unsuccessful, but this
+	// gap will be filled by the block downloading.
+	{
+		var cps ConsensusProgressStruct
+		mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.ConsensusProgress",
+			Args: struct{}{},
+			Resp: &cps,
+		})
+
+		// We would want to start ticking, but in a way that makes sure
+		// we don't compile a block that we weren't around to properly
+		// listen to.
+		//
+		// And really, we don't want to start ticking until we know
+		// we've made it into the quorum.  Which potentially means that
+		// we're going to be waiting extra blocks... >.<
+		p.currentStep = cps.CurrentStep
+	}
 
 	// 3. Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being

@@ -3,6 +3,7 @@ package consensus
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
@@ -35,6 +36,8 @@ type Participant struct {
 	// Consensus Algorithm Status
 	//ticking     bool
 	//tickingLock sync.Mutex
+	ticking         bool
+	tickStart       time.Time
 	currentStep     byte
 	currentStepLock sync.RWMutex // prevents a benign race condition
 }
