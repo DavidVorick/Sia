@@ -29,9 +29,7 @@ type ConsensusProgressStruct struct {
 func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct) (err error) {
 	cps.Height = p.engine.Metadata().Height
 
-	p.currentStepLock.RLock()
 	cps.CurrentStep = p.currentStep
-	p.currentStepLock.RUnlock()
 
 	cps.CurrentStepProgress = time.Since(p.tickStart) % StepDuration
 	return
@@ -54,9 +52,9 @@ func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err e
 			Index:    p.engine.SiblingIndex(),
 			UpdateID: sd.UpdateID,
 		}
-		p.updateAdvancementsLock.Lock()
+		p.updatesLock.Lock()
 		p.updateAdvancements = append(p.updateAdvancements, newAdvancement)
-		p.updateAdvancementsLock.Unlock()
+		p.updatesLock.Unlock()
 	}
 
 	return
@@ -66,5 +64,14 @@ func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err e
 // snapshots. Doesn't hurt to have it, I just forget the use case.
 func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
 	*wl = p.engine.WalletList()
+	return
+}
+
+// AddScriptInput is an RPC that appends a script input to
+// Participant.scriptInputs.
+func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
+	p.updatesLock.Lock()
+	p.scriptInputs = append(p.scriptInputs, si)
+	p.updatesLock.Unlock()
 	return
 }

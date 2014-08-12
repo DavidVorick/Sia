@@ -26,20 +26,15 @@ type Participant struct {
 	messageRouter network.MessageRouter
 
 	// Update Variables
-	updates                [state.QuorumSize]map[siacrypto.Hash]Update
-	updatesLock            sync.Mutex
-	scriptInputs           []delta.ScriptInput
-	scriptInputsLock       sync.Mutex
-	updateAdvancements     []state.UpdateAdvancement
-	updateAdvancementsLock sync.Mutex
+	updates            [state.QuorumSize]map[siacrypto.Hash]Update
+	scriptInputs       []delta.ScriptInput
+	updateAdvancements []state.UpdateAdvancement
+	updatesLock        sync.Mutex
 
 	// Consensus Algorithm Status
-	//ticking     bool
-	//tickingLock sync.Mutex
-	ticking         bool
-	tickStart       time.Time
-	currentStep     byte
-	currentStepLock sync.RWMutex // prevents a benign race condition
+	ticking     bool
+	tickStart   time.Time
+	currentStep byte
 }
 
 var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
@@ -96,13 +91,4 @@ func (p *Participant) broadcast(message network.Message) {
 			p.messageRouter.SendAsyncMessage(message)
 		}
 	}
-}
-
-// AddScriptInput is an RPC that appends a script input to
-// Participant.scriptInputs.
-func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
-	p.scriptInputsLock.Lock()
-	p.scriptInputs = append(p.scriptInputs, si)
-	p.scriptInputsLock.Unlock()
-	return
 }

@@ -26,9 +26,7 @@ func (p *Participant) tick() {
 
 	// Set the step to '0', and assume that tick was called at a time where
 	// the rest of the network has also reset to step 0.
-	p.currentStepLock.Lock()
 	p.currentStep = 0
-	p.currentStepLock.Unlock()
 
 	// Create a ticker that will pulse every StepDuration
 	p.tickStart = time.Now()
@@ -39,7 +37,6 @@ func (p *Participant) tick() {
 		// seconds that will keep the participant synchronized to a
 		// much higher degree of accuracy.
 
-		p.currentStepLock.Lock()
 		if p.currentStep == state.QuorumSize {
 			p.currentStep = 0
 
@@ -51,10 +48,7 @@ func (p *Participant) tick() {
 				// First condense the block, then set the current step to 1. The order
 				// shouldn't matter because currentStep is locked by a mutex.
 				block := p.condenseBlock()
-
-				p.engineLock.Lock()
 				p.engine.Compile(block)
-				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.
 				p.newSignedUpdate()
@@ -62,6 +56,5 @@ func (p *Participant) tick() {
 		} else {
 			p.currentStep++
 		}
-		p.currentStepLock.Unlock()
 	}
 }

@@ -156,14 +156,14 @@ func (p *Participant) newSignedUpdate() {
 
 	// Attach all of the script inputs to the update, clearing the list of
 	// script inputs in the process.
-	p.scriptInputsLock.Lock()
+	p.updatesLock.Lock()
 	update.ScriptInputs = p.scriptInputs
 	p.scriptInputs = nil
-	p.scriptInputsLock.Unlock()
+	p.updatesLock.Unlock()
 
 	// Attach all of the update advancements to the signed heartbeat and sign
 	// them.
-	p.updateAdvancementsLock.Lock()
+	p.updatesLock.Lock()
 	update.UpdateAdvancements = p.updateAdvancements
 	p.updateAdvancements = nil
 	for i, ua := range update.UpdateAdvancements {
@@ -174,7 +174,7 @@ func (p *Participant) newSignedUpdate() {
 		}
 		update.AdvancementSignatures[i] = uas
 	}
-	p.updateAdvancementsLock.Unlock()
+	p.updatesLock.Unlock()
 
 	// Sign the update and create a SignedUpdate object with ourselves as the
 	// first signatory.
@@ -230,9 +230,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	defer p.engineLock.RUnlock()
 
 	// Check that the update is not late.
-	p.currentStepLock.Lock()
 	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
-		p.currentStepLock.Unlock()
 		err = errLateUpdate
 		return
 	}
@@ -255,7 +253,6 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		time.Sleep(sleepDuration)
 		p.engineLock.Lock()
 	}
-	p.currentStepLock.Unlock()
 
 	// Lock the updates variable for the duration of the function.
 	p.updatesLock.Lock()
