@@ -17,6 +17,7 @@ import (
 // information for being a part of the quorum, and it contains optional
 // information such as script inputs.
 type Update struct {
+	Height             uint32
 	Heartbeat          delta.Heartbeat
 	HeartbeatSignature siacrypto.Signature
 
@@ -200,12 +201,18 @@ func (p *Participant) newSignedUpdate() {
 
 // TODO: add docstring
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
-	// for debugging purposes
+	// Printing errors helps with debugging.
 	defer func() {
 		if err != nil && err != errHaveHeartbeat {
 			fmt.Println(err.Error())
 		}
 	}()
+
+	// Check that there is a signatory for every signature.
+	if len(su.Signatories) != len(su.Signatures) {
+		err = errSignatoryMismatch
+		return
+	}
 
 	// Lock the engine for the duration of the function.
 	p.engineLock.RLock()
@@ -215,10 +222,15 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	p.updatesLock.Lock()
 	defer p.updatesLock.Unlock()
 
-	// Check that there is a signatory for every signature.
-	if len(su.Signatories) != len(su.Signatures) {
-		err = errSignatoryMismatch
-		return
+	// Check that the height of the update matches the height of the
+	// current block. If the height is greater than the current block, wait
+	// until step 2 of the block for the height of the update is created.
+	// This will insure that this host is all caught up, without putting
+	// the host behind on consensus.
+	if su.Update.Height > p.engine.Metadata().Height {
+		// Calculate the amount of time that is needed to sleep.
+
+		// That's going to be (StepDuration * state.QuorumSize) * (su.Update.Height - p.engine.Metadata().Height + 1) + StepDuration * (state.QuorumSize - CurrentStep)
 	}
 
 	// Check that the Update matches the current block.

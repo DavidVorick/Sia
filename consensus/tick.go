@@ -12,30 +12,37 @@ const (
 	StepDuration = 1800 * time.Millisecond
 )
 
-// TODO: add docstring
+// The final step is a block compilation step. At this point,
+
+// tick maintains the consensus rhythm for the participant, updating the
+// counter that tells the participant which Updates and Blocks are acceptable,
+// which are early, and which are late.
 func (p *Participant) tick() {
+	// Create a ticker that will pulse every StepDuration
 	ticker := time.Tick(StepDuration)
 	for _ = range ticker {
+		// Once cryptographic synchronization is implemented, there
+		// will be an additional sleep placed here for some volume of
+		// seconds that will keep the participant synchronized to a
+		// much higher degree of accuracy.
+
 		p.currentStepLock.Lock()
 		if p.currentStep == state.QuorumSize {
-			// First condense the block, then set the current step to 1. The order
-			// shouldn't matter because currentStep is locked by a mutex.
-			b := p.condenseBlock()
-			p.currentStep = 1
+			p.currentStep = 0
 
-			// If synchronized, give the block to the engine for processing.
-			// Otherwise, save the block in a map that is used to assist
-			// synchronization.
-			if p.synchronized {
+			// Have the engine compile and integrate the block.
+			go func() {
+				// First condense the block, then set the current step to 1. The order
+				// shouldn't matter because currentStep is locked by a mutex.
+				block := p.condenseBlock()
+
 				p.engineLock.Lock()
-				p.engine.Compile(b)
+				p.engine.Compile(block)
 				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.
 				p.newSignedUpdate()
-			} else {
-				// p.appendBlock(b)
-			}
+			}()
 		} else {
 			p.currentStep++
 		}

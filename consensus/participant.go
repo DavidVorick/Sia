@@ -37,10 +37,6 @@ type Participant struct {
 	//tickingLock sync.Mutex
 	currentStep     byte
 	currentStepLock sync.RWMutex // prevents a benign race condition
-
-	// Bootstrap variables
-	synchronized bool
-	//recentBlocks map[uint32]*delta.Block
 }
 
 var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")

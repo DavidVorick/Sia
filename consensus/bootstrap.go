@@ -55,8 +55,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	// Create the first update.
 	p.newSignedUpdate()
 
-	// Set synchronized to true and start ticking.
-	p.synchronized = true
+	// Begin ticking.
 	go p.tick()
 
 	return
@@ -174,14 +173,21 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		}
 	}
 
+	// Before spending any bandwidth on downloading, make sure that we have
+	// been accepted into the quorum. (hopefully) The expiration on the add
+	// sibling message is set to only one block in the future, meaning if
+	// we wait a full block cycle and aren't in the quorum, that we will
+	// never be in the quorum. Return an error.
+
 	// 4. After bringing the quorum up to date (still missing the latest block,
 	// won't be able to self-compile), can begin downloading file segments. The
 	// only wallet segements to avoid are the wallet segments with active
 	// uploads. Since you aren't announced to the quorum yet, the uploader
-	// won't know to contact you and upload to you the file diff.
+	// won't know to contact you and upload to you the file diff. Do this
+	// in a gothread.
 
-	// 5. After being accepted to the quorum as a full sibling, all downloads
-	// are fair game.
+	// 5. After being accepted to the quorum as a sibling, all downloads
+	// are fair game. Complete these in a gothread.
 
 	// 6. After collecting all downloads, announce synchronization and switch
 	// from being an unpaid bootstrapping participant to a paid active
