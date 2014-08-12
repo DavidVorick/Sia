@@ -26,14 +26,16 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-// SignInput takes a secret key and an input, and returns the signature of the
-// input followed by input itself.
-func SignInput(secretKey siacrypto.SecretKey, input []byte) ([]byte, error) {
-	sig, err := secretKey.Sign(input)
+// Sign takes a SecretKey and modifies the receiving ScriptInput to contain a
+// signature of its own data. Currently, only the Input field is included in
+// the signature.
+func (si *ScriptInput) Sign(secretKey siacrypto.SecretKey) (err error) {
+	sig, err := secretKey.Sign(si.Input)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return append(sig[:], input...), nil
+	si.Input = append(sig[:], si.Input...)
+	return
 }
 
 // CreateWalletInput returns the appropriate input for the CreateWallet script.
@@ -41,11 +43,16 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 	return append(siaencoding.EncUint64(walletID), s...)
 }
 
-// AddSiblingInput returns a script that calls the AddSibling function. It is
-// intended to be passed to a script that transfers execution to the input.
-func AddSiblingInput(sib *state.Sibling) []byte {
-	encSib, _ := siaencoding.Marshal(sib) // TODO: check error
-	return appendAll(
+// AddSiblingInput returns a signed ScriptInput that calls the AddSibling
+// function. It is intended to be passed to a script that transfers execution
+// to the input.
+func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib *state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
+	si.WalletID = wid
+	encSib, err := siaencoding.Marshal(sib)
+	if err != nil {
+		return
+	}
+	si.Input = appendAll(
 		[]byte{
 			0x25, 0x08, 0x00, // move data pointer to encoded sibling
 			0xE3, //             push encoded sibling
@@ -54,6 +61,13 @@ func AddSiblingInput(sib *state.Sibling) []byte {
 		},
 		encSib,
 	)
+	//si.Deadline = deadline
+
+	err = si.Sign(sk)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // TransactionInput returns a script that calls the Send function. It is
