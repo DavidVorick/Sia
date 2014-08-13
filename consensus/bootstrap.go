@@ -243,17 +243,14 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// Submit the join request.
 		// Create the sibling object that will be submitted to the
 		// quorum.
-		//inputSibling := state.Sibling{
+		//inputSibling := &state.Sibling{
 		//	Address:   p.address,
 		//	PublicKey: p.publicKey,
 		//}
 		//
 		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
 		// Create the join request and send it to the quorum.
-		joinRequest := delta.ScriptInput{
-			WalletID: tetherID,
-			Input:    delta.AddSiblingInput(nil), //(inputSibling),
-		}
+		joinRequest := delta.ScriptInput{} //delta.AddSiblingInput({WalletID}, inputSibling, {SecretKey})
 		for _, address := range quorumSiblings {
 			mr.SendAsyncMessage(network.Message{
 				Dest: address,

@@ -4,7 +4,7 @@ import (
 	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
-// A Balance is a 128-bit integer representing a volume of siacoins.
+// A Balance is a 128-bit unsigned integer representing a volume of siacoins.
 // The actual 128-bit number will likely be in nano- or femto-siacoins.
 type Balance [16]byte
 

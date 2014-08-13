@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 
-	//"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 var (
@@ -51,8 +52,8 @@ var opTable = map[byte]instruction{
 	0x21: instruction{"goto", 2, op_goto, 1},
 	0x22: instruction{"move", 2, op_move, 1},
 	// data pointer and register opcodes
-	0x30: instruction{"reg_store", 1, op_reg_store, 2},
-	0x31: instruction{"reg_load", 1, op_reg_load, 2},
+	0x30: instruction{"store", 1, op_store, 2},
+	0x31: instruction{"load", 1, op_load, 2},
 	0x32: instruction{"data_goto", 2, op_data_goto, 1},
 	0x33: instruction{"data_move", 2, op_data_move, 1},
 	0x34: instruction{"data_push", 1, op_data_push, 2},
@@ -61,23 +62,26 @@ var opTable = map[byte]instruction{
 	0x37: instruction{"data_paste", 1, op_data_paste, 2},
 	0x38: instruction{"transfer", 0, op_transfer, 1},
 	// function opcodes
-	0x40: instruction{"verify", 2, op_verify, 9},
-	0x41: instruction{"add_sibling", 1, op_add_sibling, 5},
-	0x42: instruction{"add_wallet", 1, op_add_wallet, 5},
+	0x40: instruction{"verify", 0, op_verify, 9},
+	0x41: instruction{"add_sibling", 0, op_add_sibling, 5},
+	0x42: instruction{"add_wallet", 0, op_add_wallet, 5},
 	0x43: instruction{"send", 0, op_send, 5},
-	0x44: instruction{"resize_sec", 1, op_resize_sec, 9},
-	0x45: instruction{"prop_upload", 1, op_prop_upload, 9},
+	0x44: instruction{"resize_sec", 0, op_resize_sec, 9},
+	0x45: instruction{"prop_upload", 0, op_prop_upload, 9},
 	// convenience opcodes
 	0xE0: instruction{"switch", 2, op_switch, 3},
-	0xE1: instruction{"data_prefix", 1, op_data_prefix, 2},
-	0xE2: instruction{"data_rest", 1, op_data_rest, 2},
-	0xE3: instruction{"cond_reject", 0, op_cond_reject, 1},
+	0xE1: instruction{"store_prefix", 1, op_store_prefix, 2},
+	0xE2: instruction{"store_rest", 1, op_store_rest, 2},
+	0xE3: instruction{"push_prefix", 0, op_push_prefix, 2},
+	0xE4: instruction{"push_rest", 0, op_push_rest, 2},
+	0xE5: instruction{"cond_reject", 0, op_cond_reject, 1},
 	// termination opcodes
 	0xFE: instruction{"reject", 0, op_reject, 0},
 	0xFF: instruction{"exit", 0, op_exit, 0},
 }
 
 // helper functions
+
 func v2i(b []byte) int64 {
 	p := make([]byte, 8)
 	copy(p, b)
@@ -98,7 +102,6 @@ func f2v(f float64) []byte {
 	return siaencoding.EncFloat64(f)
 }
 
-// convert two bytes to signed short
 func s2i(low, high byte) int {
 	return int(int16(low) + int16(high)<<8)
 }
@@ -114,7 +117,7 @@ func v2b(b []byte) bool {
 	return v2i(b) != 0
 }
 
-// opcodes
+// general opcodes
 
 func op_no_op(args []byte) (err error) {
 	return
@@ -334,7 +337,7 @@ func op_not_equal(args []byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(b2v(bytes.Equal(a, b)))
+	push(b2v(!bytes.Equal(a, b)))
 	return
 }
 
@@ -418,14 +421,6 @@ func op_if_goto(args []byte) (err error) {
 	return
 }
 
-func op_goto(args []byte) (err error) {
-	env.iptr = s2i(args[0], args[1]) - 1
-	if env.iptr < 0 || env.iptr > len(env.script) {
-		err = errors.New("jumped to invalid index")
-	}
-	return
-}
-
 func op_if_move(args []byte) (err error) {
 	a, err := pop()
 	if err != nil {
@@ -433,6 +428,14 @@ func op_if_move(args []byte) (err error) {
 	}
 	if v2b(a) {
 		err = op_move(args)
+	}
+	return
+}
+
+func op_goto(args []byte) (err error) {
+	env.iptr = s2i(args[0], args[1]) - 1
+	if env.iptr < 0 || env.iptr > len(env.script) {
+		err = errors.New("jumped to invalid index")
 	}
 	return
 }
@@ -445,7 +448,9 @@ func op_move(args []byte) (err error) {
 	return
 }
 
-func op_reg_store(args []byte) (err error) {
+// data pointer and register opcodes
+
+func op_store(args []byte) (err error) {
 	a, err := pop()
 	if err != nil {
 		return
@@ -454,21 +459,21 @@ func op_reg_store(args []byte) (err error) {
 	return
 }
 
-func op_reg_load(args []byte) (err error) {
+func op_load(args []byte) (err error) {
 	err = push(env.registers[args[0]])
 	return
 }
 
-func op_data_move(args []byte) (err error) {
-	env.dptr += s2i(args[0], args[1])
+func op_data_goto(args []byte) (err error) {
+	env.dptr = s2i(args[0], args[1])
 	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
 	}
 	return
 }
 
-func op_data_goto(args []byte) (err error) {
-	env.dptr = s2i(args[0], args[1])
+func op_data_move(args []byte) (err error) {
+	env.dptr += s2i(args[0], args[1])
 	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
 	}
@@ -486,11 +491,6 @@ func op_data_store(args []byte) (err error) {
 	b := make([]byte, args[0])
 	env.dptr += copy(b, env.script[env.dptr:])
 	env.registers[args[1]] = b
-	return
-}
-
-func op_replace(args []byte) (err error) {
-	copy(env.script[env.dptr:], env.registers[args[0]])
 	return
 }
 
@@ -522,53 +522,26 @@ func op_data_paste(args []byte) (err error) {
 	return
 }
 
-func op_data_prefix(args []byte) (err error) {
-	err = op_data_push([]byte{0x02})
-	if err != nil {
-		return
-	}
-	err = op_data_copy(args)
-	return
-}
-
-func op_data_rest(args []byte) (err error) {
-	env.registers[args[0]] = make([]byte, len(env.script[env.dptr:]))
-	env.dptr += copy(env.registers[args[0]], env.script[env.dptr:])
-	return
-}
-
 func op_transfer(args []byte) (err error) {
 	env.iptr = env.dptr
 	return
 }
 
-func op_reject(args []byte) (err error) {
-	return errRejected
-}
+// function opcodes
 
-func op_cond_reject(args []byte) (err error) {
-	a, err := pop()
+func op_add_sibling(args []byte) (err error) {
+	encSib, err := pop()
 	if err != nil {
 		return
 	}
-	if !v2b(a) {
-		err = op_reject([]byte{})
+
+	var sib state.Sibling
+	err = siaencoding.Unmarshal(encSib, &sib)
+	if err != nil {
+		return
 	}
-	return
-}
 
-func op_add_sibling(args []byte) (err error) {
-	/*
-		// decode sibling
-		sib := new(quorum.Sibling)
-		err = sib.GobDecode(env.buffers[args[0]])
-		if err != nil {
-			return
-		}
-
-		// add sibling
-		env.quorum.AddSibling(env.wallet, sib)
-	*/
+	env.engine.AddSibling(env.wallet, sib)
 	return
 }
 
@@ -616,31 +589,26 @@ func op_send(args []byte) (err error) {
 }
 
 func op_verify(args []byte) (err error) {
-	// get public key
-	/*var pk siacrypto.PublicKey
-	copy(pk[:], env.buffers[args[0]])
-	// decode signed message
-	var sm siacrypto.SignedMessage
-	err = siaencoding.Unmarshal(env.buffers[args[1]], &sm)
+	// pop values
+	sm, _ := pop()
+	encPk, err := pop()
 	if err != nil {
 		return
 	}
-	// verify signature
-	verified := pk.Verify(sm)
-	err = push(b2v(verified))*/
-	return
-}
 
-func op_switch(args []byte) (err error) {
-	a, err := pop()
-	if err != nil {
-		return
+	// construct public key, signature, and message
+	var pk siacrypto.PublicKey
+	copy(pk[:], encPk)
+	var sig siacrypto.Signature
+	copy(sig[:], sm)
+	if len(sm) < siacrypto.SignatureSize {
+		return push(b2v(false))
 	}
-	if args[0] == a[0] {
-		err = op_goto([]byte{0, args[1]})
-	} else {
-		err = push(a)
-	}
+	msg := sm[siacrypto.SignatureSize:]
+
+	// verify signature
+	verified := pk.Verify(sig, msg)
+	err = push(b2v(verified))
 	return
 }
 
@@ -676,6 +644,69 @@ func op_prop_upload(args []byte) (err error) {
 		)
 	*/
 	return
+}
+
+// convenience opcodes
+
+func op_switch(args []byte) (err error) {
+	a, err := pop()
+	if err != nil {
+		return
+	}
+	if args[0] == a[0] {
+		err = op_goto([]byte{0, args[1]})
+	} else {
+		err = push(a)
+	}
+	return
+}
+
+func op_store_prefix(args []byte) (err error) {
+	err = op_data_push([]byte{0x02})
+	if err != nil {
+		return
+	}
+	err = op_data_copy(args)
+	return
+}
+
+func op_store_rest(args []byte) (err error) {
+	env.registers[args[0]] = make([]byte, len(env.script[env.dptr:]))
+	copy(env.registers[args[0]], env.script[env.dptr:])
+	return
+}
+
+func op_push_prefix(args []byte) (err error) {
+	num := s2i(env.script[env.dptr], env.script[env.dptr+1])
+	env.dptr += 2
+	b := make([]byte, num)
+	env.dptr += copy(b, env.script[env.dptr:])
+	err = push(b)
+	return
+}
+
+func op_push_rest(args []byte) (err error) {
+	b := make([]byte, len(env.script[env.dptr:]))
+	copy(b, env.script[env.dptr:])
+	err = push(b)
+	return
+}
+
+func op_cond_reject(args []byte) (err error) {
+	a, err := pop()
+	if err != nil {
+		return
+	}
+	if !v2b(a) {
+		err = op_reject([]byte{})
+	}
+	return
+}
+
+// termination opcodes
+
+func op_reject(args []byte) (err error) {
+	return errRejected
 }
 
 func op_exit(b []byte) (err error) {
