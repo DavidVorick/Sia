@@ -206,10 +206,13 @@ func (p *Participant) newSignedUpdate() {
 // concensus, blocking late updates and waiting on early updates, and throwing
 // out anything that does not follow the rules for legal signatures.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
+	p.tickLock.RLock()
 	if !p.ticking {
 		err = errNotReady
+		p.tickLock.RUnlock()
 		return
 	}
+	p.tickLock.RUnlock()
 
 	// Printing errors helps with debugging. Production code for this
 	// package should never print, only log.
@@ -230,10 +233,13 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	defer p.engineLock.RUnlock()
 
 	// Check that the update is not late.
+	p.tickLock.RLock()
 	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
 		err = errLateUpdate
+		p.tickLock.RUnlock()
 		return
 	}
+	p.tickLock.RUnlock()
 
 	// Wait for the update if the update has arrived early. Ideally, we
 	// want to wait until exactly the beginning of step 2. The function
@@ -242,6 +248,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	//
 	// Additionally, stall all updates from being processed until the
 	// beginning of step 2, which will prevent newcomers from being lost.
+	p.tickLock.RLock()
 	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
 		// Sleep until the beginning of step 2.
 		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
@@ -250,9 +257,13 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 		// Unlock all mutexes, sleep, and then relock all mutexes.
 		p.engineLock.RUnlock()
+		p.tickLock.RUnlock()
 		time.Sleep(sleepDuration)
-		p.engineLock.Lock()
+		p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
+		p.tickLock.RLock()  // Interesting bug: switch this line with the prev line - deadlock!
+
 	}
+	p.tickLock.RUnlock()
 
 	// Lock the updates variable for the duration of the function.
 	p.updatesLock.Lock()

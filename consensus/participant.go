@@ -35,6 +35,7 @@ type Participant struct {
 	ticking     bool
 	tickStart   time.Time
 	currentStep byte
+	tickLock    sync.RWMutex
 }
 
 var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
