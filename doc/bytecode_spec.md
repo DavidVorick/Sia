@@ -92,18 +92,18 @@ Note that some of these descriptions are insufficient to explain the format of t
 | 0x37 | data_paste    | 1    | overwrite script with popped number of bytes (max 2^16) from register $1               |
 | 0x38 | transfer      | 0    | move instruction pointer to data pointer                                               |
 | ---- | ----          | -    | function opcodes                                                                       |
-| 0x40 | verify        | 2    | verify a signature; pushes boolean success value                                       |
-| 0x41 | add_sibling   | 1    | add sibling; pushes boolean success value                                              |
-| 0x42 | add_wallet    | 1    | add a wallet with an initial balance and script                                        |
+| 0x40 | verify        | 0    | verify a signature; pushes boolean success value                                       |
+| 0x41 | add_sibling   | 0    | add sibling; pushes boolean success value                                              |
+| 0x42 | add_wallet    | 0    | add a wallet with an initial balance and script                                        |
 | 0x43 | send          | 0    | send siacoins from host wallet to recipient                                            |
-| 0x44 | resize_sec    | 2    | resize the sector associated with a given wallet (erases current sector data)          |
-| 0x45 | prop_upload   | 1    | propose an upload to the quorum (arguments are stored in one gob-encoded register)     |
+| 0x44 | resize_sec    | 0    | resize the sector associated with a given wallet (erases current sector data)          |
+| 0x45 | prop_upload   | 0    | propose an upload to the quorum (arguments are stored in one gob-encoded register)     |
 | ---- | ----          | -    | convenience opcodes                                                                    |
 | 0xE0 | switch        | 2    | if value and $1 are equal, branch to $2. The value is only consumed upon equality.     |
 | 0xE1 | store_prefix  | 1    | same as data_copy, but using the first two bytes to determine the length               |
-| 0xE2 | store_rest    | 1    | copy from data pointer to end of script into register $1                               |
+| 0xE2 | store_rest    | 1    | copy from data pointer to end of script into register $1 (dptr does not move)          |
 | 0xE3 | push_prefix   | 0    | same as data_push, but using the first two bytes to determine the length               |
-| 0xE4 | push_rest     | 0    | push from data pointer to end of script                                                |
+| 0xE4 | push_rest     | 0    | push from data pointer to end of script (dptr does not move)                           |
 | 0xE5 | cond_reject   | 0    | if false, reject (otherwise no op)                                                     |
 | ---- | ----          | -    | termination opcodes                                                                    |
 | 0xFE | reject        | 0    | reject input, terminating execution                                                    |

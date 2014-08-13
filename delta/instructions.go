@@ -664,7 +664,7 @@ func op_store_prefix(args []byte) (err error) {
 
 func op_store_rest(args []byte) (err error) {
 	env.registers[args[0]] = make([]byte, len(env.script[env.dptr:]))
-	env.dptr += copy(env.registers[args[0]], env.script[env.dptr:])
+	copy(env.registers[args[0]], env.script[env.dptr:])
 	return
 }
 
@@ -679,7 +679,7 @@ func op_push_prefix(args []byte) (err error) {
 
 func op_push_rest(args []byte) (err error) {
 	b := make([]byte, len(env.script[env.dptr:]))
-	env.dptr += copy(b, env.script[env.dptr:])
+	copy(b, env.script[env.dptr:])
 	err = push(b)
 	return
 }
