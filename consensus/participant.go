@@ -69,7 +69,8 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.messageRouter = mr
 
 	// Initialize the file prefix
-	p.engine.Initialize(filePrefix, p.siblingIndex)
+	p.engine.SetFilePrefix(filePrefix)
+	p.engine.SetSiblingIndex(p.siblingIndex)
 
 	return
 }

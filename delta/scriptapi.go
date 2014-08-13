@@ -60,7 +60,7 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 // and throws the sibling out if there's no space. Once quorums are
 // communicating, the AddSibling routine will always succeed.
 func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
-	// first check that the wallet can afford the down payment.
+	// Down payment stuff will be added here.
 
 	// Look through the quorum for an empty sibling.
 	for i := byte(0); i < state.QuorumSize; i++ {

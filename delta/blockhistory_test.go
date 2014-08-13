@@ -15,7 +15,8 @@ import (
 // initialization.
 func TestSaveAndLoadBlock(t *testing.T) {
 	var e Engine
-	e.Initialize(siafiles.TempFilename("TestSaveAndLoad"), 0)
+	e.SetFilePrefix(siafiles.TempFilename("TestSaveAndLoad"))
+	e.SetSiblingIndex(0)
 	err := e.Bootstrap(state.Sibling{
 		WalletID: 1,
 	})

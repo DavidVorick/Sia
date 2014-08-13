@@ -6,6 +6,7 @@ import (
 
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -79,8 +80,11 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 	return
 }
 
-// TODO: add docstring
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
+// CreateJoiningParticipant creates a new participant and integrates it as a
+// host with an existing quorum. It is assumed that the tetherID is an ID to a
+// generic wallet, and that the secret key is the key that should be the key
+// that is assiciated with the public key of the generic wallet.
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
 	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
@@ -240,17 +244,17 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			time.Sleep(StepDuration * 3)
 		}
 
-		// Submit the join request.
-		// Create the sibling object that will be submitted to the
-		// quorum.
-		//inputSibling := &state.Sibling{
-		//	Address:   p.address,
-		//	PublicKey: p.publicKey,
-		//}
-		//
 		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
 		// Create the join request and send it to the quorum.
-		joinRequest := delta.ScriptInput{} //delta.AddSiblingInput({WalletID}, inputSibling, {SecretKey})
+		var joinRequest delta.ScriptInput
+		inputSibling := &state.Sibling{
+			Address:   p.address,
+			PublicKey: p.publicKey,
+		}
+		joinRequest, err = delta.AddSiblingInput(tetherID, inputSibling, tetherWalletSecretKey)
+		if err != nil {
+			return
+		}
 		for _, address := range quorumSiblings {
 			mr.SendAsyncMessage(network.Message{
 				Dest: address,
@@ -292,6 +296,15 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	}
 
 	// Parse the metadata and figure out which sibling is ourselves.
+	p.engineLock.Lock()
+	for i, sibling := range p.engine.Metadata().Siblings {
+		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
+			p.siblingIndex = byte(i)
+			break
+		}
+	}
+	p.engine.SetSiblingIndex(p.siblingIndex)
+	p.engineLock.Unlock()
 
 	// Once accepted as a sibling, begin downloading all files.
 	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.
