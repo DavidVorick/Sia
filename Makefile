@@ -35,13 +35,13 @@ test-long-verbose:
 	$(cgo_ldflags) go test -v -race ./...
 
 test-consensus:
-	$(cgo_ldflags) go test -v -race consensus
+	$(cgo_ldflags) go test -v -race ./consensus
 
 test-delta:
-	$(cgo_ldflags) go test -v -race delta
+	$(cgo_ldflags) go test -v -race ./delta
 
 test-state:
-	$(cgo_ldflags) go test -v -race state
+	$(cgo_ldflags) go test -v -race ./state
 
 bench:
 	$(cgo_ldflags) go test -run=XXX -bench=. ./...
