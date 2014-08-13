@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	//"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -62,12 +62,12 @@ var opTable = map[byte]instruction{
 	0x37: instruction{"data_paste", 1, op_data_paste, 2},
 	0x38: instruction{"transfer", 0, op_transfer, 1},
 	// function opcodes
-	0x40: instruction{"verify", 2, op_verify, 9},
-	0x41: instruction{"add_sibling", 1, op_add_sibling, 5},
-	0x42: instruction{"add_wallet", 1, op_add_wallet, 5},
+	0x40: instruction{"verify", 0, op_verify, 9},
+	0x41: instruction{"add_sibling", 0, op_add_sibling, 5},
+	0x42: instruction{"add_wallet", 0, op_add_wallet, 5},
 	0x43: instruction{"send", 0, op_send, 5},
-	0x44: instruction{"resize_sec", 1, op_resize_sec, 9},
-	0x45: instruction{"prop_upload", 1, op_prop_upload, 9},
+	0x44: instruction{"resize_sec", 0, op_resize_sec, 9},
+	0x45: instruction{"prop_upload", 0, op_prop_upload, 9},
 	// convenience opcodes
 	0xE0: instruction{"switch", 2, op_switch, 3},
 	0xE1: instruction{"store_prefix", 1, op_store_prefix, 2},
@@ -589,18 +589,26 @@ func op_send(args []byte) (err error) {
 }
 
 func op_verify(args []byte) (err error) {
-	// get public key
-	/*var pk siacrypto.PublicKey
-	copy(pk[:], env.buffers[args[0]])
-	// decode signed message
-	var sm siacrypto.SignedMessage
-	err = siaencoding.Unmarshal(env.buffers[args[1]], &sm)
+	// pop values
+	sm, _ := pop()
+	encPk, err := pop()
 	if err != nil {
 		return
 	}
+
+	// construct public key, signature, and message
+	var pk siacrypto.PublicKey
+	copy(pk[:], encPk)
+	var sig siacrypto.Signature
+	copy(sig[:], sm)
+	if len(sm) < siacrypto.SignatureSize {
+		return push(b2v(false))
+	}
+	msg := sm[siacrypto.SignatureSize:]
+
 	// verify signature
-	verified := pk.Verify(sm)
-	err = push(b2v(verified))*/
+	verified := pk.Verify(sig, msg)
+	err = push(b2v(verified))
 	return
 }
 

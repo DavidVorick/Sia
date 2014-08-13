@@ -3,14 +3,14 @@ package delta
 import (
 	"testing"
 
-	//"siacrypto"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
 // initialize a script execution environment
 func initEnv() (e Engine, si ScriptInput) {
-	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest"))
+	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest."))
 	// create a wallet that immediately passes control to its input
 	e.state.InsertWallet(state.Wallet{
 		ID:      1,
@@ -73,7 +73,7 @@ func TestInvalidScripts(t *testing.T) {
 		t.Error("expected missing argument error")
 	}
 	si.Input = []byte{
-		0x25, 0xFF, 0x7F,
+		0x21, 0xFF, 0x7F,
 	}
 	_, err = e.Execute(si)
 	if err == nil {
@@ -82,41 +82,33 @@ func TestInvalidScripts(t *testing.T) {
 }
 
 // test the "verify" opcode
-/*
 func TestVerify(t *testing.T) {
 	e, si := initEnv()
 
 	// generate public key
 	publicKey, secretKey, err := siacrypto.CreateKeyPair()
 	if err != nil {
-		t.Error(err)
-	}
-	gobPKey, err := publicKey.GobEncode()
-	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	// generate signed message
+	// generate signature
 	message := []byte("test")
-	signedMessage, err := secretKey.Sign(message)
+	signature, err := secretKey.Sign(message)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	encSm, err := signedMessage.GobEncode()
-	if err != nil {
-		t.Error(err)
-	}
+	encSm := append(signature[:], message...)
 
 	// construct script
 	si.Input = []byte{
-		0x25, 0x0D, 0x00, // move data pointer to start of public key
-		0x39, 0x20, 0x01, // copy public key into buffer 1
-		0x2E, 0x02, //       copy signed message into buffer 2
-		0x34, 0x01, 0x02, // verify signature
-		0x38, //             if invalid signature, reject
+		0x33, 0x09, 0x00, // move data pointer to start of public key
+		0x34, 0x20, //       push public key
+		0xE4, //             push signed message
+		0x40, //             verify signature
+		0xE5, //             if invalid signature, reject
 		0xFF, //             otherwise, exit normally
 	}
-	si.Input = append(si.Input, gobPKey...)
+	si.Input = append(si.Input, publicKey[:]...)
 	si.Input = append(si.Input, encSm...)
 
 	// execute script
@@ -125,4 +117,3 @@ func TestVerify(t *testing.T) {
 		t.Error(err)
 	}
 }
-*/
