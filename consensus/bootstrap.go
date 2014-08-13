@@ -294,49 +294,10 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		}
 	}
 
+	// Parse the metadata and figure out which sibling is ourselves.
+
 	// Once accepted as a sibling, begin downloading all files.
 	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.
 	// Once all files are downloaded, announce full siblingness.
 	return
 }
-
-/* // CreateParticipant initializes a participant, and then either sets itself up
-// as the bootstrap or establishes itself as a sibling on an existing network
-func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
-
-	////////////////////////////
-	// Bootstrap As A Hopeful //
-	////////////////////////////
-
-	// 1. Synchronize to the current quorum to correctly produce blocks from
-	// heartbeats
-	synchronize := new(Synchronize)
-	fmt.Println("Synchronizing to the Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.Synchronize",
-		Args: struct{}{},
-		Resp: synchronize,
-	})
-	if err != nil {
-		return
-	}
-	// lock not needed as this is the only thread
-	p.currentStep = synchronize.currentStep
-	p.heartbeats = synchronize.heartbeats
-
-	// 2. Subscribe to the current quorum and receive all heartbeats
-	fmt.Println("Subscribing to the Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.Subscribe",
-		Args: p.self.Address(),
-		Resp: nil,
-	})
-	if err != nil {
-		return
-	}
-
-	// begin processing heartbeats
-	go p.tick()
-}*/

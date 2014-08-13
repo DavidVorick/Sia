@@ -49,16 +49,11 @@ var (
 // condenseBlock assumes that a heartbeat has a valid signature and that the
 // parent is the correct parent.
 func (p *Participant) condenseBlock() (b delta.Block) {
-	// Lock the engine and the updates variables
-	p.engineLock.RLock()
-	defer p.engineLock.RUnlock()
-
-	p.updatesLock.Lock()
-	defer p.updatesLock.Unlock()
-
 	// Set the height and parent of the block.
+	p.engineLock.RLock()
 	b.Height = p.engine.Metadata().Height
 	b.ParentBlock = p.engine.Metadata().ParentBlock
+	p.engineLock.RUnlock()
 
 	// Condense updates into a single non-repetitive block.
 	{
@@ -149,10 +144,13 @@ func (p *Participant) newSignedUpdate() {
 	}
 
 	// Create the update with the heartbeat and heartbeat signature.
+	p.engineLock.Lock()
 	update := Update{
+		Height:             p.engine.Metadata().Height,
 		Heartbeat:          hb,
 		HeartbeatSignature: signature,
 	}
+	p.engineLock.Unlock()
 
 	// Attach all of the script inputs to the update, clearing the list of
 	// script inputs in the process.
@@ -192,7 +190,9 @@ func (p *Participant) newSignedUpdate() {
 	if err != nil {
 		panic(err)
 	}
+	p.updatesLock.Lock()
 	p.updates[p.siblingIndex][updateHash] = update
+	p.updatesLock.Unlock()
 
 	// Broadcast the SignedUpdate to the network.
 	p.broadcast(network.Message{
@@ -228,18 +228,17 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		return
 	}
 
-	// Lock the engine for the duration of the function.
-	p.engineLock.RLock()
-	defer p.engineLock.RUnlock()
-
 	// Check that the update is not late.
 	p.tickLock.RLock()
+	p.engineLock.RLock()
 	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
 		err = errLateUpdate
 		p.tickLock.RUnlock()
+		p.engineLock.RUnlock()
 		return
 	}
 	p.tickLock.RUnlock()
+	p.engineLock.RUnlock()
 
 	// Wait for the update if the update has arrived early. Ideally, we
 	// want to wait until exactly the beginning of step 2. The function
@@ -249,6 +248,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	// Additionally, stall all updates from being processed until the
 	// beginning of step 2, which will prevent newcomers from being lost.
 	p.tickLock.RLock()
+	p.engineLock.RLock()
 	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
 		// Sleep until the beginning of step 2.
 		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
@@ -256,20 +256,18 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		sleepDuration := (time.Duration(fullStepsToSleepThrough) * StepDuration) + timeRemainingThisStep
 
 		// Unlock all mutexes, sleep, and then relock all mutexes.
-		p.engineLock.RUnlock()
+		//p.engineLock.RUnlock()
 		p.tickLock.RUnlock()
 		time.Sleep(sleepDuration)
-		p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
-		p.tickLock.RLock()  // Interesting bug: switch this line with the prev line - deadlock!
+		//p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
+		p.tickLock.RLock() // Interesting bug: switch this line with the prev line - deadlock!
 
 	}
 	p.tickLock.RUnlock()
-
-	// Lock the updates variable for the duration of the function.
-	p.updatesLock.Lock()
-	defer p.updatesLock.Unlock()
+	p.engineLock.RUnlock()
 
 	// Check that all of the signatures are valid, and that there are no repeats.
+	p.engineLock.RLock()
 	updateHash, err := siacrypto.HashObject(su.Update)
 	if err != nil {
 		return
@@ -308,6 +306,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// the next verification.
 		message = append(su.Signatures[i][:], message...)
 	}
+	p.engineLock.RUnlock()
 
 	// Check if this update has already been received.
 	_, exists := p.updates[su.Signatories[0]][updateHash]

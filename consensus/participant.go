@@ -29,7 +29,7 @@ type Participant struct {
 	updates            [state.QuorumSize]map[siacrypto.Hash]Update
 	scriptInputs       []delta.ScriptInput
 	updateAdvancements []state.UpdateAdvancement
-	updatesLock        sync.Mutex
+	updatesLock        sync.RWMutex
 
 	// Consensus Algorithm Status
 	ticking     bool

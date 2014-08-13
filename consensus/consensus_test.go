@@ -2,46 +2,60 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
-func TestNewSignedUpdate(t *testing.T) {
-	// Bootstrap a sibling
+func TestConsensus(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	// Create a new quorum.
 	mr, err := network.NewRPCServer(11100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = CreateBootstrapParticipant(mr, siafiles.TempFilename("TestNewSignedUpdate"), 1)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus"), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// more stuff
+	// Set the current step to 4 so that a compile will be triggered after
+	// 1 step.
+	p.tickLock.Lock()
+	p.currentStep = state.QuorumSize
+	p.tickLock.Unlock()
+
+	// Wait for the compile to trigger.
+	time.Sleep(StepDuration + 50*time.Millisecond)
+
+	// Verify that the compile has triggered.
+	p.engineLock.RLock()
+	if p.engine.Metadata().Height != 1 {
+		t.Error("Attempted to trigger compile, but height is reported as", p.engine.Metadata().Height)
+	}
+	p.engineLock.RUnlock()
+
+	// Verify that the participant has not thrown itself from the quorum.
+	p.engineLock.RLock()
+	if !p.engine.Metadata().Siblings[0].Active {
+		t.Error("Bootstrapped participant has thrown itself from the quorum.")
+	}
+	p.engineLock.RUnlock()
+
+	// Verify that the next update has been accepted.
+	p.updatesLock.RLock()
+	if len(p.updates[0]) != 1 {
+		t.Error("Update for the next block has not been accepted by the participant.")
+	}
+	p.updatesLock.RUnlock()
 }
 
-/*// create a participant with a quorum and then generate a new signed heartbeat,
-// do basic checking to make sure there are no panics and no errors.
-func TestNewSignedHeartbeat(t *testing.T) {
-	p := new(Participant)
-	p.self = new(quorum.Sibling)
-	p.heartbeats[p.self.Index()] = make(map[siacrypto.Hash]*heartbeat)
-	_, key, err := siacrypto.CreateKeyPair()
-	p.secretKey = key
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = p.newSignedHeartbeat()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(p.heartbeats[p.self.Index()]) == 0 {
-		t.Error("a heartbeat was not added to the local list of heartbeats")
-	}
-}
-
+/*
 // Test takes .66 seconds to run... try to get below .1
 //
 // TestHandleSignedHeartbeat checks for every type of possible malicious
