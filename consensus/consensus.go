@@ -17,6 +17,7 @@ import (
 // information for being a part of the quorum, and it contains optional
 // information such as script inputs.
 type Update struct {
+	Height             uint32
 	Heartbeat          delta.Heartbeat
 	HeartbeatSignature siacrypto.Signature
 
@@ -33,9 +34,10 @@ type SignedUpdate struct {
 }
 
 var (
+	errNotReady          = errors.New("not ready to receive heartbeats yet")
 	errSignatoryMismatch = errors.New("signedUpdate has different number of signatures and signatories")
 	errInvalidParent     = errors.New("signedUpdate targets a different block and/or quorum than the parent of this participant")
-	errOutOfSync         = errors.New("update is late - not enough signatures given the current step of consensus")
+	errLateUpdate        = errors.New("update is late - not enough signatures given the current step of consensus")
 	errBounds            = errors.New("update contains a signature from an out-of-bounds signatory")
 	errNonSibling        = errors.New("update contains a signature from a non-sibling")
 	errDoubleSign        = errors.New("update contains two signatures from the same signatory")
@@ -129,6 +131,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	return
 }
 
+//TODO: add docstring
 func (p *Participant) newSignedUpdate() {
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
@@ -153,14 +156,14 @@ func (p *Participant) newSignedUpdate() {
 
 	// Attach all of the script inputs to the update, clearing the list of
 	// script inputs in the process.
-	p.scriptInputsLock.Lock()
+	p.updatesLock.Lock()
 	update.ScriptInputs = p.scriptInputs
 	p.scriptInputs = nil
-	p.scriptInputsLock.Unlock()
+	p.updatesLock.Unlock()
 
 	// Attach all of the update advancements to the signed heartbeat and sign
 	// them.
-	p.updateAdvancementsLock.Lock()
+	p.updatesLock.Lock()
 	update.UpdateAdvancements = p.updateAdvancements
 	p.updateAdvancements = nil
 	for i, ua := range update.UpdateAdvancements {
@@ -171,7 +174,7 @@ func (p *Participant) newSignedUpdate() {
 		}
 		update.AdvancementSignatures[i] = uas
 	}
-	p.updateAdvancementsLock.Unlock()
+	p.updatesLock.Unlock()
 
 	// Sign the update and create a SignedUpdate object with ourselves as the
 	// first signatory.
@@ -198,22 +201,26 @@ func (p *Participant) newSignedUpdate() {
 	})
 }
 
-// TODO: add docstring
+// HandleSignedUpdate is an RPC that allows other hosts to submit updates with
+// signatures to this host. They will be processed according to the rules of
+// concensus, blocking late updates and waiting on early updates, and throwing
+// out anything that does not follow the rules for legal signatures.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
-	// for debugging purposes
+	p.tickLock.RLock()
+	if !p.ticking {
+		err = errNotReady
+		p.tickLock.RUnlock()
+		return
+	}
+	p.tickLock.RUnlock()
+
+	// Printing errors helps with debugging. Production code for this
+	// package should never print, only log.
 	defer func() {
 		if err != nil && err != errHaveHeartbeat {
 			fmt.Println(err.Error())
 		}
 	}()
-
-	// Lock the engine for the duration of the function.
-	p.engineLock.RLock()
-	defer p.engineLock.RUnlock()
-
-	// Lock the updates variable for the duration of the function.
-	p.updatesLock.Lock()
-	defer p.updatesLock.Unlock()
 
 	// Check that there is a signatory for every signature.
 	if len(su.Signatories) != len(su.Signatures) {
@@ -221,25 +228,46 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		return
 	}
 
-	// Check that the Update matches the current block.
-	// If it doesn't, it has one step to match the next block.
-	if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
-		time.Sleep(StepDuration)
-		if su.Update.Heartbeat.ParentBlock != p.engine.Metadata().ParentBlock {
-			err = errInvalidParent
-			return
-		}
-	}
+	// Lock the engine for the duration of the function.
+	p.engineLock.RLock()
+	defer p.engineLock.RUnlock()
 
-	// Check that there are enough signatures in the update to match the
-	// current step.
-	p.currentStepLock.Lock()
-	if int(p.currentStep) > len(su.Signatures) {
-		p.currentStepLock.Unlock()
-		err = errOutOfSync
+	// Check that the update is not late.
+	p.tickLock.RLock()
+	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
+		err = errLateUpdate
+		p.tickLock.RUnlock()
 		return
 	}
-	p.currentStepLock.Unlock()
+	p.tickLock.RUnlock()
+
+	// Wait for the update if the update has arrived early. Ideally, we
+	// want to wait until exactly the beginning of step 2. The function
+	// will sleep until step 2 is reached, and then the for loop will kill
+	// if the block has arrived.
+	//
+	// Additionally, stall all updates from being processed until the
+	// beginning of step 2, which will prevent newcomers from being lost.
+	p.tickLock.RLock()
+	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
+		// Sleep until the beginning of step 2.
+		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
+		timeRemainingThisStep := time.Since(p.tickStart) % StepDuration
+		sleepDuration := (time.Duration(fullStepsToSleepThrough) * StepDuration) + timeRemainingThisStep
+
+		// Unlock all mutexes, sleep, and then relock all mutexes.
+		p.engineLock.RUnlock()
+		p.tickLock.RUnlock()
+		time.Sleep(sleepDuration)
+		p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
+		p.tickLock.RLock()  // Interesting bug: switch this line with the prev line - deadlock!
+
+	}
+	p.tickLock.RUnlock()
+
+	// Lock the updates variable for the duration of the function.
+	p.updatesLock.Lock()
+	defer p.updatesLock.Unlock()
 
 	// Check that all of the signatures are valid, and that there are no repeats.
 	updateHash, err := siacrypto.HashObject(su.Update)

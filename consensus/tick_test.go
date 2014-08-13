@@ -4,8 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/network"
-	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -13,41 +11,29 @@ import (
 // Participant.tick() runs without error when the participant is synchronized
 // to the quorum.
 func TestSynchronizedTick(t *testing.T) {
-	// Create a bootstrapped participant to test with.
-	rpcs, err := network.NewRPCServer(11025)
-	if err != nil {
-		t.Fatal("Failed to initialize RPCServer:", err)
-	}
-	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestSynchronizedTick"), 24)
-	if err != nil {
-		t.Fatal("Failed to create bootstrap participant:", err)
-	}
-
-	// Check that current step is initialized to 1.
-	p.currentStepLock.RLock()
-	if p.currentStep != 1 {
-		t.Error("p.currentStep not initializing to 1")
-	}
-	p.currentStepLock.RUnlock()
+	var p Participant
+	go p.tick()
 
 	// Sleep for 1 step and see if current step has increased.
 	time.Sleep(StepDuration + 25*time.Millisecond)
-	p.currentStepLock.RLock()
-	if p.currentStep != 2 {
+	p.tickLock.RLock()
+	if p.currentStep != 1 {
 		t.Error("p.currentStep is not incrementing correctly each StepDuration")
 	}
-	p.currentStepLock.RUnlock()
+	p.tickLock.RUnlock()
 
 	// Check that the quorum height has been initialized to 0.
+	p.engineLock.RLock()
 	if p.engine.Metadata().Height != 0 {
 		t.Error("Quorum height not initialized to 0")
 	}
+	p.engineLock.RUnlock()
 
 	// Set the currentStep to trigger a compile and wait for the compile to
 	// trigger.
-	p.currentStepLock.Lock()
+	p.tickLock.RLock()
 	p.currentStep = state.QuorumSize
-	p.currentStepLock.Unlock()
+	p.tickLock.RUnlock()
 	time.Sleep(StepDuration)
 
 	// Check that the height of the quorum has increased.

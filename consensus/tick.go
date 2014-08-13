@@ -12,33 +12,49 @@ const (
 	StepDuration = 1800 * time.Millisecond
 )
 
-// TODO: add docstring
 func (p *Participant) tick() {
-	ticker := time.Tick(StepDuration)
-	for _ = range ticker {
-		p.currentStepLock.Lock()
-		if p.currentStep == state.QuorumSize {
-			// First condense the block, then set the current step to 1. The order
-			// shouldn't matter because currentStep is locked by a mutex.
-			b := p.condenseBlock()
-			p.currentStep = 1
+	// Verify that tick() has not already been called.
+	p.tickLock.Lock()
+	if p.ticking {
+		p.tickLock.Unlock()
+		return
+	}
+	p.ticking = true
 
-			// If synchronized, give the block to the engine for processing.
-			// Otherwise, save the block in a map that is used to assist
-			// synchronization.
-			if p.synchronized {
+	// Create a ticker that will pulse every StepDuration
+	p.tickStart = time.Now()
+	ticker := time.Tick(StepDuration)
+	p.tickLock.Unlock() // Unlock the mutex before entering the tick loop.
+	for _ = range ticker {
+		// Once cryptographic synchronization is implemented, there
+		// will be an additional sleep placed here for some volume of
+		// seconds that will keep the participant synchronized to a
+		// much higher degree of accuracy.
+
+		p.tickLock.Lock()
+		if p.currentStep == state.QuorumSize {
+			p.currentStep = 0
+			p.tickLock.Unlock()
+
+			// Have the engine condense and integrate the block,
+			// then send a new heartbeat. This is done in a
+			// separate thread so that the timing is not disrupted
+			// in the parent thread.
+			go func() {
+				// Condense the list of updates into a block.
+				block := p.condenseBlock()
+
+				// Compile the block.
 				p.engineLock.Lock()
-				p.engine.Compile(b)
+				p.engine.Compile(block)
 				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.
 				p.newSignedUpdate()
-			} else {
-				// p.appendBlock(b)
-			}
+			}()
 		} else {
 			p.currentStep++
+			p.tickLock.Unlock()
 		}
-		p.currentStepLock.Unlock()
 	}
 }

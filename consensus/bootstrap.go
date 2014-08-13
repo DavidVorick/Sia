@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"time"
 
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
@@ -55,75 +56,84 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	// Create the first update.
 	p.newSignedUpdate()
 
-	// Set synchronized to true and start ticking.
-	p.synchronized = true
+	// Begin ticking.
 	go p.tick()
 
 	return
 }
 
+// A helper function for CreateJoiningParticipant, that downloads the next
+// block and compiles it into the participant.
+func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
+	var b delta.Block
+	err = p.messageRouter.SendMessage(network.Message{
+		Dest: quorumSiblings[0],
+		Proc: "Participant.Block",
+		Args: p.engine.Metadata().Height,
+		Resp: &b,
+	})
+	if err != nil {
+		return
+	}
+	p.engine.Compile(b)
+	return
+}
+
 // TODO: add docstring
 func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
+	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
 
-	// An important step that is being omitted for this version of Sia (omitted
-	// until Sia has meta-quorums and network-discovery) is verifying the
-	// hashes of the snapshot and blocks before you actually attempt to acquire
-	// anything.
+	// An important step that is being omitted for this version of Sia
+	// (omitted until Sia has meta-quorums and network-discovery) is
+	// verifying the hashes of the snapshot and blocks before you actually
+	// attempt to acquire anything.
 
-	// There is an assumption that the input wallet exists on the quorum with a
-	// balance sufficient to cover the costs of creating the participant.
+	// There is an assumption that the input wallet exists on the quorum
+	// with a balance sufficient to cover the costs of creating the
+	// participant. This needs to be tested and verified.
 
-	// 1. Submit a join request to the existing quorum. This join request will
-	// be added to the heartbeats of the siblings, and will be included in the
-	// next round of consensus. So before the join request gets through, the
-	// current block will need to finish, and then the next block will need to
-	// finish as well. This will take many hours, as block times are very slow.
-	joinRequest := delta.ScriptInput{
-		WalletID: tetherID,
-		Input:    delta.DefaultScript(p.publicKey),
-	}
-	for _, address := range quorumSiblings {
-		mr.SendAsyncMessage(network.Message{
-			Dest: address,
-			Proc: "Participant.AddScriptInput",
-			Args: joinRequest,
-		})
-	}
-
-	// 2. While waiting for the next block, download a snapshot.
-	// The 3 items of concern are: Metadata, Wallets, Events.
+	// Download a snapshot, which will form the basis of synchronization.
 	{
 		// get height of the most recent snapshot
 		var snapshotHead uint32
-		mr.SendMessage(network.Message{
+		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.RecentSnapshotHeight",
 			Args: struct{}{},
 			Resp: &snapshotHead,
 		})
+		if err != nil {
+			return
+		}
 
 		// get the metadata from the snapshot
 		var snapshotMetadata state.Metadata
-		mr.SendMessage(network.Message{
+		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotMetadata",
 			Args: snapshotHead,
 			Resp: &snapshotMetadata,
 		})
+		if err != nil {
+			return
+		}
 		p.engine.BootstrapSetMetadata(snapshotMetadata)
 
 		// get the list of wallets in the snapshot
 		var walletList []state.WalletID
-		mr.SendMessage(network.Message{
+		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotWalletList",
 			Args: snapshotHead,
 			Resp: &walletList,
 		})
+		if err != nil {
+			return
+		}
 
 		// get each wallet individually and insert them into the quorum
 		for _, walletID := range walletList {
@@ -133,60 +143,160 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			}
 
 			var wallet state.Wallet
-			mr.SendMessage(network.Message{
+			err = mr.SendMessage(network.Message{
 				Dest: quorumSiblings[0],
 				Proc: "Participant.SnapshotWallet",
 				Args: swa,
 				Resp: &wallet,
 			})
+			if err != nil {
+				return
+			}
 
 			err = p.engine.BootstrapInsertWallet(wallet)
 			if err != nil {
 				// ???, panic would be inappropriate
 			}
 		}
+
+		// Event downloading will be implemented later.
 	}
 
-	// Events will be implemented at a later time.
-
-	// 3. Download all of the blocks that have been processed since the
+	// Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being
 	// behind in the current round of consensus.
 	{
 		// figure out which block height is the latest
 		var currentMetadata state.Metadata
-		mr.SendMessage(network.Message{
+		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.Metadata",
 			Args: struct{}{},
 			Resp: &currentMetadata,
 		})
+		if err != nil {
+			return
+		}
 
-		for p.engine.Metadata().Height < currentMetadata.Height-1 {
-			var b delta.Block
-			mr.SendMessage(network.Message{
-				Dest: quorumSiblings[0],
-				Proc: "Participant.Block",
-				Args: p.engine.Metadata().Height,
-				Resp: &b,
-			})
-			p.engine.Compile(b)
+		for p.engine.Metadata().Height < currentMetadata.Height {
+			err = p.fetchAndCompileNextBlock(quorumSiblings)
+			if err != nil {
+				return
+			}
 		}
 	}
 
-	// 4. After bringing the quorum up to date (still missing the latest block,
-	// won't be able to self-compile), can begin downloading file segments. The
-	// only wallet segements to avoid are the wallet segments with active
-	// uploads. Since you aren't announced to the quorum yet, the uploader
-	// won't know to contact you and upload to you the file diff.
+	// Synchronize to the quorum (this implementation is non-cryptographic)
+	// and begin ticking.
+	//
+	// The method is a bit haphazard, but the goal is to insure that when
+	// ticking starts and updates come in, the quorum is guaranteed to be
+	// caught up. We do make certain (reasonable) assumptions about network
+	// speed.
+	//
+	// 1. Get the synchronization information of the current network,
+	// including the current height, the current step, and the progress
+	// throug the current step.
+	//
+	// 2. Submit the join request, waiting if the step is 0-2 because it's
+	// unclear whether the join request will make it into the current block
+	// with the low step numbers.
+	//
+	// 3. Download any blocks that are missing, catching up to the current
+	// quorum.
+	//
+	// 4. Wait for this block to finish (will not have join request), and
+	// the next block to finish (will have join request).
+	//
+	// 5. Begin ticking as soon as the current quorum hits step 0 after the
+	// block containint the join request. The participant can now start
+	// receiving SignedUpdates without synchronization issues.
+	//
+	// 6. Download the two blocks that we're missing. Updates will be held
+	// by the HandleSignedUpdate function until step 2 is reached, so these
+	// two blocks must be downloaded before step 2 is reached. The most
+	// recently completed block is not guaranteed to be available until
+	// step 1 is reached, so this must be taken into consideration.
+	//
+	// That's it! The rest of the code should maintain synchronization.
+	{
+		var cps ConsensusProgressStruct
+		err = mr.SendMessage(network.Message{
+			Dest: quorumSiblings[0],
+			Proc: "Participant.ConsensusProgress",
+			Args: struct{}{},
+			Resp: &cps,
+		})
+		if err != nil {
+			return
+		}
+		cpsReceived := time.Now()
 
-	// 5. After being accepted to the quorum as a full sibling, all downloads
-	// are fair game.
+		// Don't submit the joinRequest unless the step is greater than
+		// 2. It creates uncertainty over which block the join request
+		// will be accepted in. This can be revisited later to remove
+		// this artificial constraint.
+		if cps.CurrentStep < 3 {
+			time.Sleep(StepDuration * 3)
+		}
 
-	// 6. After collecting all downloads, announce synchronization and switch
-	// from being an unpaid bootstrapping participant to a paid active
-	// participant.
+		// Submit the join request.
+		// Create the sibling object that will be submitted to the
+		// quorum.
+		//inputSibling := state.Sibling{
+		//	Address:   p.address,
+		//	PublicKey: p.publicKey,
+		//}
+		//
+		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
+		// Create the join request and send it to the quorum.
+		joinRequest := delta.ScriptInput{
+			WalletID: tetherID,
+			Input:    delta.AddSiblingInput(nil), //(inputSibling),
+		}
+		for _, address := range quorumSiblings {
+			mr.SendAsyncMessage(network.Message{
+				Dest: address,
+				Proc: "Participant.AddScriptInput",
+				Args: joinRequest,
+			})
+		}
 
+		// Download any blocks that are missing that are currently available.
+		for p.engine.Metadata().Height < cps.Height {
+			err = p.fetchAndCompileNextBlock(quorumSiblings)
+			if err != nil {
+				return
+			}
+		}
+
+		// Wait for the current block to finish, and then for the next
+		// block to also finish, and begin ticking when the following
+		// block hits step 0.
+		sleepDuration := (time.Duration(state.QuorumSize-cps.CurrentStep) * StepDuration) - time.Since(cpsReceived) + time.Duration(state.QuorumSize)*StepDuration - cps.CurrentStepProgress
+		time.Sleep(sleepDuration)
+		go p.tick()
+
+		// Download the first missing block.
+		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		if err != nil {
+			return
+		}
+
+		// Sleep another step so that the second block becomes
+		// available.
+		time.Sleep(StepDuration)
+
+		// download the second missing block
+		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		if err != nil {
+			return
+		}
+	}
+
+	// Once accepted as a sibling, begin downloading all files.
+	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.
+	// Once all files are downloaded, announce full siblingness.
 	return
 }
 
