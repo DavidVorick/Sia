@@ -70,7 +70,9 @@ func (s *stackElem) print() string {
 		if p == nil {
 			break
 		}
-		str += fmt.Sprint(v2i(p.val))
+		b := make([]byte, 5)
+		copy(b, p.val)
+		str += fmt.Sprint(b)
 		str += " "
 		p = p.next
 	}
@@ -85,8 +87,8 @@ type scriptEnv struct {
 	registers  [256][]byte
 	stack      *stackElem
 	stackLen   int
-	wallet     state.Wallet
-	state      *state.State
+	wallet     *state.Wallet
+	engine     *Engine
 	// resource pools
 	instBalance int
 	costBalance int
@@ -125,8 +127,8 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	env = scriptEnv{
 		script: append(w.Script, si.Input...),
 		dptr:   len(w.Script),
-		wallet: w,
-		state:  &e.state,
+		wallet: &w,
+		engine: e,
 		// these values will likely be stored as part of the wallet
 		instBalance: maxInstructions,
 		costBalance: 10000,
@@ -138,7 +140,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 		fmt.Println("script execution failed:", err)
 	}
 
-	e.state.SaveWallet(env.wallet)
+	e.state.SaveWallet(w)
 	return
 }
 
@@ -183,13 +185,13 @@ func (env *scriptEnv) run() error {
 
 		if debug {
 			fmt.Println(op.print(fnArgs))
-			fmt.Println("    stack:", env.stack.print())
-			b := make([]byte, 20)
-			copy(b, env.registers[1])
-			fmt.Println("    register 1:", len(env.registers[1]), b)
-			b = make([]byte, 20)
-			copy(b, env.registers[2])
-			fmt.Println("    register 2:", len(env.registers[2]), b)
+			fmt.Println("\tstack:", env.stack.print())
+			//b := make([]byte, 20)
+			//copy(b, env.registers[1])
+			//fmt.Println("    register 1:", len(env.registers[1]), b)
+			//b = make([]byte, 20)
+			//copy(b, env.registers[2])
+			//fmt.Println("    register 2:", len(env.registers[2]), b)
 		}
 	}
 }
