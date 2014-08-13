@@ -70,7 +70,9 @@ func (s *stackElem) print() string {
 		if p == nil {
 			break
 		}
-		str += fmt.Sprint(v2i(p.val))
+		b := make([]byte, 5)
+		copy(b, p.val)
+		str += fmt.Sprint(b)
 		str += " "
 		p = p.next
 	}
@@ -183,13 +185,13 @@ func (env *scriptEnv) run() error {
 
 		if debug {
 			fmt.Println(op.print(fnArgs))
-			fmt.Println("    stack:", env.stack.print())
-			b := make([]byte, 20)
-			copy(b, env.registers[1])
-			fmt.Println("    register 1:", len(env.registers[1]), b)
-			b = make([]byte, 20)
-			copy(b, env.registers[2])
-			fmt.Println("    register 2:", len(env.registers[2]), b)
+			fmt.Println("\tstack:", env.stack.print())
+			//b := make([]byte, 20)
+			//copy(b, env.registers[1])
+			//fmt.Println("    register 1:", len(env.registers[1]), b)
+			//b = make([]byte, 20)
+			//copy(b, env.registers[2])
+			//fmt.Println("    register 2:", len(env.registers[2]), b)
 		}
 	}
 }
