@@ -337,7 +337,7 @@ func op_not_equal(args []byte) (err error) {
 	if err != nil {
 		return
 	}
-	push(b2v(bytes.Equal(a, b)))
+	push(b2v(!bytes.Equal(a, b)))
 	return
 }
 
