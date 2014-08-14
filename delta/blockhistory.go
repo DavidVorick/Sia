@@ -170,7 +170,7 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 		}
 		blockIndex = height - e.recentHistoryHead
 	} else {
-		err = fmt.Errorf("LoadBlock: Block not in available history.")
+		err = fmt.Errorf("LoadBlock: Block %v not in available history.", height)
 		return
 	}
 

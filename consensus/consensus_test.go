@@ -53,6 +53,40 @@ func TestConsensus(t *testing.T) {
 		t.Error("Update for the next block has not been accepted by the participant.")
 	}
 	p.updatesLock.RUnlock()
+
+	// Create a participant that will join the current existing
+	// participant. No timing shortcuts can be taken here, as the new
+	// participant is doing explicitly timed sleeping. The tether wallet
+	// used will be the same wallet used to tether the bootstrap
+	// participant.
+	p.engineLock.RLock()
+	quorumSiblings := p.engine.Metadata().Siblings
+	p.engineLock.RUnlock()
+	var quorumSiblingAddresses []network.Address
+	for _, sibling := range quorumSiblings {
+		if !sibling.Active {
+			continue
+		}
+		quorumSiblingAddresses = append(quorumSiblingAddresses, sibling.Address)
+	}
+	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, p.secretKey, quorumSiblingAddresses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// CreateJoiningParticipant won't return until it has fully integrated.
+	// Test that the integration was successful.
+	p.engineLock.RLock()
+	if !p.engine.Metadata().Siblings[0].Active || !p.engine.Metadata().Siblings[1].Active {
+		t.Error("Initial participant is not recognizing both siblings as active.")
+	}
+	p.engineLock.RUnlock()
+
+	joiningParticipant.engineLock.RLock()
+	if !joiningParticipant.engine.Metadata().Siblings[0].Active || !joiningParticipant.engine.Metadata().Siblings[1].Active {
+		t.Error("Joined participant is not recognizing both siblings as active.")
+	}
+	joiningParticipant.engineLock.RUnlock()
 }
 
 /*

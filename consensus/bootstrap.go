@@ -103,12 +103,12 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// Download a snapshot, which will form the basis of synchronization.
 	{
 		// get height of the most recent snapshot
-		var snapshotHead uint32
+		var metadata state.Metadata
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
-			Proc: "Participant.RecentSnapshotHeight",
+			Proc: "Participant.Metadata",
 			Args: struct{}{},
-			Resp: &snapshotHead,
+			Resp: &metadata,
 		})
 		if err != nil {
 			return
@@ -119,7 +119,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotMetadata",
-			Args: snapshotHead,
+			Args: metadata.RecentSnapshot,
 			Resp: &snapshotMetadata,
 		})
 		if err != nil {
@@ -132,7 +132,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotWalletList",
-			Args: snapshotHead,
+			Args: metadata.RecentSnapshot,
 			Resp: &walletList,
 		})
 		if err != nil {
@@ -142,7 +142,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// get each wallet individually and insert them into the quorum
 		for _, walletID := range walletList {
 			swa := SnapshotWalletArg{
-				SnapshotHead: snapshotHead,
+				SnapshotHead: metadata.RecentSnapshot,
 				WalletID:     walletID,
 			}
 
@@ -237,17 +237,17 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		cpsReceived := time.Now()
 
 		// Don't submit the joinRequest unless the step is greater than
-		// 2. It creates uncertainty over which block the join request
+		// 1. It creates uncertainty over which block the join request
 		// will be accepted in. This can be revisited later to remove
 		// this artificial constraint.
 		if cps.CurrentStep < 3 {
-			time.Sleep(StepDuration * 3)
+			time.Sleep(StepDuration * time.Duration(3-cps.CurrentStep))
 		}
 
 		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
 		// Create the join request and send it to the quorum.
 		var joinRequest delta.ScriptInput
-		inputSibling := &state.Sibling{
+		inputSibling := state.Sibling{
 			Address:   p.address,
 			PublicKey: p.publicKey,
 		}
@@ -274,7 +274,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// Wait for the current block to finish, and then for the next
 		// block to also finish, and begin ticking when the following
 		// block hits step 0.
-		sleepDuration := (time.Duration(state.QuorumSize-cps.CurrentStep) * StepDuration) - time.Since(cpsReceived) + time.Duration(state.QuorumSize)*StepDuration - cps.CurrentStepProgress
+		sleepDuration := (time.Duration(NumSteps-cps.CurrentStep) * StepDuration) - time.Since(cpsReceived) + time.Duration(NumSteps)*StepDuration - cps.CurrentStepProgress
 		time.Sleep(sleepDuration)
 		go p.tick()
 

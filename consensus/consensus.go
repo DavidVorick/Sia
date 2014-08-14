@@ -12,6 +12,10 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+const (
+	NumSteps = state.QuorumSize + 1
+)
+
 // An Update is the set of information sent by each participant during
 // consensus. This information includes the heartbeat, which contains required
 // information for being a part of the quorum, and it contains optional
@@ -56,6 +60,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	p.engineLock.RUnlock()
 
 	// Condense updates into a single non-repetitive block.
+	p.updatesLock.Lock()
 	{
 		// Create a map containing all ScriptInputs found in a heartbeat.
 		scriptInputMap := make(map[string]delta.ScriptInput)
@@ -123,6 +128,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 			b.AdvancementSignatures = append(b.AdvancementSignatures, advancementSignatureMap[k])
 		}
 	}
+	p.updatesLock.Unlock()
 	return
 }
 
@@ -268,8 +274,11 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Check that all of the signatures are valid, and that there are no repeats.
 	p.engineLock.RLock()
+	p.updatesLock.Lock()
 	updateHash, err := siacrypto.HashObject(su.Update)
 	if err != nil {
+		p.updatesLock.Unlock()
+		p.engineLock.RUnlock()
 		return
 	}
 	message := updateHash[:]
@@ -278,12 +287,16 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// Check bounds on current signatory.
 		if signatory >= state.QuorumSize {
 			err = errBounds
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
 		if !p.engine.Metadata().Siblings[signatory].Active {
 			err = errNonSibling
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
@@ -291,6 +304,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// SignedUpdate
 		if previousSignatories[signatory] {
 			err = errDoubleSign
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 		previousSignatories[signatory] = true
@@ -299,6 +314,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		verification := p.engine.Metadata().Siblings[signatory].PublicKey.Verify(su.Signatures[i], message)
 		if !verification {
 			err = errInvalidSignature
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
@@ -312,17 +329,20 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	_, exists := p.updates[su.Signatories[0]][updateHash]
 	if exists {
 		err = errHaveHeartbeat
+		p.updatesLock.Unlock()
 		return
 	}
 
 	// Check that there are less than two heartbeats from this host yet seen.
 	if len(p.updates[su.Signatories[0]]) >= 2 {
 		err = errManyHeartbeats
+		p.updatesLock.Unlock()
 		return
 	}
 
 	// Add the update to the list of seen updates.
 	p.updates[su.Signatories[0]][updateHash] = su.Update
+	p.updatesLock.Unlock()
 
 	// Sign the stack of signatures and append the signature to the stack, then
 	// announce the Update to everyone on the quorum

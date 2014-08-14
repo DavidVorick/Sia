@@ -29,7 +29,9 @@ type ConsensusProgressStruct struct {
 func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct) (err error) {
 	cps.Height = p.engine.Metadata().Height
 
+	p.tickLock.RLock()
 	cps.CurrentStep = p.currentStep
+	p.tickLock.RUnlock()
 
 	cps.CurrentStepProgress = time.Since(p.tickStart) % StepDuration
 	return

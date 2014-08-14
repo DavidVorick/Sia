@@ -46,7 +46,7 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 // AddSiblingInput returns a signed ScriptInput that calls the AddSibling
 // function. It is intended to be passed to a script that transfers execution
 // to the input.
-func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib *state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
+func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
 	si.WalletID = wid
 	encSib, err := siaencoding.Marshal(sib)
 	if err != nil {
@@ -126,7 +126,7 @@ var BootstrapScript = []byte{
 // control to the input if the verification was successful.
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	return append([]byte{
-		0x32, 0x0B, 0x00, // 00 move data pointer to public key
+		0x32, 0x0C, 0x00, // 00 move data pointer to public key
 		0x34, 0x20, //       03 push public key
 		0xE4,             // 05 push signed input
 		0x40,             // 06 verify signature
