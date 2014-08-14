@@ -262,11 +262,11 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		sleepDuration := (time.Duration(fullStepsToSleepThrough) * StepDuration) + timeRemainingThisStep
 
 		// Unlock all mutexes, sleep, and then relock all mutexes.
-		//p.engineLock.RUnlock()
+		p.engineLock.RUnlock()
 		p.tickLock.RUnlock()
 		time.Sleep(sleepDuration)
-		//p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
-		p.tickLock.RLock() // Interesting bug: switch this line with the prev line - deadlock!
+		p.engineLock.RLock()
+		p.tickLock.RLock()
 
 	}
 	p.tickLock.RUnlock()

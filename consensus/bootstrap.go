@@ -64,7 +64,8 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 }
 
 // A helper function for CreateJoiningParticipant, that downloads the next
-// block and compiles it into the participant.
+// block and compiles it into the participant. fetchAndCompileNextBlock
+// requires the engine mutex to be locked.
 func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
 	var b delta.Block
 	err = p.messageRouter.SendMessage(network.Message{
@@ -76,6 +77,7 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 	if err != nil {
 		return
 	}
+
 	p.engine.Compile(b)
 	return
 }
@@ -265,7 +267,9 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// Download any blocks that are missing that are currently available.
 		for p.engine.Metadata().Height < cps.Height {
+			p.engineLock.Lock()
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
+			p.engineLock.Unlock()
 			if err != nil {
 				return
 			}
@@ -279,7 +283,9 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		go p.tick()
 
 		// Download the first missing block.
+		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		p.engineLock.Unlock()
 		if err != nil {
 			return
 		}
@@ -289,14 +295,16 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		time.Sleep(StepDuration)
 
 		// download the second missing block
+		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		p.engineLock.Unlock()
 		if err != nil {
 			return
 		}
 	}
 
 	// Parse the metadata and figure out which sibling is ourselves.
-	p.engineLock.Lock()
+	p.engineLock.RLock()
 	for i, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
 			p.siblingIndex = byte(i)
@@ -304,7 +312,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		}
 	}
 	p.engine.SetSiblingIndex(p.siblingIndex)
-	p.engineLock.Unlock()
+	p.engineLock.RUnlock()
 
 	// Once accepted as a sibling, begin downloading all files.
 	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.

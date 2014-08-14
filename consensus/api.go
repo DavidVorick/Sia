@@ -11,7 +11,9 @@ import (
 // keep a history of so many blocks, so asking for future blocks or expired
 // blocks will return an error.
 func (p *Participant) Block(blockHeight uint32, block *delta.Block) (err error) {
+	p.engineLock.RLock()
 	*block, err = p.engine.LoadBlock(blockHeight)
+	p.engineLock.RUnlock()
 	return
 }
 
@@ -27,26 +29,32 @@ type ConsensusProgressStruct struct {
 // quorum through the current round of consensus. It is useful for indicating
 // when the next block will be ready.
 func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct) (err error) {
-	cps.Height = p.engine.Metadata().Height
-
 	p.tickLock.RLock()
-	cps.CurrentStep = p.currentStep
-	p.tickLock.RUnlock()
+	p.engineLock.RLock()
 
+	cps.Height = p.engine.Metadata().Height
+	cps.CurrentStep = p.currentStep
 	cps.CurrentStepProgress = time.Since(p.tickStart) % StepDuration
+
+	p.tickLock.RUnlock()
+	p.engineLock.RUnlock()
 	return
 }
 
 // Metadata is an RPC that returns the current state metadata.
 func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
+	p.engineLock.RLock()
 	*smd = p.engine.Metadata()
+	p.engineLock.RUnlock()
 	return
 }
 
 // UpdateSegment is an RPC that allows hosts to submit diffs that match updates
 // that have been confirmed by consensus.
 func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err error) {
+	p.engineLock.Lock()
 	*accepted, err = p.engine.UpdateSegment(sd)
+	p.engineLock.Unlock()
 
 	if *accepted {
 		// Submit a notification to the quorum that a match has been uploaded.
@@ -65,7 +73,9 @@ func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err e
 // Not sure what the use is for this, mostly wallets are downloaded via
 // snapshots. Doesn't hurt to have it, I just forget the use case.
 func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
+	p.engineLock.RLock()
 	*wl = p.engine.WalletList()
+	p.engineLock.RUnlock()
 	return
 }
 
