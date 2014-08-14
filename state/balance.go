@@ -1,6 +1,8 @@
 package state
 
 import (
+	"math/big"
+
 	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
@@ -8,12 +10,21 @@ import (
 // The actual 128-bit number will likely be in nano- or femto-siacoins.
 type Balance [16]byte
 
-// NewBalance creates a 128-bit Balance from two uint64s.
-func NewBalance(upper, lower uint64) (b Balance) {
-	uBytes := siaencoding.EncUint64(upper)
-	lBytes := siaencoding.EncUint64(lower)
-	copy(b[:8], lBytes)
-	copy(b[8:], uBytes)
+// NewBalance creates a Balance from a uint64. Larger Balances can be created
+// with the NewStringBalance function, or by modifying the bytes of a Balance
+// directly.
+func NewBalance(lower uint64) (b Balance) {
+	copy(b[:], siaencoding.EncUint64(lower))
+	return
+}
+
+// NewStringBalance creates a new Balance from a string containing a decimal
+// value. For reference, the largest possible decimal value of a Balance is
+// 340282366920938463463374607431768211456.
+func NewStringBalance(bal string) (b Balance) {
+	i := new(big.Int)
+	i.SetString(bal, 10)
+	copy(b[:], siaencoding.EncUint128(i))
 	return
 }
 

@@ -78,7 +78,7 @@ func TestSnapshotProcess(t *testing.T) {
 				Germ:         state.Entropy{1},
 				Seed:         state.Entropy{2},
 				EventCounter: 3,
-				StoragePrice: state.NewBalance(4, 5),
+				StoragePrice: state.NewBalance(45),
 				ParentBlock:  siacrypto.Hash{6},
 				Height:       7,
 			},
@@ -91,7 +91,7 @@ func TestSnapshotProcess(t *testing.T) {
 	// Save a handful of wallets into the quorum.
 	w1 := state.Wallet{
 		ID:      8,
-		Balance: state.NewBalance(9, 10),
+		Balance: state.NewBalance(910),
 		SectorSettings: state.SectorSettings{
 			Atoms: 11,
 			K:     12,
@@ -103,7 +103,7 @@ func TestSnapshotProcess(t *testing.T) {
 
 	w2 := state.Wallet{
 		ID:      17,
-		Balance: state.NewBalance(18, 19),
+		Balance: state.NewBalance(1819),
 		SectorSettings: state.SectorSettings{
 			Atoms: 20,
 			K:     21,

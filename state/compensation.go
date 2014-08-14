@@ -17,8 +17,8 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) (quorumWeight uint
 		panic(err)
 	}
 	weightedPrice := s.Metadata.StoragePrice
-	weightedPrice.Multiply(NewBalance(0, uint64(w.CompensationWeight())))
-	weightedPrice.Multiply(NewBalance(0, uint64(multiplier)))
+	weightedPrice.Multiply(NewBalance(uint64(w.CompensationWeight())))
+	weightedPrice.Multiply(NewBalance(uint64(multiplier)))
 
 	// If the wallet does not have enough money to pay for the storage it
 	// consumes between this block and next block, the wallet is deleted.
@@ -56,7 +56,7 @@ func (s *State) ExecuteCompensation() {
 
 	// Compensate each sibling.
 	compensation := s.Metadata.StoragePrice
-	compensation.Multiply(NewBalance(0, quorumWeight))
+	compensation.Multiply(NewBalance(quorumWeight))
 	for i := range s.Metadata.Siblings {
 		if !s.Metadata.Siblings[i].Active {
 			continue

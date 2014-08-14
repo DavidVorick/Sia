@@ -79,7 +79,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	// started.
 	err = e.state.InsertWallet(state.Wallet{
 		ID:      BootstrapWalletID,
-		Balance: state.NewBalance(0, 25000000),
+		Balance: state.NewBalance(25000000),
 		Script:  BootstrapScript,
 	})
 	if err != nil {
@@ -89,7 +89,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	// Create a wallet with the default script for the sibling to use.
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
-		Balance: state.NewBalance(0, 1000000),
+		Balance: state.NewBalance(1000000),
 		Script:  DefaultScript(sib.PublicKey),
 	}
 	err = e.state.InsertWallet(sibWallet)
