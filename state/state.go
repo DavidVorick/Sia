@@ -74,7 +74,7 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 	// Turn the id into a suffix that will follow the quorum prefix
 	suffixBytes := siaencoding.EncUint64(uint64(id))
 	suffix := siafiles.SafeFilename(suffixBytes)
-	filename = s.walletPrefix + suffix
+	filename = s.walletPrefix + "." + suffix
 	return
 }
 

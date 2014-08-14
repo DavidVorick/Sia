@@ -19,7 +19,7 @@ func TestConsensus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus"), 1)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1)
 	if err != nil {
 		t.Fatal(err)
 	}

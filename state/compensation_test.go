@@ -18,7 +18,7 @@ import (
 func TestExecuteCompensation(t *testing.T) {
 	// Initialize the state and set the storage price to 1.
 	var s State
-	s.SetWalletPrefix(siafiles.TempFilename("TestExecuteCompensation."))
+	s.SetWalletPrefix(siafiles.TempFilename("TestExecuteCompensation"))
 	s.Metadata.StoragePrice = NewBalance(0, 1)
 
 	// Create 3 wallets, a base wallet, a wallet with a script, and a wallet with

@@ -10,7 +10,7 @@ import (
 
 // initialize a script execution environment
 func initEnv() (e Engine, si ScriptInput) {
-	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest."))
+	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest"))
 	// create a wallet that immediately passes control to its input
 	e.state.InsertWallet(state.Wallet{
 		ID:      1,
