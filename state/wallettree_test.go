@@ -222,8 +222,8 @@ func TestWalletTree(t *testing.T) {
 
 	// Insert many nodes into the tree, each with a random weight. After each
 	// iteration, verify the integrity of the tree.
-	for z := 0; z < 50; z++ {
-		n = 257
+	for z := 0; z < 35; z++ {
+		n = 129
 		weights := make(map[uint64]bool) // keeps track of which elements have been added
 		for i := 0; i < n; i++ {
 			found := false

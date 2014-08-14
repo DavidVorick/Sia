@@ -29,7 +29,7 @@ type Participant struct {
 	updates            [state.QuorumSize]map[siacrypto.Hash]Update
 	scriptInputs       []delta.ScriptInput
 	updateAdvancements []state.UpdateAdvancement
-	updatesLock        sync.Mutex
+	updatesLock        sync.RWMutex
 
 	// Consensus Algorithm Status
 	ticking     bool
@@ -69,7 +69,8 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.messageRouter = mr
 
 	// Initialize the file prefix
-	p.engine.Initialize(filePrefix, p.siblingIndex)
+	p.engine.SetFilePrefix(filePrefix)
+	p.engine.SetSiblingIndex(p.siblingIndex)
 
 	return
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -63,7 +64,8 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 }
 
 // A helper function for CreateJoiningParticipant, that downloads the next
-// block and compiles it into the participant.
+// block and compiles it into the participant. fetchAndCompileNextBlock
+// requires the engine mutex to be locked.
 func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
 	var b delta.Block
 	err = p.messageRouter.SendMessage(network.Message{
@@ -75,12 +77,16 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 	if err != nil {
 		return
 	}
+
 	p.engine.Compile(b)
 	return
 }
 
-// TODO: add docstring
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, quorumSiblings []network.Address) (p *Participant, err error) {
+// CreateJoiningParticipant creates a new participant and integrates it as a
+// host with an existing quorum. It is assumed that the tetherID is an ID to a
+// generic wallet, and that the secret key is the key that should be the key
+// that is assiciated with the public key of the generic wallet.
+func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
 	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
@@ -99,12 +105,12 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// Download a snapshot, which will form the basis of synchronization.
 	{
 		// get height of the most recent snapshot
-		var snapshotHead uint32
+		var metadata state.Metadata
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
-			Proc: "Participant.RecentSnapshotHeight",
+			Proc: "Participant.Metadata",
 			Args: struct{}{},
-			Resp: &snapshotHead,
+			Resp: &metadata,
 		})
 		if err != nil {
 			return
@@ -115,7 +121,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotMetadata",
-			Args: snapshotHead,
+			Args: metadata.RecentSnapshot,
 			Resp: &snapshotMetadata,
 		})
 		if err != nil {
@@ -128,7 +134,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		err = mr.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotWalletList",
-			Args: snapshotHead,
+			Args: metadata.RecentSnapshot,
 			Resp: &walletList,
 		})
 		if err != nil {
@@ -138,7 +144,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// get each wallet individually and insert them into the quorum
 		for _, walletID := range walletList {
 			swa := SnapshotWalletArg{
-				SnapshotHead: snapshotHead,
+				SnapshotHead: metadata.RecentSnapshot,
 				WalletID:     walletID,
 			}
 
@@ -233,24 +239,24 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		cpsReceived := time.Now()
 
 		// Don't submit the joinRequest unless the step is greater than
-		// 2. It creates uncertainty over which block the join request
+		// 1. It creates uncertainty over which block the join request
 		// will be accepted in. This can be revisited later to remove
 		// this artificial constraint.
 		if cps.CurrentStep < 3 {
-			time.Sleep(StepDuration * 3)
+			time.Sleep(StepDuration * time.Duration(3-cps.CurrentStep))
 		}
 
-		// Submit the join request.
-		// Create the sibling object that will be submitted to the
-		// quorum.
-		//inputSibling := &state.Sibling{
-		//	Address:   p.address,
-		//	PublicKey: p.publicKey,
-		//}
-		//
 		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
 		// Create the join request and send it to the quorum.
-		joinRequest := delta.ScriptInput{} //delta.AddSiblingInput({WalletID}, inputSibling, {SecretKey})
+		var joinRequest delta.ScriptInput
+		inputSibling := state.Sibling{
+			Address:   p.address,
+			PublicKey: p.publicKey,
+		}
+		joinRequest, err = delta.AddSiblingInput(tetherID, inputSibling, tetherWalletSecretKey)
+		if err != nil {
+			return
+		}
 		for _, address := range quorumSiblings {
 			mr.SendAsyncMessage(network.Message{
 				Dest: address,
@@ -261,7 +267,9 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// Download any blocks that are missing that are currently available.
 		for p.engine.Metadata().Height < cps.Height {
+			p.engineLock.Lock()
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
+			p.engineLock.Unlock()
 			if err != nil {
 				return
 			}
@@ -270,12 +278,14 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// Wait for the current block to finish, and then for the next
 		// block to also finish, and begin ticking when the following
 		// block hits step 0.
-		sleepDuration := (time.Duration(state.QuorumSize-cps.CurrentStep) * StepDuration) - time.Since(cpsReceived) + time.Duration(state.QuorumSize)*StepDuration - cps.CurrentStepProgress
+		sleepDuration := (time.Duration(NumSteps-cps.CurrentStep) * StepDuration) - time.Since(cpsReceived) + time.Duration(NumSteps)*StepDuration - cps.CurrentStepProgress
 		time.Sleep(sleepDuration)
 		go p.tick()
 
 		// Download the first missing block.
+		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		p.engineLock.Unlock()
 		if err != nil {
 			return
 		}
@@ -285,55 +295,27 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		time.Sleep(StepDuration)
 
 		// download the second missing block
+		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
+		p.engineLock.Unlock()
 		if err != nil {
 			return
 		}
 	}
+
+	// Parse the metadata and figure out which sibling is ourselves.
+	p.engineLock.RLock()
+	for i, sibling := range p.engine.Metadata().Siblings {
+		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
+			p.siblingIndex = byte(i)
+			break
+		}
+	}
+	p.engine.SetSiblingIndex(p.siblingIndex)
+	p.engineLock.RUnlock()
 
 	// Once accepted as a sibling, begin downloading all files.
 	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.
 	// Once all files are downloaded, announce full siblingness.
 	return
 }
-
-/* // CreateParticipant initializes a participant, and then either sets itself up
-// as the bootstrap or establishes itself as a sibling on an existing network
-func CreateParticipant(messageRouter network.MessageRouter, participantPrefix string, bootstrap bool) (p *Participant, err error) {
-
-	////////////////////////////
-	// Bootstrap As A Hopeful //
-	////////////////////////////
-
-	// 1. Synchronize to the current quorum to correctly produce blocks from
-	// heartbeats
-	synchronize := new(Synchronize)
-	fmt.Println("Synchronizing to the Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.Synchronize",
-		Args: struct{}{},
-		Resp: synchronize,
-	})
-	if err != nil {
-		return
-	}
-	// lock not needed as this is the only thread
-	p.currentStep = synchronize.currentStep
-	p.heartbeats = synchronize.heartbeats
-
-	// 2. Subscribe to the current quorum and receive all heartbeats
-	fmt.Println("Subscribing to the Bootstrap")
-	err = p.messageRouter.SendMessage(&network.Message{
-		Dest: BootstrapAddress,
-		Proc: "Participant.Subscribe",
-		Args: p.self.Address(),
-		Resp: nil,
-	})
-	if err != nil {
-		return
-	}
-
-	// begin processing heartbeats
-	go p.tick()
-}*/

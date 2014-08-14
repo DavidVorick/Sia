@@ -85,7 +85,8 @@ func TestSnapshotProcess(t *testing.T) {
 		},
 		recentHistoryHead: ^uint32(0),
 	}
-	e.Initialize(siafiles.TempFilename("TestSnapshotProcess"), 0)
+	e.SetFilePrefix(siafiles.TempFilename("TestSnapshotProcess"))
+	e.SetSiblingIndex(0)
 
 	// Save a handful of wallets into the quorum.
 	w1 := state.Wallet{

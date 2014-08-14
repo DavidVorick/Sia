@@ -15,7 +15,7 @@ const (
 // activeHistoryFilename, and should only be called by these two functions.
 // Other history filenames are not guaranteed to exist.
 func (e *Engine) historyFilename(head uint32) string {
-	return fmt.Sprintf("%sblockHistory.%v", e.filePrefix, head)
+	return fmt.Sprintf("%s.blockHistory.%v", e.filePrefix, head)
 }
 
 // recentHistoryFilename returns the name of the file containing the
@@ -170,7 +170,7 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 		}
 		blockIndex = height - e.recentHistoryHead
 	} else {
-		err = fmt.Errorf("LoadBlock: Block not in available history.")
+		err = fmt.Errorf("LoadBlock: Block %v not in available history.", height)
 		return
 	}
 

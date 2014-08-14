@@ -30,7 +30,7 @@ func appendAll(slices ...[]byte) []byte {
 // signature of its own data. Currently, only the Input field is included in
 // the signature.
 func (si *ScriptInput) Sign(secretKey siacrypto.SecretKey) (err error) {
-	sig, err := secretKey.SignObject(si)
+	sig, err := secretKey.Sign(si.Input)
 	if err != nil {
 		return
 	}
@@ -46,7 +46,7 @@ func CreateWalletInput(walletID uint64, s []byte) []byte {
 // AddSiblingInput returns a signed ScriptInput that calls the AddSibling
 // function. It is intended to be passed to a script that transfers execution
 // to the input.
-func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib *state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
+func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
 	si.WalletID = wid
 	encSib, err := siaencoding.Marshal(sib)
 	if err != nil {
@@ -54,7 +54,7 @@ func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib *state.Siblin
 	}
 	si.Input = appendAll(
 		[]byte{
-			0x33, 0x08, 0x00, // move data pointer to encoded sibling
+			0x33, 0x06, 0x00, // move data pointer to encoded sibling
 			0xE4, //             push encoded sibling
 			0x41, //             call AddSibling
 			0xFF, //             exit
@@ -125,13 +125,14 @@ var BootstrapScript = []byte{
 // DefaultScript returns a script that verifies a signature, and transfers
 // control to the input if the verification was successful.
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
+	keyl, sigl := byte(siacrypto.PublicKeySize), byte(siacrypto.SignatureSize)
 	return append([]byte{
-		0x32, 0x0B, 0x00, // 00 move data pointer to public key
-		0x34, 0x20, //       03 push public key
+		0x32, 0x0C, 0x00, // 00 move data pointer to public key
+		0x34, keyl, //       03 push public key
 		0xE4,             // 05 push signed input
 		0x40,             // 06 verify signature
 		0xE5,             // 07 if invalid signature, reject
-		0x32, 0x4C, 0x00, // 08 move data pointer to input body (12 + PublicKeySize + SignatureSize)
+		0x33, sigl, 0x00, // 08 move data pointer to input body
 		0x38, //             11 execute input
 	}, publicKey[:]...)
 }

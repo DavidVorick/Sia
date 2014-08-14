@@ -48,8 +48,12 @@ type Engine struct {
 // It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
 	e.filePrefix = prefix
-	walletPrefix := prefix + "wallet."
+	walletPrefix := prefix + ".wallet"
 	e.state.SetWalletPrefix(walletPrefix)
+}
+
+func (e *Engine) SetSiblingIndex(index byte) {
+	e.siblingIndex = index
 }
 
 // Metadata is a getter that returns the state.Metadata object.
@@ -66,13 +70,6 @@ func (e *Engine) SiblingIndex() byte {
 // be accessed by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
-}
-
-// Initialize sets various fields of the Engine object.
-func (e *Engine) Initialize(filePrefix string, siblingIndex byte) {
-	e.SetFilePrefix(filePrefix)
-	e.siblingIndex = siblingIndex
-	return
 }
 
 // Bootstrap returns an engine that has its variables set so that

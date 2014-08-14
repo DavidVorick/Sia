@@ -12,6 +12,10 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+const (
+	NumSteps = state.QuorumSize + 1
+)
+
 // An Update is the set of information sent by each participant during
 // consensus. This information includes the heartbeat, which contains required
 // information for being a part of the quorum, and it contains optional
@@ -49,18 +53,14 @@ var (
 // condenseBlock assumes that a heartbeat has a valid signature and that the
 // parent is the correct parent.
 func (p *Participant) condenseBlock() (b delta.Block) {
-	// Lock the engine and the updates variables
-	p.engineLock.RLock()
-	defer p.engineLock.RUnlock()
-
-	p.updatesLock.Lock()
-	defer p.updatesLock.Unlock()
-
 	// Set the height and parent of the block.
+	p.engineLock.RLock()
 	b.Height = p.engine.Metadata().Height
 	b.ParentBlock = p.engine.Metadata().ParentBlock
+	p.engineLock.RUnlock()
 
 	// Condense updates into a single non-repetitive block.
+	p.updatesLock.Lock()
 	{
 		// Create a map containing all ScriptInputs found in a heartbeat.
 		scriptInputMap := make(map[string]delta.ScriptInput)
@@ -128,6 +128,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 			b.AdvancementSignatures = append(b.AdvancementSignatures, advancementSignatureMap[k])
 		}
 	}
+	p.updatesLock.Unlock()
 	return
 }
 
@@ -149,10 +150,13 @@ func (p *Participant) newSignedUpdate() {
 	}
 
 	// Create the update with the heartbeat and heartbeat signature.
+	p.engineLock.Lock()
 	update := Update{
+		Height:             p.engine.Metadata().Height,
 		Heartbeat:          hb,
 		HeartbeatSignature: signature,
 	}
+	p.engineLock.Unlock()
 
 	// Attach all of the script inputs to the update, clearing the list of
 	// script inputs in the process.
@@ -192,7 +196,9 @@ func (p *Participant) newSignedUpdate() {
 	if err != nil {
 		panic(err)
 	}
+	p.updatesLock.Lock()
 	p.updates[p.siblingIndex][updateHash] = update
+	p.updatesLock.Unlock()
 
 	// Broadcast the SignedUpdate to the network.
 	p.broadcast(network.Message{
@@ -228,18 +234,17 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		return
 	}
 
-	// Lock the engine for the duration of the function.
-	p.engineLock.RLock()
-	defer p.engineLock.RUnlock()
-
 	// Check that the update is not late.
 	p.tickLock.RLock()
+	p.engineLock.RLock()
 	if (su.Update.Height == p.engine.Metadata().Height && int(p.currentStep) > len(su.Signatures)) || su.Update.Height < p.engine.Metadata().Height {
 		err = errLateUpdate
 		p.tickLock.RUnlock()
+		p.engineLock.RUnlock()
 		return
 	}
 	p.tickLock.RUnlock()
+	p.engineLock.RUnlock()
 
 	// Wait for the update if the update has arrived early. Ideally, we
 	// want to wait until exactly the beginning of step 2. The function
@@ -249,6 +254,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	// Additionally, stall all updates from being processed until the
 	// beginning of step 2, which will prevent newcomers from being lost.
 	p.tickLock.RLock()
+	p.engineLock.RLock()
 	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
 		// Sleep until the beginning of step 2.
 		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
@@ -259,19 +265,20 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		p.engineLock.RUnlock()
 		p.tickLock.RUnlock()
 		time.Sleep(sleepDuration)
-		p.engineLock.Lock() // Interesting bug: switch this line with the next line - deadlock!
-		p.tickLock.RLock()  // Interesting bug: switch this line with the prev line - deadlock!
+		p.engineLock.RLock()
+		p.tickLock.RLock()
 
 	}
 	p.tickLock.RUnlock()
-
-	// Lock the updates variable for the duration of the function.
-	p.updatesLock.Lock()
-	defer p.updatesLock.Unlock()
+	p.engineLock.RUnlock()
 
 	// Check that all of the signatures are valid, and that there are no repeats.
+	p.engineLock.RLock()
+	p.updatesLock.Lock()
 	updateHash, err := siacrypto.HashObject(su.Update)
 	if err != nil {
+		p.updatesLock.Unlock()
+		p.engineLock.RUnlock()
 		return
 	}
 	message := updateHash[:]
@@ -280,12 +287,16 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// Check bounds on current signatory.
 		if signatory >= state.QuorumSize {
 			err = errBounds
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
 		if !p.engine.Metadata().Siblings[signatory].Active {
 			err = errNonSibling
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
@@ -293,6 +304,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// SignedUpdate
 		if previousSignatories[signatory] {
 			err = errDoubleSign
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 		previousSignatories[signatory] = true
@@ -301,6 +314,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		verification := p.engine.Metadata().Siblings[signatory].PublicKey.Verify(su.Signatures[i], message)
 		if !verification {
 			err = errInvalidSignature
+			p.updatesLock.Unlock()
+			p.engineLock.RUnlock()
 			return
 		}
 
@@ -308,22 +323,26 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// the next verification.
 		message = append(su.Signatures[i][:], message...)
 	}
+	p.engineLock.RUnlock()
 
 	// Check if this update has already been received.
 	_, exists := p.updates[su.Signatories[0]][updateHash]
 	if exists {
 		err = errHaveHeartbeat
+		p.updatesLock.Unlock()
 		return
 	}
 
 	// Check that there are less than two heartbeats from this host yet seen.
 	if len(p.updates[su.Signatories[0]]) >= 2 {
 		err = errManyHeartbeats
+		p.updatesLock.Unlock()
 		return
 	}
 
 	// Add the update to the list of seen updates.
 	p.updates[su.Signatories[0]][updateHash] = su.Update
+	p.updatesLock.Unlock()
 
 	// Sign the stack of signatures and append the signature to the stack, then
 	// announce the Update to everyone on the quorum
