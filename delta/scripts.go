@@ -30,7 +30,7 @@ func appendAll(slices ...[]byte) []byte {
 // signature of its own data. Currently, only the Input field is included in
 // the signature.
 func (si *ScriptInput) Sign(secretKey siacrypto.SecretKey) (err error) {
-	sig, err := secretKey.SignObject(si)
+	sig, err := secretKey.Sign(si.Input)
 	if err != nil {
 		return
 	}
