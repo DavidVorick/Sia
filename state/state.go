@@ -7,8 +7,34 @@ import (
 	"github.com/NebulousLabs/Sia/siafiles"
 )
 
+const (
+	// QuorumSize is the maximum number of siblings in a quorum.
+	QuorumSize byte = 4
+	// AtomSize is the number of bytes in an atom.
+	AtomSize int = 32
+	// AtomsPerQuorum is the maximum number of atoms that can be stored on
+	// a single quorum.
+	AtomsPerQuorum int = 16777216
+	// AtomsPerSector is the number of atoms in a sector. Final value
+	// likely to be 2^13-2^16
+	AtomsPerSector uint16 = 1024
+
+	// SiblingPassiveWindow is the number of blocks that a sibling is
+	// allowed to be passive.
+	SiblingPassiveWindow = 5
+)
+
 // A Sibling is the public facing information of participants on the quorum.
-// Every quorum contains a list of all siblings.
+// Every quorum contains a list of all siblings. The Status of a sibling
+// indicates it's standing with the quorum. ^byte(0) indicates that the sibling
+// is 'Inactive', and that there are no hosts filling that position. A standing
+// of '5-1' indicates that the sibling is 'Passive', with the number indicating
+// how many compiles until the sibling becomes active. A passive sibling is
+// sent updates during consensus, and its signatures are accepted during
+// consensus, but its updates are not required. Updates are ignored and a
+// passive sibling will not be included in compensation. An active sibling is a
+// full sibing that _must_ participate in consensus and provide updates to the
+// network.
 type Sibling struct {
 	Status    byte
 	Index     byte
@@ -17,20 +43,23 @@ type Sibling struct {
 	WalletID  WalletID
 }
 
-const (
-	// QuorumSize is the maximum number of siblings in a quorum.
-	QuorumSize byte = 4
-	// AtomSize is the number of bytes in an atom.
-	AtomSize int = 32
-	// AtomsPerQuorum is the maximum number of atoms that can be stored on a
-	// single quorum.
-	AtomsPerQuorum int = 16777216
-	// AtomsPerSector is the number of atoms in a sector. Final value likely to
-	// be 2^13-2^16
-	AtomsPerSector uint16 = 1024
-)
+// Active returns true if the sibling is a fully active member of the quorum
+// according to the status variable, false if the sibling is passive or
+// inactive.
+func (sib Sibling) Active() bool {
+	return sib.Status == 0
+}
 
-// TODO: add docstring
+// Inactive returns true if the sibling is inactive, and retuns false if the
+// sibling is active or passive.
+func (sib Sibling) Inactive() bool {
+	return sib.Status == ^byte(0)
+}
+
+// The State struct contains all of the information about the current state of
+// the quorum. This includes the list of wallets, all events, any file-updates
+// that are in progress, and eventually information about the metaquorums as
+// well.
 type State struct {
 	// A struct containing all of the simple, single-variable data of the quorum.
 	Metadata Metadata

@@ -46,7 +46,7 @@ func TestConsensus(t *testing.T) {
 	p.engineLock.RUnlock()
 	var quorumSiblingAddresses []network.Address
 	for _, sibling := range quorumSiblings {
-		if !sibling.Active {
+		if sibling.Inactive() {
 			continue
 		}
 		quorumSiblingAddresses = append(quorumSiblingAddresses, sibling.Address)
@@ -59,13 +59,13 @@ func TestConsensus(t *testing.T) {
 	// CreateJoiningParticipant won't return until it has fully integrated.
 	// Test that the integration was successful.
 	p.engineLock.RLock()
-	if !p.engine.Metadata().Siblings[0].Active || !p.engine.Metadata().Siblings[1].Active {
+	if p.engine.Metadata().Siblings[0].Inactive() || p.engine.Metadata().Siblings[1].Inactive() {
 		t.Error("Initial participant is not recognizing both siblings as active.")
 	}
 	p.engineLock.RUnlock()
 
 	joiningParticipant.engineLock.RLock()
-	if !joiningParticipant.engine.Metadata().Siblings[0].Active || !joiningParticipant.engine.Metadata().Siblings[1].Active {
+	if joiningParticipant.engine.Metadata().Siblings[0].Inactive() || joiningParticipant.engine.Metadata().Siblings[1].Inactive() {
 		t.Error("Joined participant is not recognizing both siblings as active.")
 	}
 	joiningParticipant.engineLock.RUnlock()
@@ -109,8 +109,8 @@ func TestConsensus(t *testing.T) {
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
 		for j, sibling := range participant.engine.Metadata().Siblings {
-			if !sibling.Active {
-				t.Error("Sibling not recognized as active for iterators", i, ",", j)
+			if sibling.Inactive() {
+				t.Error("Sibling recognized as inactive for iterators", i, ",", j)
 			}
 		}
 		participant.engineLock.RUnlock()

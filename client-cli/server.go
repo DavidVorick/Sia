@@ -33,10 +33,12 @@ func serverMetadataWalkthrough(c *client.Client) (err error) {
 
 	var siblingString string
 	for i := range metadata.Siblings {
-		if metadata.Siblings[i].Active {
+		if metadata.Siblings[i].Active() {
 			siblingString = fmt.Sprintf("%s\t\tSibling %v: Active\n", siblingString, i)
-		} else {
+		} else if metadata.Siblings[i].Inactive() {
 			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
+		} else {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.", siblingString, i, metadata.Siblings[i].Status)
 		}
 	}
 

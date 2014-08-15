@@ -23,8 +23,8 @@ func TestCreateParticipantFunctions(t *testing.T) {
 
 	var metadata state.Metadata
 	p.Metadata(struct{}{}, &metadata)
-	if !metadata.Siblings[0].Active {
-		t.Error("No sibling in the bootstrap position.")
+	if !metadata.Siblings[0].Active() {
+		t.Error("Sibling in the bootstrap position not marked as active!")
 	}
 	p.tickLock.Lock()
 	if p.currentStep != 1 {

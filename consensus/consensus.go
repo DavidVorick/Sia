@@ -293,10 +293,8 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
-		if !p.engine.Metadata().Siblings[signatory].Active {
+		if p.engine.Metadata().Siblings[signatory].Inactive() {
 			err = errNonSibling
-			println("NON SIB MAKE THIS MESSAGE GIAGANTIC SO TAT IT STANDS OUT FVERY VERY MUCH")
-			println(signatory)
 			p.updatesLock.Unlock()
 			p.engineLock.RUnlock()
 			return

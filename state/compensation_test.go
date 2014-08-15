@@ -52,7 +52,7 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	s.InsertWallet(sib0Wallet)
 	sib0 := Sibling{
-		Active:   true,
+		Status:   0,
 		Index:    0,
 		WalletID: 3,
 	}
@@ -106,7 +106,7 @@ func TestExecuteCompensation(t *testing.T) {
 	}
 	s.InsertWallet(sib1Wallet)
 	sib1 := Sibling{
-		Active:   true,
+		Status:   0,
 		Index:    1,
 		WalletID: 4,
 	}

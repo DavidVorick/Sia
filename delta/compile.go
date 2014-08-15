@@ -20,7 +20,7 @@ func (e *Engine) Compile(b Block) {
 	var siblingEntropy []byte
 	for i, heartbeat := range b.Heartbeats {
 		// Ignore heartbeat if there's no sibling.
-		if !e.state.Metadata.Siblings[i].Active {
+		if !e.state.Metadata.Siblings[i].Active() {
 			continue
 		}
 
