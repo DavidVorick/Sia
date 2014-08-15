@@ -57,6 +57,11 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	// Create the first update.
 	p.newSignedUpdate()
 
+	// Run the first compile.
+	block := p.condenseBlock()
+	p.engine.Compile(block)
+	p.newSignedUpdate()
+
 	// Begin ticking.
 	go p.tick()
 
@@ -184,12 +189,14 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			return
 		}
 
+		p.engineLock.Lock()
 		for p.engine.Metadata().Height < currentMetadata.Height {
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
 			if err != nil {
 				return
 			}
 		}
+		p.engineLock.Unlock()
 	}
 
 	// Synchronize to the quorum (this implementation is non-cryptographic)
@@ -311,6 +318,8 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			break
 		}
 	}
+	println("PRINTING DISCOVERED INDEX")
+	println(p.siblingIndex)
 	p.engine.SetSiblingIndex(p.siblingIndex)
 	p.engineLock.RUnlock()
 

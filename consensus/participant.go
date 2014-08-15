@@ -86,11 +86,15 @@ func (p *Participant) Ping(_ struct{}, _ *struct{}) error {
 // when the response value needs to be checked. It also discards any errors
 // received.
 func (p *Participant) broadcast(message network.Message) {
+	println("Doing a broadcast")
+	println(p.siblingIndex)
 	// send the message to all of the siblings in the quorum
+	p.engineLock.Lock()
 	for _, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Active {
 			message.Dest = sibling.Address
 			p.messageRouter.SendAsyncMessage(message)
 		}
 	}
+	p.engineLock.Unlock()
 }

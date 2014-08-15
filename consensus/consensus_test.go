@@ -1,14 +1,17 @@
 package consensus
 
 import (
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siafiles"
-	"github.com/NebulousLabs/Sia/state"
 )
 
+// TestConsensus is the catch-all function for testing the components of the
+// Sia backend. Proper testing often requires a quorum (and even a full quorum)
+// to be established and in full consensus. This takes many lines of code,
+// which are all handled below.
 func TestConsensus(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -24,35 +27,14 @@ func TestConsensus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Set the current step to 4 so that a compile will be triggered after
-	// 1 step.
-	p.tickLock.Lock()
-	p.currentStep = state.QuorumSize
-	p.tickLock.Unlock()
-
-	// Wait for the compile to trigger.
-	time.Sleep(StepDuration + 50*time.Millisecond)
-
-	// Verify that the compile has triggered.
-	p.engineLock.RLock()
-	if p.engine.Metadata().Height != 1 {
-		t.Error("Attempted to trigger compile, but height is reported as", p.engine.Metadata().Height)
-	}
-	p.engineLock.RUnlock()
-
-	// Verify that the participant has not thrown itself from the quorum.
-	p.engineLock.RLock()
-	if !p.engine.Metadata().Siblings[0].Active {
-		t.Error("Bootstrapped participant has thrown itself from the quorum.")
-	}
-	p.engineLock.RUnlock()
-
 	// Verify that the next update has been accepted.
 	p.updatesLock.RLock()
 	if len(p.updates[0]) != 1 {
 		t.Error("Update for the next block has not been accepted by the participant.")
 	}
 	p.updatesLock.RUnlock()
+
+	// Sleep for a block so that a snapshot is created. In the future we may want to have the snapshot build itself even before the first compile.
 
 	// Create a participant that will join the current existing
 	// participant. No timing shortcuts can be taken here, as the new
@@ -87,6 +69,52 @@ func TestConsensus(t *testing.T) {
 		t.Error("Joined participant is not recognizing both siblings as active.")
 	}
 	joiningParticipant.engineLock.RUnlock()
+
+	// Add 2 more participants simultaneously and see if everything is
+	// stable upon completion. The mutexing is so that non-parallel
+	// functions can run in parallel, while the program still has to wait
+	// for both to finish. I scouted around briefly online and couldn't
+	// find a better way to do this. Idiomatic go would probably use
+	// channels, this seems like an appropriate place for them.
+	var join2 *Participant
+	var join3 *Participant
+	var j1Mutex sync.Mutex
+	var j2Mutex sync.Mutex
+	j1Mutex.Lock()
+	j2Mutex.Lock()
+	go func() {
+		var err error
+		join2, err = CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, p.secretKey, quorumSiblingAddresses)
+		if err != nil {
+			t.Fatal(err)
+		}
+		j1Mutex.Unlock()
+	}()
+	go func() {
+		var err error
+		join3, err = CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, p.secretKey, quorumSiblingAddresses)
+		if err != nil {
+			t.Fatal(err)
+		}
+		j2Mutex.Unlock()
+	}()
+	j1Mutex.Lock()
+	j2Mutex.Lock()
+	j1Mutex.Unlock() // for good measure
+	j2Mutex.Unlock() // for good measure
+
+	// At this point, there should be a full quorum, where each participant
+	// recognized all other participants. We run a check to see that each
+	// participant recognizes each other participant as active siblings.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		participant.engineLock.RLock()
+		for j, sibling := range participant.engine.Metadata().Siblings {
+			if !sibling.Active {
+				t.Error("Sibling not recognized as active for iterators", i, ",", j)
+			}
+		}
+		participant.engineLock.RUnlock()
+	}
 }
 
 /*

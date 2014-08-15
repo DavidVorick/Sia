@@ -30,12 +30,14 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 		if !verified {
+			println("Bad signature on heartbeat")
 			e.state.TossSibling(byte(i))
 			continue
 		}
 
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
+			println("bad parent block")
 			e.state.TossSibling(byte(i))
 			continue
 		}
