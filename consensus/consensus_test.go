@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/NebulousLabs/Sia/network"
@@ -73,35 +72,23 @@ func TestConsensus(t *testing.T) {
 	// Add 2 more participants simultaneously and see if everything is
 	// stable upon completion. The mutexing is so that non-parallel
 	// functions can run in parallel, while the program still has to wait
-	// for both to finish. I scouted around briefly online and couldn't
-	// find a better way to do this. Idiomatic go would probably use
-	// channels, this seems like an appropriate place for them.
-	var join2 *Participant
-	var join3 *Participant
-	var j1Mutex sync.Mutex
-	var j2Mutex sync.Mutex
-	j1Mutex.Lock()
-	j2Mutex.Lock()
+	// for both to finish.
+	joinChan := make(chan *Participant)
 	go func() {
-		var err error
-		join2, err = CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, p.secretKey, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
-		j1Mutex.Unlock()
+		joinChan <- p
 	}()
 	go func() {
-		var err error
-		join3, err = CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, p.secretKey, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
-		j2Mutex.Unlock()
+		joinChan <- p
 	}()
-	j1Mutex.Lock()
-	j2Mutex.Lock()
-	j1Mutex.Unlock() // for good measure
-	j2Mutex.Unlock() // for good measure
+	join2, join3 := <-joinChan, <-joinChan
 
 	// At this point, there should be a full quorum, where each participant
 	// recognized all other participants. We run a check to see that each
