@@ -1,4 +1,5 @@
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/erasure/longhair/bin/liblonghair.a -lstdc++"
+packages = client consensus delta erasure network siacrypto siaencoding state
 
 all: submodule-update install
 
@@ -44,61 +45,28 @@ test-state:
 	$(cgo_ldflags) go test -v -race ./state
 
 cover-set:
-	mkdir -p cover
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/consensus-set.out ./consensus
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/delta-set.out ./delta
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/client-set.out ./client
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/erasure-set.out ./erasure
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/network-set.out ./network
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/siacrypto-set.out ./siacrypto
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/siaencoding-set.out ./siaencoding
-	$(cgo_ldflags) go test -covermode=set -coverprofile=cover/state-set.out ./state
-	$(cgo_ldflags) go tool cover -html=cover/consensus-set.out -o=cover/consensus-set.html
-	$(cgo_ldflags) go tool cover -html=cover/delta-set.out -o=cover/delta-set.html
-	$(cgo_ldflags) go tool cover -html=cover/client-set.out -o=cover/client-set.html
-	$(cgo_ldflags) go tool cover -html=cover/erasure-set.out -o=cover/erasure-set.html
-	$(cgo_ldflags) go tool cover -html=cover/network-set.out -o=cover/network-set.html
-	$(cgo_ldflags) go tool cover -html=cover/siacrypto-set.out -o=cover/siacrypto-set.html
-	$(cgo_ldflags) go tool cover -html=cover/siaencoding-set.out -o=cover/siaencoding-set.html
-	$(cgo_ldflags) go tool cover -html=cover/state-set.out -o=cover/state-set.html
+	@mkdir -p cover
+	@for package in $(packages); do \
+		$(cgo_ldflags) go test -covermode=set -coverprofile=cover/$$package-set.out ./$$package ; \
+		$(cgo_ldflags) go tool cover -html=cover/$$package-set.out -o=cover/$$package-set.html ; \
+		rm cover/$$package-set.out ; \
+	done
 
 cover-count:
-	mkdir -p cover
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/consensus-count.out ./consensus
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/delta-count.out ./delta
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/client-count.out ./client
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/erasure-count.out ./erasure
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/network-count.out ./network
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/siacrypto-count.out ./siacrypto
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/siaencoding-count.out ./siaencoding
-	$(cgo_ldflags) go test -covermode=count -coverprofile=cover/state-count.out ./state
-	$(cgo_ldflags) go tool cover -html=cover/consensus-count.out -o=cover/consensus-count.html
-	$(cgo_ldflags) go tool cover -html=cover/delta-count.out -o=cover/delta-count.html
-	$(cgo_ldflags) go tool cover -html=cover/client-count.out -o=cover/client-count.html
-	$(cgo_ldflags) go tool cover -html=cover/erasure-count.out -o=cover/erasure-count.html
-	$(cgo_ldflags) go tool cover -html=cover/network-count.out -o=cover/network-count.html
-	$(cgo_ldflags) go tool cover -html=cover/siacrypto-count.out -o=cover/siacrypto-count.html
-	$(cgo_ldflags) go tool cover -html=cover/siaencoding-count.out -o=cover/siaencoding-count.html
-	$(cgo_ldflags) go tool cover -html=cover/state-count.out -o=cover/state-count.html
+	@mkdir -p cover
+	@for package in $(packages); do \
+		$(cgo_ldflags) go test -covermode=count -coverprofile=cover/$$package-count.out ./$$package ; \
+		$(cgo_ldflags) go tool cover -html=cover/$$package-count.out -o=cover/$$package-count.html ; \
+		rm cover/$$package-count.out ; \
+	done
 
 cover-atomic:
-	mkdir -p cover
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/consensus-atomic.out ./consensus
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/delta-atomic.out ./delta
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/client-atomic.out ./client
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/erasure-atomic.out ./erasure
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/network-atomic.out ./network
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/siacrypto-atomic.out ./siacrypto
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/siaencoding-atomic.out ./siaencoding
-	$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/state-atomic.out ./state
-	$(cgo_ldflags) go tool cover -html=cover/consensus-atomic.out -o=cover/consensus-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/delta-atomic.out -o=cover/delta-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/client-atomic.out -o=cover/client-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/erasure-atomic.out -o=cover/erasure-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/network-atomic.out -o=cover/network-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/siacrypto-atomic.out -o=cover/siacrypto-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/siaencoding-atomic.out -o=cover/siaencoding-atomic.html
-	$(cgo_ldflags) go tool cover -html=cover/state-atomic.out -o=cover/state-atomic.html
+	@mkdir -p cover
+	@for package in $(packages); do \
+		$(cgo_ldflags) go test -covermode=atomic -coverprofile=cover/$$package-atomic.out ./$$package ; \
+		$(cgo_ldflags) go tool cover -html=cover/$$package-atomic.out -o=cover/$$package-atomic.html ; \
+		rm cover/$$package-atomic.out ; \
+	done
 
 cover: cover-set
 
