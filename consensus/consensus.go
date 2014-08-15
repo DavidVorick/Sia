@@ -69,9 +69,13 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 		for i := range p.updates {
 			if len(p.updates[i]) == 1 {
 				for _, u := range p.updates[i] {
-					// Add the heartbeat to the block
-					b.Heartbeats[i] = u.Heartbeat
-					b.HeartbeatSignatures[i] = u.HeartbeatSignature
+					// Add the heartbeat to the block for active siblings.
+					p.engineLock.RLock()
+					if p.engine.Metadata().Siblings[i].Active() {
+						b.Heartbeats[i] = u.Heartbeat
+						b.HeartbeatSignatures[i] = u.HeartbeatSignature
+					}
+					p.engineLock.RUnlock()
 
 					// Add all of the script inputs to the script input map.
 					for _, scriptInput := range u.ScriptInputs {

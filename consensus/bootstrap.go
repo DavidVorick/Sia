@@ -42,7 +42,6 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	if err != nil {
 		return
 	}
-	p.siblingIndex = 0
 
 	// Create a bootstrap wallet, and a wallet for this participant to use.
 	err = p.engine.Bootstrap(state.Sibling{
@@ -53,6 +52,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 	if err != nil {
 		return
 	}
+	p.siblingIndex = 0
 
 	// Create the first update.
 	p.newSignedUpdate()
@@ -311,17 +311,15 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	}
 
 	// Parse the metadata and figure out which sibling is ourselves.
-	p.engineLock.RLock()
+	p.engineLock.Lock()
 	for i, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
 			p.siblingIndex = byte(i)
+			p.setSiblingIndex(p.siblingIndex)
 			break
 		}
 	}
-	println("PRINTING DISCOVERED INDEX")
-	println(p.siblingIndex)
-	p.engine.SetSiblingIndex(p.siblingIndex)
-	p.engineLock.RUnlock()
+	p.engineLock.Unlock()
 
 	// Once accepted as a sibling, begin downloading all files.
 	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.

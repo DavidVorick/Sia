@@ -10,7 +10,7 @@ import (
 )
 
 func TestCreateParticipantFunctions(t *testing.T) {
-	rpcs, err := network.NewRPCServer(11000)
+	rpcs, err := network.NewRPCServer(11100)
 	if err != nil {
 		t.Fatal(err)
 	}

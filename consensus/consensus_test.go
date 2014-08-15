@@ -18,7 +18,7 @@ func TestConsensus(t *testing.T) {
 	}
 
 	// Create a new quorum.
-	mr, err := network.NewRPCServer(11100)
+	mr, err := network.NewRPCServer(11000)
 	if err != nil {
 		t.Fatal(err)
 	}

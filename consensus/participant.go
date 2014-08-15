@@ -38,6 +38,11 @@ type Participant struct {
 	tickLock    sync.RWMutex
 }
 
+func (p *Participant) setSiblingIndex(siblingIndex byte) {
+	p.siblingIndex = siblingIndex
+	p.engine.SetSiblingIndex(siblingIndex)
+}
+
 var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
 
 // NewParticipant initializes a Participant object with the provided
@@ -56,8 +61,8 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	if err != nil {
 		return
 	}
-	p.siblingIndex = ^byte(0)
 	p.currentStep = 1
+	p.siblingIndex = ^byte(0)
 
 	// Create the update maps.
 	for i := range p.updates {
@@ -69,8 +74,8 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	p.messageRouter = mr
 
 	// Initialize the file prefix
-	p.engine.SetFilePrefix(filePrefix)
-	p.engine.SetSiblingIndex(p.siblingIndex)
+	p.engine.Initialize(filePrefix)
+	p.setSiblingIndex(p.siblingIndex)
 
 	return
 }

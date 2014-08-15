@@ -30,14 +30,12 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 		if !verified {
-			println("Bad signature on heartbeat")
 			e.state.TossSibling(byte(i))
 			continue
 		}
 
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
-			println("bad parent block")
 			e.state.TossSibling(byte(i))
 			continue
 		}
@@ -71,6 +69,14 @@ func (e *Engine) Compile(b Block) {
 	// Charge wallets for the storage they are consuming, and reward sibings for
 	// the storage that is being consumed.
 	e.state.ExecuteCompensation()
+
+	// Update all passive siblings so that their PassiveWindow is reduced
+	// by one.
+	for i := range e.state.Metadata.Siblings {
+		if !e.state.Metadata.Siblings[i].Active() && !e.state.Metadata.Siblings[i].Inactive() {
+			e.state.Metadata.Siblings[i].Status -= 1
+		}
+	}
 
 	// Update the metadata of the quorum.
 	blockHash, err := siacrypto.HashObject(b)

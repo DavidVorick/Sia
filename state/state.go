@@ -21,7 +21,7 @@ const (
 
 	// SiblingPassiveWindow is the number of blocks that a sibling is
 	// allowed to be passive.
-	SiblingPassiveWindow = 5
+	SiblingPassiveWindow = 2
 )
 
 // A Sibling is the public facing information of participants on the quorum.
@@ -31,8 +31,8 @@ const (
 // of '5-1' indicates that the sibling is 'Passive', with the number indicating
 // how many compiles until the sibling becomes active. A passive sibling is
 // sent updates during consensus, and its signatures are accepted during
-// consensus, but its updates are not required. Updates are ignored and a
-// passive sibling will not be included in compensation. An active sibling is a
+// consensus, but it's heartbeats are not included into block compilation.
+// Passive sibling will not be included in compensation. An active sibling is a
 // full sibing that _must_ participate in consensus and provide updates to the
 // network.
 type Sibling struct {
@@ -95,6 +95,13 @@ func (s *State) SetWalletPrefix(walletPrefix string) {
 	// the current implementation. But it's on the todo list.
 
 	s.walletPrefix = walletPrefix
+}
+
+// Initialize takes all the siblings and sets them to inactive
+func (s *State) Initialize() {
+	for i := range s.Metadata.Siblings {
+		s.Metadata.Siblings[i].Status = ^byte(0)
+	}
 }
 
 // walletFilename returns the filename for a wallet, receiving only the id of
