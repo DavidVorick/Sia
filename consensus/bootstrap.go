@@ -31,14 +31,14 @@ The Bootstrapping Process
 
 // CreateBootstrapParticipant returns a participant that is participating as
 // the first and only sibling on a new quorum.
-func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
+func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
 	if sibID == 0 {
 		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
 		return
 	}
 
 	// Create basic participant.
-	p, err = newParticipant(mr, filePrefix)
+	p, err = newParticipant(rpcs, filePrefix)
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 // requires the engine mutex to be locked.
 func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
 	var b delta.Block
-	err = p.messageRouter.SendMessage(network.Message{
+	err = p.router.SendMessage(network.Message{
 		Dest: quorumSiblings[0],
 		Proc: "Participant.Block",
 		Args: p.engine.Metadata().Height,
@@ -86,9 +86,9 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 // host with an existing quorum. It is assumed that the tetherID is an ID to a
 // generic wallet, and that the secret key is the key that should be the key
 // that is assiciated with the public key of the generic wallet.
-func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
+func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
 	// Create a new, basic participant.
-	p, err = newParticipant(mr, filePrefix)
+	p, err = newParticipant(rpcs, filePrefix)
 	if err != nil {
 		return
 	}
@@ -106,7 +106,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	{
 		// get height of the most recent snapshot
 		var metadata state.Metadata
-		err = mr.SendMessage(network.Message{
+		err = rpcs.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.Metadata",
 			Args: struct{}{},
@@ -118,7 +118,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// get the metadata from the snapshot
 		var snapshotMetadata state.Metadata
-		err = mr.SendMessage(network.Message{
+		err = rpcs.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotMetadata",
 			Args: metadata.RecentSnapshot,
@@ -131,7 +131,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// get the list of wallets in the snapshot
 		var walletList []state.WalletID
-		err = mr.SendMessage(network.Message{
+		err = rpcs.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.SnapshotWalletList",
 			Args: metadata.RecentSnapshot,
@@ -149,7 +149,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			}
 
 			var wallet state.Wallet
-			err = mr.SendMessage(network.Message{
+			err = rpcs.SendMessage(network.Message{
 				Dest: quorumSiblings[0],
 				Proc: "Participant.SnapshotWallet",
 				Args: swa,
@@ -174,7 +174,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	{
 		// figure out which block height is the latest
 		var currentMetadata state.Metadata
-		err = mr.SendMessage(network.Message{
+		err = rpcs.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.Metadata",
 			Args: struct{}{},
@@ -227,7 +227,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 	// That's it! The rest of the code should maintain synchronization.
 	{
 		var cps ConsensusProgressStruct
-		err = mr.SendMessage(network.Message{
+		err = rpcs.SendMessage(network.Message{
 			Dest: quorumSiblings[0],
 			Proc: "Participant.ConsensusProgress",
 			Args: struct{}{},
@@ -258,7 +258,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			return
 		}
 		for _, address := range quorumSiblings {
-			mr.SendAsyncMessage(network.Message{
+			rpcs.SendAsyncMessage(network.Message{
 				Dest: address,
 				Proc: "Participant.AddScriptInput",
 				Args: joinRequest,
