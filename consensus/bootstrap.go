@@ -31,8 +31,11 @@ The Bootstrapping Process
 
 // CreateBootstrapParticipant returns a participant that is participating as
 // the first and only sibling on a new quorum.
-func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
-	if sibID == 0 {
+func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, bootstrapTetherWallet state.WalletID, tetherWalletPublicKey siacrypto.PublicKey) (p *Participant, err error) {
+	// ID 0 is reserved for the early-distribution 'fountain' wallet. The
+	// full netowrk is not likely to have this, but it makes test-network
+	// actions a lot simpler.
+	if bootstrapTetherWallet == 0 {
 		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
 		return
 	}
@@ -43,12 +46,14 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, sib
 		return
 	}
 
-	// Create a bootstrap wallet, and a wallet for this participant to use.
-	err = p.engine.Bootstrap(state.Sibling{
+	// Create a bootstrap sibling, using the bootstrapTether id as the
+	// wallet id that the sibling will be tethered to.
+	bootstrapSibling := state.Sibling{
 		Address:   p.address,
 		PublicKey: p.publicKey,
-		WalletID:  sibID,
-	})
+		WalletID:  bootstrapTetherWallet,
+	}
+	err = p.engine.Bootstrap(bootstrapSibling, tetherWalletPublicKey)
 	if err != nil {
 		return
 	}

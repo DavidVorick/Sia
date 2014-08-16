@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/NebulousLabs/Sia/consensus"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -37,8 +38,11 @@ func (c *Client) NewServer() (err error) {
 }
 
 // NewParticipant creates a directory 'name' at location 'filepath' and then
-// creates a participant that will use that directory for its files.
-func (c *Client) NewParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+// creates a participant that will use that directory for its files. It's
+// mostly a helper function to eliminate redundant code.
+func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
+	// NEED TO DO A CHECK ON IF THE NAME IS FILESYSTEM SAFE
+
 	// Check that a participant of the given name does not already exist.
 	_, exists := c.participantServer.participants[name]
 	if exists {
@@ -48,18 +52,41 @@ func (c *Client) NewParticipant(name string, filepath string, sibID state.Wallet
 
 	// Create a directory 'name' at location 'filepath' for use of the
 	// participant.
-	fullname := path.Join(filepath, name) + "/"
+	fullname = path.Join(filepath, name) + "/"
 	err = os.MkdirAll(fullname, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return
 	}
 
+	return
+}
+
+// NewBootstrapParticipant creates a new participant that is the first in it's
+// quorum; it creates the quorum along with the participant.
+func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+	fullname, err := c.createParticipantStructures(name, filepath)
+	if err != nil {
+		return
+	}
+
+	pk, sk, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+
 	// Create the participant and add it to the server map.
-	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID)
+	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID, pk)
 	if err != nil {
 		return
 	}
 	c.participantServer.participants[name] = newParticipant
+
+	// Add the wallet to the client list of generic wallets.
+	c.genericWallets[sibID] = Keypair{
+		PK: pk,
+		SK: sk,
+	}
+
 	return
 }
 

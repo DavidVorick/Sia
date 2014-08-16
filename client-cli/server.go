@@ -87,7 +87,7 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 	// Add the wallet as a generic wallet to the client.
 
 	// Create the participant.
-	err = c.NewParticipant(name, filepath, sibID)
+	err = c.NewBootstrapParticipant(name, filepath, sibID)
 	if err != nil {
 		return
 	}

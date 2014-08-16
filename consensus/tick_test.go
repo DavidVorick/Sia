@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -17,7 +18,7 @@ func TestSynchronizedTick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestSynchronizedTick"), 1)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestSynchronizedTick"), 1, *new(siacrypto.PublicKey))
 	if err != nil {
 		t.Fatal(err)
 	}

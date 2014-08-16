@@ -10,6 +10,7 @@ package delta
 // and its current designs are passable, but not elegant, clean, or beautiful.
 
 import (
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -79,7 +80,7 @@ func (e *Engine) WalletList() []state.WalletID {
 
 // Bootstrap returns an engine that has its variables set so that
 // the engine can function as the first sibling in a quorum.
-func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
+func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.PublicKey) (err error) {
 	// Create the bootstrap wallet, which acts as a fountain to get the economy
 	// started.
 	err = e.state.InsertWallet(state.Wallet{
@@ -95,7 +96,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
 		Balance: state.NewBalance(0, 1000000),
-		Script:  DefaultScript(sib.PublicKey),
+		Script:  DefaultScript(tetherWalletPublicKey),
 	}
 	err = e.state.InsertWallet(sibWallet)
 	if err != nil {

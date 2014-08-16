@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 )
 
@@ -16,12 +17,18 @@ func TestConsensus(t *testing.T) {
 		t.Skip()
 	}
 
+	// Create a keypair for the tether wallet.
+	tetherWalletPK, tetherWalletSK, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create a new quorum.
 	mr, err := network.NewRPCServer(11000)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1, tetherWalletPK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,8 +39,6 @@ func TestConsensus(t *testing.T) {
 		t.Error("Update for the next block has not been accepted by the participant.")
 	}
 	p.updatesLock.RUnlock()
-
-	// Sleep for a block so that a snapshot is created. In the future we may want to have the snapshot build itself even before the first compile.
 
 	// Create a participant that will join the current existing
 	// participant. No timing shortcuts can be taken here, as the new
@@ -50,7 +55,7 @@ func TestConsensus(t *testing.T) {
 		}
 		quorumSiblingAddresses = append(quorumSiblingAddresses, sibling.Address)
 	}
-	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, p.secretKey, quorumSiblingAddresses)
+	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, tetherWalletSK, quorumSiblingAddresses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,14 +80,14 @@ func TestConsensus(t *testing.T) {
 	// for both to finish.
 	joinChan := make(chan *Participant)
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
 		joinChan <- p
 	}()
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}

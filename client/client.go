@@ -21,7 +21,7 @@ type Client struct {
 	router   *network.RPCServer
 	siblings [state.QuorumSize]state.Sibling
 
-	// All Wallets
+	// All Generic Wallets
 	genericWallets map[state.WalletID]Keypair
 
 	// Participant Server

@@ -138,6 +138,11 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 
 //TODO: add docstring
 func (p *Participant) newSignedUpdate() {
+	// Check that this function was not called by error.
+	if p.siblingIndex > state.QuorumSize {
+		panic("error call on newSignedUpdate")
+	}
+
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
 	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -16,7 +17,7 @@ func TestCreateParticipantFunctions(t *testing.T) {
 	}
 
 	walletID := state.WalletID(24)
-	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestCreateParticipantFunctions"), walletID)
+	p, err := CreateBootstrapParticipant(rpcs, siafiles.TempFilename("TestCreateParticipantFunctions"), walletID, *new(siacrypto.PublicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
