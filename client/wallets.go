@@ -37,13 +37,17 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 }
 
 // Iterates through the client and saves all of the wallets to disk.
-func (c *Client) SaveAllWallets() {
+func (c *Client) SaveAllWallets() (err error) {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
-		SaveWallet(id, keypair, filename)
+		err = SaveWallet(id, keypair, filename)
+		if err != nil {
+			return
+		}
 	}
 	// Save other types of wallets as they are implemented.
+	return
 }
 
 func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error) {

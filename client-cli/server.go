@@ -18,6 +18,9 @@ func displayServerHelp() {
 	)
 }
 
+// serverMetadataWalkthrough collects the information needed to pull up the
+// metadata of a participant (IE the name), then collects the metadata, formats
+// it into human-readable form, and prints it.
 func serverMetadataWalkthrough(c *client.Client) (err error) {
 	fmt.Print("Name of server to fetch status from: ")
 	var name string
@@ -167,9 +170,10 @@ func joinQuorum() {
 // pollHome is a loop asking users for questions about managing participants.
 func pollServer(c *client.Client) {
 	var input string
+	var err error
 	for {
 		fmt.Print("(Server Mode) Please enter a command: ")
-		_, err := fmt.Scanln(&input)
+		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
@@ -190,17 +194,15 @@ func pollServer(c *client.Client) {
 			//joinQuorumWalkthrough(c)
 
 		case "n", "new", "bootstrap":
-			fmt.Println("Warning: this feature is incomplete.")
-			err := newQuorumWalkthrough(c)
-			if err != nil {
-				fmt.Println("Error: ", err)
-			}
+			err = newQuorumWalkthrough(c)
 
 		case "p", "print", "status":
-			err := serverMetadataWalkthrough(c)
-			if err != nil {
-				fmt.Println("Error: ", err)
-			}
+			err = serverMetadataWalkthrough(c)
+		}
+
+		if err != nil {
+			fmt.Println("Error: ", err)
+			err = nil
 		}
 	}
 }

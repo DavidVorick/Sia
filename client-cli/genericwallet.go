@@ -105,9 +105,10 @@ func uploadToGenericWallet(c *client.Client) {
 
 func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
+	var err error
 	for {
 		fmt.Print("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
-		_, err := fmt.Scanln(&input)
+		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
@@ -134,6 +135,11 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 		case "u", "upload":
 			fmt.Println("Uploading is not currently implemented.")
 			//uploadToGenericWallet(c)
+		}
+
+		if err != nil {
+			fmt.Println("Error: ", err)
+			err = nil
 		}
 	}
 }
