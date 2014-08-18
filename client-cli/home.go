@@ -9,43 +9,15 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// displayHomeHelp lists all of the options available to the home screen, with
-// a description of what they do.
-func displayHomeHelp() {
-	fmt.Println(
-		"\n",
-		"h:\tHelp\n",
-		"q:\tQuit\n",
-		"b:\tBootstrap through an address\n",
-		"c:\tConnect to Network\n",
-		"l:\tLoad wallet\n",
-		"n:\tRequest a new wallet\n",
-		"p:\tPrint wallets\n",
-		"s:\tSwitch to server mode, creating a server if none yet exists.\n",
-		"S:\tSave all wallets\n",
-	)
-}
-
-// connectWalkthrough requests a port and then calls client.Connect(port),
-// initializing the client network router.
-func connectWalkthrough(c *client.Client) (err error) {
-	// Do nothing if the router is already initialized.
-	if c.IsRouterInitialized() {
-		err = errors.New("router is already initialized")
-		return
+// printWallets provides a list of every wallet available to the Client.
+func printWallets(c *client.Client) {
+	fmt.Println()
+	fmt.Println("All Stored Wallet IDs:")
+	wallets := c.GetWalletIDs()
+	for _, id := range wallets {
+		fmt.Printf("%x\n", id)
 	}
-
-	// Get a port.
-	var port uint16
-	fmt.Print("Port the client should listen on: ")
-	_, err = fmt.Scanln(&port)
-	if err != nil {
-		err = errors.New("invalid port")
-		return
-	}
-
-	c.Connect(port)
-	return
+	fmt.Println()
 }
 
 // connectWalkthrough guides the user through providing a hostname, port, and
@@ -95,6 +67,54 @@ func bootstrapToNetworkWalkthrough(c *client.Client) (err error) {
 	return
 }
 
+// connectWalkthrough requests a port and then calls client.Connect(port),
+// initializing the client network router.
+func connectWalkthrough(c *client.Client) (err error) {
+	// Do nothing if the router is already initialized.
+	if c.IsRouterInitialized() {
+		err = errors.New("router is already initialized")
+		return
+	}
+
+	// Get a port.
+	var port uint16
+	fmt.Print("Port the client should listen on: ")
+	_, err = fmt.Scanln(&port)
+	if err != nil {
+		err = errors.New("invalid port")
+		return
+	}
+
+	c.Connect(port)
+	return
+}
+
+/*
+func createGenericWalletWalkthrough(c *client.Client) {
+	var id state.WalletID
+	var filename string
+	fmt.Print("Enter desired Wallet ID (hex): ")
+	ERR fmt.Scanln("%x", &id)
+	fmt.Print("Script file (blank for default): ")
+	ERR fmt.Scanln("%s", &filename)
+	var script []byte
+	var err error
+	if filename != "" {
+		script, err = ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+		return
+	}
+	err = c.RequestWallet(id, script)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Wallet requested")
+	}
+}
+*/
+
 // loadWallet switches the cli into wallet-mode, where actions are taken
 // against a specific wallet.
 func loadWallet(c *client.Client) (err error) {
@@ -125,42 +145,6 @@ func loadWallet(c *client.Client) (err error) {
 	return
 }
 
-/*
-func createGenericWallet(c *client.Client) {
-	var id state.WalletID
-	var filename string
-	fmt.Print("Enter desired Wallet ID (hex): ")
-	ERR fmt.Scanln("%x", &id)
-	fmt.Print("Script file (blank for default): ")
-	ERR fmt.Scanln("%s", &filename)
-	var script []byte
-	var err error
-	if filename != "" {
-		script, err = ioutil.ReadFile(filename)
-		if err != nil {
-			fmt.Println("Error:", err)
-		}
-		return
-	}
-	err = c.RequestWallet(id, script)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("Wallet requested")
-	}
-}
-*/
-
-// printWallets provides a list of every wallet available to the Client.
-func printWallets(c *client.Client) {
-	fmt.Println()
-	fmt.Println("All Stored Wallet IDs:")
-	wallets := c.GetWalletIDs()
-	for _, id := range wallets {
-		fmt.Printf("%x\n", id)
-	}
-}
-
 // serverModeSwitch will transition the client from being in home mode to being
 // in server mode, creating a new server and a new router if necessary.
 func serverModeSwitch(c *client.Client) (err error) {
@@ -173,6 +157,23 @@ func serverModeSwitch(c *client.Client) (err error) {
 	}
 	pollServer(c)
 	return
+}
+
+// displayHomeHelp lists all of the options available to the home screen, with
+// a description of what they do.
+func displayHomeHelp() {
+	fmt.Println(
+		"\n",
+		"h:\tHelp\n",
+		"q:\tQuit\n",
+		"b:\tBootstrap through an address\n",
+		"c:\tConnect to Network\n",
+		"l:\tLoad wallet\n",
+		"n:\tRequest a new wallet\n",
+		"p:\tPrint wallets\n",
+		"s:\tSwitch to server mode, creating a server if none yet exists.\n",
+		"S:\tSave all wallets\n",
+	)
 }
 
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.

@@ -7,59 +7,34 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func displayServerHelp() {
-	fmt.Println(
-		"\n",
-		"h:\tHelp\n",
-		"q:\tReturn to home mode.\n",
-		"j:\tCreate a new participant and join an existing quorum.\n",
-		"n:\tCreate a new quorum with a bootstrap participant.\n",
-		"p:\tPrint the status of a server.\n",
-	)
-}
+// joinQuorumWalkthrough gets input about the bootstrap address, the file
+// prefix for the particpant, etc. Then the participant is created and
+// bootstrapped to an existing quorum.
+func joinQuorumWalkthrough(c *client.Client) {
+	fmt.Println("Entering 'Join Quorum' Walkthrough")
 
-// serverMetadataWalkthrough collects the information needed to pull up the
-// metadata of a participant (IE the name), then collects the metadata, formats
-// it into human-readable form, and prints it.
-func serverMetadataWalkthrough(c *client.Client) (err error) {
-	fmt.Print("Name of server to fetch status from: ")
+	// Get a name for the server.
 	var name string
+	fmt.Print("Please enter a name for the server: ")
 	_, err = fmt.Scanln(&name)
 	if err != nil {
 		return
 	}
 
-	metadata, err := c.ParticipantMetadata(name)
+	// Get a fileprefix for the server
+	var filepath string
+	fmt.Print("Please provide an absolute filepath for the server file directory: ")
+	_, err = fmt.Scanln(&filepath)
 	if err != nil {
 		return
 	}
-
-	var siblingString string
-	for i := range metadata.Siblings {
-		if metadata.Siblings[i].Active() {
-			siblingString = fmt.Sprintf("%s\t\tSibling %v: Active\n", siblingString, i)
-		} else if metadata.Siblings[i].Inactive() {
-			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
-		} else {
-			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.", siblingString, i, metadata.Siblings[i].Status)
-		}
-	}
-
-	fmt.Println(
-		"\n",
-		name, "status:\n",
-		"\tSiblings: \n",
-		siblingString,
-		"\tHeight:", metadata.Height, "\n",
-	)
-
-	return
 }
 
 // newQuorumWalkthrough walks the user through creating a new quorum.
 func newQuorumWalkthrough(c *client.Client) (err error) {
 	fmt.Println("Entering 'New Quorum' walkthorugh")
 	fmt.Println("Warning: The client you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
+	fmt.Println("Double Warning: This feature is really only be meant to be used by developers. A lot can go wrong, just please be careful and realized that you were warned if bad stuff happens.")
 
 	// Get a name for the server, this is what will be used to query the
 	// server for status updates in the future.
@@ -117,55 +92,54 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-/*
-// joinQuorumWalkthrough gets input about the bootstrap address, the file
-// prefix for the particpant, etc. Then the participant is created and
-// bootstrapped to an existing quorum.
-func joinQuorumWalkthrough(c *client.Client) {
-	// ...heh
+// serverMetadataWalkthrough collects the information needed to pull up the
+// metadata of a participant (IE the name), then collects the metadata, formats
+// it into human-readable form, and prints it.
+func serverMetadataWalkthrough(c *client.Client) (err error) {
+	fmt.Print("Name of server to fetch status from: ")
+	var name string
+	_, err = fmt.Scanln(&name)
+	if err != nil {
+		return
+	}
+
+	metadata, err := c.ParticipantMetadata(name)
+	if err != nil {
+		return
+	}
+
+	var siblingString string
+	for i := range metadata.Siblings {
+		if metadata.Siblings[i].Active() {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Active\n", siblingString, i)
+		} else if metadata.Siblings[i].Inactive() {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
+		} else {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.", siblingString, i, metadata.Siblings[i].Status)
+		}
+	}
+
+	fmt.Println(
+		"\n",
+		name, "status:\n",
+		"\tSiblings: \n",
+		siblingString,
+		"\tHeight:", metadata.Height, "\n",
+	)
+
+	return
 }
-*/
 
-/*
-func joinQuorum() {
-	err = networkServer.Ping(bootstrap)
-	if err != nil {
-		fmt.Println("Failed to ping bootstrap:", err)
-		return
-	}
-
-	// read wallet ID
-	var sibID uint64
-	fmt.Print("Wallet ID: ")
-	fmt.Scanf("%d", &sibID)
-
-	// obtain a wallet
-	err = networkServer.SendMessage(network.Message{
-		Dest: bootstrap,
-		Proc: "Participant.AddScriptInput",
-		Args: delta.CreateWalletInput(sibID, []byte{0x2F}), // need better default script
-		Resp: nil,
-	})
-	if err != nil {
-		fmt.Println("Failed to obtain wallet:", err)
-		return
-	}
-
-	var directory string
-	fmt.Print("participant directory: ")
-	fmt.Scanf("%s", &directory)
-
-	// create a participant
-	_, err = consensus.CreateJoiningParticipant(networkServer, directory, state.WalletID(sibID), []network.Address{bootstrap})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// block forever
-	select {}
+func displayServerHelp() {
+	fmt.Println(
+		"\n",
+		"h:\tHelp\n",
+		"q:\tReturn to home mode.\n",
+		"j:\tCreate a new participant and join an existing quorum.\n",
+		"n:\tCreate a new quorum with a bootstrap participant.\n",
+		"p:\tPrint the status of a server.\n",
+	)
 }
-*/
 
 // pollHome is a loop asking users for questions about managing participants.
 func pollServer(c *client.Client) {
