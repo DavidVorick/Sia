@@ -24,7 +24,7 @@ type ScriptInput struct {
 type instruction struct {
 	name     string
 	argBytes int
-	fn       func([]byte) error
+	fn       func(*scriptEnv, []byte) error
 	cost     int
 }
 
@@ -41,7 +41,7 @@ type stackElem struct {
 	next *stackElem
 }
 
-func push(v []byte) (err error) {
+func push(env *scriptEnv, v []byte) (err error) {
 	if env.stackLen > maxStackLen {
 		return errors.New("stack overflow")
 	}
@@ -52,7 +52,7 @@ func push(v []byte) (err error) {
 	return
 }
 
-func pop() (v []byte, err error) {
+func pop(env *scriptEnv) (v []byte, err error) {
 	if env.stackLen < 1 {
 		err = errors.New("stack empty")
 		return
@@ -94,13 +94,10 @@ type scriptEnv struct {
 	costBalance int
 }
 
-// global execution environment
-var env scriptEnv
-
 // deduct instruction cost from resource pools, and return an error if any pool
 // is exhausted.
 // TODO: add memBalance to prevent buffer abuse
-func deductResources(op instruction) error {
+func (env *scriptEnv) deductResources(op instruction) error {
 	env.instBalance--
 	env.costBalance -= op.cost
 	switch {
@@ -124,7 +121,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	}
 
 	// initialize execution environment
-	env = scriptEnv{
+	env := scriptEnv{
 		script: append(w.Script, si.Input...),
 		dptr:   len(w.Script),
 		wallet: &w,
@@ -162,7 +159,7 @@ func (env *scriptEnv) run() error {
 		}
 
 		// deduct resources and check that we can proceed with execution
-		if err := deductResources(op); err != nil {
+		if err := env.deductResources(op); err != nil {
 			return err
 		}
 
@@ -172,7 +169,7 @@ func (env *scriptEnv) run() error {
 		env.iptr += copy(fnArgs, env.script[env.iptr:])
 
 		// call associated opcode function and check for error
-		if err := op.fn(fnArgs); err != nil {
+		if err := op.fn(env, fnArgs); err != nil {
 			switch err {
 			case errExit:
 				return nil
