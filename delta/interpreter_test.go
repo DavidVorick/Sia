@@ -15,7 +15,7 @@ func initEnv() (e Engine, si ScriptInput) {
 	e.state.InsertWallet(state.Wallet{
 		ID:      1,
 		Balance: state.NewBalance(15000),
-		Script:  []byte{0x38},
+		Script:  []byte{0x38}, // transfer control to input
 	})
 	si = ScriptInput{
 		WalletID: 1,
@@ -115,5 +115,41 @@ func TestVerify(t *testing.T) {
 	_, err = e.Execute(si)
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+// exhaust various resources
+func TestExhaustion(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	e, si := initEnv()
+
+	// exhaust balance by executing many expensive instructions
+	si.Input = []byte{
+		0x21, 0x01, 0x00, // goto 01 (this instruction; i.e. an infinite loop)
+		0xFF, //             unreachable (hopefully...)
+	}
+
+	_, err := e.Execute(si)
+	if err == nil {
+		t.Error("expected resource exhaustion error")
+	}
+
+	// currently there is no way to exhaust instBalance; instBalance and
+	// costBalance are both set to 10000, and there are no 0-cost instructions
+	// (besides op_exit and op_reject)
+
+	// exceed memory usage limit by filling up registers
+	si.Input = []byte{
+		0x02, 0xFF, 0xFF, // push 2^16
+		0x36, 0x01, //       copy 2^16 bytes into register 1
+		0xFF, //             unreachable (hopefully...)
+	}
+
+	_, err = e.Execute(si)
+	if err == nil {
+		t.Error("expected resource exhaustion error")
 	}
 }
