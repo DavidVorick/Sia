@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/NebulousLabs/Sia/consensus"
+	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -43,6 +44,12 @@ func (c *Client) NewServer() (err error) {
 func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
 	// NEED TO DO A CHECK ON IF THE NAME IS FILESYSTEM SAFE
 
+	// Check that the participant server has been created.
+	if c.participantServer == nil {
+		err = errors.New("participant server is nil")
+		return
+	}
+
 	// Check that a participant of the given name does not already exist.
 	_, exists := c.participantServer.participants[name]
 	if exists {
@@ -69,6 +76,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 		return
 	}
 
+	// Create a keypair for the wallet that the sibling will tether to.
 	pk, sk, err := siacrypto.CreateKeyPair()
 	if err != nil {
 		return
@@ -87,6 +95,36 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 		SK: sk,
 	}
 
+	return
+}
+
+// NewJoiningParticipant creates a participant that joins the network known to
+// the client as a sibling.
+func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+	fullname, err := c.createParticipantStructures(name, filepath)
+	if err != nil {
+		return
+	}
+
+	// Verify that the sibID given is available to the client.
+	_, exists := c.genericWallets[sibID]
+	if !exists {
+		err = errors.New("no known wallet of that id")
+		return
+	}
+
+	// Get a list of addresses for the joining participant to use while bootstrapping.
+	var siblingAddresses []network.Address
+	for _, sibling := range c.siblings {
+		siblingAddresses = append(siblingAddresses, sibling.Address)
+	}
+
+	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SK, siblingAddresses)
+	if err != nil {
+		return
+	}
+
+	c.participantServer.participants[name] = joiningParticipant
 	return
 }
 

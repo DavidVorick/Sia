@@ -97,11 +97,13 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 // generic wallet, and that the secret key is the key that should be the key
 // that is assiciated with the public key of the generic wallet.
 func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
+	println("0")
 	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
+	println("1")
 
 	// An important step that is being omitted for this version of Sia
 	// (omitted until Sia has meta-quorums and network-discovery) is
@@ -125,6 +127,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		if err != nil {
 			return
 		}
+		println("2")
 
 		// get the metadata from the snapshot
 		var snapshotMetadata state.Metadata
@@ -177,6 +180,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// Event downloading will be implemented later.
 	}
+	println("3")
 
 	// Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being

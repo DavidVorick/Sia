@@ -102,7 +102,7 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 }
 
 func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
-	snapshotFilename = fmt.Sprintf("%s.snapshot.%v", e.filePrefix, height)
+	snapshotFilename = fmt.Sprintf("%ssnapshot.%v", e.filePrefix, height)
 	return
 }
 

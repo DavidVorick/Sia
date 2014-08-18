@@ -49,7 +49,7 @@ type Engine struct {
 // It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
 	e.filePrefix = prefix
-	walletPrefix := prefix + ".wallet"
+	walletPrefix := prefix + "wallet"
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
