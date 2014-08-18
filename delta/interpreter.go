@@ -106,6 +106,14 @@ func (env *scriptEnv) deductResources(op instruction) error {
 	for i := range env.registers {
 		env.memUsage += len(env.registers[i])
 	}
+	p := env.stack
+	for {
+		if p == nil {
+			break
+		}
+		env.memUsage += len(p.val)
+		p = p.next
+	}
 
 	// check each resource for exhaustion
 	// TODO: export these errors
