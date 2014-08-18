@@ -29,6 +29,25 @@ The Bootstrapping Process
 
 */
 
+// A helper function for CreateJoiningParticipant, that downloads the next
+// block and compiles it into the participant. fetchAndCompileNextBlock
+// requires the engine mutex to be locked.
+func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
+	var b delta.Block
+	err = p.messageRouter.SendMessage(network.Message{
+		Dest: quorumSiblings[0],
+		Proc: "Participant.Block",
+		Args: p.engine.Metadata().Height,
+		Resp: &b,
+	})
+	if err != nil {
+		return
+	}
+
+	p.engine.Compile(b)
+	return
+}
+
 // CreateBootstrapParticipant returns a participant that is participating as
 // the first and only sibling on a new quorum.
 func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, bootstrapTetherWallet state.WalletID, tetherWalletPublicKey siacrypto.PublicKey) (p *Participant, err error) {
@@ -73,37 +92,16 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, boo
 	return
 }
 
-// A helper function for CreateJoiningParticipant, that downloads the next
-// block and compiles it into the participant. fetchAndCompileNextBlock
-// requires the engine mutex to be locked.
-func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address) (err error) {
-	var b delta.Block
-	err = p.messageRouter.SendMessage(network.Message{
-		Dest: quorumSiblings[0],
-		Proc: "Participant.Block",
-		Args: p.engine.Metadata().Height,
-		Resp: &b,
-	})
-	if err != nil {
-		return
-	}
-
-	p.engine.Compile(b)
-	return
-}
-
 // CreateJoiningParticipant creates a new participant and integrates it as a
 // host with an existing quorum. It is assumed that the tetherID is an ID to a
 // generic wallet, and that the secret key is the key that should be the key
 // that is assiciated with the public key of the generic wallet.
 func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tetherID state.WalletID, tetherWalletSecretKey siacrypto.SecretKey, quorumSiblings []network.Address) (p *Participant, err error) {
-	println("0")
 	// Create a new, basic participant.
 	p, err = newParticipant(mr, filePrefix)
 	if err != nil {
 		return
 	}
-	println("1")
 
 	// An important step that is being omitted for this version of Sia
 	// (omitted until Sia has meta-quorums and network-discovery) is
@@ -127,7 +125,6 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		if err != nil {
 			return
 		}
-		println("2")
 
 		// get the metadata from the snapshot
 		var snapshotMetadata state.Metadata
@@ -180,7 +177,6 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 
 		// Event downloading will be implemented later.
 	}
-	println("3")
 
 	// Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being
@@ -274,6 +270,8 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			return
 		}
 		for _, address := range quorumSiblings {
+			// Something should asynchronously log any errors
+			// returned.
 			mr.SendAsyncMessage(network.Message{
 				Dest: address,
 				Proc: "Participant.AddScriptInput",
@@ -281,7 +279,8 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 			})
 		}
 
-		// Download any blocks that are missing that are currently available.
+		// Download any blocks that are missing that are currently
+		// available.
 		for p.engine.Metadata().Height < cps.Height {
 			p.engineLock.Lock()
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
@@ -310,7 +309,7 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// available.
 		time.Sleep(StepDuration)
 
-		// download the second missing block
+		// Download second missing block.
 		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
 		p.engineLock.Unlock()

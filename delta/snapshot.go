@@ -209,6 +209,9 @@ func (e *Engine) saveSnapshot() (err error) {
 	}
 	_, err = file.WriteAt(encodedOffset, 0)
 
+	// Set recent snapshot equal to the snapshot value that just got saved.
+	e.state.Metadata.RecentSnapshot = e.activeHistoryHead
+
 	// Delete the oldest snapshot.
 	oldSnapshotFilename := e.snapshotFilename(e.activeHistoryHead - 2*SnapshotLength)
 	err = os.RemoveAll(oldSnapshotFilename) // os.RemoveAll returns nil if the file does not exist.
@@ -222,7 +225,7 @@ func (e *Engine) saveSnapshot() (err error) {
 func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
 	// Make sure that the requested snapshot is on disk.
 	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
-		err = errors.New("snapshot not found")
+		err = fmt.Errorf("snapshot %v not found", snapshotHead)
 		return
 	}
 

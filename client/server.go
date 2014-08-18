@@ -95,6 +95,15 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 		SK: sk,
 	}
 
+	// Update the list of siblings to contain the bootstrap address, by
+	// getting a list of siblings out of the newParticipant metadata.
+	var metadata state.Metadata
+	err = newParticipant.Metadata(struct{}{}, &metadata)
+	if err != nil {
+		return
+	}
+	c.siblings = metadata.Siblings
+
 	return
 }
 
@@ -123,8 +132,17 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	if err != nil {
 		return
 	}
-
 	c.participantServer.participants[name] = joiningParticipant
+
+	// Update the list of siblings to contain the bootstrap address, by
+	// getting a list of siblings out of the joiningParticipant metadata.
+	var metadata state.Metadata
+	err = joiningParticipant.Metadata(struct{}{}, &metadata)
+	if err != nil {
+		return
+	}
+	c.siblings = metadata.Siblings
+
 	return
 }
 
