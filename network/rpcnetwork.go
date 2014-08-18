@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,16 +26,19 @@ type RPCServer struct {
 	rpcServ  *rpc.Server
 	listener net.Listener
 	curID    Identifier
+	idLock   sync.Mutex
 }
 
 // RegisterHandler registers a message handler to the RPC server. The handler
 // is assigned an Identifier, which is returned to the caller. The Identifier
 // is appended to the service name before registration.
 func (rpcs *RPCServer) RegisterHandler(handler interface{}) Address {
+	rpcs.idLock.Lock()
 	id := rpcs.curID
 	name := reflect.Indirect(reflect.ValueOf(handler)).Type().Name() + string(id)
 	rpcs.rpcServ.RegisterName(name, handler)
 	rpcs.curID++
+	rpcs.idLock.Unlock()
 	return Address{rpcs.addr.Host, rpcs.addr.Port, id}
 }
 

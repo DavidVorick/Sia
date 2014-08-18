@@ -43,7 +43,7 @@ func (s *State) ExecuteCompensation() {
 	// Count the number of siblings receiving compensation.
 	var siblings int
 	for i := range s.Metadata.Siblings {
-		if s.Metadata.Siblings[i].Active {
+		if s.Metadata.Siblings[i].Active() {
 			siblings++
 		}
 	}
@@ -58,7 +58,7 @@ func (s *State) ExecuteCompensation() {
 	compensation := s.Metadata.StoragePrice
 	compensation.Multiply(NewBalance(0, quorumWeight))
 	for i := range s.Metadata.Siblings {
-		if !s.Metadata.Siblings[i].Active {
+		if !s.Metadata.Siblings[i].Active() {
 			continue
 		}
 

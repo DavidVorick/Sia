@@ -10,7 +10,7 @@ import (
 const (
 	maxInstructions = 10000
 	maxStackLen     = 1 << 16
-	debug           = true
+	debug           = false
 )
 
 // A ScriptInput pairs an input byte slice with the WalletID associated with
@@ -135,7 +135,9 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 	}
 
 	// run script
-	fmt.Println("executing script:", env.script)
+	if debug {
+		fmt.Println("executing script:", env.script)
+	}
 	if err = env.run(); err != nil {
 		fmt.Println("script execution failed:", err)
 	}

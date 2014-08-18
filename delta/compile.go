@@ -20,7 +20,7 @@ func (e *Engine) Compile(b Block) {
 	var siblingEntropy []byte
 	for i, heartbeat := range b.Heartbeats {
 		// Ignore heartbeat if there's no sibling.
-		if !e.state.Metadata.Siblings[i].Active {
+		if !e.state.Metadata.Siblings[i].Active() {
 			continue
 		}
 
@@ -69,6 +69,14 @@ func (e *Engine) Compile(b Block) {
 	// Charge wallets for the storage they are consuming, and reward sibings for
 	// the storage that is being consumed.
 	e.state.ExecuteCompensation()
+
+	// Update all passive siblings so that their PassiveWindow is reduced
+	// by one.
+	for i := range e.state.Metadata.Siblings {
+		if !e.state.Metadata.Siblings[i].Active() && !e.state.Metadata.Siblings[i].Inactive() {
+			e.state.Metadata.Siblings[i].Status -= 1
+		}
+	}
 
 	// Update the metadata of the quorum.
 	blockHash, err := siacrypto.HashObject(b)

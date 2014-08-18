@@ -64,8 +64,8 @@ func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
 
 	// Look through the quorum for an empty sibling.
 	for i := byte(0); i < state.QuorumSize; i++ {
-		if !e.state.Metadata.Siblings[i].Active {
-			sib.Active = true
+		if e.state.Metadata.Siblings[i].Inactive() {
+			sib.Status = state.SiblingPassiveWindow
 			sib.Index = i
 			sib.WalletID = w.ID
 			e.state.Metadata.Siblings[i] = sib
@@ -73,7 +73,7 @@ func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
 		}
 	}
 
-	if !sib.Active {
+	if sib.Inactive() {
 		err = errNoEmptySiblings
 		return
 	}

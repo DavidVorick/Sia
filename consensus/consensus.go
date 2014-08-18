@@ -69,9 +69,13 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 		for i := range p.updates {
 			if len(p.updates[i]) == 1 {
 				for _, u := range p.updates[i] {
-					// Add the heartbeat to the block
-					b.Heartbeats[i] = u.Heartbeat
-					b.HeartbeatSignatures[i] = u.HeartbeatSignature
+					// Add the heartbeat to the block for active siblings.
+					p.engineLock.RLock()
+					if p.engine.Metadata().Siblings[i].Active() {
+						b.Heartbeats[i] = u.Heartbeat
+						b.HeartbeatSignatures[i] = u.HeartbeatSignature
+					}
+					p.engineLock.RUnlock()
 
 					// Add all of the script inputs to the script input map.
 					for _, scriptInput := range u.ScriptInputs {
@@ -150,13 +154,13 @@ func (p *Participant) newSignedUpdate() {
 	}
 
 	// Create the update with the heartbeat and heartbeat signature.
-	p.engineLock.Lock()
+	p.engineLock.RLock()
 	update := Update{
 		Height:             p.engine.Metadata().Height,
 		Heartbeat:          hb,
 		HeartbeatSignature: signature,
 	}
-	p.engineLock.Unlock()
+	p.engineLock.RUnlock()
 
 	// Attach all of the script inputs to the update, clearing the list of
 	// script inputs in the process.
@@ -293,7 +297,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		}
 
 		// Check that current signatory is a valid sibling in the quorum.
-		if !p.engine.Metadata().Siblings[signatory].Active {
+		if p.engine.Metadata().Siblings[signatory].Inactive() {
 			err = errNonSibling
 			p.updatesLock.Unlock()
 			p.engineLock.RUnlock()

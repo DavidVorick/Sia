@@ -56,6 +56,11 @@ func (e *Engine) SetSiblingIndex(index byte) {
 	e.siblingIndex = index
 }
 
+func (e *Engine) Initialize(filePrefix string) {
+	e.SetFilePrefix(filePrefix)
+	e.state.Initialize()
+}
+
 // Metadata is a getter that returns the state.Metadata object.
 func (e *Engine) Metadata() state.Metadata {
 	return e.state.Metadata
@@ -97,6 +102,7 @@ func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
 		return
 	}
 	e.AddSibling(&sibWallet, sib)
+	e.state.Metadata.Siblings[0].Status = 0
 
 	e.saveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
