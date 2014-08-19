@@ -178,6 +178,17 @@ func CreateJoiningParticipant(mr network.MessageRouter, filePrefix string, tethe
 		// Event downloading will be implemented later.
 	}
 
+	// At this point, saveBlock() in package delta is expecting the active
+	// history file to be available, but this file hasn't been created yet
+	// because the inital values for snapshot weren't established
+	// correctly. It's a bit of a hack and should be refactored at some
+	// point, but we've got to set those variables so that compile(),
+	// saveBlock(), and saveSnapshot() work as expected.
+	err = p.engine.BootstrapJoinSetup()
+	if err != nil {
+		return
+	}
+
 	// Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being
 	// behind in the current round of consensus.

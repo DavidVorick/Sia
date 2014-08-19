@@ -6,7 +6,7 @@ import (
 )
 
 // TODO: add docstring
-func (e *Engine) Compile(b Block) {
+func (e *Engine) Compile(b Block) (err error) {
 	// The first thing that happens is the entropy seed for the block is
 	// determined. Though not implemented, this happens by pulling the latest
 	// external entropy source from the block and hashing it against the germ
@@ -30,12 +30,14 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 		if !verified {
+			println("Tossing sibling for invalid signature")
 			e.state.TossSibling(byte(i))
 			continue
 		}
 
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
+			println("Tossing sibling for invalid parent block")
 			e.state.TossSibling(byte(i))
 			continue
 		}
@@ -87,5 +89,10 @@ func (e *Engine) Compile(b Block) {
 	e.state.Metadata.Height++
 
 	// Save the block.
-	e.saveBlock(b)
+	err = e.saveBlock(b)
+	if err != nil {
+		return
+	}
+
+	return
 }

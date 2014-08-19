@@ -2,10 +2,12 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TestConsensus is the catch-all function for testing the components of the
@@ -103,6 +105,22 @@ func TestConsensus(t *testing.T) {
 		for j, sibling := range participant.engine.Metadata().Siblings {
 			if sibling.Inactive() {
 				t.Error("Sibling recognized as inactive for iterators", i, ",", j)
+			}
+		}
+		participant.engineLock.RUnlock()
+	}
+
+	// Wait through two full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(state.QuorumSize) * 2)
+
+	// At this point, there should be a full quorum, where each participant
+	// recognized all other participants. We run a check to see that each
+	// participant recognizes each other participant as active siblings.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		participant.engineLock.RLock()
+		for j, sibling := range participant.engine.Metadata().Siblings {
+			if sibling.Inactive() {
+				t.Error("Second check: sibling recognized as inactive for iterators", i, ",", j)
 			}
 		}
 		participant.engineLock.RUnlock()

@@ -30,7 +30,7 @@ func (e *Engine) recentHistoryFilename() string {
 // activeHistory, which is a set of blocks numbering less than or equal to
 // SnapshotLength leading from the most recent snapshot to the current quorum.
 func (e *Engine) activeHistoryFilename() string {
-	return e.historyFilename(e.activeHistoryHead)
+	return e.historyFilename(e.state.Metadata.RecentSnapshot)
 }
 
 // saveBlock takes a block and saves it to disk. Blocks are saved in chains of
@@ -53,14 +53,14 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	if e.activeHistoryLength == SnapshotLength {
 		// remove the recent history file, and progress the recentHistoryHead
 		os.Remove(e.recentHistoryFilename())
-		e.recentHistoryHead = e.activeHistoryHead
+		e.recentHistoryHead = e.state.Metadata.RecentSnapshot
 
-		// reset activeHistoryLength, and progress the activeHistoryHead, then save
-		// the snapshot. The ordering is important - the activeHistoryHead value
+		// reset activeHistoryLength, and progress the RecentSnapshot, then save
+		// the snapshot. The ordering is important - the RecentSnapshot value
 		// must be progressed before saveSnapshot() is called, such that the
 		// snapshot is saved to the right filename.
 		e.activeHistoryLength = 0
-		e.activeHistoryHead += SnapshotLength
+		e.state.Metadata.RecentSnapshot += SnapshotLength
 		err = e.saveSnapshot()
 		if err != nil {
 			return
@@ -155,13 +155,13 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 	// that possibility is also checked
 	var file *os.File
 	var blockIndex uint32
-	if height >= e.activeHistoryHead && height < e.activeHistoryHead+e.activeHistoryLength {
+	if height >= e.state.Metadata.RecentSnapshot && height < e.state.Metadata.RecentSnapshot+e.activeHistoryLength {
 		// block is in active history, load from that file
 		file, err = os.Open(e.activeHistoryFilename())
 		if err != nil {
 			return
 		}
-		blockIndex = height - e.activeHistoryHead
+		blockIndex = height - e.state.Metadata.RecentSnapshot
 	} else if e.recentHistoryHead != ^uint32(0) && height >= e.recentHistoryHead && height < e.recentHistoryHead+SnapshotLength {
 		// block is in recent history, load from that file
 		file, err = os.Open(e.recentHistoryFilename())

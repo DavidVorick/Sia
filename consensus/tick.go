@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/NebulousLabs/Sia/state"
@@ -46,7 +47,10 @@ func (p *Participant) tick() {
 
 				// Compile the block.
 				p.engineLock.Lock()
-				p.engine.Compile(block)
+				err := p.engine.Compile(block)
+				if err != nil {
+					fmt.Println(err)
+				}
 				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.

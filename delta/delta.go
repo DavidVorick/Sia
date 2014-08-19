@@ -10,6 +10,8 @@ package delta
 // and its current designs are passable, but not elegant, clean, or beautiful.
 
 import (
+	"os"
+
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -26,7 +28,7 @@ const (
 // SaveSnapshot() should be called upon initialization.
 // - recentHistoryHead needs to be initialized to ^uint32(0).
 // - activeHistoryLength should be initialized to SnapshotLength.
-// - activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1),
+// - e.state.Metadata.RecentSnapshot needs to be initialized to ^uint32(0) - (SnapshotLength-1),
 //   because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
@@ -41,7 +43,6 @@ type Engine struct {
 
 	// Snapshot Variables
 	recentHistoryHead   uint32
-	activeHistoryHead   uint32
 	activeHistoryLength uint32
 }
 
@@ -107,8 +108,17 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 
 	e.saveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
-	e.activeHistoryHead = ^uint32(0) - (SnapshotLength - 1)
+	e.state.Metadata.RecentSnapshot = ^uint32(0) - (SnapshotLength - 1)
 	e.activeHistoryLength = SnapshotLength
+	return
+}
+
+func (e *Engine) BootstrapJoinSetup() (err error) {
+	file, err := os.Create(e.activeHistoryFilename())
+	if err != nil {
+		return
+	}
+	file.Close()
 	return
 }
 
