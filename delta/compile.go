@@ -1,6 +1,8 @@
 package delta
 
 import (
+	"fmt"
+
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -31,6 +33,25 @@ func (e *Engine) Compile(b Block) (err error) {
 		}
 		if !verified {
 			println("Tossing sibling for invalid signature")
+
+			fmt.Println(e.siblingIndex)
+			fmt.Println(i)
+			fmt.Println(b.Height)
+			fmt.Println(b.ParentBlock)
+			fmt.Println("Heartbeats:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.Heartbeats[i])
+			}
+			fmt.Println("Signatures:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.HeartbeatSignatures[i])
+			}
+			fmt.Println("Everything else")
+			fmt.Println(b.ScriptInputs)
+			fmt.Println(b.UpdateAdvancements)
+			fmt.Println(b.AdvancementSignatures)
+			fmt.Println("Finished printing block.")
+
 			e.state.TossSibling(byte(i))
 			continue
 		}
@@ -38,6 +59,24 @@ func (e *Engine) Compile(b Block) (err error) {
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
 			println("Tossing sibling for invalid parent block")
+			fmt.Println(e.siblingIndex)
+			fmt.Println(i)
+			fmt.Println(b.Height)
+			fmt.Println(b.ParentBlock)
+			fmt.Println("Heartbeats:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.Heartbeats[i])
+			}
+			fmt.Println("Signatures:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.HeartbeatSignatures[i])
+			}
+			fmt.Println("Everything else")
+			fmt.Println(b.ScriptInputs)
+			fmt.Println(b.UpdateAdvancements)
+			fmt.Println(b.AdvancementSignatures)
+			fmt.Println("Finished printing block.")
+
 			e.state.TossSibling(byte(i))
 			continue
 		}

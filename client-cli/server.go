@@ -97,7 +97,7 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 
 	// Establish a wallet for the first participant in the quorum.
 	var sibID state.WalletID
-	fmt.Print("Now creating a wallet for the participant to use. Pick an id (hex): ")
+	fmt.Print("Now creating a wallet for the participant to use. Pick an id: ")
 	_, err = fmt.Scanln(&sibID)
 	if err != nil {
 		return

@@ -76,14 +76,17 @@ func CreateBootstrapParticipant(mr network.MessageRouter, filePrefix string, boo
 	if err != nil {
 		return
 	}
-	p.siblingIndex = 0
+	p.setSiblingIndex(0)
 
 	// Create the first update.
 	p.newSignedUpdate()
 
 	// Run the first compile.
 	block := p.condenseBlock()
-	p.engine.Compile(block)
+	err = p.engine.Compile(block)
+	if err != nil {
+		return
+	}
 	p.newSignedUpdate()
 
 	// Begin ticking.

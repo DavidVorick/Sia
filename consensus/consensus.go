@@ -221,14 +221,6 @@ func (p *Participant) newSignedUpdate() {
 // concensus, blocking late updates and waiting on early updates, and throwing
 // out anything that does not follow the rules for legal signatures.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
-	p.tickLock.RLock()
-	if !p.ticking {
-		err = errNotReady
-		p.tickLock.RUnlock()
-		return
-	}
-	p.tickLock.RUnlock()
-
 	// Printing errors helps with debugging. Production code for this
 	// package should never print, only log.
 	defer func() {
