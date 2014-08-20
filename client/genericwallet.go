@@ -42,7 +42,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
-			WalletID: delta.BootstrapWalletID,
+			WalletID: delta.FountainWalletID,
 			Input:    delta.DefaultScript(pk),
 		},
 		Resp: nil,
