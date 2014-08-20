@@ -17,7 +17,7 @@ func TestSaveLoadWallet(t *testing.T) {
 	var keypair1, keypair2 Keypair
 	id1 = state.WalletID(siacrypto.RandomUint64())
 	var err error
-	keypair1.PK, keypair1.SK, err = siacrypto.CreateKeyPair()
+	keypair1.PublicKey, keypair1.SecretKey, err = siacrypto.CreateKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,10 +32,10 @@ func TestSaveLoadWallet(t *testing.T) {
 	if id1 != id2 {
 		t.Fatal("Wallet ID not preserved when loaded")
 	}
-	if !bytes.Equal(keypair1.PK[:], keypair2.PK[:]) {
+	if !bytes.Equal(keypair1.PublicKey[:], keypair2.PublicKey[:]) {
 		t.Fatal("Wallet's key pair not preserved when loaded")
 	}
-	if !bytes.Equal(keypair1.SK[:], keypair2.SK[:]) {
+	if !bytes.Equal(keypair1.SecretKey[:], keypair2.SecretKey[:]) {
 		t.Fatal("Wallet's key pair not preserved when loaded")
 	}
 	os.Remove("tempFile")

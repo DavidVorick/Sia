@@ -11,8 +11,8 @@ import (
 // Keypair contains a public key and its corresponding private key. The keypair
 // is given its own struct to enforce the connection between the keys.
 type Keypair struct {
-	PK siacrypto.PublicKey
-	SK siacrypto.SecretKey
+	PublicKey siacrypto.PublicKey
+	SecretKey siacrypto.SecretKey
 }
 
 // Struct Client contains the state for client actions

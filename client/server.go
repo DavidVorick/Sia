@@ -91,8 +91,8 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 
 	// Add the wallet to the client list of generic wallets.
 	c.genericWallets[sibID] = Keypair{
-		PK: pk,
-		SK: sk,
+		PublicKey: pk,
+		SecretKey: sk,
 	}
 
 	// Update the list of siblings to contain the bootstrap address, by
@@ -128,7 +128,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 		siblingAddresses = append(siblingAddresses, sibling.Address)
 	}
 
-	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SK, siblingAddresses)
+	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SecretKey, siblingAddresses)
 	if err != nil {
 		return
 	}

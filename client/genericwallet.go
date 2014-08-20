@@ -34,8 +34,8 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 
 	// Fill out a keypair object and insert it into the generic wallet map.
 	var kp Keypair
-	kp.PK = pk
-	kp.SK = sk
+	kp.PublicKey = pk
+	kp.SecretKey = sk
 	c.genericWallets[id] = kp
 
 	// Send the requesting script input out to the network.
