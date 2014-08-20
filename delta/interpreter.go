@@ -66,16 +66,15 @@ func pop(env *scriptEnv) (v []byte, err error) {
 
 func (s *stackElem) print() string {
 	str := "{ "
-	p := s
-	for {
+	for p := s; p != nil; p = p.next {
 		if p == nil {
 			break
 		}
-		b := make([]byte, 5)
-		copy(b, p.val)
-		str += fmt.Sprint(b)
-		str += " "
-		p = p.next
+		if len(p.val) > 5 {
+			str += fmt.Sprint(p.val[:5]) + "... "
+		} else {
+			str += fmt.Sprint(p.val) + " "
+		}
 	}
 	str += "}"
 	return str
