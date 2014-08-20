@@ -86,7 +86,7 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 	// started.
 	err = e.state.InsertWallet(state.Wallet{
 		ID:      BootstrapWalletID,
-		Balance: state.NewBalance(0, 25000000),
+		Balance: state.NewBalance(25000000),
 		Script:  BootstrapScript,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 	// Create a wallet with the default script for the sibling to use.
 	sibWallet := state.Wallet{
 		ID:      sib.WalletID,
-		Balance: state.NewBalance(0, 1000000),
+		Balance: state.NewBalance(1000000),
 		Script:  DefaultScript(tetherWalletPublicKey),
 	}
 	err = e.state.InsertWallet(sibWallet)

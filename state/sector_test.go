@@ -105,3 +105,13 @@ func TestStorageProof(t *testing.T) {
 		}
 	}
 }
+
+// BenchmarkMerkleCollapse benchmarks the MerkleCollapse function when using the
+// (near) maximum value of numAtoms
+func BenchmarkMerkleCollapse(b *testing.B) {
+	r := bytes.NewReader(siacrypto.RandomByteSlice(1 << 15 * AtomSize)) // 1 MB
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		MerkleCollapse(r, 1<<15)
+	}
+}

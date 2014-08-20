@@ -119,320 +119,320 @@ func v2b(b []byte) bool {
 
 // general opcodes
 
-func op_no_op(args []byte) (err error) {
+func op_no_op(env *scriptEnv, args []byte) (err error) {
 	return
 }
 
-func op_push_byte(args []byte) (err error) {
-	err = push(args[:1])
+func op_push_byte(env *scriptEnv, args []byte) (err error) {
+	err = push(env, args[:1])
 	return
 }
 
-func op_push_short(args []byte) (err error) {
-	err = push(args[:2])
+func op_push_short(env *scriptEnv, args []byte) (err error) {
+	err = push(env, args[:2])
 	return
 }
 
-func op_pop(args []byte) (err error) {
-	_, err = pop()
+func op_pop(env *scriptEnv, args []byte) (err error) {
+	_, err = pop(env)
 	return
 }
 
-func op_dup(args []byte) (err error) {
-	a, err := pop()
+func op_dup(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(a)
-	err = push(a)
+	push(env, a)
+	err = push(env, a)
 	return
 }
 
-func op_swap(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_swap(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(a)
-	err = push(b)
+	push(env, a)
+	err = push(env, b)
 	return
 }
 
-func op_add_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_add_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) + v2i(b)))
+	err = push(env, i2v(v2i(a)+v2i(b)))
 	return
 }
 
-func op_add_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_add_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(f2v(v2f(a) + v2f(b)))
+	err = push(env, f2v(v2f(a)+v2f(b)))
 	return
 }
 
-func op_sub_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_sub_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) - v2i(b)))
+	err = push(env, i2v(v2i(a)-v2i(b)))
 	return
 }
 
-func op_sub_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_sub_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(f2v(v2f(a) - v2f(b)))
+	err = push(env, f2v(v2f(a)-v2f(b)))
 	return
 }
 
-func op_mul_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_mul_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) * v2i(b)))
+	err = push(env, i2v(v2i(a)*v2i(b)))
 	return
 }
 
-func op_mul_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_mul_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(f2v(v2f(a) * v2f(b)))
+	err = push(env, f2v(v2f(a)*v2f(b)))
 	return
 }
 
-func op_div_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_div_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
 	if v2i(b) == 0 {
 		return errors.New("divide by zero")
 	}
-	err = push(i2v(v2i(a) / v2i(b)))
+	err = push(env, i2v(v2i(a)/v2i(b)))
 	return
 }
 
-func op_div_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_div_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
 	if v2f(b) == 0.0 {
 		return errors.New("divide by zero")
 	}
-	err = push(f2v(v2f(a) / v2f(b)))
+	err = push(env, f2v(v2f(a)/v2f(b)))
 	return
 }
 
-func op_mod_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_mod_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) % v2i(b)))
+	err = push(env, i2v(v2i(a)%v2i(b)))
 	return
 }
 
-func op_neg_int(args []byte) (err error) {
-	a, err := pop()
+func op_neg_int(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(-v2i(a)))
+	err = push(env, i2v(-v2i(a)))
 	return
 }
 
-func op_neg_float(args []byte) (err error) {
-	a, err := pop()
+func op_neg_float(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(f2v(-v2f(a)))
+	err = push(env, f2v(-v2f(a)))
 	return
 }
 
-func op_binary_or(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_binary_or(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) | v2i(b)))
+	err = push(env, i2v(v2i(a)|v2i(b)))
 	return
 }
 
-func op_binary_and(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_binary_and(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) & v2i(b)))
+	err = push(env, i2v(v2i(a)&v2i(b)))
 	return
 }
 
-func op_binary_xor(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_binary_xor(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) ^ v2i(b)))
+	err = push(env, i2v(v2i(a)^v2i(b)))
 	return
 }
 
-func op_shift_left(args []byte) (err error) {
-	a, err := pop()
+func op_shift_left(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) << args[0]))
+	err = push(env, i2v(v2i(a)<<args[0]))
 	return
 }
 
-func op_shift_right(args []byte) (err error) {
-	a, err := pop()
+func op_shift_right(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	err = push(i2v(v2i(a) >> args[0]))
+	err = push(env, i2v(v2i(a)>>args[0]))
 	return
 }
 
-func op_equal(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_equal(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(bytes.Equal(a, b)))
+	push(env, b2v(bytes.Equal(a, b)))
 	return
 }
 
-func op_not_equal(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_not_equal(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(!bytes.Equal(a, b)))
+	push(env, b2v(!bytes.Equal(a, b)))
 	return
 }
 
-func op_less_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_less_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2i(a) < v2i(b)))
+	push(env, b2v(v2i(a) < v2i(b)))
 	return
 }
 
-func op_less_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_less_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2f(a) < v2f(b)))
+	push(env, b2v(v2f(a) < v2f(b)))
 	return
 }
 
-func op_greater_int(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_greater_int(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2i(a) > v2i(b)))
+	push(env, b2v(v2i(a) > v2i(b)))
 	return
 }
 
-func op_greater_float(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_greater_float(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2f(a) > v2f(b)))
+	push(env, b2v(v2f(a) > v2f(b)))
 	return
 }
 
-func op_logical_not(args []byte) (err error) {
-	a, err := pop()
+func op_logical_not(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(!v2b(a)))
+	push(env, b2v(!v2b(a)))
 	return
 }
 
-func op_logical_or(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_logical_or(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2b(a) || v2b(b)))
+	push(env, b2v(v2b(a) || v2b(b)))
 	return
 }
 
-func op_logical_and(args []byte) (err error) {
-	a, _ := pop()
-	b, err := pop()
+func op_logical_and(env *scriptEnv, args []byte) (err error) {
+	a, _ := pop(env)
+	b, err := pop(env)
 	if err != nil {
 		return
 	}
-	push(b2v(v2b(a) && v2b(b)))
+	push(env, b2v(v2b(a) && v2b(b)))
 	return
 }
 
-func op_if_goto(args []byte) (err error) {
-	a, err := pop()
-	if err != nil {
-		return
-	}
-	if v2b(a) {
-		err = op_goto(args)
-	}
-	return
-}
-
-func op_if_move(args []byte) (err error) {
-	a, err := pop()
+func op_if_goto(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
 	if v2b(a) {
-		err = op_move(args)
+		err = op_goto(env, args)
 	}
 	return
 }
 
-func op_goto(args []byte) (err error) {
+func op_if_move(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
+	if err != nil {
+		return
+	}
+	if v2b(a) {
+		err = op_move(env, args)
+	}
+	return
+}
+
+func op_goto(env *scriptEnv, args []byte) (err error) {
 	env.iptr = s2i(args[0], args[1]) - 1
 	if env.iptr < 0 || env.iptr > len(env.script) {
 		err = errors.New("jumped to invalid index")
@@ -440,7 +440,7 @@ func op_goto(args []byte) (err error) {
 	return
 }
 
-func op_move(args []byte) (err error) {
+func op_move(env *scriptEnv, args []byte) (err error) {
 	env.iptr += s2i(args[0], args[1]) - 1
 	if env.iptr < 0 || env.iptr > len(env.script) {
 		err = errors.New("jumped to invalid index")
@@ -450,8 +450,8 @@ func op_move(args []byte) (err error) {
 
 // data pointer and register opcodes
 
-func op_store(args []byte) (err error) {
-	a, err := pop()
+func op_store(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
@@ -459,12 +459,12 @@ func op_store(args []byte) (err error) {
 	return
 }
 
-func op_load(args []byte) (err error) {
-	err = push(env.registers[args[0]])
+func op_load(env *scriptEnv, args []byte) (err error) {
+	err = push(env, env.registers[args[0]])
 	return
 }
 
-func op_data_goto(args []byte) (err error) {
+func op_data_goto(env *scriptEnv, args []byte) (err error) {
 	env.dptr = s2i(args[0], args[1])
 	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
@@ -472,7 +472,7 @@ func op_data_goto(args []byte) (err error) {
 	return
 }
 
-func op_data_move(args []byte) (err error) {
+func op_data_move(env *scriptEnv, args []byte) (err error) {
 	env.dptr += s2i(args[0], args[1])
 	if env.dptr < 0 || env.dptr > len(env.script) {
 		err = errors.New("invalid data access")
@@ -480,22 +480,22 @@ func op_data_move(args []byte) (err error) {
 	return
 }
 
-func op_data_push(args []byte) (err error) {
+func op_data_push(env *scriptEnv, args []byte) (err error) {
 	b := make([]byte, args[0])
 	env.dptr += copy(b, env.script[env.dptr:])
-	err = push(b)
+	err = push(env, b)
 	return
 }
 
-func op_data_store(args []byte) (err error) {
+func op_data_store(env *scriptEnv, args []byte) (err error) {
 	b := make([]byte, args[0])
 	env.dptr += copy(b, env.script[env.dptr:])
 	env.registers[args[1]] = b
 	return
 }
 
-func op_data_copy(args []byte) (err error) {
-	lengthv, err := pop()
+func op_data_copy(env *scriptEnv, args []byte) (err error) {
+	lengthv, err := pop(env)
 	if err != nil {
 		return
 	}
@@ -505,8 +505,8 @@ func op_data_copy(args []byte) (err error) {
 	return
 }
 
-func op_data_paste(args []byte) (err error) {
-	lengthv, err := pop()
+func op_data_paste(env *scriptEnv, args []byte) (err error) {
+	lengthv, err := pop(env)
 	if err != nil {
 		return
 	}
@@ -522,15 +522,15 @@ func op_data_paste(args []byte) (err error) {
 	return
 }
 
-func op_transfer(args []byte) (err error) {
+func op_transfer(env *scriptEnv, args []byte) (err error) {
 	env.iptr = env.dptr
 	return
 }
 
 // function opcodes
 
-func op_add_sibling(args []byte) (err error) {
-	encSib, err := pop()
+func op_add_sibling(env *scriptEnv, args []byte) (err error) {
+	encSib, err := pop(env)
 	if err != nil {
 		return
 	}
@@ -545,11 +545,11 @@ func op_add_sibling(args []byte) (err error) {
 	return
 }
 
-func op_add_wallet(args []byte) (err error) {
+func op_add_wallet(env *scriptEnv, args []byte) (err error) {
 	/*
-		lbalv, _ := pop()
-		ubalv, _ := pop()
-		idv, err := pop()
+		lbalv, _ := pop(env)
+		ubalv, _ := pop(env)
+		idv, err := pop(env)
 		if err != nil {
 			return
 		}
@@ -567,11 +567,11 @@ func op_add_wallet(args []byte) (err error) {
 	return
 }
 
-func op_send(args []byte) (err error) {
+func op_send(env *scriptEnv, args []byte) (err error) {
 	/*
-		lbalv, _ := pop()
-		ubalv, _ := pop()
-		idv, err := pop()
+		lbalv, _ := pop(env)
+		ubalv, _ := pop(env)
+		idv, err := pop(env)
 		if err != nil {
 			return
 		}
@@ -588,10 +588,10 @@ func op_send(args []byte) (err error) {
 	return
 }
 
-func op_verify(args []byte) (err error) {
+func op_verify(env *scriptEnv, args []byte) (err error) {
 	// pop values
-	sm, _ := pop()
-	encPk, err := pop()
+	sm, _ := pop(env)
+	encPk, err := pop(env)
 	if err != nil {
 		return
 	}
@@ -602,19 +602,19 @@ func op_verify(args []byte) (err error) {
 	var sig siacrypto.Signature
 	copy(sig[:], sm)
 	if len(sm) < siacrypto.SignatureSize {
-		return push(b2v(false))
+		return push(env, b2v(false))
 	}
 	msg := sm[siacrypto.SignatureSize:]
 
 	// verify signature
 	verified := pk.Verify(sig, msg)
-	err = push(b2v(verified))
+	err = push(env, b2v(verified))
 	return
 }
 
-func op_resize_sec(args []byte) (err error) {
+func op_resize_sec(env *scriptEnv, args []byte) (err error) {
 	/*
-		a, err := pop()
+		a, err := pop(env)
 		if err != nil {
 			return
 		}
@@ -624,7 +624,7 @@ func op_resize_sec(args []byte) (err error) {
 	return
 }
 
-func op_prop_upload(args []byte) (err error) {
+func op_prop_upload(env *scriptEnv, args []byte) (err error) {
 	/*
 		// decode function arguments
 		var ua quorum.UploadArgs
@@ -648,67 +648,67 @@ func op_prop_upload(args []byte) (err error) {
 
 // convenience opcodes
 
-func op_switch(args []byte) (err error) {
-	a, err := pop()
+func op_switch(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
 	if args[0] == a[0] {
-		err = op_goto([]byte{0, args[1]})
+		err = op_goto(env, []byte{0, args[1]})
 	} else {
-		err = push(a)
+		err = push(env, a)
 	}
 	return
 }
 
-func op_store_prefix(args []byte) (err error) {
-	err = op_data_push([]byte{0x02})
+func op_store_prefix(env *scriptEnv, args []byte) (err error) {
+	err = op_data_push(env, []byte{0x02})
 	if err != nil {
 		return
 	}
-	err = op_data_copy(args)
+	err = op_data_copy(env, args)
 	return
 }
 
-func op_store_rest(args []byte) (err error) {
+func op_store_rest(env *scriptEnv, args []byte) (err error) {
 	env.registers[args[0]] = make([]byte, len(env.script[env.dptr:]))
 	copy(env.registers[args[0]], env.script[env.dptr:])
 	return
 }
 
-func op_push_prefix(args []byte) (err error) {
+func op_push_prefix(env *scriptEnv, args []byte) (err error) {
 	num := s2i(env.script[env.dptr], env.script[env.dptr+1])
 	env.dptr += 2
 	b := make([]byte, num)
 	env.dptr += copy(b, env.script[env.dptr:])
-	err = push(b)
+	err = push(env, b)
 	return
 }
 
-func op_push_rest(args []byte) (err error) {
+func op_push_rest(env *scriptEnv, args []byte) (err error) {
 	b := make([]byte, len(env.script[env.dptr:]))
 	copy(b, env.script[env.dptr:])
-	err = push(b)
+	err = push(env, b)
 	return
 }
 
-func op_cond_reject(args []byte) (err error) {
-	a, err := pop()
+func op_cond_reject(env *scriptEnv, args []byte) (err error) {
+	a, err := pop(env)
 	if err != nil {
 		return
 	}
 	if !v2b(a) {
-		err = op_reject([]byte{})
+		err = op_reject(env, []byte{})
 	}
 	return
 }
 
 // termination opcodes
 
-func op_reject(args []byte) (err error) {
+func op_reject(env *scriptEnv, args []byte) (err error) {
 	return errRejected
 }
 
-func op_exit(b []byte) (err error) {
+func op_exit(env *scriptEnv, args []byte) (err error) {
 	return errExit
 }

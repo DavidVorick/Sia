@@ -21,22 +21,22 @@ func TestExecuteCompensation(t *testing.T) {
 	s.Initialize()
 
 	s.SetWalletPrefix(siafiles.TempFilename("TestExecuteCompensation"))
-	s.Metadata.StoragePrice = NewBalance(0, 1)
+	s.Metadata.StoragePrice = NewBalance(1)
 
 	// Create 3 wallets, a base wallet, a wallet with a script, and a wallet with
 	// a sector.
 	w0 := Wallet{
 		ID:      0,
-		Balance: NewBalance(0, 100),
+		Balance: NewBalance(100),
 	}
 	w1 := Wallet{
 		ID:      1,
-		Balance: NewBalance(0, 100),
+		Balance: NewBalance(100),
 		Script:  siacrypto.RandomByteSlice(8),
 	}
 	w2 := Wallet{
 		ID:      2,
-		Balance: NewBalance(0, 100),
+		Balance: NewBalance(100),
 		SectorSettings: SectorSettings{
 			Atoms: 10,
 		},
@@ -50,7 +50,7 @@ func TestExecuteCompensation(t *testing.T) {
 	// Add a sibling to the state with its own wallet.
 	sib0Wallet := Wallet{
 		ID:      3,
-		Balance: NewBalance(0, 100),
+		Balance: NewBalance(100),
 	}
 	s.InsertWallet(sib0Wallet)
 	sib0 := Sibling{
@@ -68,7 +68,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w0ExpectedBalance := NewBalance(0, 100-walletAtomMultiplier)
+	w0ExpectedBalance := NewBalance(100 - walletAtomMultiplier)
 	if w0.Balance.Compare(w0ExpectedBalance) != 0 {
 		t.Error("w0 did not have the correct balance after compensation", w0ExpectedBalance, w0.Balance)
 	}
@@ -77,7 +77,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w1ExpectedBalance := NewBalance(0, 100-walletAtomMultiplier*2)
+	w1ExpectedBalance := NewBalance(100 - walletAtomMultiplier*2)
 	if w1.Balance.Compare(w1ExpectedBalance) != 0 {
 		t.Error("w1 did not have the expected balance after compensation", w1.Balance)
 	}
@@ -86,7 +86,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w2ExpectedBalance := NewBalance(0, 100-walletAtomMultiplier-10)
+	w2ExpectedBalance := NewBalance(100 - walletAtomMultiplier - 10)
 	if w2.Balance.Compare(w2ExpectedBalance) != 0 {
 		t.Error("w1 did not have the expected balance after compensation")
 	}
@@ -96,7 +96,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sib0ExpectedBalance := NewBalance(0, 100+walletAtomMultiplier*4+10)
+	sib0ExpectedBalance := NewBalance(100 + walletAtomMultiplier*4 + 10)
 	if sib0Wallet.Balance.Compare(sib0ExpectedBalance) != 0 {
 		t.Error("sibling did not have expected balance after compensation")
 	}
@@ -104,7 +104,7 @@ func TestExecuteCompensation(t *testing.T) {
 	// Add a second sibling, and increase the storage price.
 	sib1Wallet := Wallet{
 		ID:      4,
-		Balance: NewBalance(0, 100),
+		Balance: NewBalance(100),
 	}
 	s.InsertWallet(sib1Wallet)
 	sib1 := Sibling{
@@ -113,7 +113,7 @@ func TestExecuteCompensation(t *testing.T) {
 		WalletID: 4,
 	}
 	s.Metadata.Siblings[sib1.Index] = sib1
-	s.Metadata.StoragePrice = NewBalance(0, 3)
+	s.Metadata.StoragePrice = NewBalance(3)
 
 	// Run 'ExecuteCompensation' and see that all wallets were properly deducted.
 	s.ExecuteCompensation()
@@ -122,7 +122,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w0ExpectedBalance = NewBalance(0, 100-7*walletAtomMultiplier)
+	w0ExpectedBalance = NewBalance(100 - 7*walletAtomMultiplier)
 	if w0.Balance.Compare(w0ExpectedBalance) != 0 {
 		t.Error("w0 did not have the correct balance after compensation")
 	}
@@ -131,7 +131,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w1ExpectedBalance = NewBalance(0, 100-7*walletAtomMultiplier*2)
+	w1ExpectedBalance = NewBalance(100 - 7*walletAtomMultiplier*2)
 	if w1.Balance.Compare(w1ExpectedBalance) != 0 {
 		t.Error("w1 did not have the expected balance after compensation")
 	}
@@ -140,7 +140,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w2ExpectedBalance = NewBalance(0, 100-7*(walletAtomMultiplier+10))
+	w2ExpectedBalance = NewBalance(100 - 7*(walletAtomMultiplier+10))
 	if w2.Balance.Compare(w2ExpectedBalance) != 0 {
 		t.Error("w1 did not have the expected balance after compensation")
 	}
@@ -150,7 +150,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sib0ExpectedBalance = NewBalance(0, 100+4*(walletAtomMultiplier*4+10))
+	sib0ExpectedBalance = NewBalance(100 + 4*(walletAtomMultiplier*4+10))
 	if sib0Wallet.Balance.Compare(sib0ExpectedBalance) != 0 {
 		t.Error("sibling did not have expected balance after compensation")
 	}
@@ -159,7 +159,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sib1ExpectedBalance := NewBalance(0, 100+3*(walletAtomMultiplier*4+10))
+	sib1ExpectedBalance := NewBalance(100 + 3*(walletAtomMultiplier*4+10))
 	if sib1Wallet.Balance.Compare(sib1ExpectedBalance) != 0 {
 		t.Error("sibling did not have expected balance after compensation")
 	}
@@ -177,7 +177,7 @@ func TestExecuteCompensation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sib0ExpectedBalance = NewBalance(0, 100+4*(walletAtomMultiplier*4+10)+3*(walletAtomMultiplier*3))
+	sib0ExpectedBalance = NewBalance(100 + 4*(walletAtomMultiplier*4+10) + 3*(walletAtomMultiplier*3))
 	if sib0Wallet.Balance.Compare(sib0ExpectedBalance) != 0 {
 		t.Error("sibling did not have expected balance after compensation when a wallet was deleted")
 	}
