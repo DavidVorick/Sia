@@ -1,6 +1,10 @@
 package client
 
 import (
+	"errors"
+	"time"
+
+	"github.com/NebulousLabs/Sia/consensus"
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
@@ -25,6 +29,17 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 // Submit a wallet request to the fountain wallet.
 func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	// Query to verify that the wallet id is available.
+	var w state.Wallet
+	err = c.router.SendMessage(network.Message{
+		Dest: c.siblings[0].Address,
+		Proc: "Participant.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+	if err == nil {
+		err = errors.New("Wallet already exists!")
+		return
+	}
 
 	// Create a generic wallet with a keypair for the request.
 	pk, sk, err := siacrypto.CreateKeyPair()
@@ -48,9 +63,24 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		Resp: nil,
 	})
 
-	// Wait an appropriate amount of time for the request to be accepted.
+	// Wait an appropriate amount of time for the request to be accepted: 2
+	// blocks.
+	time.Sleep(time.Duration(consensus.NumSteps) * 2)
 
 	// Query to verify that the request was accepted by the network.
+	err = c.router.SendMessage(network.Message{
+		Dest: c.siblings[0].Address,
+		Proc: "Participant.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+	if err != nil {
+		return
+	}
+	if string(w.Script) != string(delta.DefaultScript(pk)) {
+		err = errors.New("Wallet already exists - someone just beat you to it.")
+		return
+	}
 
 	return
 }

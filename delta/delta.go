@@ -65,6 +65,11 @@ func (e *Engine) SiblingIndex() byte {
 	return e.siblingIndex
 }
 
+func (e *Engine) Wallet(id state.WalletID) (w state.Wallet, err error) {
+	w, err = e.state.LoadWallet(id)
+	return
+}
+
 // WalletList is a pass-along function so that the wallet list of the state can
 // be accessed by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
