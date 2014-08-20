@@ -1,12 +1,13 @@
 package client
 
-/*
 import (
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
+/*
 // send a user-specified script input
 func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 	return c.router.SendMessage(network.Message{
@@ -21,9 +22,10 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 }
 */
 
-/*
-// Submit a wallet request to the bootstrap wallet.
-func (c *Client) RequestWallet(id state.WalletID, s []byte) (err error) {
+// Submit a wallet request to the fountain wallet.
+func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
+	// Query to verify that the wallet id is available.
+
 	// Create a generic wallet with a keypair for the request.
 	pk, sk, err := siacrypto.CreateKeyPair()
 	if err != nil {
@@ -36,17 +38,22 @@ func (c *Client) RequestWallet(id state.WalletID, s []byte) (err error) {
 	kp.SK = sk
 	c.genericWallets[id] = kp
 
+	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
 			WalletID: delta.BootstrapWalletID,
-			Input:    s,
+			Input:    delta.DefaultScript(pk),
 		},
 		Resp: nil,
 	})
+
+	// Wait an appropriate amount of time for the request to be accepted.
+
+	// Query to verify that the request was accepted by the network.
+
 	return
 }
-*/
 
 /*
 // send coins from one wallet to another

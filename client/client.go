@@ -28,19 +28,17 @@ type Client struct {
 	participantServer *Server
 }
 
-/*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
-unc (c *Client) Broadcast(nm network.Message) {
+func (c *Client) Broadcast(m network.Message) {
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue
 		}
-		nm.Dest = c.siblings[i].Address
-		c.router.SendMessage(nm)
+		m.Dest = c.siblings[i].Address
+		c.router.SendMessage(m)
 		break
 	}
 }
-*/
 
 /*
 // Get siblings so that each can be uploaded to individually.  This should be

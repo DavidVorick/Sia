@@ -89,35 +89,27 @@ func connectWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-/*
-func createGenericWalletWalkthrough(c *client.Client) {
+func createGenericWalletWalkthrough(c *client.Client) (err error) {
 	var id state.WalletID
-	var filename string
-	fmt.Print("Enter desired Wallet ID (hex): ")
-	ERR fmt.Scanln("%x", &id)
-	fmt.Print("Script file (blank for default): ")
-	ERR fmt.Scanln("%s", &filename)
-	var script []byte
-	var err error
-	if filename != "" {
-		script, err = ioutil.ReadFile(filename)
-		if err != nil {
-			fmt.Println("Error:", err)
-		}
+	fmt.Print("Enter desired Wallet ID: ")
+	_, err = fmt.Scanln(&id)
+	if err != nil {
 		return
 	}
-	err = c.RequestWallet(id, script)
+
+	err = c.RequestGenericWallet(id)
 	if err != nil {
-		fmt.Println(err)
+		return
 	} else {
 		fmt.Println("Wallet requested")
 	}
+
+	return
 }
-*/
 
 // loadWallet switches the cli into wallet-mode, where actions are taken
 // against a specific wallet.
-func loadWallet(c *client.Client) (err error) {
+func loadWalletWalkthrough(c *client.Client) (err error) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
@@ -201,12 +193,11 @@ func pollHome(c *client.Client) {
 		case "b", "bootstrap":
 			err = bootstrapToNetworkWalkthrough(c)
 
-		case "l", "load", "enter":
-			err = loadWallet(c)
+		case "g", "generic", "request", "new":
+			err = createGenericWalletWalkthrough(c)
 
-		case "n", "new", "request":
-			fmt.Println("New Wallet is not currently implemented!.")
-			// createGenericWallet(c)
+		case "l", "load", "enter":
+			err = loadWalletWalkthrough(c)
 
 		case "p", "ls", "print", "list":
 			printWallets(c)
