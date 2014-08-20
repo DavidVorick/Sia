@@ -21,7 +21,7 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 	err = e.state.InsertWallet(state.Wallet{
 		ID:      FountainWalletID,
 		Balance: state.NewBalance(25000000),
-		Script:  BootstrapScript,
+		Script:  FountainScript,
 	})
 	if err != nil {
 		return

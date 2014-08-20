@@ -40,6 +40,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		err = errors.New("Wallet already exists!")
 		return
 	}
+	err = nil
 
 	// Create a generic wallet with a keypair for the request.
 	pk, sk, err := siacrypto.CreateKeyPair()
@@ -51,21 +52,20 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	var kp Keypair
 	kp.PublicKey = pk
 	kp.SecretKey = sk
-	c.genericWallets[id] = kp
 
 	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
 			WalletID: delta.FountainWalletID,
-			Input:    delta.DefaultScript(pk),
+			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
 		},
 		Resp: nil,
 	})
 
 	// Wait an appropriate amount of time for the request to be accepted: 2
 	// blocks.
-	time.Sleep(time.Duration(consensus.NumSteps) * 2)
+	time.Sleep(time.Duration(consensus.NumSteps) * 2 * consensus.StepDuration)
 
 	// Query to verify that the request was accepted by the network.
 	err = c.router.SendMessage(network.Message{
@@ -81,6 +81,8 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		err = errors.New("Wallet already exists - someone just beat you to it.")
 		return
 	}
+
+	c.genericWallets[id] = kp
 
 	return
 }

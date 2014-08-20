@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
@@ -81,7 +82,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(id)
 	if wn == nil {
-		err = errors.New("no wallet of that id exists")
+		err = fmt.Errorf("no wallet of that id exists: %v", id)
 		return
 	}
 
@@ -119,7 +120,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(w.ID)
 	if wn == nil {
-		err = errors.New("no wallet of that id exists")
+		err = fmt.Errorf("no wallet of that id exists: %v", w.ID)
 		return
 	}
 	weightDelta := int(w.SectorSettings.Atoms) - wn.nodeWeight()
