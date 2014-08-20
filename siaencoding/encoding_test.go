@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	u16 uint16  = 0x0102
 	i32 int32   = 0x01020304
 	u32 uint32  = 0x01020304
 	f32 float32 = 0x01020304
@@ -16,6 +17,9 @@ var (
 // TestEncoding checks that the Enc/Dec function pairs are proper inverses of
 // each other.
 func TestEncoding(t *testing.T) {
+	if DecUint16(EncUint16(u16)) != u16 {
+		t.Fatal("uint32 encode/decode mismatch")
+	}
 	if DecInt32(EncInt32(i32)) != i32 {
 		t.Fatal("int32 encode/decode mismatch")
 	}
@@ -33,6 +37,30 @@ func TestEncoding(t *testing.T) {
 	}
 	if DecFloat64(EncFloat64(f64)) != f64 {
 		t.Fatal("float64 encode/decode mismatch")
+	}
+}
+
+// TestMarshal checks that the Marshal/Unmarshal functions are proper inverses of each other.
+func TestMarshal(t *testing.T) {
+	type mTest struct {
+		B bool
+		F float64
+		S string
+	}
+	objs := mTest{false, 1.0, "foo"}
+	recv := mTest{}
+	b, err := Marshal(objs)
+	println(string(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = Unmarshal(b, &recv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if objs != recv {
+		t.Error("input", objs, "does not match output", recv)
 	}
 }
 

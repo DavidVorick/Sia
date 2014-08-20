@@ -22,8 +22,8 @@ type Participant struct {
 	secretKey    siacrypto.SecretKey
 
 	// Network Related Variables
-	address       network.Address
-	messageRouter network.MessageRouter
+	address network.Address
+	router  *network.RPCServer
 
 	// Update Variables
 	updates            [state.QuorumSize]map[siacrypto.Hash]Update
@@ -48,8 +48,8 @@ var errNilMessageRouter = errors.New("cannot create a participant with a nil mes
 // NewParticipant initializes a Participant object with the provided
 // MessageRouter and filePrefix. It also creates a keypair and sets default
 // values for the siblingIndex and currentStep.
-func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant, err error) {
-	if mr == nil {
+func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant, err error) {
+	if rpcs == nil {
 		err = errNilMessageRouter
 		return
 	}
@@ -70,8 +70,8 @@ func newParticipant(mr network.MessageRouter, filePrefix string) (p *Participant
 	}
 
 	// Initialize the network components of the participant.
-	p.address = mr.RegisterHandler(p)
-	p.messageRouter = mr
+	p.address = rpcs.RegisterHandler(p)
+	p.router = rpcs
 
 	// Initialize the file prefix
 	p.engine.Initialize(filePrefix)
@@ -96,7 +96,7 @@ func (p *Participant) broadcast(message network.Message) {
 	for _, sibling := range p.engine.Metadata().Siblings {
 		if !sibling.Inactive() {
 			message.Dest = sibling.Address
-			p.messageRouter.SendAsyncMessage(message)
+			p.router.SendAsyncMessage(message)
 		}
 	}
 	p.engineLock.Unlock()

@@ -20,7 +20,10 @@ func addrString(a Address) string {
 	return net.JoinHostPort(a.Host, strconv.Itoa(int(a.Port)))
 }
 
-// RPCServer is a MessageRouter that communicates using RPC over TCP.
+// An RPCServer handles all RPCs for a given hostname and port. It routes each
+// RPC according to its Identifier. Objects must register themselves with the
+// RPCServer in order to receive an Address. This implementation currently uses
+// the JSON codec over TCP.
 type RPCServer struct {
 	addr     Address
 	rpcServ  *rpc.Server
@@ -78,9 +81,10 @@ func (rpcs *RPCServer) Close() {
 	rpcs.listener.Close()
 }
 
-// serverHandler runs in the background, accepting incoming RPCs, serving them,
-// and closing the connection. It is automatically terminated when Close() is
-// called.
+// serverHandler runs in the background, accepting incoming RPCs and serving
+// them with the JSON codec. It serves the same purpose as rpc.Server.Accept(),
+// except that it simply returns on error instead of crashing. This means the
+// goroutine will be automatically terminated when RPCServer.Close() is called.
 func (rpcs *RPCServer) serverHandler() {
 	for {
 		conn, err := rpcs.listener.Accept()
@@ -91,7 +95,9 @@ func (rpcs *RPCServer) serverHandler() {
 	}
 }
 
-// Ping calls the Participant.Ping method on the specified address.
+// Ping calls the Participant.Ping method on the specified address. Note that
+// neither Ping nor any of the SendMessage functions really need to be methods
+// of RPCServer. This may change in the future.
 func (rpcs *RPCServer) Ping(a Address) error {
 	conn, err := jsonrpc.Dial("tcp", addrString(a))
 	if err != nil {
