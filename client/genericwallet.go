@@ -87,32 +87,30 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	return
 }
 
-/*
 // send coins from one wallet to another
-func (c *Client) SubmitTransaction(src, dst state.WalletID, amount uint64) (err error) {
-	_, exists := c.genericWallets[src]
+func (c *Client) GenericSendCoins(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
+	_, exists := c.genericWallets[source]
 	if !exists {
-		err = fmt.Errorf("Could not access source wallet")
+		err = errors.New("Could not access source wallet, perhaps it's not a generic walet?")
 		return
 	}
 
-	input := delta.TransactionInput(uint64(dst), 0, amount)
-	input, err = delta.SignInput(c.genericWallets[src].SK, input)
+	input := delta.ScriptInput{
+		WalletID: source,
+		Input:    delta.SendCoinInput(destination, amount),
+	}
+	err = input.Sign(c.genericWallets[source].SecretKey)
 	if err != nil {
 		return
 	}
 
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
-		Args: delta.ScriptInput{
-			WalletID: src,
-			Input:    input,
-		},
+		Args: input,
 		Resp: nil,
 	})
 	return
 }
-*/
 
 /*
 // resize sector associated with wallet
