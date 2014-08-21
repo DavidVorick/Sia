@@ -12,17 +12,29 @@ import (
 )
 
 /*
-// send a user-specified script input
-func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
-	return c.router.SendMessage(network.Message{
-		Dest: c.connectAddress,
+// resize sector associated with wallet
+func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error) {
+	_, exists := c.genericWallets[src]
+	if !exists {
+		err = fmt.Errorf("Could not access wallet")
+		return
+	}
+
+	input := delta.ResizeSectorEraseInput(atoms, k)
+	input, err = delta.SignInput(c.genericWallets[w].SK, input)
+	if err != nil {
+		return
+	}
+
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
-			WalletID: id,
+			WalletID: w,
 			Input:    input,
 		},
 		Resp: nil,
 	})
+	return
 }
 */
 
@@ -88,7 +100,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 }
 
 // send coins from one wallet to another
-func (c *Client) GenericSendCoins(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
+func (c *Client) SendCoinGeneric(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
 	_, exists := c.genericWallets[source]
 	if !exists {
 		err = errors.New("Could not access source wallet, perhaps it's not a generic walet?")
@@ -113,28 +125,16 @@ func (c *Client) GenericSendCoins(source state.WalletID, destination state.Walle
 }
 
 /*
-// resize sector associated with wallet
-func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error) {
-	_, exists := c.genericWallets[src]
-	if !exists {
-		err = fmt.Errorf("Could not access wallet")
-		return
-	}
-
-	input := delta.ResizeSectorEraseInput(atoms, k)
-	input, err = delta.SignInput(c.genericWallets[w].SK, input)
-	if err != nil {
-		return
-	}
-
-	c.Broadcast(network.Message{
+// send a user-specified script input
+func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
+	return c.router.SendMessage(network.Message{
+		Dest: c.connectAddress,
 		Proc: "Participant.AddScriptInput",
 		Args: delta.ScriptInput{
-			WalletID: w,
+			WalletID: id,
 			Input:    input,
 		},
 		Resp: nil,
 	})
-	return
 }
 */
