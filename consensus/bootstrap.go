@@ -29,45 +29,6 @@ The Bootstrapping Process
 
 */
 
-// CreateBootstrapParticipant returns a participant that is participating as
-// the first and only sibling on a new quorum.
-func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, sibID state.WalletID) (p *Participant, err error) {
-	if sibID == 0 {
-		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
-		return
-	}
-
-	// Create basic participant.
-	p, err = newParticipant(rpcs, filePrefix)
-	if err != nil {
-		return
-	}
-
-	// Create a bootstrap wallet, and a wallet for this participant to use.
-	err = p.engine.Bootstrap(state.Sibling{
-		Address:   p.address,
-		PublicKey: p.publicKey,
-		WalletID:  sibID,
-	})
-	if err != nil {
-		return
-	}
-	p.siblingIndex = 0
-
-	// Create the first update.
-	p.newSignedUpdate()
-
-	// Run the first compile.
-	block := p.condenseBlock()
-	p.engine.Compile(block)
-	p.newSignedUpdate()
-
-	// Begin ticking.
-	go p.tick()
-
-	return
-}
-
 // A helper function for CreateJoiningParticipant, that downloads the next
 // block and compiles it into the participant. fetchAndCompileNextBlock
 // requires the engine mutex to be locked.
@@ -84,6 +45,102 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 	}
 
 	p.engine.Compile(b)
+	return
+}
+
+var (
+	errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
+)
+
+// NewParticipant initializes a Participant object with the provided
+// MessageRouter and filePrefix. It also creates a keypair and sets default
+// values for the siblingIndex and currentStep.
+func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant, err error) {
+	if rpcs == nil {
+		err = errNilMessageRouter
+		return
+	}
+
+	p = new(Participant)
+
+	// Create a keypair for the participant.
+	p.publicKey, p.secretKey, err = siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+	p.siblingIndex = ^byte(0)
+
+	// Create the update maps.
+	for i := range p.updates {
+		p.updates[i] = make(map[siacrypto.Hash]Update)
+	}
+
+	// Initialize the network components of the participant.
+	p.address = rpcs.RegisterHandler(p)
+	p.router = rpcs
+
+	// Initialize the file prefix
+	p.engine.Initialize(filePrefix)
+	p.setSiblingIndex(p.siblingIndex)
+
+	// Write-lock the updateStop to stop updates until the participant
+	// starts ticking.
+	p.updateStop.Lock()
+
+	return
+}
+
+// Sets the sibling index for the participant and engine, should be called once
+// the sibling index is discovered.
+func (p *Participant) setSiblingIndex(siblingIndex byte) {
+	p.siblingIndex = siblingIndex
+	p.engine.SetSiblingIndex(siblingIndex)
+}
+
+// CreateBootstrapParticipant returns a participant that is participating as
+// the first and only sibling on a new quorum.
+func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, bootstrapTetherWallet state.WalletID, tetherWalletPublicKey siacrypto.PublicKey) (p *Participant, err error) {
+	// ID 0 is reserved for the early-distribution 'fountain' wallet. The
+	// full netowrk is not likely to have this, but it makes test-network
+	// actions a lot simpler.
+	if bootstrapTetherWallet == 0 {
+		err = errors.New("cannot use id '0', this id is reserved for the fountain wallet")
+		return
+	}
+
+	// Create basic participant.
+	p, err = newParticipant(rpcs, filePrefix)
+	if err != nil {
+		return
+	}
+
+	// Create a bootstrap sibling, using the bootstrapTether id as the
+	// wallet id that the sibling will be tethered to.
+	bootstrapSibling := state.Sibling{
+		Address:   p.address,
+		PublicKey: p.publicKey,
+		WalletID:  bootstrapTetherWallet,
+	}
+	err = p.engine.Bootstrap(bootstrapSibling, tetherWalletPublicKey)
+	if err != nil {
+		return
+	}
+	p.setSiblingIndex(0)
+
+	// Create the first update.
+	p.newSignedUpdate()
+
+	// Run the first compile, this will create a snapshot.
+	block := p.condenseBlock()
+	err = p.engine.Compile(block)
+	if err != nil {
+		return
+	}
+	p.newSignedUpdate()
+
+	// Begin ticking.
+	go p.tick()
+
 	return
 }
 
@@ -173,6 +230,17 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 		// Event downloading will be implemented later.
 	}
 
+	// At this point, saveBlock() in package delta is expecting the active
+	// history file to be available, but this file hasn't been created yet
+	// because the inital values for snapshot weren't established
+	// correctly. It's a bit of a hack and should be refactored at some
+	// point, but we've got to set those variables so that compile(),
+	// saveBlock(), and saveSnapshot() work as expected.
+	err = p.engine.BootstrapJoinSetup()
+	if err != nil {
+		return
+	}
+
 	// Download all of the blocks that have been processed since the
 	// snapshot, which will bring the quorum up to date, except for being
 	// behind in the current round of consensus.
@@ -216,7 +284,7 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	// with the low step numbers.
 	//
 	// 3. Download any blocks that are missing, catching up to the current
-	// quorum.
+	// quorum. At most 1 will be missing.
 	//
 	// 4. Wait for this block to finish (will not have join request), and
 	// the next block to finish (will have join request).
@@ -265,6 +333,8 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 			return
 		}
 		for _, address := range quorumSiblings {
+			// Something should asynchronously log any errors
+			// returned.
 			rpcs.SendAsyncMessage(network.Message{
 				Dest: address,
 				Proc: "Participant.AddScriptInput",
@@ -272,7 +342,8 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 			})
 		}
 
-		// Download any blocks that are missing that are currently available.
+		// Download any blocks that are missing that are currently
+		// available.
 		for p.engine.Metadata().Height < cps.Height {
 			p.engineLock.Lock()
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
@@ -301,7 +372,7 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 		// available.
 		time.Sleep(StepDuration)
 
-		// download the second missing block
+		// Download second missing block.
 		p.engineLock.Lock()
 		err = p.fetchAndCompileNextBlock(quorumSiblings)
 		p.engineLock.Unlock()

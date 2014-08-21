@@ -50,7 +50,6 @@ func TestMarshal(t *testing.T) {
 	objs := mTest{false, 1.0, "foo"}
 	recv := mTest{}
 	b, err := Marshal(objs)
-	println(string(b))
 	if err != nil {
 		t.Fatal(err)
 	}

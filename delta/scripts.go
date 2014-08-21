@@ -38,9 +38,10 @@ func (si *ScriptInput) Sign(secretKey siacrypto.SecretKey) (err error) {
 	return
 }
 
-// CreateWalletInput returns the appropriate input for the CreateWallet script.
-func CreateWalletInput(walletID uint64, s []byte) []byte {
-	return append(siaencoding.EncUint64(walletID), s...)
+// CreateWalletInput returns a script that can be used by the fountain wallet
+// to create a new wallet.
+func CreateFountainWalletInput(id state.WalletID, s []byte) []byte {
+	return append(siaencoding.EncUint64(uint64(id)), s...)
 }
 
 // AddSiblingInput returns a signed ScriptInput that calls the AddSibling
@@ -111,15 +112,14 @@ func ProposeUploadInput(encUA []byte) []byte {
 	}, encUA...)
 }
 
-// The BootstrapScript acts as a fountain, and can be called to spawn a new
+// The FountainScript acts as a fountain, and can be called to spawn a new
 // wallet with a minimal starting balance that will the economy to get flowing.
-var BootstrapScript = []byte{
+var FountainScript = []byte{
 	0x34, 0x08, //       00 push 8 bytes of input (wallet id)
-	0x01, 0x00, //       02 push 0 (high balance)
-	0x02, 0xA8, 0x61, // 04 push 25000 (low balance)
-	0xE4, //             07 push script
-	0x32, //             08 call CreateWallet
-	0xFF, //             10 exit
+	0x02, 0xA8, 0x61, // 02 push 25000 (balance)
+	0xE4, //             05 push script
+	0x42, //             06 call CreateWallet
+	0xFF, //             07 exit (not technically necessary here)
 }
 
 // DefaultScript returns a script that verifies a signature, and transfers

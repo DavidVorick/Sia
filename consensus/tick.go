@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/NebulousLabs/Sia/state"
@@ -9,7 +10,7 @@ import (
 const (
 	// StepDuration is the amount of time between each step.
 	// Each block is compiled after state.QuorumSize steps.
-	StepDuration = 1800 * time.Millisecond
+	StepDuration = 400 * time.Millisecond
 )
 
 func (p *Participant) tick() {
@@ -20,6 +21,7 @@ func (p *Participant) tick() {
 		return
 	}
 	p.ticking = true
+	p.updateStop.Unlock()
 
 	// Create a ticker that will pulse every StepDuration
 	p.tickStart = time.Now()
@@ -46,7 +48,10 @@ func (p *Participant) tick() {
 
 				// Compile the block.
 				p.engineLock.Lock()
-				p.engine.Compile(block)
+				err := p.engine.Compile(block)
+				if err != nil {
+					fmt.Println(err)
+				}
 				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.

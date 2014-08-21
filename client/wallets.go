@@ -37,13 +37,17 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 }
 
 // Iterates through the client and saves all of the wallets to disk.
-func (c *Client) SaveAllWallets() {
+func (c *Client) SaveAllWallets() (err error) {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
-		SaveWallet(id, keypair, filename)
+		err = SaveWallet(id, keypair, filename)
+		if err != nil {
+			return
+		}
 	}
 	// Save other types of wallets as they are implemented.
+	return
 }
 
 func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error) {
@@ -57,11 +61,11 @@ func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error)
 	if err != nil {
 		return
 	}
-	_, err = f.Write(keypair.PK[:])
+	_, err = f.Write(keypair.PublicKey[:])
 	if err != nil {
 		return
 	}
-	_, err = f.Write(keypair.SK[:])
+	_, err = f.Write(keypair.SecretKey[:])
 	if err != nil {
 		return
 	}
@@ -89,11 +93,11 @@ func LoadWallet(fileName string) (id state.WalletID, keypair Keypair, err error)
 		return
 	}
 	id = state.WalletID(siaencoding.DecUint64(idSlice))
-	if copy(keypair.PK[:], pubSlice) != siacrypto.PublicKeySize {
+	if copy(keypair.PublicKey[:], pubSlice) != siacrypto.PublicKeySize {
 		err = errors.New("bad public key length")
 		return
 	}
-	if copy(keypair.SK[:], secSlice) != siacrypto.SecretKeySize {
+	if copy(keypair.SecretKey[:], secSlice) != siacrypto.SecretKeySize {
 		err = errors.New("bad secret key length")
 		return
 	}

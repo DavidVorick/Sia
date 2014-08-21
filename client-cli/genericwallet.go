@@ -7,21 +7,8 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// displayGenericWalletHelp prints a list of commands that are available in
-// generic wallet mode.
-func displayGenericWalletHelp() {
-	fmt.Println(
-		"\n",
-		"h:\tHelp\n",
-		"q:\tQuit\n",
-		"d:\tDownload the wallet's file.\n",
-		"s:\tSend siacoins to another wallet.\n",
-		"u:\tUpload a file to the wallet, replacing whatever is currently there.\n",
-	)
-}
-
 /*
-func download(c *client.Client) {
+func downloadWalkthrough(c *client.Client) {
 	var dest string
 	fmt.Print("Destination Filepath: ")
 	ERR fmt.Scanln(&dest)
@@ -31,7 +18,7 @@ func download(c *client.Client) {
 */
 
 /*
-func resizeGenericWallet(c *client.Client) {
+func resizeGenericWalletWalkthrough(c *client.Client) {
 	var atoms uint16
 	var m byte
 	fmt.Print("New size (in atoms): ")
@@ -48,7 +35,24 @@ func resizeGenericWallet(c *client.Client) {
 */
 
 /*
-func sendScriptInput(c *client.Client) {
+func sendFromGenericWalletWalkthrough(c *client.Client) {
+	var dstID state.WalletID
+	var amount uint64
+	fmt.Print("Dest Wallet ID (hex): ")
+	ERR fmt.Scanln("%x", &dstID)
+	fmt.Print("Amount to send (dec): ")
+	ERR fmt.Scanln(&amount)
+	err := c.SubmitTransaction(c.CurID, dstID, amount)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Transaction successfully submitted")
+	}
+}
+*/
+
+/*
+func sendScriptInputWalkthrough(c *client.Client) {
 	var filename string
 	fmt.Print("Input file: ")
 	ERR fmt.Scanln("%s", &filename)
@@ -68,24 +72,7 @@ func sendScriptInput(c *client.Client) {
 */
 
 /*
-func sendFromGenericWallet(c *client.Client) {
-	var dstID state.WalletID
-	var amount uint64
-	fmt.Print("Dest Wallet ID (hex): ")
-	ERR fmt.Scanln("%x", &dstID)
-	fmt.Print("Amount to send (dec): ")
-	ERR fmt.Scanln(&amount)
-	err := c.SubmitTransaction(c.CurID, dstID, amount)
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Transaction successfully submitted")
-	}
-}
-*/
-
-/*
-func uploadToGenericWallet(c *client.Client) {
+func uploadToGenericWalletWalkthrough(c *client.Client) {
 	var filename string
 	var k byte
 	fmt.Print("Filename: ")
@@ -103,11 +90,25 @@ func uploadToGenericWallet(c *client.Client) {
 }
 */
 
+// displayGenericWalletHelp prints a list of commands that are available in
+// generic wallet mode.
+func displayGenericWalletHelp() {
+	fmt.Println(
+		"\n",
+		"h:\tHelp\n",
+		"q:\tQuit\n",
+		"d:\tDownload the wallet's file.\n",
+		"s:\tSend siacoins to another wallet.\n",
+		"u:\tUpload a file to the wallet, replacing whatever is currently there.\n",
+	)
+}
+
 func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
+	var err error
 	for {
 		fmt.Print("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
-		_, err := fmt.Scanln(&input)
+		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
@@ -134,6 +135,11 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 		case "u", "upload":
 			fmt.Println("Uploading is not currently implemented.")
 			//uploadToGenericWallet(c)
+		}
+
+		if err != nil {
+			fmt.Println("Error: ", err)
+			err = nil
 		}
 	}
 }

@@ -102,7 +102,7 @@ func (wo *walletOffset) decode(b []byte) (err error) {
 }
 
 func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
-	snapshotFilename = fmt.Sprintf("%s.snapshot.%v", e.filePrefix, height)
+	snapshotFilename = fmt.Sprintf("%ssnapshot.%v", e.filePrefix, height)
 	return
 }
 
@@ -110,7 +110,7 @@ func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
 // encodes them, and writes to disk.
 func (e *Engine) saveSnapshot() (err error) {
 	// Determine the filename for the snapshot
-	snapshotFilename := e.snapshotFilename(e.activeHistoryHead)
+	snapshotFilename := e.snapshotFilename(e.state.Metadata.RecentSnapshot)
 	file, err := os.Create(snapshotFilename)
 	if err != nil {
 		return
@@ -210,7 +210,7 @@ func (e *Engine) saveSnapshot() (err error) {
 	_, err = file.WriteAt(encodedOffset, 0)
 
 	// Delete the oldest snapshot.
-	oldSnapshotFilename := e.snapshotFilename(e.activeHistoryHead - 2*SnapshotLength)
+	oldSnapshotFilename := e.snapshotFilename(e.state.Metadata.RecentSnapshot - 2*SnapshotLength)
 	err = os.RemoveAll(oldSnapshotFilename) // os.RemoveAll returns nil if the file does not exist.
 	if err != nil {
 		return
@@ -221,8 +221,8 @@ func (e *Engine) saveSnapshot() (err error) {
 
 func (e *Engine) openSnapshot(snapshotHead uint32) (file *os.File, snapshotTable snapshotOffsetTable, err error) {
 	// Make sure that the requested snapshot is on disk.
-	if snapshotHead == ^uint32(0) || (snapshotHead != e.activeHistoryHead && snapshotHead != e.recentHistoryHead) {
-		err = errors.New("snapshot not found")
+	if snapshotHead == ^uint32(0) || (snapshotHead != e.state.Metadata.RecentSnapshot && snapshotHead != e.recentHistoryHead) {
+		err = fmt.Errorf("snapshot %v not found", snapshotHead)
 		return
 	}
 

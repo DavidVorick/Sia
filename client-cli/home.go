@@ -9,21 +9,60 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// displayHomeHelp lists all of the options available to the home screen, with
-// a description of what they do.
-func displayHomeHelp() {
-	fmt.Println(
-		"\n",
-		"h:\tHelp\n",
-		"q:\tQuit\n",
-		"b:\tBootstrap through an address\n",
-		"c:\tConnect to Network\n",
-		"l:\tLoad wallet\n",
-		"n:\tRequest a new wallet\n",
-		"p:\tPrint wallets\n",
-		"s:\tSwitch to server mode, creating a server if none yet exists.\n",
-		"S:\tSave all wallets\n",
-	)
+// printWallets provides a list of every wallet available to the Client.
+func printWallets(c *client.Client) {
+	fmt.Println("All Stored Wallet IDs:")
+	wallets := c.GetWalletIDs()
+	for _, id := range wallets {
+		fmt.Printf("%x\n", id)
+	}
+}
+
+// connectWalkthrough guides the user through providing a hostname, port, and
+// id which can be used to create a Sia address. Then the connection is
+// committed.
+func bootstrapToNetworkWalkthrough(c *client.Client) (err error) {
+	fmt.Println("Starting connect walkthrough.")
+	if !c.IsRouterInitialized() {
+		err = connectWalkthrough(c)
+		if err != nil {
+			return
+		}
+	}
+
+	fmt.Println("Please indicate the hostname, port, and id that you wish to connect through.")
+	var connectAddress network.Address
+
+	// Load the hostname.
+	fmt.Print("Hostname: ")
+	_, err = fmt.Scanln(&connectAddress.Host)
+	if err != nil {
+		return
+	}
+
+	// Load the port number.
+	fmt.Print("Port: ")
+	_, err = fmt.Scanln(&connectAddress.Port)
+	if err != nil {
+		return
+	}
+
+	// Load the participant id.
+	fmt.Print("ID: ")
+	_, err = fmt.Scanln(&connectAddress.ID)
+	if err != nil {
+		return
+	}
+
+	// Call client.Connect using the provided information.
+	err = c.BootstrapConnection(connectAddress)
+	if err != nil {
+		return
+	} else {
+		fmt.Println("Connection successful.")
+	}
+
+	return
 }
 
 // connectWalkthrough requests a port and then calls client.Connect(port),
@@ -48,64 +87,32 @@ func connectWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-// connectWalkthrough guides the user through providing a hostname, port, and
-// id which can be used to create a Sia address. Then the connection is
-// committed.
-func bootstrapToNetworkWalkthrough(c *client.Client) {
-	fmt.Println("Starting connect walkthrough.")
-	if !c.IsRouterInitialized() {
-		err := connectWalkthrough(c)
-		if err != nil {
-			fmt.Println("Error: ", err)
-			return
-		}
-	}
-
-	fmt.Println("Please indicate the hostname, port, and id that you wish to connect through.")
-	var connectAddress network.Address
-
-	// Load the hostname.
-	fmt.Print("Hostname: ")
-	_, err := fmt.Scanln(&connectAddress.Host)
+func createGenericWalletWalkthrough(c *client.Client) (err error) {
+	var id state.WalletID
+	fmt.Print("Enter desired Wallet ID: ")
+	_, err = fmt.Scanln(&id)
 	if err != nil {
-		fmt.Println("Invalid hostname")
 		return
 	}
 
-	// Load the port number.
-	fmt.Print("Port: ")
-	_, err = fmt.Scanln(&connectAddress.Port)
+	err = c.RequestGenericWallet(id)
 	if err != nil {
-		fmt.Println("Invalid port")
 		return
-	}
-
-	// Load the participant id.
-	fmt.Print("ID: ")
-	_, err = fmt.Scanln(&connectAddress.ID)
-	if err != nil {
-		fmt.Println("Invalid id")
-		return
-	}
-
-	// Call client.Connect using the provided information.
-	err = c.BootstrapConnection(connectAddress)
-	if err != nil {
-		fmt.Println("Error while connecting:", err)
 	} else {
-		fmt.Println("Connection successful.")
+		fmt.Println("Wallet requested")
 	}
+
+	return
 }
 
 // loadWallet switches the cli into wallet-mode, where actions are taken
 // against a specific wallet.
-func loadWallet(c *client.Client) {
+func loadWalletWalkthrough(c *client.Client) (err error) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID (hex): ")
-	_, err := fmt.Scanln(&id)
+	_, err = fmt.Scanln(&id)
 	if err != nil {
-		fmt.Println("Invalid ID")
 		return
 	}
 
@@ -117,74 +124,60 @@ func loadWallet(c *client.Client) {
 	// that wallet type. If the type is not recognized, print an error and
 	// return to the home menu.
 	if err != nil {
-		fmt.Println(err)
+		return
 	} else if walletType == "generic" {
 		pollGenericWallet(c, id)
 	} else {
-		fmt.Println("Wallet is available, but is of an unknown type.")
-	}
-}
-
-/*
-func createGenericWallet(c *client.Client) {
-	var id state.WalletID
-	var filename string
-	fmt.Print("Enter desired Wallet ID (hex): ")
-	ERR fmt.Scanln("%x", &id)
-	fmt.Print("Script file (blank for default): ")
-	ERR fmt.Scanln("%s", &filename)
-	var script []byte
-	var err error
-	if filename != "" {
-		script, err = ioutil.ReadFile(filename)
-		if err != nil {
-			fmt.Println("Error:", err)
-		}
+		err = errors.New("wallet is available, but is of an unknown type.")
 		return
 	}
-	err = c.RequestWallet(id, script)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("Wallet requested")
-	}
-}
-*/
 
-// printWallets provides a list of every wallet available to the Client.
-func printWallets(c *client.Client) {
-	fmt.Println()
-	fmt.Println("All Stored Wallet IDs:")
-	wallets := c.GetWalletIDs()
-	for _, id := range wallets {
-		fmt.Printf("%x\n", id)
-	}
+	return
 }
 
 // serverModeSwitch will transition the client from being in home mode to being
 // in server mode, creating a new server and a new router if necessary.
-func serverModeSwitch(c *client.Client) {
+func serverModeSwitch(c *client.Client) (err error) {
 	init := c.IsServerInitialized()
 	if !init {
-		err := serverCreationWalkthrough(c)
+		err = serverCreationWalkthrough(c)
 		if err != nil {
-			fmt.Println("Error creating server: ", err)
 			return
 		}
 	}
 	pollServer(c)
+	return
+}
+
+// displayHomeHelp lists all of the options available to the home screen, with
+// a description of what they do.
+func displayHomeHelp() {
+	fmt.Println(
+		"h:\tHelp\n",
+		"q:\tQuit\n",
+		"b:\tBootstrap through an address\n",
+		"c:\tConnect to network\n",
+		"g:\tRequest a new generic wallet\n",
+		"l:\tLoad wallet\n",
+		"p:\tPrint wallets\n",
+		"s:\tSwitch to server mode, creating a server if none yet exists.\n",
+		"S:\tSave all wallets\n",
+	)
 }
 
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.
 func pollHome(c *client.Client) {
 	var input string
+	var err error
 	for {
+		fmt.Println()
 		fmt.Print("(Home) Please enter a command: ")
-		_, err := fmt.Scanln(&input)
+		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
 		}
+		fmt.Println()
 
 		switch input {
 		default:
@@ -197,25 +190,29 @@ func pollHome(c *client.Client) {
 			return
 
 		case "b", "bootstrap":
-			bootstrapToNetworkWalkthrough(c)
+			err = bootstrapToNetworkWalkthrough(c)
+
+		case "g", "generic", "request", "new":
+			err = createGenericWalletWalkthrough(c)
 
 		case "l", "load", "enter":
-			loadWallet(c)
-
-		case "n", "new", "request":
-			fmt.Println("New Wallet is not currently implemented!.")
-			// createGenericWallet(c)
+			err = loadWalletWalkthrough(c)
 
 		case "p", "ls", "print", "list":
 			printWallets(c)
 
 		case "s", "server":
-			serverModeSwitch(c)
+			err = serverModeSwitch(c)
 
 		case "S", "save":
 			fmt.Println("Saving all wallets...")
 			c.SaveAllWallets()
 			fmt.Println("...finished!")
+		}
+
+		if err != nil {
+			fmt.Println("Error: ", err)
+			err = nil
 		}
 	}
 }

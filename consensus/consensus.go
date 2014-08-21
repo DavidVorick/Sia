@@ -138,6 +138,11 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 
 //TODO: add docstring
 func (p *Participant) newSignedUpdate() {
+	// Check that this function was not called by error.
+	if p.siblingIndex > state.QuorumSize {
+		panic("error call on newSignedUpdate")
+	}
+
 	// Generate the entropy for this round of random numbers.
 	var entropy state.Entropy
 	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))
@@ -216,11 +221,20 @@ func (p *Participant) newSignedUpdate() {
 // concensus, blocking late updates and waiting on early updates, and throwing
 // out anything that does not follow the rules for legal signatures.
 func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err error) {
+	// Debugging: Print the participant, their address, and which update they've been sent.
+
+	// If ticking hasn't started yet, wait until tick() is called.
 	p.tickLock.RLock()
 	if !p.ticking {
-		err = errNotReady
 		p.tickLock.RUnlock()
-		return
+
+		// updateStop will be write-locked until the participant starts
+		// ticking, meaning this function will block until p.ticking ==
+		// true
+		p.updateStop.RLock()
+		p.updateStop.RUnlock()
+
+		p.tickLock.RLock()
 	}
 	p.tickLock.RUnlock()
 
@@ -250,25 +264,21 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	p.tickLock.RUnlock()
 	p.engineLock.RUnlock()
 
-	// Wait for the update if the update has arrived early. Ideally, we
-	// want to wait until exactly the beginning of step 2. The function
-	// will sleep until step 2 is reached, and then the for loop will kill
-	// if the block has arrived.
-	//
-	// Additionally, stall all updates from being processed until the
-	// beginning of step 2, which will prevent newcomers from being lost.
+	// If the update is early, wait until the proper block appears. We
+	// don't want to process an update earlier than step 1 because other
+	// siblings in the network (due to clock drift) may not be far enough
+	// along to handle it, and we want to give the update time to
+	// propagate.
 	p.tickLock.RLock()
 	p.engineLock.RLock()
-	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 2) {
-		// Sleep until the beginning of step 2.
-		fullStepsToSleepThrough := (2 + state.QuorumSize - p.currentStep) % (state.QuorumSize + 1)
-		timeRemainingThisStep := time.Since(p.tickStart) % StepDuration
-		sleepDuration := (time.Duration(fullStepsToSleepThrough) * StepDuration) + timeRemainingThisStep
+	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 1) {
+		// Sleep until the next step, repeating until the height has properly caught up.
+		timeRemainingThisStep := StepDuration - (time.Since(p.tickStart) % StepDuration)
 
 		// Unlock all mutexes, sleep, and then relock all mutexes.
 		p.engineLock.RUnlock()
 		p.tickLock.RUnlock()
-		time.Sleep(sleepDuration)
+		time.Sleep(timeRemainingThisStep + 15*time.Millisecond) // 15 extra milliseconds for good luck.
 		p.engineLock.RLock()
 		p.tickLock.RLock()
 

@@ -1,12 +1,14 @@
 package delta
 
 import (
+	"fmt"
+
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
 // TODO: add docstring
-func (e *Engine) Compile(b Block) {
+func (e *Engine) Compile(b Block) (err error) {
 	// The first thing that happens is the entropy seed for the block is
 	// determined. Though not implemented, this happens by pulling the latest
 	// external entropy source from the block and hashing it against the germ
@@ -30,12 +32,51 @@ func (e *Engine) Compile(b Block) {
 			continue
 		}
 		if !verified {
+			println("Tossing sibling for invalid signature")
+
+			fmt.Println(e.siblingIndex)
+			fmt.Println(i)
+			fmt.Println(b.Height)
+			fmt.Println(b.ParentBlock)
+			fmt.Println("Heartbeats:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.Heartbeats[i])
+			}
+			fmt.Println("Signatures:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.HeartbeatSignatures[i])
+			}
+			fmt.Println("Everything else")
+			fmt.Println(b.ScriptInputs)
+			fmt.Println(b.UpdateAdvancements)
+			fmt.Println(b.AdvancementSignatures)
+			fmt.Println("Finished printing block.")
+
 			e.state.TossSibling(byte(i))
 			continue
 		}
 
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
+			println("Tossing sibling for invalid parent block")
+			fmt.Println(e.siblingIndex)
+			fmt.Println(i)
+			fmt.Println(b.Height)
+			fmt.Println(b.ParentBlock)
+			fmt.Println("Heartbeats:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.Heartbeats[i])
+			}
+			fmt.Println("Signatures:")
+			for i := 0; i < int(state.QuorumSize); i++ {
+				fmt.Println(b.HeartbeatSignatures[i])
+			}
+			fmt.Println("Everything else")
+			fmt.Println(b.ScriptInputs)
+			fmt.Println(b.UpdateAdvancements)
+			fmt.Println(b.AdvancementSignatures)
+			fmt.Println("Finished printing block.")
+
 			e.state.TossSibling(byte(i))
 			continue
 		}
@@ -87,5 +128,10 @@ func (e *Engine) Compile(b Block) {
 	e.state.Metadata.Height++
 
 	// Save the block.
-	e.saveBlock(b)
+	err = e.saveBlock(b)
+	if err != nil {
+		return
+	}
+
+	return
 }

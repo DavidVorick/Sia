@@ -121,5 +121,7 @@ func (s *State) AtomsInUse() int {
 
 // TossSibling removes a sibling from the list of siblings.
 func (s *State) TossSibling(i byte) {
-	s.Metadata.Siblings[i] = *new(Sibling)
+	s.Metadata.Siblings[i] = Sibling{
+		Status: 255,
+	}
 }

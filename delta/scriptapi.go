@@ -51,8 +51,12 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 		Script:  childScript,
 	}
 
-	// Save the child wallet.
-	err = e.state.SaveWallet(childWallet)
+	// Insert the child wallet.
+	err = e.state.InsertWallet(childWallet)
+	if err != nil {
+		return
+	}
+
 	return
 }
 

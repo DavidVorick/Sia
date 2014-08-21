@@ -7,6 +7,15 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+// AddScriptInput is an RPC that appends a script input to
+// Participant.scriptInputs.
+func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
+	p.updatesLock.Lock()
+	p.scriptInputs = append(p.scriptInputs, si)
+	p.updatesLock.Unlock()
+	return
+}
+
 // Block is an RPC that returns a block of a specific height. Participants only
 // keep a history of so many blocks, so asking for future blocks or expired
 // blocks will return an error.
@@ -70,20 +79,16 @@ func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err e
 	return
 }
 
+func (p *Participant) Wallet(id state.WalletID, w *state.Wallet) (err error) {
+	*w, err = p.engine.Wallet(id)
+	return
+}
+
 // Not sure what the use is for this, mostly wallets are downloaded via
 // snapshots. Doesn't hurt to have it, I just forget the use case.
 func (p *Participant) WalletIDs(_ struct{}, wl *[]state.WalletID) (err error) {
 	p.engineLock.RLock()
 	*wl = p.engine.WalletList()
 	p.engineLock.RUnlock()
-	return
-}
-
-// AddScriptInput is an RPC that appends a script input to
-// Participant.scriptInputs.
-func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
-	p.updatesLock.Lock()
-	p.scriptInputs = append(p.scriptInputs, si)
-	p.updatesLock.Unlock()
 	return
 }

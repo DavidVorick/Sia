@@ -2,8 +2,10 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 )
 
@@ -16,12 +18,18 @@ func TestConsensus(t *testing.T) {
 		t.Skip()
 	}
 
+	// Create a keypair for the tether wallet.
+	tetherWalletPK, tetherWalletSK, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create a new quorum.
 	mr, err := network.NewRPCServer(11000)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1, tetherWalletPK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,8 +40,6 @@ func TestConsensus(t *testing.T) {
 		t.Error("Update for the next block has not been accepted by the participant.")
 	}
 	p.updatesLock.RUnlock()
-
-	// Sleep for a block so that a snapshot is created. In the future we may want to have the snapshot build itself even before the first compile.
 
 	// Create a participant that will join the current existing
 	// participant. No timing shortcuts can be taken here, as the new
@@ -50,10 +56,31 @@ func TestConsensus(t *testing.T) {
 		}
 		quorumSiblingAddresses = append(quorumSiblingAddresses, sibling.Address)
 	}
-	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, p.secretKey, quorumSiblingAddresses)
+	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, tetherWalletSK, quorumSiblingAddresses)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// See that immidiate synchronization has succeded, and that the blocks
+	// are timed with some epsilon.
+	p.tickLock.RLock()
+	joiningParticipant.tickLock.RLock()
+
+	pCurrentStep := p.currentStep
+	jCurrentStep := joiningParticipant.currentStep
+	pProgress := time.Duration(pCurrentStep) * StepDuration
+	jProgress := time.Duration(jCurrentStep) * StepDuration
+	pProgress += time.Since(p.tickStart) % StepDuration
+	jProgress += time.Since(joiningParticipant.tickStart) % StepDuration
+
+	// Check that each is within 50 milliseconds of the other.
+	difference := int64(pProgress/time.Millisecond) - int64(jProgress/time.Millisecond)
+	if difference > 50 || difference < -50 {
+		t.Error("The drift on p and j exceeds 50 milliseconds")
+	}
+
+	p.tickLock.RUnlock()
+	joiningParticipant.tickLock.RUnlock()
 
 	// CreateJoiningParticipant won't return until it has fully integrated.
 	// Test that the integration was successful.
@@ -75,14 +102,14 @@ func TestConsensus(t *testing.T) {
 	// for both to finish.
 	joinChan := make(chan *Participant)
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
 		joinChan <- p
 	}()
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, p.secretKey, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,6 +129,22 @@ func TestConsensus(t *testing.T) {
 		}
 		participant.engineLock.RUnlock()
 	}
+
+	// Wait through four full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 2)
+
+	// At this point, there should be a full quorum, where each participant
+	// recognized all other participants. We run a check to see that each
+	// participant recognizes each other participant as active siblings.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		participant.engineLock.RLock()
+		for j, sibling := range participant.engine.Metadata().Siblings {
+			if sibling.Inactive() {
+				t.Error("Second check: sibling recognized as inactive for iterators", i, ",", j)
+			}
+		}
+		participant.engineLock.RUnlock()
+	}
 }
 
 /*
@@ -116,7 +159,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 	p.messageRouter = new(network.DebugNetwork)
-	p.quorum = *new(quorum.Quorum)
+	LOL p.quorum = quorum.Quorum)
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -262,9 +305,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		sh.signatories = sh.signatories[:1]
 
 		// handle heartbeat when tick is larger than num signatures
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = 2
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 		err = p.HandleSignedHeartbeat(*sh, nil)
 		if err != hsherrNoSync {
 			t.Error("expected heartbeat to be rejected as out-of-sync: ", err)
@@ -276,9 +319,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		}
 
 		// send a heartbeat right at the edge of a new block
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = QuorumSize
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 
 		// submit heartbeat in separate thread
 		go func() {
@@ -289,9 +332,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 			// need some way to verify with the test that the funcion gets here
 		}()
 
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = 1
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 		time.Sleep(time.Second)
 		time.Sleep(StepDuration)
 }*/

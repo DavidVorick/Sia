@@ -11,8 +11,8 @@ import (
 // Keypair contains a public key and its corresponding private key. The keypair
 // is given its own struct to enforce the connection between the keys.
 type Keypair struct {
-	PK siacrypto.PublicKey
-	SK siacrypto.SecretKey
+	PublicKey siacrypto.PublicKey
+	SecretKey siacrypto.SecretKey
 }
 
 // Struct Client contains the state for client actions
@@ -21,26 +21,24 @@ type Client struct {
 	router   *network.RPCServer
 	siblings [state.QuorumSize]state.Sibling
 
-	// All Wallets
+	// All Generic Wallets
 	genericWallets map[state.WalletID]Keypair
 
 	// Participant Server
 	participantServer *Server
 }
 
-/*
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
-unc (c *Client) Broadcast(nm network.Message) {
+func (c *Client) Broadcast(m network.Message) {
 	for i := range c.siblings {
 		if c.siblings[i].Address.Host == "" {
 			continue
 		}
-		nm.Dest = c.siblings[i].Address
-		c.router.SendMessage(nm)
+		m.Dest = c.siblings[i].Address
+		c.router.SendMessage(m)
 		break
 	}
 }
-*/
 
 /*
 // Get siblings so that each can be uploaded to individually.  This should be

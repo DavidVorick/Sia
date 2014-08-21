@@ -6,6 +6,8 @@ import (
 	"path"
 
 	"github.com/NebulousLabs/Sia/consensus"
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -37,8 +39,17 @@ func (c *Client) NewServer() (err error) {
 }
 
 // NewParticipant creates a directory 'name' at location 'filepath' and then
-// creates a participant that will use that directory for its files.
-func (c *Client) NewParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+// creates a participant that will use that directory for its files. It's
+// mostly a helper function to eliminate redundant code.
+func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
+	// NEED TO DO A CHECK ON IF THE NAME IS FILESYSTEM SAFE
+
+	// Check that the participant server has been created.
+	if c.participantServer == nil {
+		err = errors.New("participant server is nil")
+		return
+	}
+
 	// Check that a participant of the given name does not already exist.
 	_, exists := c.participantServer.participants[name]
 	if exists {
@@ -48,18 +59,90 @@ func (c *Client) NewParticipant(name string, filepath string, sibID state.Wallet
 
 	// Create a directory 'name' at location 'filepath' for use of the
 	// participant.
-	fullname := path.Join(filepath, name) + "/"
+	fullname = path.Join(filepath, name) + "/"
 	err = os.MkdirAll(fullname, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return
 	}
 
+	return
+}
+
+// NewBootstrapParticipant creates a new participant that is the first in it's
+// quorum; it creates the quorum along with the participant.
+func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+	fullname, err := c.createParticipantStructures(name, filepath)
+	if err != nil {
+		return
+	}
+
+	// Create a keypair for the wallet that the sibling will tether to.
+	pk, sk, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+
 	// Create the participant and add it to the server map.
-	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID)
+	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID, pk)
 	if err != nil {
 		return
 	}
 	c.participantServer.participants[name] = newParticipant
+
+	// Add the wallet to the client list of generic wallets.
+	c.genericWallets[sibID] = Keypair{
+		PublicKey: pk,
+		SecretKey: sk,
+	}
+
+	// Update the list of siblings to contain the bootstrap address, by
+	// getting a list of siblings out of the newParticipant metadata.
+	var metadata state.Metadata
+	err = newParticipant.Metadata(struct{}{}, &metadata)
+	if err != nil {
+		return
+	}
+	c.siblings = metadata.Siblings
+
+	return
+}
+
+// NewJoiningParticipant creates a participant that joins the network known to
+// the client as a sibling.
+func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state.WalletID) (err error) {
+	fullname, err := c.createParticipantStructures(name, filepath)
+	if err != nil {
+		return
+	}
+
+	// Verify that the sibID given is available to the client.
+	_, exists := c.genericWallets[sibID]
+	if !exists {
+		err = errors.New("no known wallet of that id")
+		return
+	}
+
+	// Get a list of addresses for the joining participant to use while bootstrapping.
+	var siblingAddresses []network.Address
+	for _, sibling := range c.siblings {
+		siblingAddresses = append(siblingAddresses, sibling.Address)
+	}
+
+	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SecretKey, siblingAddresses)
+	if err != nil {
+		return
+	}
+	c.participantServer.participants[name] = joiningParticipant
+
+	// Update the list of siblings to contain the bootstrap address, by
+	// getting a list of siblings out of the joiningParticipant metadata.
+	var metadata state.Metadata
+	err = joiningParticipant.Metadata(struct{}{}, &metadata)
+	if err != nil {
+		return
+	}
+	c.siblings = metadata.Siblings
+
 	return
 }
 

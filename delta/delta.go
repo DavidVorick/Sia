@@ -13,11 +13,6 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-const (
-	// BootstrapWalletID is the wallet ID used by the siacoin 'fountain'.
-	BootstrapWalletID = 0
-)
-
 // The Engine struct has all the fields that enable basic operations at the
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
@@ -25,7 +20,7 @@ const (
 // SaveSnapshot() should be called upon initialization.
 // - recentHistoryHead needs to be initialized to ^uint32(0).
 // - activeHistoryLength should be initialized to SnapshotLength.
-// - activeHistoryHead needs to be initialized to ^uint32(0) - (SnapshotLength-1),
+// - e.state.Metadata.RecentSnapshot needs to be initialized to ^uint32(0) - (SnapshotLength-1),
 //   because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
@@ -40,7 +35,6 @@ type Engine struct {
 
 	// Snapshot Variables
 	recentHistoryHead   uint32
-	activeHistoryHead   uint32
 	activeHistoryLength uint32
 }
 
@@ -48,7 +42,7 @@ type Engine struct {
 // It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
 	e.filePrefix = prefix
-	walletPrefix := prefix + ".wallet"
+	walletPrefix := prefix + "wallet"
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
@@ -71,61 +65,13 @@ func (e *Engine) SiblingIndex() byte {
 	return e.siblingIndex
 }
 
+func (e *Engine) Wallet(id state.WalletID) (w state.Wallet, err error) {
+	w, err = e.state.LoadWallet(id)
+	return
+}
+
 // WalletList is a pass-along function so that the wallet list of the state can
 // be accessed by instances containing the engine.
 func (e *Engine) WalletList() []state.WalletID {
 	return e.state.WalletList()
-}
-
-// Bootstrap returns an engine that has its variables set so that
-// the engine can function as the first sibling in a quorum.
-func (e *Engine) Bootstrap(sib state.Sibling) (err error) {
-	// Create the bootstrap wallet, which acts as a fountain to get the economy
-	// started.
-	err = e.state.InsertWallet(state.Wallet{
-		ID:      BootstrapWalletID,
-		Balance: state.NewBalance(25000000),
-		Script:  BootstrapScript,
-	})
-	if err != nil {
-		return
-	}
-
-	// Create a wallet with the default script for the sibling to use.
-	sibWallet := state.Wallet{
-		ID:      sib.WalletID,
-		Balance: state.NewBalance(1000000),
-		Script:  DefaultScript(sib.PublicKey),
-	}
-	err = e.state.InsertWallet(sibWallet)
-	if err != nil {
-		return
-	}
-	e.AddSibling(&sibWallet, sib)
-	e.state.Metadata.Siblings[0].Status = 0
-
-	e.saveSnapshot()
-	e.recentHistoryHead = ^uint32(0)
-	e.activeHistoryHead = ^uint32(0) - (SnapshotLength - 1)
-	e.activeHistoryLength = SnapshotLength
-	return
-}
-
-// BootstrapSetMetadata is functionally equivalent to 'SetMetadata', but it's a
-// function that should _only_ be called during the bootstrapping process,
-// which is why it has the extra word in the name. I wanted to implement
-// something like an initialize that would take a bunch of wallets and a
-// metadata as input, but that could take a massive amount of memory. I wasn't
-// certain about the best way to approach the problem, so this is the solution
-// I've picked for the time being.
-func (e *Engine) BootstrapSetMetadata(md state.Metadata) {
-	e.state.Metadata = md
-}
-
-// BootstrapInsertWallet is functionally equivalent to 'InsertWallet', except
-// that this function should _only_ be called during bootstrapping. See
-// 'BootstrapSetMetadata' comment for more details.
-func (e *Engine) BootstrapInsertWallet(w state.Wallet) (err error) {
-	err = e.state.InsertWallet(w)
-	return
 }
