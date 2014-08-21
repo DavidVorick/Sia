@@ -51,8 +51,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err 
 		return
 	}
 
-	balance := state.NewBalance(amount)
-	err = c.SendCoinGeneric(id, destinationID, balance)
+	err = c.SendCoinGeneric(id, destinationID, state.NewBalance(amount))
 	if err != nil {
 		return
 	}
