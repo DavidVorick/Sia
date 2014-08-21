@@ -44,9 +44,6 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 		return
 	}
 
-	println("compiling block")
-	println(p.siblingIndex)
-	println(b.Height)
 	p.engine.Compile(b)
 	return
 }

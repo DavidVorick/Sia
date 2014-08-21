@@ -96,20 +96,6 @@ func TestConsensus(t *testing.T) {
 	}
 	joiningParticipant.engineLock.RUnlock()
 
-	// Let sit for 2 blocks and check again.
-	time.Sleep(time.Duration(NumSteps) * StepDuration)
-	p.engineLock.RLock()
-	if p.engine.Metadata().Siblings[0].Inactive() || p.engine.Metadata().Siblings[1].Inactive() {
-		t.Error("Initial participant is not recognizing both siblings as active after 2 blocks..")
-	}
-	p.engineLock.RUnlock()
-
-	joiningParticipant.engineLock.RLock()
-	if joiningParticipant.engine.Metadata().Siblings[0].Inactive() || joiningParticipant.engine.Metadata().Siblings[1].Inactive() {
-		t.Error("Joined participant is not recognizing both siblings as active after 2 blocks.")
-	}
-	joiningParticipant.engineLock.RUnlock()
-
 	// Add 2 more participants simultaneously and see if everything is
 	// stable upon completion. The mutexing is so that non-parallel
 	// functions can run in parallel, while the program still has to wait
@@ -145,7 +131,7 @@ func TestConsensus(t *testing.T) {
 	}
 
 	// Wait through four full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(NumSteps) * 4)
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 2)
 
 	// At this point, there should be a full quorum, where each participant
 	// recognized all other participants. We run a check to see that each
@@ -173,7 +159,7 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		p.heartbeats[i] = make(map[siacrypto.Hash]*heartbeat)
 	}
 	p.messageRouter = new(network.DebugNetwork)
-	p.quorum = *new(quorum.Quorum)
+	LOL p.quorum = quorum.Quorum)
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)

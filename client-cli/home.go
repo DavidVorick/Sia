@@ -11,13 +11,11 @@ import (
 
 // printWallets provides a list of every wallet available to the Client.
 func printWallets(c *client.Client) {
-	fmt.Println()
 	fmt.Println("All Stored Wallet IDs:")
 	wallets := c.GetWalletIDs()
 	for _, id := range wallets {
 		fmt.Printf("%x\n", id)
 	}
-	fmt.Println()
 }
 
 // connectWalkthrough guides the user through providing a hostname, port, and
@@ -155,7 +153,6 @@ func serverModeSwitch(c *client.Client) (err error) {
 // a description of what they do.
 func displayHomeHelp() {
 	fmt.Println(
-		"\n",
 		"h:\tHelp\n",
 		"q:\tQuit\n",
 		"b:\tBootstrap through an address\n",
@@ -173,12 +170,14 @@ func pollHome(c *client.Client) {
 	var input string
 	var err error
 	for {
+		fmt.Println()
 		fmt.Print("(Home) Please enter a command: ")
 		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
 		}
+		fmt.Println()
 
 		switch input {
 		default:

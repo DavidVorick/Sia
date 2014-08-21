@@ -269,7 +269,6 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 	// siblings in the network (due to clock drift) may not be far enough
 	// along to handle it, and we want to give the update time to
 	// propagate.
-	fmt.Println(p.engine.Metadata().Height)
 	p.tickLock.RLock()
 	p.engineLock.RLock()
 	for su.Update.Height > p.engine.Metadata().Height || (su.Update.Height == p.engine.Metadata().Height && p.currentStep < 1) {

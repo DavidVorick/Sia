@@ -20,7 +20,7 @@ func TestSaveAndLoadBlock(t *testing.T) {
 	e.SetSiblingIndex(0)
 	err := e.Bootstrap(state.Sibling{
 		WalletID: 1,
-	}, *new(siacrypto.PublicKey))
+	}, siacrypto.PublicKey{})
 	if err != nil {
 		t.Fatal(err)
 	}
