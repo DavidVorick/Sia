@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -159,6 +160,36 @@ func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) 
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+// ParticipantWallets returns every wallet known to the participant of the
+// given name.
+func (c *Client) ParticipantWallets(name string) (wallets []state.Wallet, err error) {
+	participant, exists := c.participantServer.participants[name]
+	if !exists {
+		err = errors.New("no participant of that name found")
+		return
+	}
+
+	var walletIDList []state.WalletID
+	err = participant.WalletIDs(struct{}{}, &walletIDList)
+	if err != nil {
+		return
+	}
+	fmt.Println(walletIDList)
+
+	for _, id := range walletIDList {
+		var wallet state.Wallet
+		err = participant.Wallet(id, &wallet)
+		if err != nil {
+			return
+		}
+
+		wallets = append(wallets, wallet)
+	}
+	fmt.Println(wallets)
 
 	return
 }

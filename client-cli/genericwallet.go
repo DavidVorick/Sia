@@ -34,22 +34,31 @@ func resizeGenericWalletWalkthrough(c *client.Client) {
 }
 */
 
-/*
-func sendFromGenericWalletWalkthrough(c *client.Client) {
-	var dstID state.WalletID
+// sendCoinGenericWalletWalkthrough walks the user through sending coins from
+// their generic wallet.
+func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err error) {
+	// Get a destination and an amount
+	var destinationID state.WalletID
 	var amount uint64
-	fmt.Print("Dest Wallet ID (hex): ")
-	ERR fmt.Scanln("%x", &dstID)
-	fmt.Print("Amount to send (dec): ")
-	ERR fmt.Scanln(&amount)
-	err := c.SubmitTransaction(c.CurID, dstID, amount)
+	fmt.Print("Destination Wallet ID: ")
+	_, err = fmt.Scanln(&destinationID)
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Transaction successfully submitted")
+		return
 	}
+	fmt.Print("Amount to send: ")
+	_, err = fmt.Scanln(&amount)
+	if err != nil {
+		return
+	}
+
+	balance := state.NewBalance(amount)
+	err = c.SendCoinGeneric(id, destinationID, balance)
+	if err != nil {
+		return
+	}
+
+	return
 }
-*/
 
 /*
 func sendScriptInputWalkthrough(c *client.Client) {
@@ -107,7 +116,7 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
 	var err error
 	for {
-		fmt.Print("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
+		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
 		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
@@ -126,15 +135,14 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 
 		case "d", "download":
 			fmt.Println("Download is not currently implemented.")
-			//download(c)
+			//download(c, id)
 
 		case "s", "send", "transaction":
-			fmt.Println("Sending money is not currently implmeented.")
-			//sendFromGenericWallet(c)
+			sendCoinGenericWalletWalkthrough(c, id)
 
 		case "u", "upload":
 			fmt.Println("Uploading is not currently implemented.")
-			//uploadToGenericWallet(c)
+			//uploadToGenericWallet(c, id)
 		}
 
 		if err != nil {

@@ -82,7 +82,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(id)
 	if wn == nil {
-		err = fmt.Errorf("no wallet of that id exists: %v", id)
+		err = fmt.Errorf("no wallet of id %v exists.", id)
 		return
 	}
 
@@ -92,6 +92,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	if err != nil {
 		panic(err)
 	}
+	defer file.Close()
 
 	// Fetch the size of the wallet from disk.
 	walletLengthBytes := make([]byte, 4)
