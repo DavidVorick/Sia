@@ -25,7 +25,7 @@ type Update struct {
 	Heartbeat          delta.Heartbeat
 	HeartbeatSignature siacrypto.Signature
 
-	ScriptInputs          []delta.ScriptInput
+	ScriptInputs          []state.ScriptInput
 	UpdateAdvancements    []state.UpdateAdvancement
 	AdvancementSignatures []siacrypto.Signature
 }
@@ -63,7 +63,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	p.updatesLock.Lock()
 	{
 		// Create a map containing all ScriptInputs found in a heartbeat.
-		scriptInputMap := make(map[string]delta.ScriptInput)
+		scriptInputMap := make(map[string]state.ScriptInput)
 		updateAdvancementMap := make(map[string]state.UpdateAdvancement)
 		advancementSignatureMap := make(map[string]siacrypto.Signature)
 		for i := range p.updates {

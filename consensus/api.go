@@ -9,7 +9,7 @@ import (
 
 // AddScriptInput is an RPC that appends a script input to
 // Participant.scriptInputs.
-func (p *Participant) AddScriptInput(si delta.ScriptInput, _ *struct{}) (err error) {
+func (p *Participant) AddScriptInput(si state.ScriptInput, _ *struct{}) (err error) {
 	p.updatesLock.Lock()
 	p.scriptInputs = append(p.scriptInputs, si)
 	p.updatesLock.Unlock()

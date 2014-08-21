@@ -9,7 +9,7 @@ import (
 
 // Takes a ScriptInput and verifies that it's allowed to run, and then stores
 // information that will prevent the script from ever being run again.
-func (e *Engine) HandleScriptInput(si ScriptInput) {
+func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 	// If the deadline for the script has already passed, reject the
 	// script.
 	if si.Deadline < e.state.Metadata.Height {

@@ -4,6 +4,15 @@ import (
 	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
+// A ScriptInput pairs an input byte slice with the WalletID associated with
+// the recipient. During execution, the WalletID is used to load the script
+// body, and then the Input is appended to the end of the script.
+type ScriptInput struct {
+	WalletID WalletID
+	Input    []byte
+	Deadline uint32
+}
+
 // ScriptInputEvent contains all the information needed by the event list to
 // manage the expiration of scripts.
 type ScriptInputEvent struct {

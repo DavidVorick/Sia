@@ -28,7 +28,7 @@ func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error
 
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
-		Args: delta.ScriptInput{
+		Args: state.ScriptInput{
 			WalletID: w,
 			Input:    input,
 		},
@@ -68,7 +68,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
-		Args: delta.ScriptInput{
+		Args: state.ScriptInput{
 			WalletID: delta.FountainWalletID,
 			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
 		},
@@ -106,11 +106,11 @@ func (c *Client) SendCoinGeneric(source state.WalletID, destination state.Wallet
 		return
 	}
 
-	input := delta.ScriptInput{
+	input := state.ScriptInput{
 		WalletID: source,
 		Input:    delta.SendCoinInput(destination, amount),
 	}
-	err = input.Sign(c.genericWallets[source].SecretKey)
+	err = delta.SignScriptInput(&input, c.genericWallets[source].SecretKey)
 	if err != nil {
 		return
 	}
@@ -129,7 +129,7 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 	return c.router.SendMessage(network.Message{
 		Dest: c.connectAddress,
 		Proc: "Participant.AddScriptInput",
-		Args: delta.ScriptInput{
+		Args: state.ScriptInput{
 			WalletID: id,
 			Input:    input,
 		},

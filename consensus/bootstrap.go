@@ -131,9 +131,7 @@ func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, boot
 	p.newSignedUpdate()
 
 	// Run the first compile, this will create a snapshot.
-	println("t1")
 	block := p.condenseBlock()
-	println("t2")
 	err = p.engine.Compile(block)
 	if err != nil {
 		return
@@ -324,7 +322,7 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 		}
 
 		// Create the join request and send it to the quorum.
-		var joinRequest delta.ScriptInput
+		var joinRequest state.ScriptInput
 		inputSibling := state.Sibling{
 			Address:   p.address,
 			PublicKey: p.publicKey,
