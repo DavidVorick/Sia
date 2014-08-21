@@ -565,23 +565,19 @@ func op_add_wallet(env *scriptEnv, args []byte) (err error) {
 }
 
 func op_send(env *scriptEnv, args []byte) (err error) {
-	/*
-		lbalv, _ := pop(env)
-		ubalv, _ := pop(env)
-		idv, err := pop(env)
-		if err != nil {
-			return
-		}
+	balb, _ := pop(env)
+	idb, err := pop(env)
+	if err != nil {
+		return
+	}
 
-		// convert values to proper types
-		id := quorum.WalletID(siaencoding.DecUint64(idv[:]))
-		lbal := siaencoding.DecUint64(lbalv[:])
-		ubal := siaencoding.DecUint64(ubalv[:])
-		bal := quorum.NewBalance(ubal, lbal)
+	// convert values to proper types
+	var bal state.Balance
+	copy(bal[:], balb)
+	id := state.WalletID(siaencoding.DecUint64(idb))
 
-		// send
-		_, err = env.quorum.Send(env.wallet, bal, id)
-	*/
+	// send
+	err = env.engine.SendCoin(env.wallet, bal, id)
 	return
 }
 
