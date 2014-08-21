@@ -13,7 +13,7 @@ import (
 // Returns a list of all wallets available to the client.
 func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 	ids = make([]state.WalletID, 0, len(c.genericWallets))
-	for id, _ := range c.genericWallets {
+	for id := range c.genericWallets {
 		ids = append(ids, id)
 	}
 	// Add other types of wallets as they are implemented.
@@ -32,7 +32,7 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 
 	// Check for other types of wallets.
 
-	err = fmt.Errorf("Wallet is not available.")
+	err = errors.New("Wallet is not available.")
 	return
 }
 

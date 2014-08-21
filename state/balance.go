@@ -28,6 +28,12 @@ func NewStringBalance(bal string) (b Balance) {
 	return
 }
 
+// String returns a balance as a string containing a decimal value.
+func (a Balance) String() string {
+	x := siaencoding.DecUint128(a[:])
+	return x.String()
+}
+
 // Add performs addition on two Balances.
 func (a *Balance) Add(b Balance) {
 	x := siaencoding.DecUint128(a[:])

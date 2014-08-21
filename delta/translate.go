@@ -24,7 +24,7 @@ func findDataSection(script []byte) (index int) {
 	index = len(script)
 	for i, b := range script {
 		// exit, reject, cond_reject, transfer
-		if b == 0xFF || b == 0xFE || b == 0xE3 || b == 0x38 {
+		if b == 0xFF || b == 0xFE || b == 0xE5 || b == 0x38 {
 			index = i + 1
 		}
 		// these are good indicators that we're inside a data block

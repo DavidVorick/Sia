@@ -73,19 +73,17 @@ func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling
 
 // TransactionInput returns a script that calls the Send function. It is
 // intended to be passed to a script that transfers execution to the input.
-func SendCoinInput(destination state.WalletID, amount state.Balance) []byte {
+func SendCoinInput(dest state.WalletID, amount state.Balance) []byte {
 	return appendAll(
 		[]byte{
-			0x33, 0x0B, 0x00, // move data pointer to dst
-			0x34, 0x08, //       push 8 bytes of input (id)
-			0x34, 0x08, //       push 8 bytes of input (high balance)
-			0x34, 0x08, //       push 8 bytes of input (low balance)
+			0x33, 0x09, 0x00, // move data pointer to dest
+			0x34, 0x08, //       push dest
+			0x34, 0x10, //       push balance
 			0x43, //             call Send
 			0xFF, //             exit
 		},
-		siaencoding.EncUint64(uint64(destination)),
-		//siaencoding.EncUint64(high),
-		//siaencoding.EncUint64(low),
+		siaencoding.EncUint64(uint64(dest)),
+		amount[:],
 	)
 }
 

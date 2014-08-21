@@ -9,6 +9,7 @@ import (
 
 const (
 	maxInstructions = 10000
+	maxMemory       = 1 << 14 // 16 KB
 	maxStackLen     = 1 << 16
 	debug           = false
 )
@@ -65,16 +66,15 @@ func pop(env *scriptEnv) (v []byte, err error) {
 
 func (s *stackElem) print() string {
 	str := "{ "
-	p := s
-	for {
+	for p := s; p != nil; p = p.next {
 		if p == nil {
 			break
 		}
-		b := make([]byte, 5)
-		copy(b, p.val)
-		str += fmt.Sprint(b)
-		str += " "
-		p = p.next
+		if len(p.val) > 5 {
+			str += fmt.Sprint(p.val[:5]) + "... "
+		} else {
+			str += fmt.Sprint(p.val) + " "
+		}
 	}
 	str += "}"
 	return str
@@ -92,19 +92,37 @@ type scriptEnv struct {
 	// resource pools
 	instBalance int
 	costBalance int
+	memUsage    int
 }
 
 // deduct instruction cost from resource pools, and return an error if any pool
 // is exhausted.
-// TODO: add memBalance to prevent buffer abuse
 func (env *scriptEnv) deductResources(op instruction) error {
 	env.instBalance--
 	env.costBalance -= op.cost
+	// calculate memUsage
+	env.memUsage = 0
+	for i := range env.registers {
+		env.memUsage += len(env.registers[i])
+	}
+	p := env.stack
+	for {
+		if p == nil {
+			break
+		}
+		env.memUsage += len(p.val)
+		p = p.next
+	}
+
+	// check each resource for exhaustion
+	// TODO: export these errors
 	switch {
 	case env.instBalance < 0:
 		return errors.New("instruction limit reached")
 	case env.costBalance < 0:
 		return errors.New("balance exhausted")
+	case env.memUsage > maxMemory:
+		return errors.New("memory limit reached")
 	default:
 		return nil
 	}
@@ -129,6 +147,7 @@ func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
 		// these values will likely be stored as part of the wallet
 		instBalance: maxInstructions,
 		costBalance: 10000,
+		memUsage:    0,
 	}
 
 	// run script

@@ -101,9 +101,8 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 
 // send coins from one wallet to another
 func (c *Client) SendCoinGeneric(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
-	_, exists := c.genericWallets[source]
-	if !exists {
-		err = errors.New("Could not access source wallet, perhaps it's not a generic walet?")
+	if _, ok := c.genericWallets[source]; !ok {
+		err = errors.New("Could not access source wallet, perhaps it's not a generic wallet?")
 		return
 	}
 
