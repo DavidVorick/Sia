@@ -7,6 +7,19 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+// participantName is a helper function that asks for a participant name.
+func participantName() (name string, err error) {
+	fmt.Print("Name of participant: ")
+	_, err = fmt.Scanln(&name)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// printMetadata is a helper function that takes metadata and outputs it in
+// human readable form.
 func printMetadata(metadata state.Metadata) {
 	var siblingString string
 	for i := range metadata.Siblings {
@@ -25,6 +38,28 @@ func printMetadata(metadata state.Metadata) {
 		"\tHeight:", metadata.Height, "\n",
 		"\tRecent Snapshot:", metadata.RecentSnapshot, "\n",
 	)
+}
+
+// printWalletList takes a slice of wallets and prints each in human readable
+// form.
+func printWalletList(wallets []state.Wallet) {
+	var walletString string
+	for _, wallet := range wallets {
+		walletString += fmt.Sprintf("\tWallet: %v\n", wallet.ID)
+		walletString += fmt.Sprintf("\t\tBalance: %v\n", wallet.Balance)
+		walletString += fmt.Sprintf("\t\tSectorSettings:\n")
+		{
+			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.SectorSettings.Atoms)
+			walletString += fmt.Sprintf("\t\t\tUpdate Atoms: %v\n", wallet.SectorSettings.UpdateAtoms)
+			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.SectorSettings.K)
+			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.SectorSettings.D)
+			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.SectorSettings.Hash)
+		}
+		walletString += fmt.Sprintf("\t\tScript: %v", wallet.Script)
+		walletString += "\n\n"
+	}
+
+	fmt.Println(walletString)
 }
 
 // serverNameAndFilepathWalkthrough is a helper function that gets and returns
@@ -108,6 +143,50 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 	return
 }
 
+// participantMetadataWalkthrough gets the name of a participant and then
+// prints the metadata of that participant.
+func participantMetadataWalkthrough(c *client.Client) (err error) {
+	name, err := participantName()
+	if err != nil {
+		return
+	}
+
+	metadata, err := c.ParticipantMetadata(name)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(
+		"\n",
+		name, "status:\n",
+	)
+	printMetadata(metadata)
+
+	return
+}
+
+// participantWalletsWalkthrough gets the name of a participant and prints all
+// of the wallets being tracked by that participant.
+func participantWalletsWalkthrough(c *client.Client) (err error) {
+	name, err := participantName()
+	if err != nil {
+		return
+	}
+
+	wallets, err := c.ParticipantWallets(name)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(
+		"\n",
+		name, "wallets:\n",
+	)
+	printWalletList(wallets)
+
+	return
+}
+
 // serverCreationWalkthrough gets a bunch of input from the user and uses it to
 // create a new server.
 func serverCreationWalkthrough(c *client.Client) (err error) {
@@ -127,38 +206,14 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-// serverMetadataWalkthrough collects the information needed to pull up the
-// metadata of a participant (IE the name), then collects the metadata, formats
-// it into human-readable form, and prints it.
-func serverMetadataWalkthrough(c *client.Client) (err error) {
-	fmt.Print("Name of server to fetch status from: ")
-	var name string
-	_, err = fmt.Scanln(&name)
-	if err != nil {
-		return
-	}
-
-	metadata, err := c.ParticipantMetadata(name)
-	if err != nil {
-		return
-	}
-
-	fmt.Println(
-		"\n",
-		name, "status:\n",
-	)
-	printMetadata(metadata)
-
-	return
-}
-
 func displayServerHelp() {
 	fmt.Println(
 		"h:\tHelp\n",
 		"q:\tReturn to home mode.\n",
 		"j:\tCreate a new participant and join an existing quorum.\n",
+		"m:\tPrint the metadata of a participant.\n",
 		"n:\tCreate a new quorum with a bootstrap participant.\n",
-		"p:\tPrint the status of a server.\n",
+		"w:\tPrint the wallets known to a participant.\n",
 	)
 }
 
@@ -189,11 +244,14 @@ func pollServer(c *client.Client) {
 		case "j", "join":
 			err = joinQuorumWalkthrough(c)
 
+		case "m", "metadata", "status":
+			err = participantMetadataWalkthrough(c)
+
 		case "n", "new", "bootstrap":
 			err = newQuorumWalkthrough(c)
 
-		case "p", "print", "status":
-			err = serverMetadataWalkthrough(c)
+		case "w", "wallets":
+			err = participantWalletsWalkthrough(c)
 		}
 
 		if err != nil {
