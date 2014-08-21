@@ -19,6 +19,7 @@ const (
 type ScriptInput struct {
 	WalletID state.WalletID
 	Input    []byte
+	Deadline uint32
 }
 
 type instruction struct {

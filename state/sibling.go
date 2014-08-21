@@ -1,10 +1,16 @@
 package state
 
+import (
+	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/siacrypto"
+)
+
 const (
 	// SiblingPassiveWindow is the number of blocks that a sibling is
 	// allowed to be passive.
 	SiblingPassiveWindow = 2
 )
+
 // A Sibling is the public facing information of participants on the quorum.
 // Every quorum contains a list of all siblings. The Status of a sibling
 // indicates it's standing with the quorum. ^byte(0) indicates that the sibling

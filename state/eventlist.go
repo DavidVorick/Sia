@@ -22,10 +22,10 @@ const (
 // and being able to provide malicious input to distrupt the order notation of
 // the list.
 type Event interface {
-	Expiration() uint32
 	Counter() uint32
-	SetCounter(uint32)
+	Expiration() uint32
 	HandleEvent(s *State)
+	SetCounter(uint32)
 }
 
 // An eventNode houses an event and a pointer to the top of its pointer stack.

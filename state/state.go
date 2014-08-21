@@ -1,7 +1,6 @@
 package state
 
 import (
-	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/siafiles"
@@ -39,12 +38,15 @@ type State struct {
 	// Points to the skip list that contains all of the events.
 	eventRoot *eventNode
 
-	// Maintains a list of all SectorModifiers active on each wallet. If the
-	// wallet is not represented in the map, it only indicates that there are
-	// no SectorModifiers active for that wallet. To check for a wallets
-	// existence, one must transverse the wallet tree.
-	// activeSectors map[WalletID][]SectorModifier
-	// activeUploads map[UploadID]*Upload
+	// A list of the hashes of all script inputs that have run on the
+	// server recently.
+	knownScripts map[siacrypto.Hash]struct{}
+
+	// A list of all SectorModifiers active on each wallet. If the wallet
+	// is not represented in the map, it only indicates that there are no
+	// SectorModifiers active for that wallet. To check for a wallets
+	// existence, one must transverse the wallet tree.  activeSectors
+	// map[WalletID][]SectorModifier activeUploads map[UploadID]*Upload
 	activeUpdates map[WalletID][]SectorUpdate
 }
 

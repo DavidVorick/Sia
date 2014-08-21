@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path"
 
@@ -178,7 +177,6 @@ func (c *Client) ParticipantWallets(name string) (wallets []state.Wallet, err er
 	if err != nil {
 		return
 	}
-	fmt.Println(walletIDList)
 
 	for _, id := range walletIDList {
 		var wallet state.Wallet
@@ -189,7 +187,6 @@ func (c *Client) ParticipantWallets(name string) (wallets []state.Wallet, err er
 
 		wallets = append(wallets, wallet)
 	}
-	fmt.Println(wallets)
 
 	return
 }
