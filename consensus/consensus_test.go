@@ -7,7 +7,6 @@ import (
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
-	"github.com/NebulousLabs/Sia/state"
 )
 
 // TestConsensus is the catch-all function for testing the components of the
@@ -62,6 +61,27 @@ func TestConsensus(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// See that immidiate synchronization has succeded, and that the blocks
+	// are timed with some epsilon.
+	p.tickLock.RLock()
+	joiningParticipant.tickLock.RLock()
+
+	pCurrentStep := p.currentStep
+	jCurrentStep := joiningParticipant.currentStep
+	pProgress := time.Duration(pCurrentStep) * StepDuration
+	jProgress := time.Duration(jCurrentStep) * StepDuration
+	pProgress += time.Since(p.tickStart) % StepDuration
+	jProgress += time.Since(joiningParticipant.tickStart) % StepDuration
+
+	// Check that each is within 50 milliseconds of the other.
+	difference := int64(pProgress/time.Millisecond) - int64(jProgress/time.Millisecond)
+	if difference > 50 || difference < -50 {
+		t.Error("The drift on p and j exceeds 50 milliseconds")
+	}
+
+	p.tickLock.RUnlock()
+	joiningParticipant.tickLock.RUnlock()
+
 	// CreateJoiningParticipant won't return until it has fully integrated.
 	// Test that the integration was successful.
 	p.engineLock.RLock()
@@ -73,6 +93,20 @@ func TestConsensus(t *testing.T) {
 	joiningParticipant.engineLock.RLock()
 	if joiningParticipant.engine.Metadata().Siblings[0].Inactive() || joiningParticipant.engine.Metadata().Siblings[1].Inactive() {
 		t.Error("Joined participant is not recognizing both siblings as active.")
+	}
+	joiningParticipant.engineLock.RUnlock()
+
+	// Let sit for 2 blocks and check again.
+	time.Sleep(time.Duration(NumSteps) * StepDuration)
+	p.engineLock.RLock()
+	if p.engine.Metadata().Siblings[0].Inactive() || p.engine.Metadata().Siblings[1].Inactive() {
+		t.Error("Initial participant is not recognizing both siblings as active after 2 blocks..")
+	}
+	p.engineLock.RUnlock()
+
+	joiningParticipant.engineLock.RLock()
+	if joiningParticipant.engine.Metadata().Siblings[0].Inactive() || joiningParticipant.engine.Metadata().Siblings[1].Inactive() {
+		t.Error("Joined participant is not recognizing both siblings as active after 2 blocks.")
 	}
 	joiningParticipant.engineLock.RUnlock()
 
@@ -110,8 +144,8 @@ func TestConsensus(t *testing.T) {
 		participant.engineLock.RUnlock()
 	}
 
-	// Wait through two full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(state.QuorumSize) * 2)
+	// Wait through four full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 4)
 
 	// At this point, there should be a full quorum, where each participant
 	// recognized all other participants. We run a check to see that each
@@ -285,9 +319,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		sh.signatories = sh.signatories[:1]
 
 		// handle heartbeat when tick is larger than num signatures
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = 2
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 		err = p.HandleSignedHeartbeat(*sh, nil)
 		if err != hsherrNoSync {
 			t.Error("expected heartbeat to be rejected as out-of-sync: ", err)
@@ -299,9 +333,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 		}
 
 		// send a heartbeat right at the edge of a new block
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = QuorumSize
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 
 		// submit heartbeat in separate thread
 		go func() {
@@ -312,9 +346,9 @@ func TestHandleSignedHeartbeat(t *testing.T) {
 			// need some way to verify with the test that the funcion gets here
 		}()
 
-		p.stepLock.Lock()
+		p.tickLock.Lock()
 		p.currentStep = 1
-		p.stepLock.Unlock()
+		p.tickLock.Unlock()
 		time.Sleep(time.Second)
 		time.Sleep(StepDuration)
 }*/

@@ -1,8 +1,6 @@
 package delta
 
 import (
-	"os"
-
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -40,19 +38,19 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 	e.AddSibling(&sibWallet, sib)
 	e.state.Metadata.Siblings[0].Status = 0
 
-	e.saveSnapshot()
 	e.recentHistoryHead = ^uint32(0)
 	e.state.Metadata.RecentSnapshot = ^uint32(0) - (SnapshotLength - 1)
 	e.activeHistoryLength = SnapshotLength
 	return
 }
 
+// BootstrapJoinSetup currently just sets the snapshot variables when a
+// participant is just joining the network.
 func (e *Engine) BootstrapJoinSetup() (err error) {
-	file, err := os.Create(e.activeHistoryFilename())
-	if err != nil {
-		return
-	}
-	file.Close()
+	// Set e.activeHistoryLength to SnapshotLength. It's a bit of a hack,
+	// but it signals to the snapshot code that a new blockhistory file
+	// needs to be created.
+	e.activeHistoryLength = SnapshotLength
 	return
 }
 

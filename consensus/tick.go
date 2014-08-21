@@ -10,7 +10,7 @@ import (
 const (
 	// StepDuration is the amount of time between each step.
 	// Each block is compiled after state.QuorumSize steps.
-	StepDuration = 2800 * time.Millisecond
+	StepDuration = 400 * time.Millisecond
 )
 
 func (p *Participant) tick() {
@@ -21,6 +21,7 @@ func (p *Participant) tick() {
 		return
 	}
 	p.ticking = true
+	p.updateStop.Unlock()
 
 	// Create a ticker that will pulse every StepDuration
 	p.tickStart = time.Now()

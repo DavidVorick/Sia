@@ -44,8 +44,60 @@ func (p *Participant) fetchAndCompileNextBlock(quorumSiblings []network.Address)
 		return
 	}
 
+	println("compiling block")
+	println(p.siblingIndex)
+	println(b.Height)
 	p.engine.Compile(b)
 	return
+}
+
+var (
+	errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
+)
+
+// NewParticipant initializes a Participant object with the provided
+// MessageRouter and filePrefix. It also creates a keypair and sets default
+// values for the siblingIndex and currentStep.
+func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant, err error) {
+	if rpcs == nil {
+		err = errNilMessageRouter
+		return
+	}
+
+	p = new(Participant)
+
+	// Create a keypair for the participant.
+	p.publicKey, p.secretKey, err = siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+	p.siblingIndex = ^byte(0)
+
+	// Create the update maps.
+	for i := range p.updates {
+		p.updates[i] = make(map[siacrypto.Hash]Update)
+	}
+
+	// Initialize the network components of the participant.
+	p.address = rpcs.RegisterHandler(p)
+	p.router = rpcs
+
+	// Initialize the file prefix
+	p.engine.Initialize(filePrefix)
+	p.setSiblingIndex(p.siblingIndex)
+
+	// Write-lock the updateStop to stop updates until the participant
+	// starts ticking.
+	p.updateStop.Lock()
+
+	return
+}
+
+// Sets the sibling index for the participant and engine, should be called once
+// the sibling index is discovered.
+func (p *Participant) setSiblingIndex(siblingIndex byte) {
+	p.siblingIndex = siblingIndex
+	p.engine.SetSiblingIndex(siblingIndex)
 }
 
 // CreateBootstrapParticipant returns a participant that is participating as
@@ -55,7 +107,7 @@ func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, boot
 	// full netowrk is not likely to have this, but it makes test-network
 	// actions a lot simpler.
 	if bootstrapTetherWallet == 0 {
-		err = errors.New("cannot use id '0', this id is reserved for the bootstrapping wallet")
+		err = errors.New("cannot use id '0', this id is reserved for the fountain wallet")
 		return
 	}
 
@@ -81,7 +133,7 @@ func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, boot
 	// Create the first update.
 	p.newSignedUpdate()
 
-	// Run the first compile.
+	// Run the first compile, this will create a snapshot.
 	block := p.condenseBlock()
 	err = p.engine.Compile(block)
 	if err != nil {
@@ -235,7 +287,7 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	// with the low step numbers.
 	//
 	// 3. Download any blocks that are missing, catching up to the current
-	// quorum.
+	// quorum. At most 1 will be missing.
 	//
 	// 4. Wait for this block to finish (will not have join request), and
 	// the next block to finish (will have join request).

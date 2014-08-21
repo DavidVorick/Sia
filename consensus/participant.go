@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -36,48 +35,7 @@ type Participant struct {
 	tickStart   time.Time
 	currentStep byte
 	tickLock    sync.RWMutex
-}
-
-func (p *Participant) setSiblingIndex(siblingIndex byte) {
-	p.siblingIndex = siblingIndex
-	p.engine.SetSiblingIndex(siblingIndex)
-}
-
-var errNilMessageRouter = errors.New("cannot create a participant with a nil message router")
-
-// NewParticipant initializes a Participant object with the provided
-// MessageRouter and filePrefix. It also creates a keypair and sets default
-// values for the siblingIndex and currentStep.
-func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant, err error) {
-	if rpcs == nil {
-		err = errNilMessageRouter
-		return
-	}
-
-	p = new(Participant)
-
-	// Create a keypair for the participant.
-	p.publicKey, p.secretKey, err = siacrypto.CreateKeyPair()
-	if err != nil {
-		return
-	}
-	p.currentStep = 1
-	p.siblingIndex = ^byte(0)
-
-	// Create the update maps.
-	for i := range p.updates {
-		p.updates[i] = make(map[siacrypto.Hash]Update)
-	}
-
-	// Initialize the network components of the participant.
-	p.address = rpcs.RegisterHandler(p)
-	p.router = rpcs
-
-	// Initialize the file prefix
-	p.engine.Initialize(filePrefix)
-	p.setSiblingIndex(p.siblingIndex)
-
-	return
+	updateStop  sync.RWMutex
 }
 
 // Ping is the simplest RPC possible. It exists only to confirm that a

@@ -18,16 +18,19 @@ func TestSynchronizedTick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestSynchronizedTick"), 1, *new(siacrypto.PublicKey))
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestSynchronizedTick"), 1, siacrypto.PublicKey{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	go p.tick()
 
 	// Sleep for 1 step and see if current step has increased.
+	p.tickLock.RLock()
+	startingStep := p.currentStep
+	p.tickLock.RUnlock()
 	time.Sleep(StepDuration + 25*time.Millisecond)
 	p.tickLock.RLock()
-	if p.currentStep != 2 {
+	if p.currentStep != startingStep+1 {
 		t.Error("p.currentStep is not incrementing correctly each StepDuration")
 	}
 	p.tickLock.RUnlock()
@@ -36,12 +39,13 @@ func TestSynchronizedTick(t *testing.T) {
 	// trigger.
 	p.tickLock.Lock()
 	p.currentStep = state.QuorumSize
+	startingHeight := p.engine.Metadata().Height
 	p.tickLock.Unlock()
 	time.Sleep(StepDuration)
 
 	// Check that the height of the quorum has increased.
 	p.engineLock.RLock()
-	if p.engine.Metadata().Height != 2 {
+	if p.engine.Metadata().Height != startingHeight+1 {
 		t.Error("Quorum height has not increased to 2 after compilation")
 	}
 	p.engineLock.RUnlock()
