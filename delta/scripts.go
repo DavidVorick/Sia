@@ -47,7 +47,7 @@ func CreateFountainWalletInput(id state.WalletID, s []byte) []byte {
 // AddSiblingInput returns a signed ScriptInput that calls the AddSibling
 // function. It is intended to be passed to a script that transfers execution
 // to the input.
-func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
+func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
 	si.WalletID = wid
 	encSib, err := siaencoding.Marshal(sib)
 	if err != nil {
@@ -62,7 +62,7 @@ func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling
 		},
 		encSib,
 	)
-	//si.Deadline = deadline
+	si.Deadline = deadline
 
 	err = si.Sign(sk)
 	if err != nil {

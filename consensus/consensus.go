@@ -136,7 +136,8 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 	return
 }
 
-//TODO: add docstring
+// newSignedUpdate creates an update for this participant, signs it, and then
+// broadcasts it to the network.
 func (p *Participant) newSignedUpdate() {
 	// Check that this function was not called by error.
 	if p.siblingIndex > state.QuorumSize {

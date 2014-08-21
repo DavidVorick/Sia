@@ -131,7 +131,9 @@ func CreateBootstrapParticipant(rpcs *network.RPCServer, filePrefix string, boot
 	p.newSignedUpdate()
 
 	// Run the first compile, this will create a snapshot.
+	println("t1")
 	block := p.condenseBlock()
+	println("t2")
 	err = p.engine.Compile(block)
 	if err != nil {
 		return
@@ -321,14 +323,13 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 			time.Sleep(StepDuration * time.Duration(3-cps.CurrentStep))
 		}
 
-		// REMEMBER TO SET DEADLINE TO CPS.HEIGHT + 2!
 		// Create the join request and send it to the quorum.
 		var joinRequest delta.ScriptInput
 		inputSibling := state.Sibling{
 			Address:   p.address,
 			PublicKey: p.publicKey,
 		}
-		joinRequest, err = delta.AddSiblingInput(tetherID, inputSibling, tetherWalletSecretKey)
+		joinRequest, err = delta.AddSiblingInput(tetherID, cps.Height+2, inputSibling, tetherWalletSecretKey)
 		if err != nil {
 			return
 		}
