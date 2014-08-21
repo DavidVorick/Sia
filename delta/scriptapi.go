@@ -87,24 +87,30 @@ func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
 	return
 }
 
-/*
-func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (cost int, err error) {
+// Send is a call that sends siacoins from the source wallet to the destination
+// wallet.
+func (s *State) Send(w *Wallet, amount Balance, destID WalletID) (err error) {
+	// Check that the source wallet contains enough to send the desired
+	// amount.
 	if w.Balance.Compare(amount) < 0 {
 		err = errors.New("insufficient balance")
 		return
 	}
+
+	// Check that the destination wallet is available.
 	destWallet := s.LoadWallet(destID)
 	if destWallet == nil {
 		err = errors.New("destination wallet does not exist")
 		return
 	}
 
+	// Commit the send.
 	w.Balance.Subtract(amount)
 	destWallet.Balance.Add(amount)
 	s.SaveWallet(destWallet)
+
 	return
 }
-*/
 
 // TODO: add docstring
 func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
