@@ -19,12 +19,12 @@ type ScriptInputEvent struct {
 	hash siacrypto.Hash
 
 	// Event-required variables.
-	counter  uint32
-	deadline uint32
+	counter    uint32
+	expiration uint32
 }
 
 func (sie *ScriptInputEvent) Expiration() uint32 {
-	return sie.deadline
+	return sie.expiration
 }
 
 func (sie *ScriptInputEvent) Counter() uint32 {
@@ -42,14 +42,37 @@ func (sie *ScriptInputEvent) SetCounter(counter uint32) {
 // KnownScript takes the hash of a script as input (it has to be this way,
 // unless we move the ScriptInput object to the state package, which is worth
 // considering)
-func (s *State) KnownScript() bool {
-	// to be implemented after delta.ScriptInput is transitioned to state.ScriptInput
-	return false
+func (s *State) KnownScript(si ScriptInput) bool {
+	hash, err := siacrypto.HashObject(si)
+	if err != nil {
+		// This is a bit of a strange behavior, it might be better to
+		// log a panic or something. I'm not sure what would cause a
+		// script to be unhashable.
+		//
+		// I just don't want an errored script getting the okay,
+		// because then it will always get the okay.
+		return true
+	}
+	_, exists := s.knownScripts[hash]
+	return exists
 }
 
 // LearnScript takes a script, creates a script-event using that script, and
 // then stores the script in the list of known scripts. When the deadline
 // expires, the script event will trigger and the script will be removed.
-func (s *State) LearnScript() {
-	// to be implemented after delta.ScriptInput is transitioned to state.ScriptInput
+func (s *State) LearnScript(si ScriptInput) {
+	// Hash the script and add it to the list of known scripts.
+	hash, err := siacrypto.HashObject(si)
+	if err != nil {
+		return
+	}
+	s.knownScripts[hash] = struct{}{}
+
+	// Create a script event and add it to the event list.
+	sie := ScriptInputEvent{
+		hash:       hash,
+		expiration: si.Deadline,
+	}
+
+	s.InsertEvent(&sie)
 }

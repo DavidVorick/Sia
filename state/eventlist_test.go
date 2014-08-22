@@ -1,10 +1,14 @@
 package state
 
-/*import (
-	"siacrypto"
+import (
 	"testing"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
+// countReachableEvents starts at the event root and figures out how many are
+// reachable from a bottom-level crawl of the event list. Only checks for
+// infinite loops where an event points to itself.
 func countReachableEvents(en *eventNode) (i int) {
 	for {
 		if en == nil {
@@ -24,61 +28,125 @@ func countReachableEvents(en *eventNode) (i int) {
 	}
 }
 
-func TestEventList(t *testing.T) {
-	u0 := &upload{
-		deadline: 5,
+// eventsOrderedProperly iterates through the event list and makes sure that
+// each event expires before the next event.
+func eventsOrderedProperly(en *eventNode) bool {
+	for {
+		if en == nil {
+			return true
+		}
+
+		current := en.top
+		if current == nil {
+			return true
+		}
+		current = current.bottom()
+		if current.nextNode == nil {
+			return true
+		}
+		if eventIndex(current.nextNode.event) < eventIndex(en.event) {
+			// t.Error("Event list ordering is incorrect:", eventIndex(current.nextNode.event), "follows", eventIndex(en.event))
+			return false
+		}
+		if current.nextNode.event.Expiration() < en.event.Expiration() {
+			// t.Error("Node expiration is off:", current.nextNode.Expiration(), "follows", current.Expiration())
+			return false
+		}
+
+		en = current.nextNode
 	}
+}
 
+// TestEventList is designed to verify that the skip-list logic of the event
+// list is reasonably responsive and doesn't have any unexpected behaviors,
+// such as failing to remove an event after calling delte.
+func TestEventList(t *testing.T) {
+	// Create and initialize a state.
 	var s State
-	q.insertEvent(u0)
+	s.Initialize()
 
-	en0 := q.eventNode(u0)
-	if en0 == nil {
+	// Create and insert an event.
+	e := &ScriptInputEvent{
+		expiration: 1,
+	}
+	s.InsertEvent(e)
+
+	// Verify that the event can be fetched.
+	en := s.eventNode(e)
+	if en == nil {
 		t.Fatal("Could not get inserted event!")
 	}
-	if countReachableEvents(q.eventRoot) != 1 {
-		t.Fatal("Reached wrong number of events, expecting 1:", countReachableEvents(q.eventRoot))
+	if countReachableEvents(s.eventRoot) != 1 {
+		t.Fatal("Reached wrong number of events, expecting 1:", countReachableEvents(s.eventRoot))
 	}
 
-	q.deleteEvent(u0)
-	en0 = q.eventNode(u0)
-	if en0 != nil {
+	// Delete the event and verify that it's no longer in the event list.
+	s.DeleteEvent(e)
+	en = s.eventNode(e)
+	if en != nil {
 		t.Fatal("deleted event node still retrievable")
 	}
-	if countReachableEvents(q.eventRoot) != 0 {
-		t.Fatal("Reached wrong number of events, expecting 0:", countReachableEvents(q.eventRoot))
+	if countReachableEvents(s.eventRoot) != 0 {
+		t.Fatal("Reached wrong number of events, expecting 0:", countReachableEvents(s.eventRoot))
+	}
+
+	// Have the state learn a script, this will result in the script being
+	// added to the event list.
+	si := ScriptInput{
+		Deadline: 0,
+	}
+	s.LearnScript(si)
+
+	// Verify that e1 is now a known script. This really doesn't need to be
+	// happening in this test, but it's better to be safe and double check.
+	if !s.KnownScript(si) {
+		t.Fatal("The state failed to learn the test script!.")
+	}
+
+	// Set the height to 1, so that 'si' (expiration of 0) has expired. Then
+	// call process.
+	s.Metadata.Height = 1
+	s.ProcessExpiringEvents()
+
+	// Verify that HandleEvent() has been called, which means the script
+	// will no longer be known to the state.
+	if s.KnownScript(si) {
+		t.Error("Process event has failed - script is still known to the state.")
 	}
 
 	if testing.Short() {
 		t.Skip()
 	}
 
-	uploadMap := make(map[*upload]*upload)
-	n := 100
+	sieMap := make(map[*ScriptInputEvent]struct{})
+	n := 50
 	for j := 0; j < n; j++ {
 		for i := 0; i < n; i++ {
-			randomTimeout, _ := siacrypto.RandomInt(12)
-			nu := &upload{
-				deadline: uint32(randomTimeout),
+			randomTimeout := siacrypto.RandomInt(12)
+			si := &ScriptInputEvent{
+				expiration: uint32(randomTimeout),
 			}
-			uploadMap[nu] = nu
-			q.insertEvent(nu)
+			sieMap[si] = struct{}{}
+			s.InsertEvent(si)
 
-			if countReachableEvents(q.eventRoot) != i+1 {
-				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(q.eventRoot))
+			if countReachableEvents(s.eventRoot) != i+1 {
+				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(s.eventRoot))
+			}
+			if !eventsOrderedProperly(s.eventRoot) {
+				t.Error("Improper ordering discovered")
 			}
 		}
 
-		elementSlice := make([]*upload, n)
+		elementSlice := make([]*ScriptInputEvent, n)
 		i := 0
-		for key := range uploadMap {
+		for key := range sieMap {
 			elementSlice[i] = key
 			i++
 		}
 
 		// try and fetch every element
 		for i := range elementSlice {
-			wn := q.eventNode(elementSlice[i])
+			wn := s.eventNode(elementSlice[i])
 			if wn == nil {
 				t.Error("cannot reach inserted element")
 			}
@@ -86,10 +154,7 @@ func TestEventList(t *testing.T) {
 
 		// shuffle elementSlice
 		for i := range elementSlice {
-			newIndex, err := siacrypto.RandomInt(len(elementSlice) - i)
-			if err != nil {
-				t.Fatal(err)
-			}
+			newIndex := siacrypto.RandomInt(len(elementSlice) - i)
 			newIndex += i
 
 			tmp := elementSlice[newIndex]
@@ -98,20 +163,20 @@ func TestEventList(t *testing.T) {
 		}
 
 		for i := range elementSlice {
-			q.deleteEvent(elementSlice[i])
-			wn := q.eventNode(elementSlice[i])
+			s.DeleteEvent(elementSlice[i])
+			wn := s.eventNode(elementSlice[i])
 			if wn != nil {
 				t.Error("deleted event node is still fetchable")
 			}
-			if countReachableEvents(q.eventRoot) != n-i-1 {
-				t.Fatal("Wrong number of reachable events, expecting", n-i-1, "got", countReachableEvents(q.eventRoot))
+			if countReachableEvents(s.eventRoot) != n-i-1 {
+				t.Fatal("Wrong number of reachable events, expecting", n-i-1, "got", countReachableEvents(s.eventRoot))
+			}
+			if !eventsOrderedProperly(s.eventRoot) {
+				t.Error("Improper ordering discovered")
 			}
 		}
-		uploadMap = make(map[*upload]*upload)
+		sieMap = make(map[*ScriptInputEvent]struct{})
 	}
 
-	// insert a bunch of random things
-	// randomly insert and delete the things
-	// delete all of the things
-	// check sorting each time
-}*/
+	// randomly insert and delete events before deleting all of the events.
+}
