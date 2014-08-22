@@ -26,11 +26,11 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-// Sign takes a SecretKey and modifies the receiving ScriptInput to contain a
-// signature of its own data. Currently, only the Input field is included in
-// the signature.
+// SignScriptInput modifies a ScriptInput to contain a signature of its own
+// data. Currently, only the Input and Deadline fields are included in the
+// signature.
 func SignScriptInput(si *state.ScriptInput, secretKey siacrypto.SecretKey) (err error) {
-	sig, err := secretKey.Sign(si.Input)
+	sig, err := secretKey.Sign(append(siaencoding.EncUint32(si.Deadline), si.Input...))
 	if err != nil {
 		return
 	}
@@ -124,13 +124,16 @@ var FountainScript = []byte{
 // control to the input if the verification was successful.
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	keyl, sigl := byte(siacrypto.PublicKeySize), byte(siacrypto.SignatureSize)
+	negl, negh := short(-siacrypto.PublicKeySize)
 	return append([]byte{
-		0xE6, 0x38, //       00 move data pointer to public key
-		0x34, keyl, //       02 push public key
-		0xE4,             // 04 push signed input
-		0x40,             // 05 verify signature
-		0xE5,             // 06 if invalid signature, reject
-		0x33, sigl, 0x00, // 07 move data pointer to input body
-		0x38, //             10 execute input
+		0x33, negl, negh, // 00 move data pointer to public key
+		0x34, keyl, //       03 push public key
+		0x34, sigl, //       04 push signature
+		0x46, //             06 push deadline
+		0xE4, //             07 push input
+		0x23, //             08 concatenate deadline and input
+		0x40, //             09 verify signature
+		0xE5, //             10 if invalid signature, reject
+		0x38, //             11 execute input
 	}, publicKey[:]...)
 }
