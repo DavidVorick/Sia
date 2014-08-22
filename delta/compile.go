@@ -7,6 +7,25 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
+// Takes a ScriptInput and verifies that it's allowed to run, and then stores
+// information that will prevent the script from ever being run again.
+func (e *Engine) HandleScriptInput(si state.ScriptInput) {
+	// If the deadline for the script has already passed, reject the
+	// script.
+	if si.Deadline < e.state.Metadata.Height {
+		return
+	}
+
+	// If the script is 'known', it has been seen before and should not be
+	// processed, therefore reject.
+	if e.state.KnownScript() {
+		return
+	}
+
+	e.Execute(si)
+	e.state.LearnScript()
+}
+
 // TODO: add docstring
 func (e *Engine) Compile(b Block) (err error) {
 	// The first thing that happens is the entropy seed for the block is
@@ -95,7 +114,7 @@ func (e *Engine) Compile(b Block) (err error) {
 	// and scripting DOS attacks. The future will hold a probabilistic
 	// distribution of resources based on price paid for tickets.
 	for _, si := range b.ScriptInputs {
-		e.Execute(si)
+		e.HandleScriptInput(si)
 	}
 
 	// Process all of the UpdateAdvancements.

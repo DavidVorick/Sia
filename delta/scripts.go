@@ -29,7 +29,7 @@ func appendAll(slices ...[]byte) []byte {
 // Sign takes a SecretKey and modifies the receiving ScriptInput to contain a
 // signature of its own data. Currently, only the Input field is included in
 // the signature.
-func (si *ScriptInput) Sign(secretKey siacrypto.SecretKey) (err error) {
+func SignScriptInput(si *state.ScriptInput, secretKey siacrypto.SecretKey) (err error) {
 	sig, err := secretKey.Sign(si.Input)
 	if err != nil {
 		return
@@ -47,7 +47,7 @@ func CreateFountainWalletInput(id state.WalletID, s []byte) []byte {
 // AddSiblingInput returns a signed ScriptInput that calls the AddSibling
 // function. It is intended to be passed to a script that transfers execution
 // to the input.
-func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling, sk siacrypto.SecretKey) (si ScriptInput, err error) {
+func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk siacrypto.SecretKey) (si state.ScriptInput, err error) {
 	si.WalletID = wid
 	encSib, err := siaencoding.Marshal(sib)
 	if err != nil {
@@ -62,9 +62,9 @@ func AddSiblingInput(wid state.WalletID /*, deadline uint64*/, sib state.Sibling
 		},
 		encSib,
 	)
-	//si.Deadline = deadline
+	si.Deadline = deadline
 
-	err = si.Sign(sk)
+	err = SignScriptInput(&si, sk)
 	if err != nil {
 		return
 	}

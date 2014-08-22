@@ -9,7 +9,7 @@ import (
 )
 
 // initialize a script execution environment
-func initEnv() (e Engine, si ScriptInput) {
+func initEnv() (e Engine, si state.ScriptInput) {
 	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest"))
 	// create a wallet that immediately passes control to its input
 	e.state.InsertWallet(state.Wallet{
@@ -17,7 +17,7 @@ func initEnv() (e Engine, si ScriptInput) {
 		Balance: state.NewBalance(15000),
 		Script:  []byte{0x38}, // transfer control to input
 	})
-	si = ScriptInput{
+	si = state.ScriptInput{
 		WalletID: 1,
 	}
 	return

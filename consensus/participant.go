@@ -26,7 +26,7 @@ type Participant struct {
 
 	// Update Variables
 	updates            [state.QuorumSize]map[siacrypto.Hash]Update
-	scriptInputs       []delta.ScriptInput
+	scriptInputs       []state.ScriptInput
 	updateAdvancements []state.UpdateAdvancement
 	updatesLock        sync.RWMutex
 

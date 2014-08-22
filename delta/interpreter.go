@@ -14,14 +14,6 @@ const (
 	debug           = false
 )
 
-// A ScriptInput pairs an input byte slice with the WalletID associated with
-// the recipient. During execution, the WalletID is used to load the script
-// body, and then the Input is appended to the end of the script.
-type ScriptInput struct {
-	WalletID state.WalletID
-	Input    []byte
-}
-
 type instruction struct {
 	name     string
 	argBytes int
@@ -131,7 +123,7 @@ func (env *scriptEnv) deductResources(op instruction) error {
 // Execute loads the requested script, appends the script input data, sets up
 // an execution environment, and interprets bytecodes until a termination
 // condition is reached.
-func (e *Engine) Execute(si ScriptInput) (totalCost int, err error) {
+func (e *Engine) Execute(si state.ScriptInput) (totalCost int, err error) {
 	// load wallet
 	w, err := e.state.LoadWallet(si.WalletID)
 	if err != nil {
