@@ -51,6 +51,7 @@ var opTable = map[byte]instruction{
 	0x20: instruction{"if_move", 2, op_if_move, 2},
 	0x21: instruction{"goto", 2, op_goto, 1},
 	0x22: instruction{"move", 2, op_move, 1},
+	0x23: instruction{"concat", 0, op_concat, 2},
 	// data pointer and register opcodes
 	0x30: instruction{"store", 1, op_store, 2},
 	0x31: instruction{"load", 1, op_load, 2},
@@ -68,6 +69,7 @@ var opTable = map[byte]instruction{
 	0x43: instruction{"send", 0, op_send, 5},
 	0x44: instruction{"resize_sec", 0, op_resize_sec, 9},
 	0x45: instruction{"prop_upload", 0, op_prop_upload, 9},
+	0x46: instruction{"deadline", 0, op_deadline, 2},
 	// convenience opcodes
 	0xE0: instruction{"switch", 2, op_switch, 3},
 	0xE1: instruction{"store_prefix", 1, op_store_prefix, 2},
@@ -449,6 +451,15 @@ func op_move(env *scriptEnv, args []byte) (err error) {
 	return
 }
 
+func op_concat(env *scriptEnv, args []byte) (err error) {
+	a, _ := env.pop()
+	b, err := env.pop()
+	if err != nil {
+		return
+	}
+	return env.push(append(b, a...))
+}
+
 // data pointer and register opcodes
 
 func op_store(env *scriptEnv, args []byte) (err error) {
@@ -638,6 +649,10 @@ func op_prop_upload(env *scriptEnv, args []byte) (err error) {
 		)
 	*/
 	return
+}
+
+func op_deadline(env *scriptEnv, args []byte) (err error) {
+	return env.push(siaencoding.EncUint32(env.deadline))
 }
 
 // convenience opcodes

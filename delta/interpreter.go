@@ -81,6 +81,7 @@ type scriptEnv struct {
 	stackLen   int
 	wallet     *state.Wallet
 	engine     *Engine
+	deadline   uint32
 	// resource pools
 	instBalance int
 	costBalance int
@@ -132,10 +133,11 @@ func (e *Engine) Execute(si state.ScriptInput) (totalCost int, err error) {
 
 	// initialize execution environment
 	env := scriptEnv{
-		script: append(w.Script, si.Input...),
-		dptr:   len(w.Script),
-		wallet: &w,
-		engine: e,
+		script:   append(w.Script, si.Input...),
+		dptr:     len(w.Script),
+		wallet:   &w,
+		engine:   e,
+		deadline: si.Deadline,
 		// these values will likely be stored as part of the wallet
 		instBalance: maxInstructions,
 		costBalance: 10000,
