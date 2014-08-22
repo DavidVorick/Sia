@@ -52,6 +52,22 @@ func TestOpCodes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	// test data_seek
+	si.Input = []byte{
+		0xE6, 0xFE, // seek past next 0xFE
+		0xE6, 0xFE, // seek past next 0xFE
+		0xE6, 0xFE, // seek past next 0xFE
+		0x38, //       transfer
+		0xFE, //       reject (error)
+		0xFE, //       reject (error)
+		0xFE, //       reject (error)
+		0xFF, //       terminate (no error)
+	}
+	_, err = e.Execute(si)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 // check that invalid scripts produce an error

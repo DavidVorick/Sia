@@ -75,6 +75,7 @@ var opTable = map[byte]instruction{
 	0xE3: instruction{"push_prefix", 0, op_push_prefix, 2},
 	0xE4: instruction{"push_rest", 0, op_push_rest, 2},
 	0xE5: instruction{"cond_reject", 0, op_cond_reject, 1},
+	0xE6: instruction{"data_seek", 1, op_data_seek, 3},
 	// termination opcodes
 	0xFE: instruction{"reject", 0, op_reject, 0},
 	0xFF: instruction{"exit", 0, op_exit, 0},
@@ -692,6 +693,22 @@ func op_cond_reject(env *scriptEnv, args []byte) (err error) {
 	}
 	if !v2b(a) {
 		err = op_reject(env, []byte{})
+	}
+	return
+}
+
+func op_data_seek(env *scriptEnv, args []byte) (err error) {
+	i := bytes.IndexByte(env.script[env.dptr:], args[0])
+	if i == -1 {
+		return errors.New("no marker found")
+	}
+	env.dptr += i
+	// advance past marker byte itself, since we usually don't want to read it
+	env.dptr++
+
+	// skip the occurrence in the opcode itself
+	if env.script[env.dptr-2] == 0xE6 {
+		return op_data_seek(env, args)
 	}
 	return
 }

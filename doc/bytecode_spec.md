@@ -105,6 +105,7 @@ Note that some of these descriptions are insufficient to explain the format of t
 | 0xE3 | push_prefix   | 0    | same as data_push, but using the first two bytes to determine the length               |
 | 0xE4 | push_rest     | 0    | push from data pointer to end of script (dptr does not move)                           |
 | 0xE5 | cond_reject   | 0    | if false, reject (otherwise no op)                                                     |
+| 0xE6 | data_seek     | 1    | move data pointer past next occurence of $1 (ignoring this one)                        |
 | ---- | ----          | -    | termination opcodes                                                                    |
 | 0xFE | reject        | 0    | reject input, terminating execution                                                    |
 | 0xFF | exit          | 0    | terminates execution                                                                   |
