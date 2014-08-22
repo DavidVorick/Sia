@@ -28,12 +28,36 @@ func countReachableEvents(en *eventNode) (i int) {
 	}
 }
 
+func eventsOrderedProperly(en *eventNode) bool {
+	for {
+		if en == nil {
+			return true
+		}
+
+		current := en.top
+		if current == nil {
+			return true
+		}
+		current = current.bottom()
+		if current.nextNode == nil {
+			return true
+		}
+		if eventIndex(current.nextNode.event) < eventIndex(en.event) {
+			// t.Error("Event list ordering is incorrect:", eventIndex(current.nextNode.event), "follows", eventIndex(en.event))
+			return false
+		}
+		if current.nextNode.event.Expiration() < en.event.Expiration() {
+			// t.Error("Node expiration is off:", current.nextNode.Expiration(), "follows", current.Expiration())
+			return false
+		}
+
+		en = current.nextNode
+	}
+}
+
 // TestEventList is designed to verify that the skip-list logic of the event
 // list is reasonably responsive and doesn't have any unexpected behaviors,
 // such as failing to remove an event after calling delte.
-//
-// A current shortcoming of this test is that it doesn't check for ordering,
-// and Process() is also not verified against.
 func TestEventList(t *testing.T) {
 	// Create and initialize a state.
 	var s State
@@ -80,6 +104,9 @@ func TestEventList(t *testing.T) {
 			if countReachableEvents(s.eventRoot) != i+1 {
 				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(s.eventRoot))
 			}
+			if !eventsOrderedProperly(s.eventRoot) {
+				t.Error("Improper ordering discovered")
+			}
 		}
 
 		elementSlice := make([]*ScriptInputEvent, n)
@@ -116,12 +143,12 @@ func TestEventList(t *testing.T) {
 			if countReachableEvents(s.eventRoot) != n-i-1 {
 				t.Fatal("Wrong number of reachable events, expecting", n-i-1, "got", countReachableEvents(s.eventRoot))
 			}
+			if !eventsOrderedProperly(s.eventRoot) {
+				t.Error("Improper ordering discovered")
+			}
 		}
 		sieMap = make(map[*ScriptInputEvent]struct{})
 	}
 
-	// insert a bunch of random things
-	// randomly insert and delete the things
-	// delete all of the things
-	// check sorting each time
+	// randomly insert and delete events before deleting all of the events.
 }
