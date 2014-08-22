@@ -119,7 +119,7 @@ func TestEventList(t *testing.T) {
 	}
 
 	sieMap := make(map[*ScriptInputEvent]struct{})
-	n := 50
+	n := 75
 	for j := 0; j < n; j++ {
 		for i := 0; i < n; i++ {
 			randomTimeout := siacrypto.RandomInt(12)

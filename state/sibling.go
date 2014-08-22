@@ -42,3 +42,10 @@ func (sib Sibling) Active() bool {
 func (sib Sibling) Inactive() bool {
 	return sib.Status == ^byte(0)
 }
+
+// TossSibling removes a sibling from the list of siblings.
+func (s *State) TossSibling(i byte) {
+	s.Metadata.Siblings[i] = Sibling{
+		Status: 255,
+	}
+}

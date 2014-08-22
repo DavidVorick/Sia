@@ -113,64 +113,66 @@ func (e *Engine) SendCoin(w *state.Wallet, amount state.Balance, destID state.Wa
 
 // TODO: add docstring
 func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
-	// Verify that the parent hash is available to have an upload attatched to
-	// it.
-	available := e.state.AvailableParentID(parentID)
-	if !available {
-		err = errNonCurrentParentID
-		return
-	}
+	/*
+		// Verify that the parent hash is available to have an upload attatched to
+		// it.
+		available := e.state.AvailableParentID(parentID)
+		if !available {
+			err = errNonCurrentParentID
+			return
+		}
 
-	// Verify that 'atoms' follows the rules for sector sizes.
-	if atoms <= uint16(state.QuorumSize) {
-		err = errTooFewAtoms
-		return
-	}
+		// Verify that 'atoms' follows the rules for sector sizes.
+		if atoms <= uint16(state.QuorumSize) {
+			err = errTooFewAtoms
+			return
+		}
 
-	// Verify that 'k' is a sane value.
-	if k > 2 || k == 0 {
-		err = errInvalidK
-		return
-	}
+		// Verify that 'k' is a sane value.
+		if k > 2 || k == 0 {
+			err = errInvalidK
+			return
+		}
 
-	// Right now the role of 'd' is pretty well undefined.
+		// Right now the role of 'd' is pretty well undefined.
 
-	// Verify that 'confirmationsRequired' is a legal value.
-	if confirmationsRequired > state.QuorumSize {
-		err = errTooManyConfirmations
-		return
-	} else if confirmationsRequired < k {
-		err = errTooFewConfirmations
-		return
-	}
+		// Verify that 'confirmationsRequired' is a legal value.
+		if confirmationsRequired > state.QuorumSize {
+			err = errTooManyConfirmations
+			return
+		} else if confirmationsRequired < k {
+			err = errTooFewConfirmations
+			return
+		}
 
-	// Verify that the dealine is reasonable.
-	if deadline < e.state.Metadata.Height+2 {
-		err = errDeadlineTooEarly
-		return
-	} else if deadline > e.state.Metadata.Height+state.MaxDeadline {
-		err = errLongDeadline
-		return
-	}
+		// Verify that the dealine is reasonable.
+		if deadline < e.state.Metadata.Height+2 {
+			err = errDeadlineTooEarly
+			return
+		} else if deadline > e.state.Metadata.Height+state.MaxDeadline {
+			err = errLongDeadline
+			return
+		}
 
-	// Verify that the quorum has enough atoms to support the upload. Long
-	// term, this check won't be necessary because it'll be a part of the
-	// preallocated resources planning.
-	if e.state.AtomsInUse()+int(atoms) > int(state.AtomsPerQuorum) {
-		err = errInsufficientAtoms
-		return
-	}
+		// Verify that the quorum has enough atoms to support the upload. Long
+		// term, this check won't be necessary because it'll be a part of the
+		// preallocated resources planning.
+		if e.state.AtomsInUse()+int(atoms) > int(state.AtomsPerQuorum) {
+			err = errInsufficientAtoms
+			return
+		}
 
-	// Update the eventlist to include an upload event.
-	su := state.SectorUpdate{
-		WalletID:              w.ID,
-		ParentCounter:         parentID.Counter,
-		Atoms:                 atoms,
-		K:                     k,
-		D:                     d,
-		HashSet:               hashSet,
-		ConfirmationsRequired: confirmationsRequired,
-	}
-	err = e.state.InsertSectorUpdate(w, su)
+		// Update the eventlist to include an upload event.
+		su := state.SectorUpdate{
+			WalletID:              w.ID,
+			ParentCounter:         parentID.Counter,
+			Atoms:                 atoms,
+			K:                     k,
+			D:                     d,
+			HashSet:               hashSet,
+			ConfirmationsRequired: confirmationsRequired,
+		}
+		err = e.state.InsertSectorUpdate(w, su)
+	*/
 	return
 }

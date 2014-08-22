@@ -4,10 +4,6 @@ import (
 	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
-const (
-	MaxDeadline = 90
-)
-
 // A ScriptInput pairs an input byte slice with the WalletID associated with
 // the recipient. During execution, the WalletID is used to load the script
 // body, and then the Input is appended to the end of the script.

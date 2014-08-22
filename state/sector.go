@@ -8,14 +8,27 @@ import (
 	"github.com/NebulousLabs/Sia/siacrypto"
 )
 
-// TODO: add docstring
+// In setting these constants, remember that compensation weight can never
+// exceed 2^32, since the number of atoms is measured using 32bit integers.
+const (
+	AtomSize         = 32   // In bytes
+	AtomsPerSector   = 2048 // Eventually 2^16
+	MaxUpdates       = 8    // Eventually 64
+	MinConfirmations = 3    // Eventually 65
+	MaxK             = 2    // Eventually 51
+	MinK             = 1
+)
+
+// SectorSettings contains all the information about the sector of a wallet,
+// including erasure information, potential future updates, and the total cost
+// of the sector in its current state.
 type SectorSettings struct {
 	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
 
 	// The number of atoms that are currently allocated for uploading to the
 	// sector.
-	UpdateAtoms uint16
+	UpdateAtoms uint32
 
 	// The minimum number of sibings in the quorum that need to remain
 	// uncorrupted in order for the original data to be recoverable.
@@ -30,24 +43,34 @@ type SectorSettings struct {
 	// ordered list of of hashes of each segment held by each sibling in the
 	// quorum. Hash is kept as a variable so that there is a record in the
 	// blockchain of what the exact appearance of the file should be.
-	Hash siacrypto.Hash
+	HashSet [QuorumSize]siacrypto.Hash
 
-	// The value corresponding to the most recent update, used so new updates can
-	// identify the wallet with an UpdateID.
-	RecentUpdateCounter uint32
+	// A list of all SectorModifiers active on each wallet. If the wallet
+	// is not represented in the map, it only indicates that there are no
+	// SectorModifiers active for that wallet. To check for a wallets
+	// existence, one must transverse the wallet tree.  activeSectors
+	// map[WalletID][]SectorModifier activeUploads map[UploadID]*Upload
+	ActiveUpdates []SectorUpdate
 }
 
-/* func (s *State) ActiveParentHash(w Wallet, parentHash siacrypto.Hash) bool {
-	modifiers, exists := s.activeSectors[w.ID]
-	if exists {
-		latestModifier := modifiers[len(modifiers)-1]
-		return parentHash == latestModifier.Hash()
-	} else {
-		return parentHash == w.SectorSettings.Hash
-	}
-} */
+// SectorFilename takes a wallet id and returns the filename of the sector
+// associated with that wallet.
+func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
+	sectorFilename = s.walletFilename(id) + ".sector"
+	return
+}
 
-// convenience function for constructing Merkle trees
+// SectorHash returns the combined hash of 'QuorumSize' Hashes.
+func (s SectorSettings) Hash() siacrypto.Hash {
+	fullSet := make([]byte, siacrypto.HashSize*int(QuorumSize))
+	for i := range s.HashSet {
+		copy(fullSet[i*siacrypto.HashSize:], s.HashSet[i][:])
+	}
+	return siacrypto.HashBytes(fullSet)
+}
+
+// Helper function for merkle trees; takes two hashes, appends them, and then
+// hashes their sum.
 func joinHash(left, right siacrypto.Hash) siacrypto.Hash {
 	return siacrypto.HashBytes(append(left[:], right[:]...))
 }
@@ -77,23 +100,6 @@ func MerkleCollapse(reader io.Reader, numAtoms uint16) (hash siacrypto.Hash, err
 	left, _ := MerkleCollapse(reader, mid)
 	right, err := MerkleCollapse(reader, numAtoms-mid)
 	hash = joinHash(left, right)
-	return
-}
-
-// SectorHash returns the combined hash of 'QuorumSize' Hashes.
-// TODO: check that this still make sense for the current AtomSize.
-func SectorHash(hashSet [QuorumSize]siacrypto.Hash) siacrypto.Hash {
-	atomRepresentation := make([]byte, AtomSize) // regardless of quorumsize, must hash a whole atom
-	for i := range hashSet {
-		copy(atomRepresentation[i*siacrypto.HashSize:], hashSet[i][:])
-	}
-	return siacrypto.HashBytes(atomRepresentation)
-}
-
-// SectorFilename takes a wallet id and returns the filename of the sector
-// associated with that wallet.
-func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
-	sectorFilename = s.walletFilename(id) + ".sector"
 	return
 }
 

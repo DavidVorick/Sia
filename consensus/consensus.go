@@ -89,7 +89,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 					// Add all of the update advancements to the hash map.
 					for i, ua := range u.UpdateAdvancements {
 						// Verify the signature on the update advancement.
-						verified, err := p.engine.Metadata().Siblings[ua.Index].PublicKey.VerifyObject(u.AdvancementSignatures[i], ua)
+						verified, err := p.engine.Metadata().Siblings[ua.SiblingIndex].PublicKey.VerifyObject(u.AdvancementSignatures[i], ua)
 						if err != nil || !verified {
 							continue
 						}

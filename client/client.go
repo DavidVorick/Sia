@@ -91,10 +91,10 @@ func (c *Client) Connect(port uint16) (err error) {
 func (c *Client) GetHeight() (height uint32, err error) {
 	var m state.Metadata
 	err = c.router.SendMessage(network.Message{
-		Dest:  c.siblings[0].Address,
-		Proc:  "Participant.Metadata",
-		Args:  struct{}{},
-		Respt: &m,
+		Dest: c.siblings[0].Address,
+		Proc: "Participant.Metadata",
+		Args: struct{}{},
+		Resp: &m,
 	})
 	if err != nil {
 		return

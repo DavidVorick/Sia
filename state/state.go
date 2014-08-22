@@ -2,21 +2,15 @@ package state
 
 import (
 	"github.com/NebulousLabs/Sia/siacrypto"
-	"github.com/NebulousLabs/Sia/siaencoding"
-	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 const (
 	// QuorumSize is the maximum number of siblings in a quorum.
 	QuorumSize byte = 4
-	// AtomSize is the number of bytes in an atom.
-	AtomSize int = 32
+
 	// AtomsPerQuorum is the maximum number of atoms that can be stored on
 	// a single quorum.
 	AtomsPerQuorum int = 16777216
-	// AtomsPerSector is the number of atoms in a sector. Final value
-	// likely to be 2^13-2^16
-	AtomsPerSector uint16 = 1024
 )
 
 // The State struct contains all of the information about the current state of
@@ -41,13 +35,11 @@ type State struct {
 	// A list of the hashes of all script inputs that have run on the
 	// server recently.
 	knownScripts map[siacrypto.Hash]struct{}
+}
 
-	// A list of all SectorModifiers active on each wallet. If the wallet
-	// is not represented in the map, it only indicates that there are no
-	// SectorModifiers active for that wallet. To check for a wallets
-	// existence, one must transverse the wallet tree.  activeSectors
-	// map[WalletID][]SectorModifier activeUploads map[UploadID]*Upload
-	activeUpdates map[WalletID][]SectorUpdate
+// AtomsInUse returns the number of atoms being consumed by the whole quorum.
+func (s *State) AtomsInUse() int {
+	return s.walletRoot.weight
 }
 
 // SetWalletPrefix is a setter that sets the state walletPrefix field.
@@ -70,26 +62,4 @@ func (s *State) Initialize() {
 	}
 
 	s.knownScripts = make(map[siacrypto.Hash]struct{})
-}
-
-// walletFilename returns the filename for a wallet, receiving only the id of
-// the wallet as input.
-func (s *State) walletFilename(id WalletID) (filename string) {
-	// Turn the id into a suffix that will follow the quorum prefix
-	suffixBytes := siaencoding.EncUint64(uint64(id))
-	suffix := siafiles.SafeFilename(suffixBytes)
-	filename = s.walletPrefix + "." + suffix
-	return
-}
-
-// AtomsInUse returns the number of atoms being consumed by the whole quorum.
-func (s *State) AtomsInUse() int {
-	return s.walletRoot.weight
-}
-
-// TossSibling removes a sibling from the list of siblings.
-func (s *State) TossSibling(i byte) {
-	s.Metadata.Siblings[i] = Sibling{
-		Status: 255,
-	}
 }

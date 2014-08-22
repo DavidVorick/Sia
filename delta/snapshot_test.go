@@ -95,7 +95,7 @@ func TestSnapshotProcess(t *testing.T) {
 		SectorSettings: state.SectorSettings{
 			Atoms: 11,
 			K:     12,
-			Hash:  siacrypto.Hash{13},
+			//Hash:  siacrypto.Hash{13},
 		},
 		Script: []byte{14, 15, 16},
 	}
@@ -107,7 +107,7 @@ func TestSnapshotProcess(t *testing.T) {
 		SectorSettings: state.SectorSettings{
 			Atoms: 20,
 			K:     21,
-			Hash:  siacrypto.Hash{22},
+			//Hash:  siacrypto.Hash{22},
 		},
 		Script: []byte{23, 24, 25},
 	}
