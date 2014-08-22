@@ -595,21 +595,18 @@ func op_send(env *scriptEnv, args []byte) (err error) {
 
 func op_verify(env *scriptEnv, args []byte) (err error) {
 	// pop values
-	sm, _ := env.pop()
-	encPk, err := env.pop()
+	msg, _ := env.pop()
+	sigBytes, _ := env.pop()
+	pkBytes, err := env.pop()
 	if err != nil {
 		return
 	}
 
 	// construct public key, signature, and message
 	var pk siacrypto.PublicKey
-	copy(pk[:], encPk)
+	copy(pk[:], pkBytes)
 	var sig siacrypto.Signature
-	copy(sig[:], sm)
-	if len(sm) < siacrypto.SignatureSize {
-		return env.push(b2v(false))
-	}
-	msg := sm[siacrypto.SignatureSize:]
+	copy(sig[:], sigBytes)
 
 	// verify signature
 	verified := pk.Verify(sig, msg)

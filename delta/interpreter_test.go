@@ -113,19 +113,22 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	encSm := append(signature[:], message...)
 
 	// construct script
-	si.Input = []byte{
-		0x33, 0x09, 0x00, // move data pointer to start of public key
-		0x34, 0x20, //       push public key
-		0xE4, //             push signed message
-		0x40, //             verify signature
-		0xE5, //             if invalid signature, reject
-		0xFF, //             otherwise, exit normally
-	}
-	si.Input = append(si.Input, publicKey[:]...)
-	si.Input = append(si.Input, encSm...)
+	si.Input = appendAll(
+		[]byte{
+			0xE6, 0xFF, // move data pointer to start of public key
+			0x34, 0x20, // push public key
+			0x34, 0x40, // push signature
+			0xE4, //       push message
+			0x40, //       verify signature
+			0xE5, //       if invalid signature, reject
+			0xFF, //       otherwise, exit normally
+		},
+		publicKey[:],
+		signature[:],
+		message,
+	)
 
 	// execute script
 	_, err = e.Execute(si)
