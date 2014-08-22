@@ -55,10 +55,10 @@ func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk 
 	}
 	si.Input = appendAll(
 		[]byte{
-			0x33, 0x06, 0x00, // move data pointer to encoded sibling
-			0xE4, //             push encoded sibling
-			0x41, //             call AddSibling
-			0xFF, //             exit
+			0xE6, 0xFF, // move data pointer to encoded sibling
+			0xE4, //       push encoded sibling
+			0x41, //       call AddSibling
+			0xFF, //       exit
 		},
 		encSib,
 	)
@@ -76,11 +76,11 @@ func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk 
 func SendCoinInput(dest state.WalletID, amount state.Balance) []byte {
 	return appendAll(
 		[]byte{
-			0x33, 0x09, 0x00, // move data pointer to dest
-			0x34, 0x08, //       push dest
-			0x34, 0x10, //       push balance
-			0x43, //             call Send
-			0xFF, //             exit
+			0xE6, 0xFF, // move data pointer to dest
+			0x34, 0x08, // push dest
+			0x34, 0x10, // push balance
+			0x43, //       call Send
+			0xFF, //       exit
 		},
 		siaencoding.EncUint64(uint64(dest)),
 		amount[:],
@@ -103,10 +103,10 @@ func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 // to the input.
 func ProposeUploadInput(encUA []byte) []byte {
 	return append([]byte{
-		0x33, 0x08, 0x00, // move data pointer to encoded args
-		0xE4, //             push args
-		0x45, //             call ProposeUpload
-		0xFF, //             exit
+		0xE6, 0xFF, // move data pointer to encoded args
+		0xE4, //       push args
+		0x45, //       call ProposeUpload
+		0xFF, //       exit
 	}, encUA...)
 }
 
@@ -117,7 +117,7 @@ var FountainScript = []byte{
 	0x02, 0xA8, 0x61, // 02 push 25000 (balance)
 	0xE4, //             05 push script
 	0x42, //             06 call CreateWallet
-	0xFF, //             07 exit (not technically necessary here)
+	0xFF, //             07 exit
 }
 
 // DefaultScript returns a script that verifies a signature, and transfers
@@ -125,12 +125,12 @@ var FountainScript = []byte{
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	keyl, sigl := byte(siacrypto.PublicKeySize), byte(siacrypto.SignatureSize)
 	return append([]byte{
-		0x32, 0x0C, 0x00, // 00 move data pointer to public key
-		0x34, keyl, //       03 push public key
-		0xE4,             // 05 push signed input
-		0x40,             // 06 verify signature
-		0xE5,             // 07 if invalid signature, reject
-		0x33, sigl, 0x00, // 08 move data pointer to input body
-		0x38, //             11 execute input
+		0xE6, 0x38, //       00 move data pointer to public key
+		0x34, keyl, //       02 push public key
+		0xE4,             // 04 push signed input
+		0x40,             // 05 verify signature
+		0xE5,             // 06 if invalid signature, reject
+		0x33, sigl, 0x00, // 07 move data pointer to input body
+		0x38, //             10 execute input
 	}, publicKey[:]...)
 }
