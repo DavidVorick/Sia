@@ -26,13 +26,14 @@ func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 	e.state.LearnScript(si)
 }
 
-// TODO: add docstring
+// Compile takes a block and uses the information contained within to update
+// the state.
 func (e *Engine) Compile(b Block) (err error) {
 	// The first thing that happens is the entropy seed for the block is
-	// determined. Though not implemented, this happens by pulling the latest
-	// external entropy source from the block and hashing it against the germ
-	// from the previous block. Right now, the germ is created but the portion
-	// about external entropy is omitted.
+	// determined. Though not implemented, this happens by pulling the
+	// latest external entropy source from the block and hashing it against
+	// the germ from the previous block. Right now, the germ is created but
+	// the portion about external entropy is omitted.
 	var externalEntropy state.Entropy // will be pulled from block
 	e.state.MergeExternalEntropy(externalEntropy)
 
@@ -108,6 +109,12 @@ func (e *Engine) Compile(b Block) (err error) {
 
 	// Hash the siblingEntropy to get the new Germ.
 	e.state.Metadata.Germ = state.Entropy(siacrypto.HashBytes(siblingEntropy))
+
+	// Process all of the expiring events in the event list. Right now this
+	// just deletes 'known' scripts whose deadlines have passed, but
+	// eventually it can also add additional script inputs to the
+	// processing queue.
+	e.state.ProcessExpiringEvents()
 
 	// Process all of the script inputs. Right now, every script input is
 	// processed every block, with only a few protections against inifinite loops

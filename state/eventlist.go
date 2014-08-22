@@ -46,6 +46,15 @@ type pointerStack struct {
 	nextPointer *pointerStack
 }
 
+// bottom takes a pointerStack and finds the bottom pointerStack, which is
+// guaranteed to point only one event forward.
+func (ps *pointerStack) bottom() *pointerStack {
+	for ps.nextPointer != nil {
+		ps = ps.nextPointer
+	}
+	return ps
+}
+
 // height returns the number of elements in the linked list of pointerStacks,
 // including the one used to call height().
 func (ps *pointerStack) height() (i int) {
@@ -59,19 +68,42 @@ func (ps *pointerStack) height() (i int) {
 	return
 }
 
-// bottom takes a pointerStack and finds the bottom pointerStack, which is
-// guaranteed to point only one event forward.
-func (ps *pointerStack) bottom() *pointerStack {
-	for ps.nextPointer != nil {
-		ps = ps.nextPointer
-	}
-	return ps
-}
-
 func eventIndex(e Event) (index uint64) {
 	index = uint64(e.Expiration()) << 32
 	index += uint64(e.Counter())
 	return
+}
+
+// eventNode() retreives an eventNode that corresponds to a specific event.
+func (s *State) eventNode(e Event) *eventNode {
+	// check the base cases
+	if s.eventRoot == nil {
+		return nil
+	}
+	if eventIndex(s.eventRoot.event) == eventIndex(e) {
+		return s.eventRoot
+	}
+
+	currentPointer := s.eventRoot.top
+	for {
+		// move forward
+		for currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) < eventIndex(e) {
+			currentPointer = currentPointer.nextNode.top
+		}
+
+		// see if the next node is the desired node
+		if currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) == eventIndex(e) {
+			return currentPointer.nextNode
+		}
+
+		// see if we're at the bottom of the list - node not found
+		if currentPointer.nextPointer == nil {
+			return nil
+		}
+
+		// move down
+		currentPointer = currentPointer.nextPointer
+	}
 }
 
 // InsertEvent takes a new event and inserts it into the event list.
@@ -233,42 +265,12 @@ func (s *State) DeleteEvent(e Event) {
 	}
 }
 
-// eventNode() retreives an eventNode that corresponds to a specific event.
-func (s *State) eventNode(e Event) *eventNode {
-	// check the base cases
-	if s.eventRoot == nil {
-		return nil
-	}
-	if eventIndex(s.eventRoot.event) == eventIndex(e) {
-		return s.eventRoot
-	}
-
-	currentPointer := s.eventRoot.top
-	for {
-		// move forward
-		for currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) < eventIndex(e) {
-			currentPointer = currentPointer.nextNode.top
-		}
-
-		// see if the next node is the desired node
-		if currentPointer.nextNode != nil && eventIndex(currentPointer.nextNode.event) == eventIndex(e) {
-			return currentPointer.nextNode
-		}
-
-		// see if we're at the bottom of the list - node not found
-		if currentPointer.nextPointer == nil {
-			return nil
-		}
-
-		// move down
-		currentPointer = currentPointer.nextPointer
+// ProcesssEvents takes every event in the event list that has expired and
+// calls the HandleEvent() function on that event, then removes the event from
+// the list.
+func (s *State) ProcessExpiringEvents() {
+	for s.eventRoot != nil && s.eventRoot.event.Expiration() < s.Metadata.Height {
+		s.eventRoot.event.HandleEvent(s)
+		s.DeleteEvent(s.eventRoot.event)
 	}
 }
-
-/*
-func (q *Quorum) ProcessEvents() {
-	for q.eventRoot != nil && q.eventRoot.event.expiration() <= q.height {
-		q.eventRoot.event.handleEvent(q)
-		q.deleteEvent(q.eventRoot.event)
-	}
-}*/

@@ -28,6 +28,8 @@ func countReachableEvents(en *eventNode) (i int) {
 	}
 }
 
+// eventsOrderedProperly iterates through the event list and makes sure that
+// each event expires before the next event.
 func eventsOrderedProperly(en *eventNode) bool {
 	for {
 		if en == nil {
@@ -64,26 +66,52 @@ func TestEventList(t *testing.T) {
 	s.Initialize()
 
 	// Create and insert an event.
-	e0 := &ScriptInputEvent{
+	e := &ScriptInputEvent{
 		expiration: 1,
 	}
-	s.InsertEvent(e0)
+	s.InsertEvent(e)
 
-	en0 := s.eventNode(e0)
-	if en0 == nil {
+	// Verify that the event can be fetched.
+	en := s.eventNode(e)
+	if en == nil {
 		t.Fatal("Could not get inserted event!")
 	}
 	if countReachableEvents(s.eventRoot) != 1 {
 		t.Fatal("Reached wrong number of events, expecting 1:", countReachableEvents(s.eventRoot))
 	}
 
-	s.DeleteEvent(e0)
-	en0 = s.eventNode(e0)
-	if en0 != nil {
+	// Delete the event and verify that it's no longer in the event list.
+	s.DeleteEvent(e)
+	en = s.eventNode(e)
+	if en != nil {
 		t.Fatal("deleted event node still retrievable")
 	}
 	if countReachableEvents(s.eventRoot) != 0 {
 		t.Fatal("Reached wrong number of events, expecting 0:", countReachableEvents(s.eventRoot))
+	}
+
+	// Have the state learn a script, this will result in the script being
+	// added to the event list.
+	si := ScriptInput{
+		Deadline: 0,
+	}
+	s.LearnScript(si)
+
+	// Verify that e1 is now a known script. This really doesn't need to be
+	// happening in this test, but it's better to be safe and double check.
+	if !s.KnownScript(si) {
+		t.Fatal("The state failed to learn the test script!.")
+	}
+
+	// Set the height to 1, so that 'si' (expiration of 0) has expired. Then
+	// call process.
+	s.Metadata.Height = 1
+	s.ProcessExpiringEvents()
+
+	// Verify that HandleEvent() has been called, which means the script
+	// will no longer be known to the state.
+	if s.KnownScript(si) {
+		t.Error("Process event has failed - script is still known to the state.")
 	}
 
 	if testing.Short() {
