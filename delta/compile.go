@@ -18,12 +18,12 @@ func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 
 	// If the script is 'known', it has been seen before and should not be
 	// processed, therefore reject.
-	if e.state.KnownScript() {
+	if e.state.KnownScript(si) {
 		return
 	}
 
 	e.Execute(si)
-	e.state.LearnScript()
+	e.state.LearnScript(si)
 }
 
 // TODO: add docstring

@@ -68,6 +68,8 @@ func (s *State) Initialize() {
 	for i := range s.Metadata.Siblings {
 		s.Metadata.Siblings[i].Status = ^byte(0)
 	}
+
+	s.knownScripts = make(map[siacrypto.Hash]struct{})
 }
 
 // walletFilename returns the filename for a wallet, receiving only the id of
