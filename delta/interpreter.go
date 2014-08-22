@@ -34,7 +34,7 @@ type stackElem struct {
 	next *stackElem
 }
 
-func push(env *scriptEnv, v []byte) (err error) {
+func (env *scriptEnv) push(v []byte) (err error) {
 	if env.stackLen > maxStackLen {
 		return errors.New("stack overflow")
 	}
@@ -45,7 +45,7 @@ func push(env *scriptEnv, v []byte) (err error) {
 	return
 }
 
-func pop(env *scriptEnv) (v []byte, err error) {
+func (env *scriptEnv) pop() (v []byte, err error) {
 	if env.stackLen < 1 {
 		err = errors.New("stack empty")
 		return
