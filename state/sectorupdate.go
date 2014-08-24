@@ -2,7 +2,6 @@ package state
 
 import (
 	"errors"
-	"os"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
 )
@@ -62,6 +61,18 @@ type UpdateAdvancement struct {
 	UpdateIndex  uint32
 }
 
+func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
+	for i := range w.SectorSettings.ActiveUpdates {
+		if w.SectorSettings.ActiveUpdates[i].Index == index {
+			su = w.SectorSettings.ActiveUpdates[i]
+			return
+		}
+	}
+
+	err = errors.New("could not find update of given index")
+	return
+}
+
 func (sue *SectorUpdateEvent) Counter() uint32 {
 	return sue.counter
 }
@@ -77,13 +88,13 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) {
 		return
 	}
 
-	su, err := s.LoadSectorUpdate(sue.walletID, sue.updateInex)
+	su, err := w.LoadSectorUpdate(sue.updateIndex)
 	if err != nil {
 		return
 	}
 
 	// Remove the weight of the update from the wallet.
-	w.SectorSettings.UpdateAtoms -= su.Atoms
+	w.SectorSettings.UpdateAtoms -= uint32(su.Atoms)
 
 	// Count the number of confirmations.
 	var confirmations int
@@ -96,10 +107,9 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) {
 	// Compare to the required confirmations.
 	if confirmations >= int(su.ConfirmationsRequired) {
 		// Remove all active updates leading to this update, inclusive.
-		for {
-			index = w.SectorSettings.ActiveUpdates[0].updateIndex
-			w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[1:]
-			if index == sue.updateIndex {
+		for i := range w.SectorSettings.ActiveUpdates {
+			if i == int(sue.updateIndex) {
+				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[i+1:]
 				break
 			}
 		}
@@ -108,10 +118,12 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) {
 		w.SectorSettings.K = su.K
 		w.SectorSettings.D = su.D
 		w.SectorSettings.HashSet = su.HashSet
+
+		// Copy the file from the update to the file for the sector.
 	} else {
 		// Remove all active updates following this update, inclusive.
 		for i := range w.SectorSettings.ActiveUpdates {
-			if w.SectorSettings.ActiveUpdates[i].updateIndex == sue.updateIndex {
+			if w.SectorSettings.ActiveUpdates[i].Index == sue.updateIndex {
 				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[:i]
 				break
 			}
@@ -199,7 +211,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
 
 	// Add the weight of the update to the wallet.
-	w.UpdateAtoms += su.Atoms
+	w.SectorSettings.UpdateAtoms += uint32(su.Atoms)
 
 	// Figure out the update index.
 	var index uint32
