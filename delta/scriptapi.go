@@ -3,7 +3,6 @@ package delta
 import (
 	"errors"
 
-	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -31,6 +30,33 @@ var (
 	errDeadlineTooEarly     = errors.New("An upload takes at least 2 complete blocks to succeed - deadline too early.")
 	errLongDeadline         = errors.New("The deadline is too far in the future.")
 )
+
+// AddSibling tries to add the new sibling to the existing quorum
+// and throws the sibling out if there's no space. Once quorums are
+// communicating, the AddSibling routine will always succeed.
+func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
+	// Down payment stuff will be added here.
+
+	// Look through the quorum for an empty sibling.
+	for i := byte(0); i < state.QuorumSize; i++ {
+		if e.state.Metadata.Siblings[i].Inactive() {
+			sib.Status = state.SiblingPassiveWindow
+			sib.Index = i
+			sib.WalletID = w.ID
+			e.state.Metadata.Siblings[i] = sib
+			break
+		}
+	}
+
+	if sib.Inactive() {
+		err = errNoEmptySiblings
+		return
+	}
+
+	// Charge the wallet some volume that's required as a down payment.
+
+	return
+}
 
 // CreateWallet takes an id, a Balance, and an initial script and uses
 // those to create a new wallet that gets stored in stable memory.
@@ -60,33 +86,6 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 	return
 }
 
-// AddSibling tries to add the new sibling to the existing quorum
-// and throws the sibling out if there's no space. Once quorums are
-// communicating, the AddSibling routine will always succeed.
-func (e *Engine) AddSibling(w *state.Wallet, sib state.Sibling) (err error) {
-	// Down payment stuff will be added here.
-
-	// Look through the quorum for an empty sibling.
-	for i := byte(0); i < state.QuorumSize; i++ {
-		if e.state.Metadata.Siblings[i].Inactive() {
-			sib.Status = state.SiblingPassiveWindow
-			sib.Index = i
-			sib.WalletID = w.ID
-			e.state.Metadata.Siblings[i] = sib
-			break
-		}
-	}
-
-	if sib.Inactive() {
-		err = errNoEmptySiblings
-		return
-	}
-
-	// Charge the wallet some volume that's required as a down payment.
-
-	return
-}
-
 // Send is a call that sends siacoins from the source wallet to the destination
 // wallet.
 func (e *Engine) SendCoin(w *state.Wallet, amount state.Balance, destID state.WalletID) (err error) {
@@ -111,68 +110,16 @@ func (e *Engine) SendCoin(w *state.Wallet, amount state.Balance, destID state.Wa
 	return
 }
 
-// TODO: add docstring
-func (e *Engine) UpdateSector(w *state.Wallet, parentID state.UpdateID, atoms uint16, k byte, d byte, hashSet [state.QuorumSize]siacrypto.Hash, confirmationsRequired byte, deadline uint32) (err error) {
-	/*
-		// Verify that the parent hash is available to have an upload attatched to
-		// it.
-		available := e.state.AvailableParentID(parentID)
-		if !available {
-			err = errNonCurrentParentID
-			return
-		}
+// UpdateSector takes a different approach, which is essentially to completely
+// outsource the function to the state package, reporting an error if needed. I
+// have no idea if this is a good approach, but at somepoint we'll need to
+// standardize around a single approach. It's probably better that this file is
+// the leaner.
+func (e *Engine) UpdateSector(w *state.Wallet, su state.SectorUpdate) (err error) {
+	err = e.state.InsertSectorUpdate(w, su)
+	if err != nil {
+		return
+	}
 
-		// Verify that 'atoms' follows the rules for sector sizes.
-		if atoms <= uint16(state.QuorumSize) {
-			err = errTooFewAtoms
-			return
-		}
-
-		// Verify that 'k' is a sane value.
-		if k > 2 || k == 0 {
-			err = errInvalidK
-			return
-		}
-
-		// Right now the role of 'd' is pretty well undefined.
-
-		// Verify that 'confirmationsRequired' is a legal value.
-		if confirmationsRequired > state.QuorumSize {
-			err = errTooManyConfirmations
-			return
-		} else if confirmationsRequired < k {
-			err = errTooFewConfirmations
-			return
-		}
-
-		// Verify that the dealine is reasonable.
-		if deadline < e.state.Metadata.Height+2 {
-			err = errDeadlineTooEarly
-			return
-		} else if deadline > e.state.Metadata.Height+state.MaxDeadline {
-			err = errLongDeadline
-			return
-		}
-
-		// Verify that the quorum has enough atoms to support the upload. Long
-		// term, this check won't be necessary because it'll be a part of the
-		// preallocated resources planning.
-		if e.state.AtomsInUse()+int(atoms) > int(state.AtomsPerQuorum) {
-			err = errInsufficientAtoms
-			return
-		}
-
-		// Update the eventlist to include an upload event.
-		su := state.SectorUpdate{
-			WalletID:              w.ID,
-			ParentCounter:         parentID.Counter,
-			Atoms:                 atoms,
-			K:                     k,
-			D:                     d,
-			HashSet:               hashSet,
-			ConfirmationsRequired: confirmationsRequired,
-		}
-		err = e.state.InsertSectorUpdate(w, su)
-	*/
 	return
 }

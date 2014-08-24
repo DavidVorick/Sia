@@ -16,9 +16,7 @@ type ScriptInput struct {
 // ScriptInputEvent contains all the information needed by the event list to
 // manage the expiration of scripts.
 type ScriptInputEvent struct {
-	hash siacrypto.Hash
-
-	// Event-required variables.
+	hash       siacrypto.Hash
 	counter    uint32
 	expiration uint32
 }
@@ -69,10 +67,10 @@ func (s *State) LearnScript(si ScriptInput) {
 	s.knownScripts[hash] = struct{}{}
 
 	// Create a script event and add it to the event list.
-	sie := ScriptInputEvent{
+	sie := &ScriptInputEvent{
 		hash:       hash,
 		expiration: si.Deadline,
 	}
 
-	s.InsertEvent(&sie)
+	s.InsertEvent(sie)
 }

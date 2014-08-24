@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"os"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
 )
@@ -38,6 +39,15 @@ type SectorUpdate struct {
 	// update.
 	ConfirmationsRequired byte
 	Confirmations         [QuorumSize]bool
+
+	Deadline uint32
+}
+
+type SectorUpdateEvent struct {
+	walletID    WalletID
+	updateIndex uint32
+	expiration  uint32
+	counter     uint32
 }
 
 // An update advancement is a tool that siblings use to signify that they have
@@ -50,6 +60,72 @@ type UpdateAdvancement struct {
 	SiblingIndex byte
 	Wallet       WalletID
 	UpdateIndex  uint32
+}
+
+func (sue *SectorUpdateEvent) Counter() uint32 {
+	return sue.counter
+}
+
+func (sue *SectorUpdateEvent) Expiration() uint32 {
+	return sue.expiration
+}
+
+func (sue *SectorUpdateEvent) HandleEvent(s *State) {
+	// Need to be able to navigate from the event to the wallet.
+	w, err := s.LoadWallet(sue.walletID)
+	if err != nil {
+		return
+	}
+
+	su, err := s.LoadSectorUpdate(sue.walletID, sue.updateInex)
+	if err != nil {
+		return
+	}
+
+	// Remove the weight of the update from the wallet.
+	w.SectorSettings.UpdateAtoms -= su.Atoms
+
+	// Count the number of confirmations.
+	var confirmations int
+	for _, confirmation := range su.Confirmations {
+		if confirmation {
+			confirmations++
+		}
+	}
+
+	// Compare to the required confirmations.
+	if confirmations >= int(su.ConfirmationsRequired) {
+		// Remove all active updates leading to this update, inclusive.
+		for {
+			index = w.SectorSettings.ActiveUpdates[0].updateIndex
+			w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[1:]
+			if index == sue.updateIndex {
+				break
+			}
+		}
+
+		w.SectorSettings.Atoms = su.Atoms
+		w.SectorSettings.K = su.K
+		w.SectorSettings.D = su.D
+		w.SectorSettings.HashSet = su.HashSet
+	} else {
+		// Remove all active updates following this update, inclusive.
+		for i := range w.SectorSettings.ActiveUpdates {
+			if w.SectorSettings.ActiveUpdates[i].updateIndex == sue.updateIndex {
+				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[:i]
+				break
+			}
+		}
+	}
+
+	err = s.SaveWallet(w)
+	if err != nil {
+		return
+	}
+}
+
+func (sue *SectorUpdateEvent) SetCounter(newCounter uint32) {
+	sue.counter = newCounter
 }
 
 // AdvanceUpdate marks that the sibling of the particular index has signaled a
@@ -73,48 +149,6 @@ func (su *SectorUpdate) Hash() siacrypto.Hash {
 	}
 	return siacrypto.HashBytes(fullSet)
 }
-
-/*
-// TODO: add docstring
-func (su *SectorUpdate) HandleEvent(s *State) {
-	// Load the wallet associated with the event.
-	w, err := s.LoadWallet(su.WalletID)
-	if err != nil {
-		panic(err)
-	}
-
-	// Remove the weight on the wallet that the upload consumed.
-	w.SectorSettings.UpdateAtoms -= w.SectorSettings.Atoms
-
-	// Count the number of confirmations that the upload has received.
-	var confirmationsReceived byte
-	for _, confirmation := range su.Confirmations {
-		if confirmation == true {
-			confirmationsReceived += 1
-		}
-	}
-
-	// If there are sufficient confirmations, update the sector hash values.
-	if su.ConfirmationsRequired <= confirmationsReceived {
-		// Hash our holding of the upload file and see if it matches the required
-		// file. !! There are probably synchronization issues with doing things
-		// this way.
-		file, err := os.Open(s.UpdateFilename(su.UpdateID()))
-		if err == nil {
-			hash := MerkleCollapse(file)
-			file.Close()
-			if hash == su.HashSet[siblingIndex] {
-				siafiles.Copy(s.SectorFilename(su.WalletID), s.UpdateFilename(su.UpdateID()))
-			}
-		}
-	}
-
-	// Call to delete the file that either did or did not exist.
-	os.Remove(s.UpdateFilename(su.UpdateID()))
-
-	s.DeleteEvent(su)
-}
-*/
 
 // InsertSectorUpdate adds an update to a wallet, and to the event list.
 func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
@@ -142,6 +176,12 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 		return
 	}
 
+	// Check that the deadline is in bounds.
+	if su.Deadline < s.Metadata.Height+MaxDeadline {
+		err = errors.New("deadline too far in the future")
+		return
+	}
+
 	// Check that the hash of the most recent update matches the parent hash.
 	if len(w.SectorSettings.ActiveUpdates) == 0 {
 		if su.ParentHash != w.SectorSettings.Hash() {
@@ -158,7 +198,24 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	// Append the update to the list of active updates.
 	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
 
+	// Add the weight of the update to the wallet.
+	w.UpdateAtoms += su.Atoms
+
+	// Figure out the update index.
+	var index uint32
+	if len(w.SectorSettings.ActiveUpdates) == 0 {
+		index = 0
+	} else {
+		index = w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Index + 1
+	}
+
 	// Create the event and put it into the event list.
+	sue := &SectorUpdateEvent{
+		walletID:    w.ID,
+		updateIndex: index,
+		expiration:  su.Deadline,
+	}
+	s.InsertEvent(sue)
 
 	return
 }
