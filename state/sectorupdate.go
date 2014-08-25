@@ -43,10 +43,10 @@ type SectorUpdate struct {
 }
 
 type SectorUpdateEvent struct {
-	walletID    WalletID
-	updateIndex uint32
-	expiration  uint32
-	counter     uint32
+	WalletID     WalletID
+	UpdateIndex  uint32
+	Deadline     uint32
+	EventCounter uint32
 }
 
 // An update advancement is a tool that siblings use to signify that they have
@@ -57,7 +57,7 @@ type SectorUpdateEvent struct {
 // they can get their piece.
 type UpdateAdvancement struct {
 	SiblingIndex byte
-	Wallet       WalletID
+	WalletID     WalletID
 	UpdateIndex  uint32
 }
 
@@ -74,21 +74,21 @@ func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
 }
 
 func (sue *SectorUpdateEvent) Counter() uint32 {
-	return sue.counter
+	return sue.EventCounter
 }
 
 func (sue *SectorUpdateEvent) Expiration() uint32 {
-	return sue.expiration
+	return sue.Deadline
 }
 
 func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	// Need to be able to navigate from the event to the wallet.
-	w, err := s.LoadWallet(sue.walletID)
+	w, err := s.LoadWallet(sue.WalletID)
 	if err != nil {
 		return
 	}
 
-	su, err := w.LoadSectorUpdate(sue.updateIndex)
+	su, err := w.LoadSectorUpdate(sue.UpdateIndex)
 	if err != nil {
 		return
 	}
@@ -108,7 +108,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	if confirmations >= int(su.ConfirmationsRequired) {
 		// Remove all active updates leading to this update, inclusive.
 		for i := range w.SectorSettings.ActiveUpdates {
-			if i == int(sue.updateIndex) {
+			if i == int(sue.UpdateIndex) {
 				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[i+1:]
 				break
 			}
@@ -123,7 +123,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	} else {
 		// Remove all active updates following this update, inclusive.
 		for i := range w.SectorSettings.ActiveUpdates {
-			if w.SectorSettings.ActiveUpdates[i].Index == sue.updateIndex {
+			if w.SectorSettings.ActiveUpdates[i].Index == sue.UpdateIndex {
 				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[:i]
 				break
 			}
@@ -139,19 +139,25 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 }
 
 func (sue *SectorUpdateEvent) SetCounter(newCounter uint32) {
-	sue.counter = newCounter
+	sue.EventCounter = newCounter
 }
 
 // AdvanceUpdate marks that the sibling of the particular index has signaled a
 // completed update.
-func (s *State) AdvanceUpdate(ua UpdateAdvancement) {
-	/*
-		for i := range s.activeUpdates[ua.UpdateID.WalletID] {
-			if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {
-				s.activeUpdates[ua.UpdateID.WalletID][i].Confirmations[ua.Index] = true
-			}
+func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
+	w, err := s.LoadWallet(ua.WalletID)
+	if err != nil {
+		return
+	}
+
+	for i := range w.SectorSettings.ActiveUpdates {
+		if w.SectorSettings.ActiveUpdates[i].Index == ua.UpdateIndex {
+			w.SectorSettings.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
+			break
 		}
-	*/
+	}
+
+	return
 }
 
 // Hash returns the hash of a SectorUpdate, which is really just a hash of the
@@ -199,21 +205,15 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	// Check that the hash of the most recent update matches the parent hash.
 	if len(w.SectorSettings.ActiveUpdates) == 0 {
 		if su.ParentHash != w.SectorSettings.Hash() {
-			err = errors.New("Unrecognized parent hash - refusing to continue")
+			err = errors.New("unrecognized parent hash - refusing to continue")
 			return
 		}
 	} else {
 		if su.ParentHash != w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Hash() {
-			err = errors.New("Parent hash doesn't match the most recent active upload.")
+			err = errors.New("parent hash doesn't match the most recent active upload - refusing to continue")
 			return
 		}
 	}
-
-	// Append the update to the list of active updates.
-	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
-
-	// Add the weight of the update to the wallet.
-	w.SectorSettings.UpdateAtoms += uint32(su.Atoms)
 
 	// Figure out the update index.
 	var index uint32
@@ -223,11 +223,17 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 		index = w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Index + 1
 	}
 
+	// Append the update to the list of active updates.
+	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
+
+	// Add the weight of the update to the wallet.
+	w.SectorSettings.UpdateAtoms += uint32(su.Atoms)
+
 	// Create the event and put it into the event list.
 	sue := &SectorUpdateEvent{
-		walletID:    w.ID,
-		updateIndex: index,
-		expiration:  su.Deadline,
+		WalletID:    w.ID,
+		UpdateIndex: index,
+		Deadline:    su.Deadline,
 	}
 	s.InsertEvent(sue)
 
