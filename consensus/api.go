@@ -58,6 +58,7 @@ func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
 	return
 }
 
+/*
 // UpdateSegment is an RPC that allows hosts to submit diffs that match updates
 // that have been confirmed by consensus.
 func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err error) {
@@ -78,6 +79,7 @@ func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err e
 
 	return
 }
+*/
 
 func (p *Participant) Wallet(id state.WalletID, w *state.Wallet) (err error) {
 	*w, err = p.engine.Wallet(id)

@@ -1,11 +1,9 @@
 package state
 
 import (
-	"fmt"
-	//"os"
+	"errors"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
-	//"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TODO: add docstring
@@ -21,194 +19,217 @@ type UpdateID struct {
 // successfully updated. If no, the upload is rejected and deleted from the
 // system.
 type SectorUpdate struct {
-	// Which wallet is being modified.
-	WalletID WalletID
+	Index      uint32         // Update # for this wallet.
+	ParentHash siacrypto.Hash // Hash of thi updates parent.
 
-	// The hash of the upload that is being changed. This hash must match the
-	// most recent hash in the system, otherwise this upload is rejected as being
-	// out-of-order or being out-of-date. This hash is required purely to prevent
-	// synchronization problems. This hash is derived by appending all the hashes
-	// in the HashSet into one set of QuorumSize * siacrypto.HashSize bytes and
-	// hashing that.
-	ParentCounter uint32
-
-	// The updated SectorSettings value.
+	// The updated SectorSettings values.
 	Atoms uint16
 	K     byte
 	D     byte
 
-	// The MerkleCollapse value that each sibling should have after the segement
-	// diff has been uploaded to them. SectorSettings.Hash is the hash of the
-	// HashSet.
+	// The MerkleCollapse value that each sibling should have after the
+	// segement diff has been uploaded to them. SectorSettings.Hash is the
+	// hash of the HashSet.
 	HashSet [QuorumSize]siacrypto.Hash
 
 	// Confirmation variables. ConfirmationsRequired is the number of
-	// confirmations needed before the update gets accepted to the network, and
-	// Confirmatoins keeps track of which siblings have confirmed the update.
+	// confirmations needed before the update gets accepted to the network,
+	// and Confirmatoins keeps track of which siblings have confirmed the
+	// update.
 	ConfirmationsRequired byte
 	Confirmations         [QuorumSize]bool
 
-	// Event variables, as UpdateSector is an event.
-	EventCounter    uint32
-	EventExpiration uint32
+	Deadline uint32
 }
 
-// TODO: add docstring
+type SectorUpdateEvent struct {
+	walletID    WalletID
+	updateIndex uint32
+	expiration  uint32
+	counter     uint32
+}
+
+// An update advancement is a tool that siblings use to signify that they have
+// received the data necessary for them to complete their side of a sector
+// update. When enough siblings have announced their update advancement, the
+// update is rolled over into canon for the sector, and whatever siblings do
+// not have the update will need to perform erasure recovery on the file, so
+// they can get their piece.
 type UpdateAdvancement struct {
-	Index    byte
-	UpdateID UpdateID
+	SiblingIndex byte
+	Wallet       WalletID
+	UpdateIndex  uint32
 }
 
-// Hash returns the hash of a SectorUpdate.
-func (su *SectorUpdate) Hash() siacrypto.Hash {
-	var hashSetBytes []byte
-	for _, hash := range su.HashSet {
-		hashSetBytes = append(hashSetBytes, hash[:]...)
-	}
-	return siacrypto.HashBytes(hashSetBytes)
-}
-
-// Expiration is a getter that returns the EventExpiration of the SectorUpdate.
-func (su *SectorUpdate) Expiration() uint32 {
-	return su.EventExpiration
-}
-
-// Expiration is a getter that returns the EventCounter of the SectorUpdate.
-func (su *SectorUpdate) Counter() uint32 {
-	return su.EventCounter
-}
-
-// Expiration is a setter that sets the EventCounter of the SectorUpdate.
-func (su *SectorUpdate) SetCounter(counter uint32) {
-	su.EventCounter = counter
-}
-
-// TODO: add docstring
-func (su *SectorUpdate) HandleEvent(s *State) {
-	/*
-		// Load the wallet associated with the event.
-		w, err := s.LoadWallet(su.WalletID)
-		if err != nil {
-			panic(err)
-		}
-
-		// Remove the weight on the wallet that the upload consumed.
-		w.SectorSettings.UpdateAtoms -= w.SectorSettings.Atoms
-
-		// Count the number of confirmations that the upload has received.
-		var confirmationsReceived byte
-		for _, confirmation := range su.Confirmations {
-			if confirmation == true {
-				confirmationsReceived += 1
-			}
-		}
-
-		// If there are sufficient confirmations, update the sector hash values.
-		if su.ConfirmationsRequired <= confirmationsReceived {
-			// Hash our holding of the upload file and see if it matches the required
-			// file. !! There are probably synchronization issues with doing things
-			// this way.
-			file, err := os.Open(s.UpdateFilename(su.UpdateID()))
-			if err == nil {
-				hash := MerkleCollapse(file)
-				file.Close()
-				if hash == su.HashSet[siblingIndex] {
-					siafiles.Copy(s.SectorFilename(su.WalletID), s.UpdateFilename(su.UpdateID()))
-				}
-			}
-		}
-
-		// Call to delete the file that either did or did not exist.
-		os.Remove(s.UpdateFilename(su.UpdateID()))
-
-		s.DeleteEvent(su)
-	*/
-}
-
-// TODO: add docstring
-func (s *State) AvailableParentID(parentID UpdateID) bool {
-	// If there is an entry for this wallet in the active updates map, then
-	// that's the only thing that counts. Otherwise, the value of the wallet is
-	// the only thing that counts.
-	updateList, exists := s.activeUpdates[parentID.WalletID]
-	if exists {
-		// Compare the counter in the parent to the counter of the latest element
-		// in the update list.
-		if parentID.Counter == updateList[len(updateList)-1].EventCounter {
-			return true
-		}
-	} else {
-		// Compare the counter in the parent to the counter of the wallet.
-		w, err := s.LoadWallet(parentID.WalletID)
-		if err != nil {
-			return false
-		}
-
-		if parentID.Counter == w.SectorSettings.RecentUpdateCounter {
-			return true
-		}
-	}
-	return false
-}
-
-// TODO: add docstring
-func (s *State) GetSectorUpdate(uid UpdateID) (update SectorUpdate, exists bool) {
-	updateList, exists := s.activeUpdates[uid.WalletID]
-	if !exists {
-		return
-	}
-
-	for _, update = range updateList {
-		if update.EventCounter == uid.Counter {
+func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
+	for i := range w.SectorSettings.ActiveUpdates {
+		if w.SectorSettings.ActiveUpdates[i].Index == index {
+			su = w.SectorSettings.ActiveUpdates[i]
 			return
 		}
 	}
-	exists = false
+
+	err = errors.New("could not find update of given index")
 	return
 }
 
-// TODO: add docstring
-func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
-	// Check that the total atom usage of the wallet is not being overflowed.
-	overflowCheck := uint32(w.CompensationWeight()) + uint32(su.Atoms)
-	if overflowCheck > uint32(^uint16(0)) {
-		err = fmt.Errorf("Adding the update atoms to the sector causes an overflow.")
+func (sue *SectorUpdateEvent) Counter() uint32 {
+	return sue.counter
+}
+
+func (sue *SectorUpdateEvent) Expiration() uint32 {
+	return sue.expiration
+}
+
+func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
+	// Need to be able to navigate from the event to the wallet.
+	w, err := s.LoadWallet(sue.walletID)
+	if err != nil {
 		return
 	}
 
-	s.InsertEvent(&su)
-	w.SectorSettings.UpdateAtoms += su.Atoms
-	s.activeUpdates[su.WalletID] = append(s.activeUpdates[su.WalletID], su)
+	su, err := w.LoadSectorUpdate(sue.updateIndex)
+	if err != nil {
+		return
+	}
+
+	// Remove the weight of the update from the wallet.
+	w.SectorSettings.UpdateAtoms -= uint32(su.Atoms)
+
+	// Count the number of confirmations.
+	var confirmations int
+	for _, confirmation := range su.Confirmations {
+		if confirmation {
+			confirmations++
+		}
+	}
+
+	// Compare to the required confirmations.
+	if confirmations >= int(su.ConfirmationsRequired) {
+		// Remove all active updates leading to this update, inclusive.
+		for i := range w.SectorSettings.ActiveUpdates {
+			if i == int(sue.updateIndex) {
+				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[i+1:]
+				break
+			}
+		}
+
+		w.SectorSettings.Atoms = su.Atoms
+		w.SectorSettings.K = su.K
+		w.SectorSettings.D = su.D
+		w.SectorSettings.HashSet = su.HashSet
+
+		// Copy the file from the update to the file for the sector.
+	} else {
+		// Remove all active updates following this update, inclusive.
+		for i := range w.SectorSettings.ActiveUpdates {
+			if w.SectorSettings.ActiveUpdates[i].Index == sue.updateIndex {
+				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[:i]
+				break
+			}
+		}
+	}
+
+	err = s.SaveWallet(w)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
-// TODO: add docstring
-func (su SectorUpdate) UpdateID() UpdateID {
-	return UpdateID{
-		WalletID: su.WalletID,
-		Counter:  su.EventCounter,
-	}
-}
-
-// TODO: add docstring
-func (su SectorUpdate) ParentID() UpdateID {
-	return UpdateID{
-		WalletID: su.WalletID,
-		Counter:  su.ParentCounter,
-	}
-}
-
-// UpdateFilename creates a filename corresponding to a given UpdateID.
-func (s *State) UpdateFilename(id UpdateID) (filename string) {
-	return fmt.Sprintf("%s.sectorupdate.%d", s.walletFilename(id.WalletID), id.Counter)
+func (sue *SectorUpdateEvent) SetCounter(newCounter uint32) {
+	sue.counter = newCounter
 }
 
 // AdvanceUpdate marks that the sibling of the particular index has signaled a
 // completed update.
 func (s *State) AdvanceUpdate(ua UpdateAdvancement) {
-	for i := range s.activeUpdates[ua.UpdateID.WalletID] {
-		if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {
-			s.activeUpdates[ua.UpdateID.WalletID][i].Confirmations[ua.Index] = true
+	/*
+		for i := range s.activeUpdates[ua.UpdateID.WalletID] {
+			if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {
+				s.activeUpdates[ua.UpdateID.WalletID][i].Confirmations[ua.Index] = true
+			}
+		}
+	*/
+}
+
+// Hash returns the hash of a SectorUpdate, which is really just a hash of the
+// HashSet presented in the update.
+func (su *SectorUpdate) Hash() siacrypto.Hash {
+	fullSet := make([]byte, siacrypto.HashSize*int(QuorumSize))
+	for i := range su.HashSet {
+		copy(fullSet[i*siacrypto.HashSize:], su.HashSet[i][:])
+	}
+	return siacrypto.HashBytes(fullSet)
+}
+
+// InsertSectorUpdate adds an update to a wallet, and to the event list.
+func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
+	// Check that the values in the update are legal.
+	if su.Atoms > AtomsPerSector {
+		err = errors.New("Sector allocates too many atoms")
+		return
+	}
+	if su.K > MaxK {
+		err = errors.New("Sector has a K exceeding the Max K")
+		return
+	}
+	if su.K < MinK {
+		err = errors.New("Sector has K below the Min K")
+		return
+	}
+	if su.ConfirmationsRequired < MinConfirmations {
+		err = errors.New("Confirmations required must be at least K!")
+		return
+	}
+
+	// Check that there aren't already too many open updates.
+	if len(w.SectorSettings.ActiveUpdates) >= MaxUpdates {
+		err = errors.New("There are already the max number of open updates on the wallet")
+		return
+	}
+
+	// Check that the deadline is in bounds.
+	if su.Deadline < s.Metadata.Height+MaxDeadline {
+		err = errors.New("deadline too far in the future")
+		return
+	}
+
+	// Check that the hash of the most recent update matches the parent hash.
+	if len(w.SectorSettings.ActiveUpdates) == 0 {
+		if su.ParentHash != w.SectorSettings.Hash() {
+			err = errors.New("Unrecognized parent hash - refusing to continue")
+			return
+		}
+	} else {
+		if su.ParentHash != w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Hash() {
+			err = errors.New("Parent hash doesn't match the most recent active upload.")
+			return
 		}
 	}
+
+	// Append the update to the list of active updates.
+	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
+
+	// Add the weight of the update to the wallet.
+	w.SectorSettings.UpdateAtoms += uint32(su.Atoms)
+
+	// Figure out the update index.
+	var index uint32
+	if len(w.SectorSettings.ActiveUpdates) == 0 {
+		index = 0
+	} else {
+		index = w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Index + 1
+	}
+
+	// Create the event and put it into the event list.
+	sue := &SectorUpdateEvent{
+		walletID:    w.ID,
+		updateIndex: index,
+		expiration:  su.Deadline,
+	}
+	s.InsertEvent(sue)
+
+	return
 }

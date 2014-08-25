@@ -24,7 +24,7 @@ const (
 type Event interface {
 	Counter() uint32
 	Expiration() uint32
-	HandleEvent(s *State)
+	HandleEvent(s *State) (err error)
 	SetCounter(uint32)
 }
 

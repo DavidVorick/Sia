@@ -31,20 +31,20 @@ func TestWalletCompensationWeight(t *testing.T) {
 
 	w.SectorSettings.Atoms = 12
 	weight = w.CompensationWeight()
-	if weight != 3*walletAtomMultiplier+w.SectorSettings.Atoms {
+	if weight != 3*walletAtomMultiplier+uint32(w.SectorSettings.Atoms) {
 		t.Error("Wallet weight not properly calculated")
 	}
 
 	w.SectorSettings.UpdateAtoms = 7
 	weight = w.CompensationWeight()
-	if weight != 3*walletAtomMultiplier+w.SectorSettings.Atoms+w.SectorSettings.UpdateAtoms {
+	if weight != 3*walletAtomMultiplier+uint32(w.SectorSettings.Atoms)+w.SectorSettings.UpdateAtoms {
 		t.Error("Wallet compensation weight not properly calculated.")
 	}
 
 	w.Script = nil
 	w.SectorSettings.UpdateAtoms = 0
 	weight = w.CompensationWeight()
-	if weight != walletAtomMultiplier+w.SectorSettings.Atoms {
+	if weight != walletAtomMultiplier+uint32(w.SectorSettings.Atoms) {
 		t.Error("Wallet weight is not being calculated correctly")
 	}
 }

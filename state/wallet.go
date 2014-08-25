@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 const (
@@ -26,6 +27,7 @@ type Wallet struct {
 	Balance        Balance
 	SectorSettings SectorSettings
 	Script         []byte
+	KnownScripts   map[string]ScriptInputEvent
 }
 
 // Bytes returns the WalletID as a byte slice.
@@ -34,10 +36,9 @@ func (id WalletID) Bytes() []byte {
 }
 
 // TODO: add docstring
-func (w Wallet) CompensationWeight() uint16 {
+func (w Wallet) CompensationWeight() (weight uint32) {
 	// Count the number of atoms used by the script.
-	weight := uint16(len(w.Script) / AtomSize)
-	// math.Ceil()
+	weight = uint32(len(w.Script) / AtomSize)
 	if len(w.Script)%AtomSize != 0 {
 		weight++
 	}
@@ -50,9 +51,19 @@ func (w Wallet) CompensationWeight() uint16 {
 	weight *= walletAtomMultiplier
 
 	// Add non-replicated weight according to the size of the wallet sector.
-	weight += w.SectorSettings.Atoms + w.SectorSettings.UpdateAtoms
+	weight += uint32(w.SectorSettings.Atoms) + w.SectorSettings.UpdateAtoms
 
-	return weight
+	return
+}
+
+// walletFilename returns the filename for a wallet, receiving only the id of
+// the wallet as input.
+func (s *State) walletFilename(id WalletID) (filename string) {
+	// Turn the id into a suffix that will follow the quorum prefix
+	suffixBytes := siaencoding.EncUint64(uint64(id))
+	suffix := siafiles.SafeFilename(suffixBytes)
+	filename = s.walletPrefix + "." + suffix
+	return
 }
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
@@ -71,6 +82,14 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 		wn.weight = 0
 	}
 	s.insertWalletNode(wn)
+
+	if w.KnownScripts == nil {
+		w.KnownScripts = make(map[string]ScriptInputEvent)
+	} else {
+		for _, scriptEvent := range w.KnownScripts {
+			s.InsertEvent(&scriptEvent)
+		}
+	}
 
 	s.SaveWallet(w)
 	return
@@ -112,6 +131,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	if err != nil {
 		panic(err)
 	}
+
 	return
 }
 

@@ -334,6 +334,11 @@ func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID
 				return
 			}
 			err = siaencoding.Unmarshal(walletBytes, &wallet)
+
+			if wallet.KnownScripts == nil {
+				println("nil map issue")
+				wallet.KnownScripts = make(map[string]state.ScriptInputEvent)
+			}
 			return
 		} else if midID < walletID {
 			min = mid + 1

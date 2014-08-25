@@ -18,7 +18,11 @@ func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 
 	// If the script is 'known', it has been seen before and should not be
 	// processed, therefore reject.
-	if e.state.KnownScript(si) {
+	known, err := e.state.KnownScript(si)
+	if err != nil {
+		return
+	}
+	if known {
 		return
 	}
 
@@ -126,7 +130,7 @@ func (e *Engine) Compile(b Block) (err error) {
 
 	// Process all of the UpdateAdvancements.
 	for i, ua := range b.UpdateAdvancements {
-		verified, err := e.state.Metadata.Siblings[ua.Index].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
+		verified, err := e.state.Metadata.Siblings[ua.SiblingIndex].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
 		if err != nil || !verified {
 			continue
 		}

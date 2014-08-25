@@ -1,5 +1,6 @@
 package delta
 
+/*
 import (
 	"errors"
 	"os"
@@ -133,3 +134,4 @@ func (e *Engine) UpdateSegment(sd SegmentDiff) (accepted bool, err error) {
 	accepted = true
 	return
 }
+*/

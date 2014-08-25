@@ -31,6 +31,7 @@ func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error
 		Args: state.ScriptInput{
 			WalletID: w,
 			Input:    input,
+			Deadline: BobbyTables,
 		},
 		Resp: nil,
 	})
@@ -65,12 +66,19 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	kp.PublicKey = pk
 	kp.SecretKey = sk
 
+	// Get the current height of the quorum.
+	currentHeight, err := c.GetHeight()
+	if err != nil {
+		return
+	}
+
 	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: state.ScriptInput{
 			WalletID: delta.FountainWalletID,
 			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
+			Deadline: currentHeight + state.MaxDeadline,
 		},
 		Resp: nil,
 	})
@@ -99,16 +107,24 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	return
 }
 
-// send coins from one wallet to another
+// Send coins from one wallet to another.
 func (c *Client) SendCoinGeneric(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
 	if _, ok := c.genericWallets[source]; !ok {
 		err = errors.New("Could not access source wallet, perhaps it's not a generic wallet?")
 		return
 	}
 
+	// Get the current height of the quorum, for setting the deadline on
+	// the script input.
+	currentHeight, err := c.GetHeight()
+	if err != nil {
+		return
+	}
+
 	input := state.ScriptInput{
 		WalletID: source,
 		Input:    delta.SendCoinInput(destination, amount),
+		Deadline: currentHeight + state.MaxDeadline,
 	}
 	err = delta.SignScriptInput(&input, c.genericWallets[source].SecretKey)
 	if err != nil {
@@ -132,6 +148,7 @@ func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
 		Args: state.ScriptInput{
 			WalletID: id,
 			Input:    input,
+			Deadline: BobbyTables,
 		},
 		Resp: nil,
 	})

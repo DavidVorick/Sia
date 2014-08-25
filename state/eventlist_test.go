@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // countReachableEvents starts at the event root and figures out how many are
@@ -64,10 +65,14 @@ func TestEventList(t *testing.T) {
 	// Create and initialize a state.
 	var s State
 	s.Initialize()
+	s.SetWalletPrefix(siafiles.TempFilename("TestEventList"))
+
+	var w Wallet
+	s.InsertWallet(w)
 
 	// Create and insert an event.
 	e := &ScriptInputEvent{
-		expiration: 1,
+		Deadline: 1,
 	}
 	s.InsertEvent(e)
 
@@ -95,11 +100,18 @@ func TestEventList(t *testing.T) {
 	si := ScriptInput{
 		Deadline: 0,
 	}
-	s.LearnScript(si)
+	err := s.LearnScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Verify that e1 is now a known script. This really doesn't need to be
 	// happening in this test, but it's better to be safe and double check.
-	if !s.KnownScript(si) {
+	known, err := s.KnownScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !known {
 		t.Fatal("The state failed to learn the test script!.")
 	}
 
@@ -110,7 +122,11 @@ func TestEventList(t *testing.T) {
 
 	// Verify that HandleEvent() has been called, which means the script
 	// will no longer be known to the state.
-	if s.KnownScript(si) {
+	known, err = s.KnownScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if known {
 		t.Error("Process event has failed - script is still known to the state.")
 	}
 
@@ -119,15 +135,15 @@ func TestEventList(t *testing.T) {
 	}
 
 	sieMap := make(map[*ScriptInputEvent]struct{})
-	n := 50
+	n := 75
 	for j := 0; j < n; j++ {
 		for i := 0; i < n; i++ {
 			randomTimeout := siacrypto.RandomInt(12)
-			si := &ScriptInputEvent{
-				expiration: uint32(randomTimeout),
+			sie := &ScriptInputEvent{
+				Deadline: uint32(randomTimeout),
 			}
-			sieMap[si] = struct{}{}
-			s.InsertEvent(si)
+			sieMap[sie] = struct{}{}
+			s.InsertEvent(sie)
 
 			if countReachableEvents(s.eventRoot) != i+1 {
 				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(s.eventRoot))

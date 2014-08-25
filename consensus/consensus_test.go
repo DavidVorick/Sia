@@ -4,9 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 // TestConsensus is the catch-all function for testing the components of the
@@ -40,6 +42,20 @@ func TestConsensus(t *testing.T) {
 		t.Error("Update for the next block has not been accepted by the participant.")
 	}
 	p.updatesLock.RUnlock()
+
+	// Submit a script input to a wallet, to test synchronization when the
+	// event list is involed. The first joining participant will get a
+	// snapshot without the script input and event, but the later joining
+	// participants will get snapshots that have the event.
+	si := state.ScriptInput{
+		Deadline: 6,
+		WalletID: delta.FountainWalletID,
+		Input:    delta.CreateFountainWalletInput(2, delta.DefaultScript(tetherWalletPK)),
+	}
+	err = p.AddScriptInput(si, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create a participant that will join the current existing
 	// participant. No timing shortcuts can be taken here, as the new
@@ -130,12 +146,22 @@ func TestConsensus(t *testing.T) {
 		participant.engineLock.RUnlock()
 	}
 
-	// Wait through four full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(NumSteps) * 2)
+	// Check that all participants have the script that was submitted
+	// earlier.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		var w state.Wallet
+		err = participant.Wallet(0, &w)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// At this point, there should be a full quorum, where each participant
-	// recognized all other participants. We run a check to see that each
-	// participant recognizes each other participant as active siblings.
+		if len(w.KnownScripts) == 0 {
+			t.Error("sibling of index", i, "does not know the script.")
+		}
+	}
+
+	// Wait through three full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 3)
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
 		for j, sibling := range participant.engine.Metadata().Siblings {
@@ -144,6 +170,21 @@ func TestConsensus(t *testing.T) {
 			}
 		}
 		participant.engineLock.RUnlock()
+	}
+
+	// The submitted script should have expired and no longer needs to be
+	// known; see if the event for forgetting the script has triggered
+	// properly in all clients.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		var w state.Wallet
+		err = participant.Wallet(0, &w)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(w.KnownScripts) != 0 {
+			t.Error("sibling of index", i, "did not forget the script.")
+		}
 	}
 }
 
