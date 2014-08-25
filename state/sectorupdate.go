@@ -157,6 +157,11 @@ func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
 		}
 	}
 
+	err = s.SaveWallet(w)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -197,7 +202,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	}
 
 	// Check that the deadline is in bounds.
-	if su.Deadline < s.Metadata.Height+MaxDeadline {
+	if su.Deadline > s.Metadata.Height+MaxDeadline {
 		err = errors.New("deadline too far in the future")
 		return
 	}

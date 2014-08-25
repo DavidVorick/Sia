@@ -180,13 +180,13 @@ func (p *Participant) newSignedUpdate() {
 	p.updatesLock.Lock()
 	update.UpdateAdvancements = p.updateAdvancements
 	p.updateAdvancements = nil
-	for i, ua := range update.UpdateAdvancements {
+	for _, ua := range update.UpdateAdvancements {
 		uas, err := p.secretKey.SignObject(ua)
 		if err != nil {
 			// log an error
 			continue
 		}
-		update.AdvancementSignatures[i] = uas
+		update.AdvancementSignatures = append(update.AdvancementSignatures, uas)
 	}
 	p.updatesLock.Unlock()
 
