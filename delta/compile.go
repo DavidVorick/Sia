@@ -18,7 +18,11 @@ func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 
 	// If the script is 'known', it has been seen before and should not be
 	// processed, therefore reject.
-	if e.state.KnownScript(si) {
+	known, err := e.state.KnownScript(si)
+	if err != nil {
+		return
+	}
+	if known {
 		return
 	}
 

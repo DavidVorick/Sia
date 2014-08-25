@@ -1,9 +1,5 @@
 package state
 
-import (
-	"github.com/NebulousLabs/Sia/siacrypto"
-)
-
 const (
 	// QuorumSize is the maximum number of siblings in a quorum.
 	QuorumSize byte = 4
@@ -31,10 +27,6 @@ type State struct {
 
 	// Points to the skip list that contains all of the events.
 	eventRoot *eventNode
-
-	// A list of the hashes of all script inputs that have run on the
-	// server recently.
-	knownScripts map[siacrypto.Hash]struct{}
 }
 
 // AtomsInUse returns the number of atoms being consumed by the whole quorum.
@@ -60,6 +52,4 @@ func (s *State) Initialize() {
 	for i := range s.Metadata.Siblings {
 		s.Metadata.Siblings[i].Status = ^byte(0)
 	}
-
-	s.knownScripts = make(map[siacrypto.Hash]struct{})
 }

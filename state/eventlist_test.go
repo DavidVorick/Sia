@@ -67,7 +67,7 @@ func TestEventList(t *testing.T) {
 
 	// Create and insert an event.
 	e := &ScriptInputEvent{
-		expiration: 1,
+		Deadline: 1,
 	}
 	s.InsertEvent(e)
 
@@ -99,7 +99,11 @@ func TestEventList(t *testing.T) {
 
 	// Verify that e1 is now a known script. This really doesn't need to be
 	// happening in this test, but it's better to be safe and double check.
-	if !s.KnownScript(si) {
+	known, err := s.KnownScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !known {
 		t.Fatal("The state failed to learn the test script!.")
 	}
 
@@ -110,6 +114,11 @@ func TestEventList(t *testing.T) {
 
 	// Verify that HandleEvent() has been called, which means the script
 	// will no longer be known to the state.
+	known, err := s.KnownScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if known {
 	if s.KnownScript(si) {
 		t.Error("Process event has failed - script is still known to the state.")
 	}
@@ -123,11 +132,11 @@ func TestEventList(t *testing.T) {
 	for j := 0; j < n; j++ {
 		for i := 0; i < n; i++ {
 			randomTimeout := siacrypto.RandomInt(12)
-			si := &ScriptInputEvent{
-				expiration: uint32(randomTimeout),
+			sie := &ScriptInputEvent{
+				Deadline: uint32(randomTimeout),
 			}
-			sieMap[si] = struct{}{}
-			s.InsertEvent(si)
+			sieMap[sie] = struct{}{}
+			s.InsertEvent(sie)
 
 			if countReachableEvents(s.eventRoot) != i+1 {
 				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(s.eventRoot))

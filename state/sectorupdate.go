@@ -81,7 +81,7 @@ func (sue *SectorUpdateEvent) Expiration() uint32 {
 	return sue.expiration
 }
 
-func (sue *SectorUpdateEvent) HandleEvent(s *State) {
+func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	// Need to be able to navigate from the event to the wallet.
 	w, err := s.LoadWallet(sue.walletID)
 	if err != nil {
@@ -134,6 +134,8 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) {
 	if err != nil {
 		return
 	}
+
+	return
 }
 
 func (sue *SectorUpdateEvent) SetCounter(newCounter uint32) {

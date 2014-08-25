@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/siafiles"
 )
@@ -27,6 +28,7 @@ type Wallet struct {
 	Balance        Balance
 	SectorSettings SectorSettings
 	Script         []byte
+	KnownScripts   map[siacrypto.Hash]ScriptInputEvent
 }
 
 // Bytes returns the WalletID as a byte slice.
