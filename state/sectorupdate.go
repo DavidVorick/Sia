@@ -57,7 +57,7 @@ type SectorUpdateEvent struct {
 // they can get their piece.
 type UpdateAdvancement struct {
 	SiblingIndex byte
-	Wallet       WalletID
+	WalletID     WalletID
 	UpdateIndex  uint32
 }
 
@@ -144,14 +144,20 @@ func (sue *SectorUpdateEvent) SetCounter(newCounter uint32) {
 
 // AdvanceUpdate marks that the sibling of the particular index has signaled a
 // completed update.
-func (s *State) AdvanceUpdate(ua UpdateAdvancement) {
-	/*
-		for i := range s.activeUpdates[ua.UpdateID.WalletID] {
-			if s.activeUpdates[ua.UpdateID.WalletID][i].EventCounter == ua.UpdateID.Counter {
-				s.activeUpdates[ua.UpdateID.WalletID][i].Confirmations[ua.Index] = true
-			}
+func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
+	w, err := s.LoadWallet(ua.WalletID)
+	if err != nil {
+		return
+	}
+
+	for i := range w.SectorSettings.ActiveUpdates {
+		if w.SectorSettings.ActiveUpdates[i].Index == ua.UpdateIndex {
+			w.SectorSettings.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
+			break
 		}
-	*/
+	}
+
+	return
 }
 
 // Hash returns the hash of a SectorUpdate, which is really just a hash of the
