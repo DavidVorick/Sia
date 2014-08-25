@@ -1,7 +1,10 @@
 package state
 
 import (
+	"fmt"
+
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // A ScriptInput pairs an input byte slice with the WalletID associated with
@@ -36,7 +39,7 @@ func (sie *ScriptInputEvent) HandleEvent(s *State) (err error) {
 		return
 	}
 
-	delete(w.KnownScripts, sie.Hash)
+	delete(w.KnownScripts, siafiles.SafeFilename(sie.Hash[:]))
 
 	err = s.SaveWallet(w)
 	if err != nil {
@@ -56,14 +59,20 @@ func (sie *ScriptInputEvent) SetCounter(counter uint32) {
 func (s *State) KnownScript(si ScriptInput) (known bool, err error) {
 	w, err := s.LoadWallet(si.WalletID)
 	if err != nil {
+		// Here we should really check what type of error got returned.
+		// If it's a 'not found' error, then return false. If it's
+		// something like a disk-read error, other actions need to be
+		// taken.
+		known = false
 		return
 	}
+	fmt.Println(w)
 
 	hash, err := siacrypto.HashObject(si)
 	if err != nil {
 		return
 	}
-	_, known = w.KnownScripts[hash]
+	_, known = w.KnownScripts[siafiles.SafeFilename(hash[:])]
 
 	return
 }
@@ -90,9 +99,10 @@ func (s *State) LearnScript(si ScriptInput) (err error) {
 		WalletID: si.WalletID,
 	}
 
-	w.KnownScripts[hash] = sie
+	w.KnownScripts[siafiles.SafeFilename(hash[:])] = sie
 	s.InsertEvent(&sie)
 
+	fmt.Println(w)
 	err = s.SaveWallet(w)
 	if err != nil {
 		return

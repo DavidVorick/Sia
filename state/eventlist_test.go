@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // countReachableEvents starts at the event root and figures out how many are
@@ -64,6 +65,10 @@ func TestEventList(t *testing.T) {
 	// Create and initialize a state.
 	var s State
 	s.Initialize()
+	s.SetWalletPrefix(siafiles.TempFilename("TestEventList"))
+
+	var w Wallet
+	s.InsertWallet(w)
 
 	// Create and insert an event.
 	e := &ScriptInputEvent{
@@ -95,7 +100,10 @@ func TestEventList(t *testing.T) {
 	si := ScriptInput{
 		Deadline: 0,
 	}
-	s.LearnScript(si)
+	err := s.LearnScript(si)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Verify that e1 is now a known script. This really doesn't need to be
 	// happening in this test, but it's better to be safe and double check.
@@ -114,12 +122,11 @@ func TestEventList(t *testing.T) {
 
 	// Verify that HandleEvent() has been called, which means the script
 	// will no longer be known to the state.
-	known, err := s.KnownScript(si)
+	known, err = s.KnownScript(si)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if known {
-	if s.KnownScript(si) {
 		t.Error("Process event has failed - script is still known to the state.")
 	}
 

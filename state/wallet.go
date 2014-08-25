@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/siafiles"
 )
@@ -28,7 +27,7 @@ type Wallet struct {
 	Balance        Balance
 	SectorSettings SectorSettings
 	Script         []byte
-	KnownScripts   map[siacrypto.Hash]ScriptInputEvent
+	KnownScripts   map[string]ScriptInputEvent
 }
 
 // Bytes returns the WalletID as a byte slice.
@@ -84,6 +83,14 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 	}
 	s.insertWalletNode(wn)
 
+	if w.KnownScripts == nil {
+		w.KnownScripts = make(map[string]ScriptInputEvent)
+	} else {
+		for _, scriptEvent := range w.KnownScripts {
+			s.InsertEvent(&scriptEvent)
+		}
+	}
+
 	s.SaveWallet(w)
 	return
 }
@@ -124,6 +131,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	if err != nil {
 		panic(err)
 	}
+
 	return
 }
 
