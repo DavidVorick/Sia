@@ -26,11 +26,11 @@ func appendAll(slices ...[]byte) []byte {
 	return all
 }
 
-// Sign takes a SecretKey and modifies the receiving ScriptInput to contain a
-// signature of its own data. Currently, only the Input field is included in
-// the signature.
+// SignScriptInput modifies a ScriptInput to contain a signature of its own
+// data. Currently, only the Input and Deadline fields are included in the
+// signature.
 func SignScriptInput(si *state.ScriptInput, secretKey siacrypto.SecretKey) (err error) {
-	sig, err := secretKey.Sign(si.Input)
+	sig, err := secretKey.Sign(append(siaencoding.EncUint32(si.Deadline), si.Input...))
 	if err != nil {
 		return
 	}
@@ -55,10 +55,10 @@ func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk 
 	}
 	si.Input = appendAll(
 		[]byte{
-			0x33, 0x06, 0x00, // move data pointer to encoded sibling
-			0xE4, //             push encoded sibling
-			0x41, //             call AddSibling
-			0xFF, //             exit
+			0xE6, 0xFF, // move data pointer to encoded sibling
+			0xE4, //       push encoded sibling
+			0x41, //       call AddSibling
+			0xFF, //       exit
 		},
 		encSib,
 	)
@@ -76,11 +76,11 @@ func AddSiblingInput(wid state.WalletID, deadline uint32, sib state.Sibling, sk 
 func SendCoinInput(dest state.WalletID, amount state.Balance) []byte {
 	return appendAll(
 		[]byte{
-			0x33, 0x09, 0x00, // move data pointer to dest
-			0x34, 0x08, //       push dest
-			0x34, 0x10, //       push balance
-			0x43, //             call Send
-			0xFF, //             exit
+			0xE6, 0xFF, // move data pointer to dest
+			0x34, 0x08, // push dest
+			0x34, 0x10, // push balance
+			0x43, //       call Send
+			0xFF, //       exit
 		},
 		siaencoding.EncUint64(uint64(dest)),
 		amount[:],
@@ -103,10 +103,10 @@ func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
 // to the input.
 func ProposeUploadInput(encUA []byte) []byte {
 	return append([]byte{
-		0x33, 0x08, 0x00, // move data pointer to encoded args
-		0xE4, //             push args
-		0x45, //             call ProposeUpload
-		0xFF, //             exit
+		0xE6, 0xFF, // move data pointer to encoded args
+		0xE4, //       push args
+		0x45, //       call ProposeUpload
+		0xFF, //       exit
 	}, encUA...)
 }
 
@@ -117,20 +117,23 @@ var FountainScript = []byte{
 	0x02, 0xA8, 0x61, // 02 push 25000 (balance)
 	0xE4, //             05 push script
 	0x42, //             06 call CreateWallet
-	0xFF, //             07 exit (not technically necessary here)
+	0xFF, //             07 exit
 }
 
 // DefaultScript returns a script that verifies a signature, and transfers
 // control to the input if the verification was successful.
 func DefaultScript(publicKey siacrypto.PublicKey) []byte {
 	keyl, sigl := byte(siacrypto.PublicKeySize), byte(siacrypto.SignatureSize)
+	negl, negh := short(-siacrypto.PublicKeySize)
 	return append([]byte{
-		0x32, 0x0C, 0x00, // 00 move data pointer to public key
+		0x33, negl, negh, // 00 move data pointer to public key
 		0x34, keyl, //       03 push public key
-		0xE4,             // 05 push signed input
-		0x40,             // 06 verify signature
-		0xE5,             // 07 if invalid signature, reject
-		0x33, sigl, 0x00, // 08 move data pointer to input body
+		0x34, sigl, //       04 push signature
+		0x46, //             06 push deadline
+		0xE4, //             07 push input
+		0x23, //             08 concatenate deadline and input
+		0x40, //             09 verify signature
+		0xE5, //             10 if invalid signature, reject
 		0x38, //             11 execute input
 	}, publicKey[:]...)
 }
