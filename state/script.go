@@ -1,8 +1,6 @@
 package state
 
 import (
-	"fmt"
-
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
 )
@@ -66,7 +64,6 @@ func (s *State) KnownScript(si ScriptInput) (known bool, err error) {
 		known = false
 		return
 	}
-	fmt.Println(w)
 
 	hash, err := siacrypto.HashObject(si)
 	if err != nil {
@@ -102,7 +99,6 @@ func (s *State) LearnScript(si ScriptInput) (err error) {
 	w.KnownScripts[siafiles.SafeFilename(hash[:])] = sie
 	s.InsertEvent(&sie)
 
-	fmt.Println(w)
 	err = s.SaveWallet(w)
 	if err != nil {
 		return
