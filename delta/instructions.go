@@ -67,8 +67,7 @@ var opTable = map[byte]instruction{
 	0x41: instruction{"add_sibling", 0, op_add_sibling, 5},
 	0x42: instruction{"add_wallet", 0, op_add_wallet, 5},
 	0x43: instruction{"send", 0, op_send, 5},
-	0x44: instruction{"resize_sec", 0, op_resize_sec, 9},
-	0x45: instruction{"prop_upload", 0, op_prop_upload, 9},
+	0x44: instruction{"update_sector", 0, op_update_sector, 9},
 	0x46: instruction{"deadline", 0, op_deadline, 2},
 	// convenience opcodes
 	0xE0: instruction{"switch", 2, op_switch, 3},
@@ -558,6 +557,7 @@ func op_add_sibling(env *scriptEnv, args []byte) (err error) {
 }
 
 func op_add_wallet(env *scriptEnv, args []byte) (err error) {
+	// pop values
 	script, _ := env.pop()
 	balb, _ := env.pop()
 	idb, err := env.pop()
@@ -565,14 +565,14 @@ func op_add_wallet(env *scriptEnv, args []byte) (err error) {
 		return
 	}
 
-	// convert input bytes to their proper types
+	// convert values to proper types
 	var bal state.Balance
 	copy(bal[:], balb)
 	encUint64 := make([]byte, 8)
 	copy(encUint64, idb)
 	id := state.WalletID(siaencoding.DecUint64(encUint64))
 
-	// create wallet
+	// call API function
 	return env.engine.CreateWallet(env.wallet, id, bal, script)
 }
 
@@ -583,18 +583,15 @@ func op_send(env *scriptEnv, args []byte) (err error) {
 		return
 	}
 
-	// convert values to proper types
 	var bal state.Balance
 	copy(bal[:], balb)
 	id := state.WalletID(siaencoding.DecUint64(idb))
 
-	// send
 	err = env.engine.SendCoin(env.wallet, bal, id)
 	return
 }
 
 func op_verify(env *scriptEnv, args []byte) (err error) {
-	// pop values
 	msg, _ := env.pop()
 	sigBytes, _ := env.pop()
 	pkBytes, err := env.pop()
@@ -602,49 +599,59 @@ func op_verify(env *scriptEnv, args []byte) (err error) {
 		return
 	}
 
-	// construct public key, signature, and message
 	var pk siacrypto.PublicKey
 	copy(pk[:], pkBytes)
 	var sig siacrypto.Signature
 	copy(sig[:], sigBytes)
 
-	// verify signature
 	verified := pk.Verify(sig, msg)
+
+	// push success value
 	err = env.push(b2v(verified))
 	return
 }
 
-func op_resize_sec(env *scriptEnv, args []byte) (err error) {
-	/*
-		a, err := env.pop()
-		if err != nil {
-			return
-		}
-		atoms := siaencoding.DecUint16(a[:2])
-		_, _, err = env.quorum.ResizeSectorErase(env.wallet, atoms, args[0])
-	*/
-	return
-}
+func op_update_sector(env *scriptEnv, args []byte) (err error) {
+	deadline, _ := env.pop()
+	confreq, _ := env.pop()
+	hashset, _ := env.pop()
+	d, _ := env.pop()
+	k, _ := env.pop()
+	atoms, _ := env.pop()
+	phash, err := env.pop()
+	if err != nil {
+		return
+	}
 
-func op_prop_upload(env *scriptEnv, args []byte) (err error) {
-	/*
-		// decode function arguments
-		var ua quorum.UploadArgs
-		err = ua.GobDecode(env.buffers[args[0]])
-		if err != nil {
-			return
-		}
+	if len(phash) != siacrypto.HashSize ||
+		len(atoms) != 2 ||
+		len(k) != 1 || len(d) != 1 ||
+		len(hashset) != int(state.QuorumSize)*siacrypto.HashSize ||
+		len(confreq) != 1 ||
+		len(deadline) != 4 {
+		err = errors.New("invalid parameter")
+		return
+	}
 
-		// call function
-		_, _, err = env.quorum.ProposeUpload(
-			env.wallet,
-			ua.ParentHash,
-			ua.NewHashSet,
-			ua.AtomsChanged,
-			ua.Confirmations,
-			ua.Deadline,
-		)
-	*/
+	var h siacrypto.Hash
+	copy(h[:], phash)
+	var hs [state.QuorumSize]siacrypto.Hash
+	for i := range hs {
+		copy(hs[i][:], hashset)
+		hashset = hashset[siacrypto.HashSize:]
+	}
+
+	su := state.SectorUpdate{
+		ParentHash:            h,
+		Atoms:                 siaencoding.DecUint16(atoms),
+		K:                     k[0],
+		D:                     d[0],
+		HashSet:               hs,
+		ConfirmationsRequired: confreq[0],
+		Deadline:              siaencoding.DecUint32(deadline),
+	}
+
+	err = env.engine.UpdateSector(env.wallet, su)
 	return
 }
 

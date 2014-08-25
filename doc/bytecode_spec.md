@@ -97,8 +97,7 @@ Note that some of these descriptions are insufficient to explain the format of t
 | 0x41 | add_sibling   | 0    | add sibling; pushes boolean success value                                              |
 | 0x42 | add_wallet    | 0    | add a wallet with an initial balance and script                                        |
 | 0x43 | send          | 0    | send siacoins from host wallet to recipient                                            |
-| 0x44 | resize_sec    | 0    | resize the sector associated with a given wallet (erases current sector data)          |
-| 0x45 | prop_upload   | 0    | propose an upload to the quorum (arguments are stored in one gob-encoded register)     |
+| 0x44 | sector_update | 0    | updates a sector (TODO: better description)                                            |
 | 0x46 | deadline      | 0    | pushes the Deadline field of the ScriptInput as an encoded uint32                      |
 | ---- | ----          | -    | convenience opcodes                                                                    |
 | 0xE0 | switch        | 2    | if value and $1 are equal, branch to $2. The value is only consumed upon equality.     |
