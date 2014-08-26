@@ -50,9 +50,9 @@ func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct
 	return
 }
 
-func (p *Participant) DownloadSector(id state.WalletID, sector *[]byte) (err error) {
+func (p *Participant) DownloadSegment(id state.WalletID, segment *[]byte) (err error) {
 	p.engineLock.RLock()
-	*sector, err = p.engine.DownloadSector(id)
+	*segment, err = p.engine.DownloadSector(id)
 	p.engineLock.RUnlock()
 	return
 }

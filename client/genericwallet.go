@@ -14,8 +14,50 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func (c *Client) DownloadFile(id state.WalletID) (err error) {
+func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
+	// Download a segment from each person in the quorum, until k segments
+	// are grabbed.
+	var segments []io.Reader
+	var indicies []byte
+	for i := range c.siblings {
+		var segment []byte
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[0].Address,
+			Proc: "Participant.DownloadSegment",
+			Args: id,
+			Resp: &segment,
+		})
 
+		segments = append(segments, bytes.NewReader(segment))
+		indicies = append(indicies, byte(i))
+		if len(indicies) == state.StandardK {
+			break
+		}
+	}
+
+	// Create the file.
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+
+	// Call recover, writing into the file.
+	_, err = state.RSRecover(segments, indicies, file, state.StandardK)
+	if err != nil {
+		return
+	}
+
+	// Sort out the padding, removing what padding has been added.
+	keypair, exists := c.genericWallets[id]
+	if !exists {
+		return
+	}
+	err = file.Truncate(keypair.OriginalSize)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 // Submit a wallet request to the fountain wallet.
@@ -143,16 +185,6 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	}
 	fileSize := info.Size()
 
-	// Figure out the number of atoms needed to upload the file.
-	atomsNeeded := uint16(int(fileSize) / (int(state.AtomSize) * int(state.StandardK)))
-	if int(fileSize)%(int(state.AtomSize)*int(state.StandardK)) != 0 {
-		atomsNeeded++
-	}
-	if atomsNeeded > state.AtomsPerSector {
-		err = errors.New("Cannot use such a large file.")
-		return
-	}
-
 	// Create basic sector update.
 	height, err := c.GetHeight()
 	if err != nil {
@@ -165,13 +197,10 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	}
 
 	// Get the set of erasure coded data to upload to the quorum.
-	var segments [state.QuorumSize]*bytes.Buffer
-	for i := range segments {
-		segments[i] = new(bytes.Buffer)
-	}
+	var segments [state.QuorumSize]bytes.Buffer
 	var segmentsWriter [state.QuorumSize]io.Writer
 	for i := range segments {
-		segmentsWriter[i] = segments[i]
+		segmentsWriter[i] = &segments[i]
 	}
 	atoms, err := state.RSEncode(file, segmentsWriter, state.StandardK)
 	if err != nil {
@@ -209,8 +238,8 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 		Resp: nil,
 	})
 
-	// Wait 2 blocks while the update gets accepted.
-	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize))
+	// Wait 3 blocks while the update gets accepted.
+	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize) * 3)
 
 	// Upload each segment to its respective sibling.
 	for i := range segmentBytes {
@@ -226,7 +255,15 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 			Args: segmentUpload,
 			Resp: &accepted,
 		})
+
+		if err != nil {
+			println("error, but handle bad.")
+		}
 	}
+
+	originalKeypair := c.genericWallets[id]
+	originalKeypair.OriginalSize = fileSize
+	c.genericWallets[id] = originalKeypair
 
 	return
 }
