@@ -22,8 +22,7 @@ type UpdateID struct {
 // successfully updated. If no, the upload is rejected and deleted from the
 // system.
 type SectorUpdate struct {
-	Index      uint32         // Update # for this wallet.
-	ParentHash siacrypto.Hash // Hash of thi updates parent.
+	Index uint32 // Update # for this wallet.
 
 	// The updated SectorSettings values.
 	Atoms uint16
@@ -224,19 +223,6 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	if su.Deadline > s.Metadata.Height+MaxDeadline {
 		err = errors.New("deadline too far in the future")
 		return
-	}
-
-	// Check that the hash of the most recent update matches the parent hash.
-	if len(w.SectorSettings.ActiveUpdates) == 0 {
-		if su.ParentHash != w.SectorSettings.Hash() {
-			err = errors.New("unrecognized parent hash - refusing to continue")
-			return
-		}
-	} else {
-		if su.ParentHash != w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Hash() {
-			err = errors.New("parent hash doesn't match the most recent active upload - refusing to continue")
-			return
-		}
 	}
 
 	// Figure out the update index.

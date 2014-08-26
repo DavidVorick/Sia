@@ -617,14 +617,12 @@ func op_update_sector(env *scriptEnv, args []byte) (err error) {
 	hashset, _ := env.pop()
 	d, _ := env.pop()
 	k, _ := env.pop()
-	atoms, _ := env.pop()
-	phash, err := env.pop()
+	atoms, err := env.pop()
 	if err != nil {
 		return
 	}
 
-	if len(phash) != siacrypto.HashSize ||
-		len(atoms) != 2 ||
+	if len(atoms) != 2 ||
 		len(k) != 1 || len(d) != 1 ||
 		len(hashset) != int(state.QuorumSize)*siacrypto.HashSize ||
 		len(confreq) != 1 ||
@@ -633,8 +631,6 @@ func op_update_sector(env *scriptEnv, args []byte) (err error) {
 		return
 	}
 
-	var h siacrypto.Hash
-	copy(h[:], phash)
 	var hs [state.QuorumSize]siacrypto.Hash
 	for i := range hs {
 		copy(hs[i][:], hashset)
@@ -642,7 +638,6 @@ func op_update_sector(env *scriptEnv, args []byte) (err error) {
 	}
 
 	su := state.SectorUpdate{
-		ParentHash:            h,
 		Atoms:                 siaencoding.DecUint16(atoms),
 		K:                     k[0],
 		D:                     d[0],
