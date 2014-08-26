@@ -9,6 +9,10 @@ import (
 	"github.com/NebulousLabs/Sia/siafiles"
 )
 
+const (
+	StandardConfirmations = 3
+)
+
 // TODO: add docstring
 type UpdateID struct {
 	WalletID WalletID

@@ -1,7 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"errors"
+	"io"
+	"os"
 	"time"
 
 	"github.com/NebulousLabs/Sia/consensus"
@@ -11,33 +14,9 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-/*
-// resize sector associated with wallet
-func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error) {
-	_, exists := c.genericWallets[src]
-	if !exists {
-		err = fmt.Errorf("Could not access wallet")
-		return
-	}
+func (c *Client) DownloadFile(id state.WalletID) (err error) {
 
-	input := delta.ResizeSectorEraseInput(atoms, k)
-	input, err = delta.SignInput(c.genericWallets[w].SK, input)
-	if err != nil {
-		return
-	}
-
-	c.Broadcast(network.Message{
-		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: w,
-			Input:    input,
-			Deadline: BobbyTables,
-		},
-		Resp: nil,
-	})
-	return
 }
-*/
 
 // Submit a wallet request to the fountain wallet.
 func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
@@ -139,18 +118,115 @@ func (c *Client) SendCoinGeneric(source state.WalletID, destination state.Wallet
 	return
 }
 
-/*
-// send a user-specified script input
-func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
-	return c.router.SendMessage(network.Message{
-		Dest: c.connectAddress,
+// UpdateSectorGeneric takes the id of a generic wallet, along with a file, and
+// replaces whatever sector/file is currently housed in the generic wallet with
+// the new file.
+func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
+	// Check that the wallet is available to this client.
+	if _, exists := c.genericWallets[id]; !exists {
+		err = errors.New("do not have access to given wallet")
+		return
+	}
+
+	// Get a fresh list of siblings.
+	c.RefreshSiblings()
+
+	// Calculate the size of the file.
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return
+	}
+	fileSize := info.Size()
+
+	// Figure out the number of atoms needed to upload the file.
+	atomsNeeded := uint16(int(fileSize) / (int(state.AtomSize) * int(state.StandardK)))
+	if int(fileSize)%(int(state.AtomSize)*int(state.StandardK)) != 0 {
+		atomsNeeded++
+	}
+	if atomsNeeded > state.AtomsPerSector {
+		err = errors.New("Cannot use such a large file.")
+		return
+	}
+
+	// Create basic sector update.
+	height, err := c.GetHeight()
+	if err != nil {
+		return
+	}
+	su := state.SectorUpdate{
+		K: state.StandardK,
+		ConfirmationsRequired: state.StandardConfirmations,
+		Deadline:              height + 6,
+	}
+
+	// Get the set of erasure coded data to upload to the quorum.
+	var segments [state.QuorumSize]*bytes.Buffer
+	for i := range segments {
+		segments[i] = new(bytes.Buffer)
+	}
+	var segmentsWriter [state.QuorumSize]io.Writer
+	for i := range segments {
+		segmentsWriter[i] = segments[i]
+	}
+	atoms, err := state.RSEncode(file, segmentsWriter, state.StandardK)
+	if err != nil {
+		return
+	}
+	su.Atoms = atoms
+
+	// Now that we have written to the buffers, we have to convert them to
+	// readers so they can be merkle hashed.
+	var segmentBytes [state.QuorumSize][]byte
+	var segmentReaders [state.QuorumSize]*bytes.Reader
+	for i := range segments {
+		segmentBytes[i] = segments[i].Bytes()
+		segmentReaders[i] = bytes.NewReader(segmentBytes[i])
+	}
+
+	// Get the hashes of each segment.
+	for i := range segmentReaders {
+		su.HashSet[i], err = state.MerkleCollapse(segmentReaders[i], atoms)
+		if err != nil {
+			return
+		}
+	}
+
+	// Submit the sector update.
+	input := state.ScriptInput{
+		Deadline: height + 4,
+		Input:    delta.UpdateSectorInput(su),
+		WalletID: id,
+	}
+	delta.SignScriptInput(&input, c.genericWallets[id].SecretKey)
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: id,
-			Input:    input,
-			Deadline: BobbyTables,
-		},
+		Args: input,
 		Resp: nil,
 	})
+
+	// Wait 2 blocks while the update gets accepted.
+	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize))
+
+	// Upload each segment to its respective sibling.
+	for i := range segmentBytes {
+		var accepted bool
+		segmentUpload := delta.SegmentUpload{
+			WalletID:    id,
+			UpdateIndex: 0,
+			NewSegment:  segmentBytes[i],
+		}
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[i].Address,
+			Proc: "Participant.UploadSegment",
+			Args: segmentUpload,
+			Resp: &accepted,
+		})
+	}
+
+	return
 }
-*/

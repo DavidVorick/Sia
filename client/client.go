@@ -103,13 +103,8 @@ func (c *Client) GetHeight() (height uint32, err error) {
 	return
 }
 
-/*
-// Get siblings so that each can be uploaded to individually.  This should be
-// moved to a (c *Client) function that updates the current siblings. I'm
-// actually considering that a client should listen on a quorum, or somehow
-// perform lightweight actions (receive digests?) that allow it to keep up but
-// don't require many resources.
-func (c *Client) RetrieveSiblings() (err error) {
+// Figure out the latest list of siblings in the quorum.
+func (c *Client) RefreshSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
 	var metadata state.Metadata
@@ -124,18 +119,23 @@ func (c *Client) RetrieveSiblings() (err error) {
 			Resp: &metadata,
 		})
 		if err == nil {
+			// Prevents all but one batch from getting through.
 			break
 		}
-		c.siblings = metadata.Siblings
 	}
 	if err != nil {
 		err = errors.New("Could not reach any stored siblings")
 		return
 	}
 
+	// Right now the function just uses the first batch of siblings that
+	// are recieved. In the future it will instead do some smart comparison
+	// and pick the batch of siblings that seems most likely of all the
+	// batches it receives.
+	c.siblings = metadata.Siblings
+
 	return
 }
-*/
 
 /*
 // Closes and destroys the client's RPC server

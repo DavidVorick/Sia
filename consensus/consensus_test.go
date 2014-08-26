@@ -59,12 +59,10 @@ func TestConsensus(t *testing.T) {
 	}
 
 	// Submit a sector update to the tether wallet.
-	var wNil state.Wallet
 	su := state.SectorUpdate{
-		Atoms:                 6,
-		K:                     1,
-		D:                     1,
-		ParentHash:            wNil.SectorSettings.Hash(),
+		Atoms: 6,
+		K:     1,
+		D:     1,
 		ConfirmationsRequired: 3,
 		Deadline:              8,
 	}
