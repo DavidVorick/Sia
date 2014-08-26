@@ -22,7 +22,7 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 	for i := range c.siblings {
 		var segment []byte
 		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[0].Address,
+			Dest: c.siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
 			Args: id,
 			Resp: &segment,
@@ -196,24 +196,28 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 		Deadline:              height + 6,
 	}
 
-	// Get the set of erasure coded data to upload to the quorum.
-	var segments [state.QuorumSize]bytes.Buffer
-	var segmentsWriter [state.QuorumSize]io.Writer
+	// Create segments for the encoder output.
+	var segments [state.QuorumSize]io.Writer
+	var segmentsBuffer [state.QuorumSize]bytes.Buffer
 	for i := range segments {
-		segmentsWriter[i] = &segments[i]
+		segments[i] = &segmentsBuffer[i]
 	}
-	atoms, err := state.RSEncode(file, segmentsWriter, state.StandardK)
+	atoms, err := state.RSEncode(file, segments, state.StandardK)
 	if err != nil {
 		return
 	}
 	su.Atoms = atoms
 
+	// Covert the buffer to byte slices containing the encoded data.
+	var segmentBytes [state.QuorumSize][]byte
+	for i := range segmentBytes {
+		segmentBytes[i] = segmentsBuffer[i].Bytes()
+	}
+
 	// Now that we have written to the buffers, we have to convert them to
 	// readers so they can be merkle hashed.
-	var segmentBytes [state.QuorumSize][]byte
 	var segmentReaders [state.QuorumSize]*bytes.Reader
 	for i := range segments {
-		segmentBytes[i] = segments[i].Bytes()
 		segmentReaders[i] = bytes.NewReader(segmentBytes[i])
 	}
 
