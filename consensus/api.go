@@ -50,6 +50,13 @@ func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct
 	return
 }
 
+func (p *Participant) DownloadSector(id state.WalletID, sector *[]byte) (err error) {
+	p.engineLock.RLock()
+	*sector, err = p.engine.DownloadSector(id)
+	p.engineLock.RUnlock()
+	return
+}
+
 // Metadata is an RPC that returns the current state metadata.
 func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
 	p.engineLock.RLock()

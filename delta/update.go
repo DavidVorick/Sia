@@ -86,6 +86,34 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	return
 }
 
+// DownloadSector opens the sector of a wallet and loads it into []byte
+// 'sector', which is then returned. It is meant as a helper function to the
+// participant.
+func (e *Engine) DownloadSector(id state.WalletID) (sector []byte, err error) {
+	// Open the sector.
+	filename := e.state.SectorFilename(id)
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// Create a slice that will hold the whole sector.
+	info, err := file.Stat()
+	if err != nil {
+		return
+	}
+	sector = make([]byte, info.Size())
+
+	// Read the file into the sector.
+	_, err = file.Read(sector)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 /*
 import (
 	"errors"
