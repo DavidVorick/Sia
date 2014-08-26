@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 // TODO: add docstring
@@ -59,6 +61,15 @@ type UpdateAdvancement struct {
 	SiblingIndex byte
 	WalletID     WalletID
 	UpdateIndex  uint32
+}
+
+func (s *State) SectorUpdateFilename(id WalletID, index uint32) (filename string) {
+	idBytes := siaencoding.EncUint64(uint64(id))
+	idString := siafiles.SafeFilename(idBytes)
+	indexBytes := siaencoding.EncUint32(index)
+	indexString := siafiles.SafeFilename(indexBytes)
+	filename = s.walletPrefix + "." + idString + ".update-" + indexString
+	return
 }
 
 func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {

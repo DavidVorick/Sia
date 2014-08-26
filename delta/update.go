@@ -1,5 +1,91 @@
 package delta
 
+import (
+	"errors"
+	"os"
+
+	"github.com/NebulousLabs/Sia/state"
+)
+
+type SegmentUpload struct {
+	WalletID    state.WalletID
+	UpdateIndex uint32
+	NewSegment  []byte
+}
+
+func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err error) {
+	// Fetch the wallet and the update from the wallet.
+	w, err := e.state.LoadWallet(su.WalletID)
+	if err != nil {
+		return
+	}
+	sectorUpdate, err := w.LoadSectorUpdate(su.UpdateIndex)
+	if err != nil {
+		return
+	}
+
+	// Check whether the update file has already been created, which
+	// indicates whether the upload has already been completed for this
+	// participant.
+	filename := e.state.SectorUpdateFilename(su.WalletID, su.UpdateIndex)
+	if _, err = os.Stat(filename); !os.IsNotExist(err) {
+		err = errors.New("already have upload")
+		return
+	}
+
+	// Check that the NewSegment will fit in the update.
+	if len(su.NewSegment) > int(state.AtomSize)*int(sectorUpdate.Atoms) {
+		err = errors.New("proposed update is larger than allocated update")
+		return
+	}
+
+	// Create the file nad write the new segment.
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+	_, err = file.Write(su.NewSegment)
+	if err != nil {
+		file.Close()
+		os.Remove(filename)
+		return
+	}
+
+	// Pad the remaining file with '0's
+	numZerosNeeded := int(state.AtomSize)*int(sectorUpdate.Atoms) - len(su.NewSegment)
+	empty := make([]byte, numZerosNeeded)
+	_, err = file.Write(empty)
+	if err != nil {
+		file.Close()
+		os.Remove(filename)
+		return
+	}
+
+	// Run a merkle collapse on the file and see if the hash matches.
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		file.Close()
+		os.Remove(filename)
+		return
+	}
+	root, err := state.MerkleCollapse(file, sectorUpdate.Atoms)
+	if err != nil {
+		file.Close()
+		os.Remove(filename)
+		return
+	}
+	if root != sectorUpdate.HashSet[e.siblingIndex] {
+		err = errors.New("hash does not match!")
+		file.Close()
+		os.Remove(filename)
+		return
+	}
+
+	file.Close()
+	accepted = true
+	return
+}
+
 /*
 import (
 	"errors"
