@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"os"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
@@ -131,6 +132,13 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 		w.SectorSettings.HashSet = su.HashSet
 
 		// Copy the file from the update to the file for the sector.
+		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
+		if _, err = os.Stat(filename); os.IsNotExist(err) {
+			// DO SOMETHING TO RECOVER THE FILE
+		} else {
+			siafiles.Copy(s.SectorFilename(sue.WalletID), filename)
+			os.Remove(filename)
+		}
 	} else {
 		// Remove all active updates following this update, inclusive.
 		for i := range w.SectorSettings.ActiveUpdates {
