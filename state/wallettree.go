@@ -1,5 +1,9 @@
 package state
 
+import (
+	"errors"
+)
+
 // A walletNode is the base unit for the WalletTree. The wallet tree is a
 // red-black tree sorted by id. It's used to load balance between quorums and
 // to pick random sectors in logarithmic time. It's also currently used for
@@ -314,4 +318,49 @@ func (s *State) walletNode(id WalletID) *walletNode {
 	}
 
 	return nil
+}
+
+// A parent is the sum of the weight of its two children. When transversing the
+// tree, the left child is the "lightest", containing the lowest weights, the
+// right child is the "middle", containing the next weights, and the parent is
+// the "heaviest", containing all of the higher weights.
+func (s *State) weightNode(weightUint uint64) (wn *walletNode, index uint16, err error) {
+	weight := int(weightUint)
+	if weight > s.walletRoot.weight {
+		err = errors.New("quorum does not have that many atoms")
+		return
+	}
+
+	wn = s.walletRoot
+	for {
+		// Check if the left child contains the weight.
+		if wn.children[0] != nil {
+			if weight < wn.children[0].weight {
+				wn = wn.children[0]
+				continue
+			} else {
+				weight -= wn.children[0].weight
+			}
+		}
+
+		// Check if the right child contains the weight.
+		if wn.children[1] != nil {
+			if weight < wn.children[1].weight {
+				wn = wn.children[1]
+				continue
+			} else {
+				weight -= wn.children[1].weight
+			}
+		}
+
+		// Getting this far means that the parent is winner.
+		index = uint16(weight)
+		break
+	}
+
+	// Safety check - the inside of this loop should never be reached.
+	if index >= uint16(wn.nodeWeight()) {
+		panic("illegal index reached - inconsistency somewhere in wallet tree!")
+	}
+	return
 }

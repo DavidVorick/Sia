@@ -1,10 +1,12 @@
 package state
 
 import (
+	"errors"
 	"io"
 	"os"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
 )
 
 type StorageProof struct {
@@ -81,14 +83,16 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StoragePro
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
-		panic(err)
+		return
+		// panic(err)
 	}
 	defer file.Close()
 
 	// determine numAtoms
 	w, err := s.LoadWallet(id)
 	if err != nil {
-		panic(err)
+		return
+		// panic(err)
 	}
 	numAtoms := w.SectorSettings.Atoms
 
@@ -152,4 +156,28 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 	finalHash := foldHashes(initialHash, proofIndex, hashStack)
 
 	return finalHash == expectedHash
+}
+
+// Proof location uses s.Metadata.PoStorageSeed to determine which atom of
+// which wallet is being checked for during proof of storage.
+func (s *State) ProofLocation() (id WalletID, index uint16, err error) {
+	// Take the first 8 bytes of the storage proof and convert to a uint64 - a
+	// random number.
+	seedInt := siaencoding.DecUint64(s.Metadata.PoStorageSeed[:])
+
+	// Can't take the modulus of 0
+	if s.walletRoot.weight == 0 {
+		err = errors.New("empty quorum")
+		return
+	} else {
+		seedInt %= uint64(s.walletRoot.weight)
+	}
+
+	// Get the node and index associated with the seed weight.
+	node, index, err := s.weightNode(seedInt)
+	if err != nil {
+		return
+	}
+	id = node.id
+	return
 }
