@@ -7,32 +7,23 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-/*
-func downloadWalkthrough(c *client.Client) {
-	var dest string
-	fmt.Print("Destination Filepath: ")
-	ERR fmt.Scanln(&dest)
-	fmt.Println("Downloading File, please wait a few minutes")
-	c.Download(c.CurID, dest)
-}
-*/
-
-/*
-func resizeGenericWalletWalkthrough(c *client.Client) {
-	var atoms uint16
-	var m byte
-	fmt.Print("New size (in atoms): ")
-	ERR fmt.Scanln(&atoms)
-	fmt.Print("Redundancy: ")
-	ERR fmt.Scanln(&m)
-	err := c.ResizeSector(c.CurID, atoms, m)
+func downloadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
+	// Get the name of the filepath to download into.
+	var filename string
+	fmt.Print("Absolute path to download the file to: ")
+	_, err = fmt.Scanln(&filename)
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Sector resized")
+		return
 	}
+
+	// yep... that's it.
+	err = c.DownloadFile(id, filename)
+	if err != nil {
+		return
+	}
+
+	return
 }
-*/
 
 // sendCoinGenericWalletWalkthrough walks the user through sending coins from
 // their generic wallet.
@@ -59,50 +50,28 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err 
 	return
 }
 
-/*
-func sendScriptInputWalkthrough(c *client.Client) {
+func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
+	// Get the name of the file to upload.
 	var filename string
-	fmt.Print("Input file: ")
-	ERR fmt.Scanln("%s", &filename)
-	// read script from file
-	input, err := ioutil.ReadFile(filename)
+	fmt.Print("Absolute path of the file to upload: ")
+	_, err = fmt.Scanln(&filename)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return
 	}
-	err = c.SendCustomInput(c.CurID, input)
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Script input sent")
-	}
-}
-*/
 
-/*
-func uploadToGenericWalletWalkthrough(c *client.Client) {
-	var filename string
-	var k byte
-	fmt.Print("Filename: ")
-	ERR fmt.Scanln(&filename)
-	fmt.Print("K: ")
-	ERR fmt.Scanln(&k)
-	atomsRequired, err := client.CalculateAtoms(filename, k)
+	// yep... that's it.
+	err = c.UploadFile(id, filename)
 	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Printf("Atoms Required: %v\n", atomsRequired)
+		return
 	}
-	fmt.Println("Attempting to Upload File, please wait a few minutes (longer for large files).")
-	c.UploadFile(c.CurID, filename, k)
+
+	return
 }
-*/
 
 // displayGenericWalletHelp prints a list of commands that are available in
 // generic wallet mode.
 func displayGenericWalletHelp() {
 	fmt.Println(
-		"\n",
 		"h:\tHelp\n",
 		"q:\tQuit\n",
 		"d:\tDownload the wallet's file.\n",
@@ -115,12 +84,14 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 	var input string
 	var err error
 	for {
+		fmt.Println()
 		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
 		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			continue
 		}
+		fmt.Println()
 
 		switch input {
 		default:
@@ -133,15 +104,13 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 			return
 
 		case "d", "download":
-			fmt.Println("Download is not currently implemented.")
-			//download(c, id)
+			err = downloadGenericWalkthrough(c, id)
 
 		case "s", "send", "transaction":
-			sendCoinGenericWalletWalkthrough(c, id)
+			err = sendCoinGenericWalletWalkthrough(c, id)
 
 		case "u", "upload":
-			fmt.Println("Uploading is not currently implemented.")
-			//uploadToGenericWallet(c, id)
+			err = uploadGenericWalkthrough(c, id)
 		}
 
 		if err != nil {

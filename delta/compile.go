@@ -118,6 +118,15 @@ func (e *Engine) Compile(b Block) (err error) {
 	// Hash the siblingEntropy to get the new Germ.
 	e.state.Metadata.Germ = state.Entropy(siacrypto.HashBytes(siblingEntropy))
 
+	// Process all of the UpdateAdvancements.
+	for i, ua := range b.UpdateAdvancements {
+		verified, err := e.state.Metadata.Siblings[ua.SiblingIndex].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
+		if err != nil || !verified {
+			continue
+		}
+		e.state.AdvanceUpdate(ua)
+	}
+
 	// Process all of the expiring events in the event list. Right now this
 	// just deletes 'known' scripts whose deadlines have passed, but
 	// eventually it can also add additional script inputs to the
@@ -130,15 +139,6 @@ func (e *Engine) Compile(b Block) (err error) {
 	// distribution of resources based on price paid for tickets.
 	for _, si := range b.ScriptInputs {
 		e.HandleScriptInput(si)
-	}
-
-	// Process all of the UpdateAdvancements.
-	for i, ua := range b.UpdateAdvancements {
-		verified, err := e.state.Metadata.Siblings[ua.SiblingIndex].PublicKey.VerifyObject(b.AdvancementSignatures[i], ua)
-		if err != nil || !verified {
-			continue
-		}
-		e.state.AdvanceUpdate(ua)
 	}
 
 	// Charge wallets for the storage they are consuming, and reward sibings for

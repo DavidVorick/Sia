@@ -87,27 +87,32 @@ func SendCoinInput(dest state.WalletID, amount state.Balance) []byte {
 	)
 }
 
-// ResizeSectorEraseInput returns a script that calls the ResizeSectorErase
-// function. It is intended to be passed to a script that transfers execution
-// to the input.
-func ResizeSectorEraseInput(atoms uint16, m byte) []byte {
-	l, h := short(int(atoms))
-	return []byte{
-		0x02, l, h, // push number of atoms
-		0x44, m, //    call resize
+// UpdateSectorInput returns a script that calls the UpdateSector function. It
+// is intended to be passed to a script that transfers execution to the input.
+func UpdateSectorInput(su state.SectorUpdate) []byte {
+	slen := state.QuorumSize * byte(siacrypto.HashSize) // TODO: this must be fixed for QuorumSize > 8
+	hashset := make([]byte, slen)
+	for i, h := range su.HashSet {
+		copy(hashset[i*siacrypto.HashSize:], h[:])
 	}
-}
-
-// ProposeUploadInput returns a script that calls the ProposeUploadInput
-// function. It is intended to be passed to a script that transfers execution
-// to the input.
-func ProposeUploadInput(encUA []byte) []byte {
-	return append([]byte{
-		0xE6, 0xFF, // move data pointer to encoded args
-		0xE4, //       push args
-		0x45, //       call ProposeUpload
-		0xFF, //       exit
-	}, encUA...)
+	return appendAll(
+		[]byte{
+			0xE6, 0xFF, // move data pointer to parent hash
+			0x34, 0x02, // push atoms
+			0x34, 0x01, // push k
+			0x34, 0x01, // push d
+			0x34, slen, // push hashset
+			0x34, 0x01, // push confreq
+			0x34, 0x04, // push deadline
+			0x44, //       call UpdateSector
+			0xFF, //       exit
+		},
+		siaencoding.EncUint16(su.Atoms),
+		[]byte{su.K, su.D},
+		hashset,
+		[]byte{su.ConfirmationsRequired},
+		siaencoding.EncUint32(su.Deadline),
+	)
 }
 
 // The FountainScript acts as a fountain, and can be called to spawn a new

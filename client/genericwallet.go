@@ -1,7 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"errors"
+	"io"
+	"os"
 	"time"
 
 	"github.com/NebulousLabs/Sia/consensus"
@@ -11,33 +14,51 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-/*
-// resize sector associated with wallet
-func (c *Client) ResizeSector(w state.WalletID, atoms uint16, k byte) (err error) {
-	_, exists := c.genericWallets[src]
-	if !exists {
-		err = fmt.Errorf("Could not access wallet")
-		return
+func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
+	// Download a segment from each person in the quorum, until k segments
+	// are grabbed.
+	var segments []io.Reader
+	var indicies []byte
+	for i := range c.siblings {
+		var segment []byte
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[i].Address,
+			Proc: "Participant.DownloadSegment",
+			Args: id,
+			Resp: &segment,
+		})
+
+		segments = append(segments, bytes.NewReader(segment))
+		indicies = append(indicies, byte(i))
+		if len(indicies) == state.StandardK {
+			break
+		}
 	}
 
-	input := delta.ResizeSectorEraseInput(atoms, k)
-	input, err = delta.SignInput(c.genericWallets[w].SK, input)
+	// Create the file.
+	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
 
-	c.Broadcast(network.Message{
-		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: w,
-			Input:    input,
-			Deadline: BobbyTables,
-		},
-		Resp: nil,
-	})
+	// Call recover, writing into the file.
+	_, err = state.RSRecover(segments, indicies, file, state.StandardK)
+	if err != nil {
+		return
+	}
+
+	// Sort out the padding, removing what padding has been added.
+	keypair, exists := c.genericWallets[id]
+	if !exists {
+		return
+	}
+	err = file.Truncate(keypair.OriginalSize)
+	if err != nil {
+		return
+	}
+
 	return
 }
-*/
 
 // Submit a wallet request to the fountain wallet.
 func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
@@ -139,18 +160,114 @@ func (c *Client) SendCoinGeneric(source state.WalletID, destination state.Wallet
 	return
 }
 
-/*
-// send a user-specified script input
-func (c *Client) SendCustomInput(id state.WalletID, input []byte) (err error) {
-	return c.router.SendMessage(network.Message{
-		Dest: c.connectAddress,
+// UpdateSectorGeneric takes the id of a generic wallet, along with a file, and
+// replaces whatever sector/file is currently housed in the generic wallet with
+// the new file.
+func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
+	// Check that the wallet is available to this client.
+	if _, exists := c.genericWallets[id]; !exists {
+		err = errors.New("do not have access to given wallet")
+		return
+	}
+
+	// Get a fresh list of siblings.
+	c.RefreshSiblings()
+
+	// Calculate the size of the file.
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return
+	}
+	fileSize := info.Size()
+
+	// Create basic sector update.
+	height, err := c.GetHeight()
+	if err != nil {
+		return
+	}
+	su := state.SectorUpdate{
+		K: state.StandardK,
+		ConfirmationsRequired: state.StandardConfirmations,
+		Deadline:              height + 6,
+	}
+
+	// Create segments for the encoder output.
+	var segments [state.QuorumSize]io.Writer
+	var segmentsBuffer [state.QuorumSize]bytes.Buffer
+	for i := range segments {
+		segments[i] = &segmentsBuffer[i]
+	}
+	atoms, err := state.RSEncode(file, segments, state.StandardK)
+	if err != nil {
+		return
+	}
+	su.Atoms = atoms
+
+	// Covert the buffer to byte slices containing the encoded data.
+	var segmentBytes [state.QuorumSize][]byte
+	for i := range segmentBytes {
+		segmentBytes[i] = segmentsBuffer[i].Bytes()
+	}
+
+	// Now that we have written to the buffers, we have to convert them to
+	// readers so they can be merkle hashed.
+	var segmentReaders [state.QuorumSize]*bytes.Reader
+	for i := range segments {
+		segmentReaders[i] = bytes.NewReader(segmentBytes[i])
+	}
+
+	// Get the hashes of each segment.
+	for i := range segmentReaders {
+		su.HashSet[i], err = state.MerkleCollapse(segmentReaders[i], atoms)
+		if err != nil {
+			return
+		}
+	}
+
+	// Submit the sector update.
+	input := state.ScriptInput{
+		Deadline: height + 4,
+		Input:    delta.UpdateSectorInput(su),
+		WalletID: id,
+	}
+	delta.SignScriptInput(&input, c.genericWallets[id].SecretKey)
+	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: id,
-			Input:    input,
-			Deadline: BobbyTables,
-		},
+		Args: input,
 		Resp: nil,
 	})
+
+	// Wait 3 blocks while the update gets accepted.
+	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize) * 3)
+
+	// Upload each segment to its respective sibling.
+	for i := range segmentBytes {
+		var accepted bool
+		segmentUpload := delta.SegmentUpload{
+			WalletID:    id,
+			UpdateIndex: 0,
+			NewSegment:  segmentBytes[i],
+		}
+		err = c.router.SendMessage(network.Message{
+			Dest: c.siblings[i].Address,
+			Proc: "Participant.UploadSegment",
+			Args: segmentUpload,
+			Resp: &accepted,
+		})
+
+		if err != nil {
+			println("error, but handle bad.")
+		}
+	}
+
+	originalKeypair := c.genericWallets[id]
+	originalKeypair.OriginalSize = fileSize
+	c.genericWallets[id] = originalKeypair
+
+	return
 }
-*/

@@ -2,8 +2,15 @@ package state
 
 import (
 	"errors"
+	"os"
 
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
+)
+
+const (
+	StandardConfirmations = 3
 )
 
 // TODO: add docstring
@@ -19,8 +26,7 @@ type UpdateID struct {
 // successfully updated. If no, the upload is rejected and deleted from the
 // system.
 type SectorUpdate struct {
-	Index      uint32         // Update # for this wallet.
-	ParentHash siacrypto.Hash // Hash of thi updates parent.
+	Index uint32 // Update # for this wallet.
 
 	// The updated SectorSettings values.
 	Atoms uint16
@@ -59,6 +65,15 @@ type UpdateAdvancement struct {
 	SiblingIndex byte
 	WalletID     WalletID
 	UpdateIndex  uint32
+}
+
+func (s *State) SectorUpdateFilename(id WalletID, index uint32) (filename string) {
+	idBytes := siaencoding.EncUint64(uint64(id))
+	idString := siafiles.SafeFilename(idBytes)
+	indexBytes := siaencoding.EncUint32(index)
+	indexString := siafiles.SafeFilename(indexBytes)
+	filename = s.walletPrefix + "." + idString + ".update-" + indexString
+	return
 }
 
 func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
@@ -120,6 +135,13 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 		w.SectorSettings.HashSet = su.HashSet
 
 		// Copy the file from the update to the file for the sector.
+		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
+		if _, err = os.Stat(filename); os.IsNotExist(err) {
+			// DO SOMETHING TO RECOVER THE FILE
+		} else {
+			siafiles.Copy(s.SectorFilename(sue.WalletID), filename)
+			os.Remove(filename)
+		}
 	} else {
 		// Remove all active updates following this update, inclusive.
 		for i := range w.SectorSettings.ActiveUpdates {
@@ -155,6 +177,11 @@ func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
 			w.SectorSettings.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
 			break
 		}
+	}
+
+	err = s.SaveWallet(w)
+	if err != nil {
+		return
 	}
 
 	return
@@ -197,22 +224,9 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	}
 
 	// Check that the deadline is in bounds.
-	if su.Deadline < s.Metadata.Height+MaxDeadline {
+	if su.Deadline > s.Metadata.Height+MaxDeadline {
 		err = errors.New("deadline too far in the future")
 		return
-	}
-
-	// Check that the hash of the most recent update matches the parent hash.
-	if len(w.SectorSettings.ActiveUpdates) == 0 {
-		if su.ParentHash != w.SectorSettings.Hash() {
-			err = errors.New("unrecognized parent hash - refusing to continue")
-			return
-		}
-	} else {
-		if su.ParentHash != w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Hash() {
-			err = errors.New("parent hash doesn't match the most recent active upload - refusing to continue")
-			return
-		}
 	}
 
 	// Figure out the update index.

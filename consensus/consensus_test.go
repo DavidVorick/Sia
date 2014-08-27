@@ -27,11 +27,12 @@ func TestConsensus(t *testing.T) {
 	}
 
 	// Create a new quorum.
+	tetherWalletID := state.WalletID(1)
 	mr, err := network.NewRPCServer(11000)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), 1, tetherWalletPK)
+	p, err := CreateBootstrapParticipant(mr, siafiles.TempFilename("TestConsensus-Start"), tetherWalletID, tetherWalletPK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +58,28 @@ func TestConsensus(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Submit a sector update to the tether wallet.
+	su := state.SectorUpdate{
+		Atoms: 6,
+		K:     1,
+		D:     1,
+		ConfirmationsRequired: 3,
+		Deadline:              8,
+	}
+	si = state.ScriptInput{
+		Deadline: 6,
+		Input:    delta.UpdateSectorInput(su),
+		WalletID: 1,
+	}
+	err = delta.SignScriptInput(&si, tetherWalletSK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.AddScriptInput(si, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create a participant that will join the current existing
 	// participant. No timing shortcuts can be taken here, as the new
 	// participant is doing explicitly timed sleeping. The tether wallet
@@ -72,7 +95,7 @@ func TestConsensus(t *testing.T) {
 		}
 		quorumSiblingAddresses = append(quorumSiblingAddresses, sibling.Address)
 	}
-	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), 1, tetherWalletSK, quorumSiblingAddresses)
+	joiningParticipant, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join1"), tetherWalletID, tetherWalletSK, quorumSiblingAddresses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,14 +141,14 @@ func TestConsensus(t *testing.T) {
 	// for both to finish.
 	joinChan := make(chan *Participant)
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), 1, tetherWalletSK, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join2"), tetherWalletID, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
 		joinChan <- p
 	}()
 	go func() {
-		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), 1, tetherWalletSK, quorumSiblingAddresses)
+		p, err := CreateJoiningParticipant(mr, siafiles.TempFilename("TestConsensus-Join3"), tetherWalletID, tetherWalletSK, quorumSiblingAddresses)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,6 +169,18 @@ func TestConsensus(t *testing.T) {
 		participant.engineLock.RUnlock()
 	}
 
+	// Have 3 participants submit an update advancement.
+	for _, participant := range []*Participant{p, joiningParticipant, join3} {
+		advancement := state.UpdateAdvancement{
+			SiblingIndex: participant.siblingIndex,
+			WalletID:     tetherWalletID,
+			UpdateIndex:  0,
+		}
+		participant.updatesLock.Lock()
+		participant.updateAdvancements = append(participant.updateAdvancements, advancement)
+		participant.updatesLock.Unlock()
+	}
+
 	// Check that all participants have the script that was submitted
 	// earlier.
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
@@ -161,7 +196,7 @@ func TestConsensus(t *testing.T) {
 	}
 
 	// Wait through three full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(NumSteps) * 3)
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 5)
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
 		for j, sibling := range participant.engine.Metadata().Siblings {
@@ -170,6 +205,19 @@ func TestConsensus(t *testing.T) {
 			}
 		}
 		participant.engineLock.RUnlock()
+	}
+
+	// Verify that the sector update passed.
+	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
+		var w state.Wallet
+		err = participant.Wallet(tetherWalletID, &w)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if w.SectorSettings.Atoms != 6 {
+			t.Error("Sector update does not appear to have occurred in participant", i)
+		}
 	}
 
 	// The submitted script should have expired and no longer needs to be

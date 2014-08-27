@@ -50,11 +50,46 @@ func (p *Participant) ConsensusProgress(_ struct{}, cps *ConsensusProgressStruct
 	return
 }
 
+func (p *Participant) DownloadSegment(id state.WalletID, segment *[]byte) (err error) {
+	p.engineLock.RLock()
+	*segment, err = p.engine.DownloadSector(id)
+	p.engineLock.RUnlock()
+	return
+}
+
 // Metadata is an RPC that returns the current state metadata.
 func (p *Participant) Metadata(_ struct{}, smd *state.Metadata) (err error) {
 	p.engineLock.RLock()
 	*smd = p.engine.Metadata()
 	p.engineLock.RUnlock()
+	return
+}
+
+// UploadSegment accepts a SegmentUpload contianing a wallet id, an update
+// index, and a new segment. This is processed by the engine. If the
+// segmentupload is accepted, then an update advancement is added to be sent to
+// the quorum in the next heartbeat.
+func (p *Participant) UploadSegment(upload delta.SegmentUpload, accepted *bool) (err error) {
+	p.engineLock.Lock()
+	*accepted, err = p.engine.ProcessSegmentUpload(upload)
+	p.engineLock.Unlock()
+	if err != nil {
+		return
+	}
+
+	if *accepted {
+		// Add an upload advancement confirming that we have our
+		// segment of this upload.
+		newAdvancement := state.UpdateAdvancement{
+			SiblingIndex: p.siblingIndex,
+			WalletID:     upload.WalletID,
+			UpdateIndex:  upload.UpdateIndex,
+		}
+		p.updatesLock.Lock()
+		p.updateAdvancements = append(p.updateAdvancements, newAdvancement)
+		p.updatesLock.Unlock()
+	}
+
 	return
 }
 

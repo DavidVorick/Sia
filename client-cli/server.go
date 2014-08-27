@@ -208,7 +208,7 @@ func serverCreationWalkthrough(c *client.Client) (err error) {
 
 func displayServerHelp() {
 	fmt.Println(
-		"h:\tHelp\n",
+		" h:\tHelp\n",
 		"q:\tReturn to home mode.\n",
 		"j:\tCreate a new participant and join an existing quorum.\n",
 		"m:\tPrint the metadata of a participant.\n",

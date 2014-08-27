@@ -17,6 +17,8 @@ const (
 	MinConfirmations = 3    // Eventually 65
 	MaxK             = 2    // Eventually 51
 	MinK             = 1
+
+	StandardK = 2
 )
 
 // SectorSettings contains all the information about the sector of a wallet,

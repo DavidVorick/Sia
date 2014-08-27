@@ -153,7 +153,7 @@ func serverModeSwitch(c *client.Client) (err error) {
 // a description of what they do.
 func displayHomeHelp() {
 	fmt.Println(
-		"h:\tHelp\n",
+		" h:\tHelp\n",
 		"q:\tQuit\n",
 		"b:\tBootstrap through an address\n",
 		"c:\tConnect to network\n",
