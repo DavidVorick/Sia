@@ -8,8 +8,8 @@ import (
 )
 
 type StorageProof struct {
-	Base       [AtomSize]byte
-	ProofStack []siacrypto.Hash
+	AtomBase  [AtomSize]byte
+	HashStack []siacrypto.Hash
 }
 
 // buildProof constructs a list of hashes using the following procedure. The
@@ -76,7 +76,7 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 }
 
 // BuildStorageProof is a simple wrapper around buildProof.
-func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
+func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StorageProof) {
 	// read the sector data
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
@@ -92,7 +92,12 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (proofBytes []
 	}
 	numAtoms := w.SectorSettings.Atoms
 
-	return buildProof(file, numAtoms, proofIndex)
+	atomBase, hashStack := buildProof(file, numAtoms, proofIndex)
+	copy(sp.AtomBase[:], atomBase)
+	for i := range hashStack {
+		sp.HashStack = append(sp.HashStack, *hashStack[i])
+	}
+	return
 }
 
 // foldHashes traverses a proofStack, hashing elements together to produce the
@@ -121,7 +126,7 @@ func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.
 // corresponding proofStack, can be used to reconstruct the original root
 // Merkle hash.
 // TODO: think about removing this function or combining it with foldHashes
-func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, proofBase []byte, proofStack []*siacrypto.Hash) bool {
+func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, sp StorageProof) bool {
 	// get the intended hash from the segment stored on disk
 	sectorFilename := s.SectorFilename(id)
 	file, err := os.Open(sectorFilename)
@@ -139,8 +144,12 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 	}
 
 	// build the hash up from the base
-	initialHash := siacrypto.HashBytes(proofBase)
-	finalHash := foldHashes(initialHash, proofIndex, proofStack)
+	initialHash := siacrypto.HashBytes(sp.AtomBase[:])
+	hashStack := make([]*siacrypto.Hash, len(sp.HashStack))
+	for i := range sp.HashStack {
+		hashStack[i] = &sp.HashStack[i]
+	}
+	finalHash := foldHashes(initialHash, proofIndex, hashStack)
 
 	return finalHash == expectedHash
 }

@@ -170,6 +170,7 @@ func (e *Engine) Compile(b Block) (err error) {
 	}
 	e.state.Metadata.ParentBlock = blockHash
 	e.state.Metadata.Height++
+	e.state.Metadata.PoStorageSeed = e.state.Metadata.Germ
 
 	// Save the block.
 	err = e.saveBlock(b)

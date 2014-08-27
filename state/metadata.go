@@ -19,5 +19,5 @@ type Metadata struct {
 	ParentBlock    siacrypto.Hash
 	Height         uint32
 	RecentSnapshot uint32
-	PoStorageSeed  siacrypto.Hash
+	PoStorageSeed  Entropy
 }
