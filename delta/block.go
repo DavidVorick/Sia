@@ -14,9 +14,9 @@ const (
 // every block. Each block contains an array of [state.QuorumSize] heartbeats,
 // and sets the value to 'nil' if nothing was submitted.
 type Heartbeat struct {
-	ParentBlock siacrypto.Hash
-	Entropy     state.Entropy
-	// storage proof
+	ParentBlock  siacrypto.Hash
+	Entropy      state.Entropy
+	StorageProof state.StorageProof
 }
 
 // A Block contains all the data that is necessary to move the quorum from one

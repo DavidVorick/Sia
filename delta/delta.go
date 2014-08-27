@@ -17,7 +17,6 @@ import (
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
 //
-// SaveSnapshot() should be called upon initialization.
 // - recentHistoryHead needs to be initialized to ^uint32(0).
 // - activeHistoryLength should be initialized to SnapshotLength.
 // - e.state.Metadata.RecentSnapshot needs to be initialized to ^uint32(0) - (SnapshotLength-1),

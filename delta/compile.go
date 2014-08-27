@@ -109,7 +109,17 @@ func (e *Engine) Compile(b Block) (err error) {
 			continue
 		}
 
-		// proof of storage verification
+		// Verify the storage proof.
+		walletID, proofIndex, err := e.state.ProofLocation()
+		if err != nil {
+			// ??? What do we do here? Panic?
+			fmt.Println("MAJOR PROTOCOL BREAKDOWN DURING PROOF OF STORAGE = FILE A BUG REPORT")
+		}
+		if !e.state.VerifyStorageProof(walletID, proofIndex, byte(i), heartbeat.StorageProof) {
+			fmt.Println("A host has failed the storage proof.")
+			fmt.Println(i)
+			fmt.Println(e.state.Metadata.Siblings[i])
+		}
 
 		// Append the entropy to siblingEntropy.
 		siblingEntropy = append(siblingEntropy, heartbeat.Entropy[:]...)
