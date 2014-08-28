@@ -13,7 +13,7 @@ type Client struct {
 	metadata state.Metadata
 
 	// Generic Wallets
-	genericWallets map[state.WalletID]GenericWallet
+	genericWallets map[GenericWalletID]GenericWallet
 
 	// Participant Server
 	participantServer *Server
@@ -24,7 +24,7 @@ type Client struct {
 func NewClient() (c *Client, err error) {
 	// Initialize vital variables.
 	c = new(Client)
-	c.genericWallets = make(map[state.WalletID]GenericWallet)
+	c.genericWallets = make(map[GenericWalletID]GenericWallet)
 
 	// Process config file.
 	err = c.processConfigFile()

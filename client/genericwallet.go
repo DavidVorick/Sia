@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -13,6 +14,12 @@ import (
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
+
+// A GenericWalletID is currently just a normal WalletID, but enforces type
+// safety when making calls to generic wallet functions in the client. Also,
+// when asked for a generic wallet, the client will only return the ID instead
+// of the whole wallet; this is a safer way to interact with the wallet type.
+type GenericWalletID state.WalletID
 
 // A GenericWallet is a transportable struct which points to a wallet in the
 // quorum of id 'id'. The wallet is assumed to have a generic script body which
@@ -26,6 +33,21 @@ type GenericWallet struct {
 	SecretKey siacrypto.SecretKey
 
 	OriginalFileSize int64
+}
+
+// genericWallet is a helper function that fetches and returns a generic wallet
+// when given a generic wallet id. It's not exported because the generic
+// wallets are not meant to leave the client - all modifications that happen to
+// them should be performed from within the client package.
+func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
+	var exists bool
+	*gw, exists = c.genericWallets[gwid]
+	if !exists {
+		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
+		return
+	}
+
+	return
 }
 
 // Download the sector into filepath 'filename'.
@@ -105,7 +127,7 @@ func (gw *GenericWallet) SendCoin(c *Client, destination state.WalletID, amount 
 // the new file.
 func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	// Check that the wallet is available to this client.
-	if _, exists := c.genericWallets[id]; !exists {
+	if _, exists := c.genericWallets[GenericWalletID(id)]; !exists {
 		err = errors.New("do not have access to given wallet")
 		return
 	}
@@ -171,7 +193,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 		Input:    delta.UpdateSectorInput(su),
 		WalletID: id,
 	}
-	delta.SignScriptInput(&input, c.genericWallets[id].SecretKey)
+	delta.SignScriptInput(&input, c.genericWallets[GenericWalletID(id)].SecretKey)
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
@@ -201,9 +223,9 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 		}
 	}
 
-	originalKeypair := c.genericWallets[id]
+	originalKeypair := c.genericWallets[GenericWalletID(id)]
 	originalKeypair.OriginalFileSize = fileSize
-	c.genericWallets[id] = originalKeypair
+	c.genericWallets[GenericWalletID(id)] = originalKeypair
 
 	return
 }

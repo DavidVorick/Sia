@@ -96,7 +96,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	c.participantServer.participants[name] = newParticipant
 
 	// Add the wallet to the client list of generic wallets.
-	c.genericWallets[sibID] = GenericWallet{
+	c.genericWallets[GenericWalletID(sibID)] = GenericWallet{
 		PublicKey: pk,
 		SecretKey: sk,
 	}
@@ -122,7 +122,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	}
 
 	// Verify that the sibID given is available to the client.
-	_, exists := c.genericWallets[sibID]
+	_, exists := c.genericWallets[GenericWalletID(sibID)]
 	if !exists {
 		err = errors.New("no known wallet of that id")
 		return
@@ -134,7 +134,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 		siblingAddresses = append(siblingAddresses, sibling.Address)
 	}
 
-	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SecretKey, siblingAddresses)
+	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[GenericWalletID(sibID)].SecretKey, siblingAddresses)
 	if err != nil {
 		return
 	}

@@ -18,7 +18,7 @@ import (
 func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 	ids = make([]state.WalletID, 0, len(c.genericWallets))
 	for id := range c.genericWallets {
-		ids = append(ids, id)
+		ids = append(ids, state.WalletID(id))
 	}
 	// Add other types of wallets as they are implemented.
 	return
@@ -28,7 +28,7 @@ func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 // returned if the wallet is not found by the client.
 func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	// Check if the wallet is a generic type.
-	_, exists := c.genericWallets[id]
+	_, exists := c.genericWallets[GenericWalletID(id)]
 	if exists {
 		walletType = "generic"
 		return
@@ -41,8 +41,8 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 }
 
 func (c *Client) GenericWallet(id state.WalletID) (gw *GenericWallet, err error) {
-	if _, exists := c.genericWallets[id]; exists {
-		*gw = c.genericWallets[id]
+	if _, exists := c.genericWallets[GenericWalletID(id)]; exists {
+		*gw = c.genericWallets[GenericWalletID(id)]
 	} else {
 		err = fmt.Errorf("could not find generic wallet of id %v", id)
 	}
@@ -108,7 +108,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		return
 	}
 
-	c.genericWallets[id] = gw
+	c.genericWallets[GenericWalletID(id)] = gw
 
 	return
 }
@@ -118,7 +118,7 @@ func (c *Client) SaveAllWallets() (err error) {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
-		err = SaveWallet(id, keypair, filename)
+		err = SaveWallet(state.WalletID(id), keypair, filename)
 		if err != nil {
 			return
 		}
