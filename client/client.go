@@ -88,23 +88,6 @@ func (c *Client) Connect(port uint16) (err error) {
 	return
 }
 
-// Get height talks to sibling 0 and returns the height of the quorum, as
-// reported by sibling 0.
-func (c *Client) GetHeight() (height uint32, err error) {
-	var m state.Metadata
-	err = c.router.SendMessage(network.Message{
-		Dest: c.metadata.Siblings[0].Address,
-		Proc: "Participant.Metadata",
-		Args: struct{}{},
-		Resp: &m,
-	})
-	if err != nil {
-		return
-	}
-	height = m.Height
-	return
-}
-
 // Figure out the latest list of siblings in the quorum.
 func (c *Client) RefreshSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The

@@ -88,18 +88,13 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	gw.SecretKey = sk
 
 	// Get the current height of the quorum.
-	currentHeight, err := c.GetHeight()
-	if err != nil {
-		return
-	}
-
 	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: state.ScriptInput{
 			WalletID: delta.FountainWalletID,
 			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
-			Deadline: currentHeight + state.MaxDeadline,
+			Deadline: c.metadata.Height + state.MaxDeadline,
 		},
 		Resp: nil,
 	})
@@ -137,15 +132,10 @@ func (c *Client) SendCoinGeneric(source state.WalletID, destination state.Wallet
 
 	// Get the current height of the quorum, for setting the deadline on
 	// the script input.
-	currentHeight, err := c.GetHeight()
-	if err != nil {
-		return
-	}
-
 	input := state.ScriptInput{
 		WalletID: source,
 		Input:    delta.SendCoinInput(destination, amount),
-		Deadline: currentHeight + state.MaxDeadline,
+		Deadline: c.metadata.Height + state.MaxDeadline,
 	}
 	err = delta.SignScriptInput(&input, c.genericWallets[source].SecretKey)
 	if err != nil {
@@ -186,14 +176,10 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	fileSize := info.Size()
 
 	// Create basic sector update.
-	height, err := c.GetHeight()
-	if err != nil {
-		return
-	}
 	su := state.SectorUpdate{
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
-		Deadline:              height + 6,
+		Deadline:              c.metadata.Height + 6,
 	}
 
 	// Create segments for the encoder output.
@@ -231,7 +217,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 
 	// Submit the sector update.
 	input := state.ScriptInput{
-		Deadline: height + 4,
+		Deadline: c.metadata.Height + 4,
 		Input:    delta.UpdateSectorInput(su),
 		WalletID: id,
 	}
