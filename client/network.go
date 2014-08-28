@@ -41,9 +41,11 @@ func (c *Client) Connect(port uint16) (err error) {
 }
 
 // Figure out the latest list of siblings in the quorum.
-func (c *Client) RefreshSiblings() (err error) {
-	// Iterate through known siblings until someone provides an updated list. The
-	// first answer given is trusted, this is insecure.
+func (c *Client) RefreshMetadata() (err error) {
+	// Iterate through known siblings until someone provides an updated list.
+	// The first answer given is trusted, this is insecure. A separate
+	// variable, 'metadata', is used instead of 'c.metadata' because an
+	// erroneous call may wipe out the metadata otherwise.
 	var metadata state.Metadata
 	for i := range c.metadata.Siblings {
 		if c.metadata.Siblings[i].Address.Host == "" {
@@ -56,7 +58,7 @@ func (c *Client) RefreshSiblings() (err error) {
 			Resp: &metadata,
 		})
 		if err == nil {
-			// Prevents all but one batch from getting through.
+			// End the loop after first success.
 			break
 		}
 	}
@@ -65,11 +67,7 @@ func (c *Client) RefreshSiblings() (err error) {
 		return
 	}
 
-	// Right now the function just uses the first batch of siblings that
-	// are recieved. In the future it will instead do some smart comparison
-	// and pick the batch of siblings that seems most likely of all the
-	// batches it receives.
-	c.metadata.Siblings = metadata.Siblings
+	c.metadata = metadata
 
 	return
 }

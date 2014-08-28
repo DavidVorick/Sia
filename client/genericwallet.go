@@ -35,6 +35,12 @@ type GenericWallet struct {
 	OriginalFileSize int64
 }
 
+// Helper function on GenericWallet that calculates and returns the id to the
+// wallet.
+func (gw GenericWallet) ID() GenericWalletID {
+	return GenericWalletID(gw.WalletID)
+}
+
 // genericWallet is a helper function that fetches and returns a generic wallet
 // when given a generic wallet id. It's not exported because the generic
 // wallets are not meant to leave the client - all modifications that happen to
@@ -106,12 +112,14 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	return
 }
 
-func (gw GenericWallet) ID() GenericWalletID {
-	return GenericWalletID(gw.WalletID)
-}
-
 // Send coins to wallet 'destination'.
-func (gw *GenericWallet) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
+func (gwid GenericWalletID) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
+	if err != nil {
+		return
+	}
+
 	// Get the current height of the quorum, for setting the deadline on
 	// the script input.
 	input := state.ScriptInput{
@@ -132,18 +140,16 @@ func (gw *GenericWallet) SendCoin(c *Client, destination state.WalletID, amount 
 	return
 }
 
-// UpdateSectorGeneric takes the id of a generic wallet, along with a file, and
-// replaces whatever sector/file is currently housed in the generic wallet with
-// the new file.
-func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
-	// Check that the wallet is available to this client.
-	if _, exists := c.genericWallets[GenericWalletID(id)]; !exists {
-		err = errors.New("do not have access to given wallet")
+// Upload takes a file as input and uploads it to the wallet.
+func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
+	if err != nil {
 		return
 	}
 
-	// Get a fresh list of siblings.
-	c.RefreshSiblings()
+	// Refresh the metadata for greatest chance of success.
+	c.RefreshMetadata()
 
 	// Calculate the size of the file.
 	file, err := os.Open(filename)
@@ -161,7 +167,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	su := state.SectorUpdate{
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
-		Deadline:              c.metadata.Height + 6,
+		Deadline:              c.metadata.Height + 5,
 	}
 
 	// Create segments for the encoder output.
@@ -201,9 +207,9 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	input := state.ScriptInput{
 		Deadline: c.metadata.Height + 4,
 		Input:    delta.UpdateSectorInput(su),
-		WalletID: id,
+		WalletID: gw.WalletID,
 	}
-	delta.SignScriptInput(&input, c.genericWallets[GenericWalletID(id)].SecretKey)
+	delta.SignScriptInput(&input, c.genericWallets[gwid].SecretKey)
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
@@ -214,28 +220,35 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize) * 3)
 
 	// Upload each segment to its respective sibling.
+	var successes byte
 	for i := range segmentBytes {
-		var accepted bool
+		// Create a segment upload for the sibling of index 'i'.
 		segmentUpload := delta.SegmentUpload{
-			WalletID:    id,
+			WalletID:    gw.WalletID,
 			UpdateIndex: 0,
 			NewSegment:  segmentBytes[i],
 		}
-		err = c.router.SendMessage(network.Message{
+
+		var accepted bool
+		err2 := c.router.SendMessage(network.Message{
 			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.UploadSegment",
 			Args: segmentUpload,
 			Resp: &accepted,
 		})
-
-		if err != nil {
-			println("error, but handle bad.")
+		if err2 == nil {
+			successes++
 		}
 	}
 
-	originalKeypair := c.genericWallets[GenericWalletID(id)]
-	originalKeypair.OriginalFileSize = fileSize
-	c.genericWallets[GenericWalletID(id)] = originalKeypair
+	// Check that at least K segments were uploaded.
+	if successes < state.StandardConfirmations {
+		err = errors.New("not enough upload confirmations - upload failed")
+		return
+	}
+
+	// Update the file size information attached to this wallet.
+	gw.OriginalFileSize = fileSize
 
 	return
 }

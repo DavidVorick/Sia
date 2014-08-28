@@ -41,7 +41,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet)
 		return
 	}
 
-	err = gw.SendCoin(c, destinationID, state.NewBalance(amount))
+	err = gw.ID().SendCoin(c, destinationID, state.NewBalance(amount))
 	if err != nil {
 		return
 	}
@@ -49,7 +49,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet)
 	return
 }
 
-func uploadGenericWalkthrough(c *client.Client, id client.GenericWalletID) (err error) {
+func uploadGenericWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get the name of the file to upload.
 	var filename string
 	fmt.Print("Absolute path of the file to upload: ")
@@ -58,8 +58,7 @@ func uploadGenericWalkthrough(c *client.Client, id client.GenericWalletID) (err 
 		return
 	}
 
-	// yep... that's it.
-	err = c.UploadFile(state.WalletID(id), filename)
+	err = gw.ID().Upload(c, filename)
 	if err != nil {
 		return
 	}
@@ -109,7 +108,7 @@ func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
 			err = sendCoinGenericWalletWalkthrough(c, gw)
 
 		case "u", "upload":
-			err = uploadGenericWalkthrough(c, gw.ID())
+			err = uploadGenericWalkthrough(c, gw)
 		}
 
 		if err != nil {
