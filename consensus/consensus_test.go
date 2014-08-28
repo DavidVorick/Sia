@@ -64,8 +64,9 @@ func TestConsensus(t *testing.T) {
 		K:     1,
 		D:     1,
 		ConfirmationsRequired: 3,
-		Deadline:              8,
 	}
+	su.Event.Deadline = 8
+
 	si = state.ScriptInput{
 		Deadline: 6,
 		Input:    delta.UpdateSectorInput(su),

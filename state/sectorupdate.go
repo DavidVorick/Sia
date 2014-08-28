@@ -25,8 +25,6 @@ type UpdateID struct {
 // successfully updated. If no, the upload is rejected and deleted from the
 // system.
 type SectorUpdate struct {
-	Index uint32 // Update # for this wallet.
-
 	// The updated Sector values.
 	Atoms uint16
 	K     byte
@@ -44,7 +42,7 @@ type SectorUpdate struct {
 	ConfirmationsRequired byte
 	Confirmations         [QuorumSize]bool
 
-	Deadline uint32
+	Event SectorUpdateEvent
 }
 
 // An update advancement is a tool that siblings use to signify that they have
@@ -70,7 +68,7 @@ func (s *State) SectorUpdateFilename(id WalletID, index uint32) (filename string
 
 func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
 	for i := range w.Sector.ActiveUpdates {
-		if w.Sector.ActiveUpdates[i].Index == index {
+		if w.Sector.ActiveUpdates[i].Event.UpdateIndex == index {
 			su = w.Sector.ActiveUpdates[i]
 			return
 		}
@@ -89,7 +87,7 @@ func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
 	}
 
 	for i := range w.Sector.ActiveUpdates {
-		if w.Sector.ActiveUpdates[i].Index == ua.UpdateIndex {
+		if w.Sector.ActiveUpdates[i].Event.UpdateIndex == ua.UpdateIndex {
 			w.Sector.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
 			break
 		}
@@ -140,29 +138,24 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	}
 
 	// Check that the deadline is in bounds.
-	if su.Deadline > s.Metadata.Height+MaxDeadline {
+	if su.Event.Deadline > s.Metadata.Height+MaxDeadline {
 		err = errors.New("deadline too far in the future")
 		return
 	}
 
 	// Figure out the update index.
-	var index uint32
 	if len(w.Sector.ActiveUpdates) == 0 {
-		index = 0
+		su.Event.UpdateIndex = 0
 	} else {
-		index = w.Sector.ActiveUpdates[len(w.Sector.ActiveUpdates)-1].Index + 1
+		su.Event.UpdateIndex = w.Sector.ActiveUpdates[len(w.Sector.ActiveUpdates)-1].Event.UpdateIndex + 1
 	}
+	su.Event.WalletID = w.ID
 
 	// Append the update to the list of active updates.
 	w.Sector.ActiveUpdates = append(w.Sector.ActiveUpdates, su)
 
 	// Create the event and put it into the event list.
-	sue := &SectorUpdateEvent{
-		WalletID:    w.ID,
-		UpdateIndex: index,
-		Deadline:    su.Deadline,
-	}
-	s.InsertEvent(sue, true)
+	s.InsertEvent(&su.Event, true)
 
 	return
 }

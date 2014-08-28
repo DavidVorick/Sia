@@ -180,8 +180,8 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 	su := state.SectorUpdate{
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
-		Deadline:              c.metadata.Height + 5,
 	}
+	su.Event.Deadline = c.metadata.Height + 5
 
 	// Create segments for the encoder output.
 	var segments [state.QuorumSize]io.Writer

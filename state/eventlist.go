@@ -25,7 +25,7 @@ type Event interface {
 	Counter() uint32
 	Expiration() uint32
 	HandleEvent(s *State) (err error)
-	SetCounter(uint32)
+	SetCounter(newCounter uint32)
 }
 
 // An eventNode houses an event and a pointer to the top of its pointer stack.

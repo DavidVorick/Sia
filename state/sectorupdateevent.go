@@ -25,11 +25,13 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	// Need to be able to navigate from the event to the wallet.
 	w, err := s.LoadWallet(sue.WalletID)
 	if err != nil {
+		panic(err)
 		return
 	}
 
 	su, err := w.LoadSectorUpdate(sue.UpdateIndex)
 	if err != nil {
+		panic(err)
 		return
 	}
 
@@ -67,7 +69,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	} else {
 		// Remove all active updates following this update, inclusive.
 		for i := range w.Sector.ActiveUpdates {
-			if w.Sector.ActiveUpdates[i].Index == sue.UpdateIndex {
+			if w.Sector.ActiveUpdates[i].Event.UpdateIndex == sue.UpdateIndex {
 				w.Sector.ActiveUpdates = w.Sector.ActiveUpdates[:i]
 				break
 			}

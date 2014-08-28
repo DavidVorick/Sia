@@ -104,13 +104,7 @@ func (s *State) InsertWallet(w Wallet, newWallet bool) (err error) {
 		w.Sector.ActiveUpdates = make([]SectorUpdate, 0)
 	} else {
 		for _, update := range w.Sector.ActiveUpdates {
-			sue := SectorUpdateEvent{
-				WalletID:    w.ID,
-				UpdateIndex: update.Index,
-				Deadline:    update.Deadline,
-				//EventCounter: update.EventCounter,
-			}
-			s.InsertEvent(&sue, newWallet)
+			s.InsertEvent(&update.Event, newWallet)
 		}
 	}
 
