@@ -17,6 +17,12 @@ type Server struct {
 	participants map[string]*consensus.Participant
 }
 
+// IsServerInitialized() is useful for telling front ent programs whether a
+// server needs to be initialized or not.
+func (c *Client) IsServerInitialized() bool {
+	return c.participantServer != nil
+}
+
 // NewServer takes a port number as input and returns a server object that's
 // ready to be populated with participants.
 func (c *Client) NewServer() (err error) {

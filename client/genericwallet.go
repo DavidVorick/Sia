@@ -14,9 +14,24 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
-	// Download a segment from each person in the quorum, until k segments
-	// are grabbed.
+// A GenericWallet is a transportable struct which points to a wallet in the
+// quorum of id 'id'. The wallet is assumed to have a generic script body which
+// uses 'PublicKey' as the public key. The data stored in the wallet's sector
+// is assumed to have a 'K' value of 'state.StandardK', and is assumed to
+// decode to a file exactly 'OriginalFileSize' bytes on disk.
+type GenericWallet struct {
+	ID state.WalletID
+
+	PublicKey siacrypto.PublicKey
+	SecretKey siacrypto.SecretKey
+
+	OriginalFileSize int64
+}
+
+// Download the sector into filepath 'filename'
+func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
+	// Download a segment from each sibling in the quorum, until StandardK
+	// segments have been downloaded.
 	var segments []io.Reader
 	var indicies []byte
 	for i := range c.metadata.Siblings {
@@ -24,7 +39,7 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 		err = c.router.SendMessage(network.Message{
 			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
-			Args: id,
+			Args: gw.ID,
 			Resp: &segment,
 		})
 
@@ -35,24 +50,27 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 		}
 	}
 
-	// Create the file.
+	// Check that enough pieces were retrieved.
+	if len(indicies) < state.StandardK {
+		err = errors.New("file not retrievable")
+		return
+	}
+
+	// Create the file for writing.
 	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
 
-	// Call recover, writing into the file.
+	// Recover the StandardK segments into the file.
 	_, err = state.RSRecover(segments, indicies, file, state.StandardK)
 	if err != nil {
 		return
 	}
 
-	// Sort out the padding, removing what padding has been added.
-	keypair, exists := c.genericWallets[id]
-	if !exists {
-		return
-	}
-	err = file.Truncate(keypair.OriginalFileSize)
+	// Truncate the file to it's original size, effectively removing any
+	// padding that may have been added.
+	err = file.Truncate(gw.OriginalFileSize)
 	if err != nil {
 		return
 	}

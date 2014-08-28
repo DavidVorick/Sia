@@ -36,6 +36,16 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	return
 }
 
+func (c *Client) GetGenericWallet(id state.WalletID) (gw *GenericWallet, err error) {
+	if _, exists := c.genericWallets[id]; exists {
+		*gw = c.genericWallets[id]
+	} else {
+		err = fmt.Errorf("could not find generic wallet of id %v", id)
+	}
+
+	return
+}
+
 // Iterates through the client and saves all of the wallets to disk.
 func (c *Client) SaveAllWallets() (err error) {
 	var filename string
