@@ -109,7 +109,18 @@ func (e *Engine) Compile(b Block) (err error) {
 			continue
 		}
 
-		// proof of storage verification
+		// Verify the storage proof.
+		walletID, proofIndex, err := e.state.ProofLocation()
+		if err != nil {
+			// log the error
+			fmt.Println("Error during storage proof verification:", err)
+		} else {
+			if !e.state.VerifyStorageProof(walletID, proofIndex, byte(i), heartbeat.StorageProof) {
+				fmt.Println("A host has failed the storage proof.")
+				fmt.Println(i)
+				fmt.Println(e.state.Metadata.Siblings[i])
+			}
+		}
 
 		// Append the entropy to siblingEntropy.
 		siblingEntropy = append(siblingEntropy, heartbeat.Entropy[:]...)
@@ -160,6 +171,7 @@ func (e *Engine) Compile(b Block) (err error) {
 	}
 	e.state.Metadata.ParentBlock = blockHash
 	e.state.Metadata.Height++
+	e.state.Metadata.PoStorageSeed = e.state.Metadata.Germ
 
 	// Save the block.
 	err = e.saveBlock(b)

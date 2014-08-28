@@ -35,7 +35,9 @@ func (id WalletID) Bytes() []byte {
 	return siaencoding.EncUint64(uint64(id))
 }
 
-// TODO: add docstring
+// CompensationWeight calculates the weight of the wallet as reported when
+// charging the wallet. This includes the atoms, weight of any updates in the
+// works, and the weight of the wallet itself.
 func (w Wallet) CompensationWeight() (weight uint32) {
 	// Count the number of atoms used by the script.
 	weight = uint32(len(w.Script) / AtomSize)
@@ -77,7 +79,7 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 
 	wn = new(walletNode)
 	wn.id = w.ID
-	wn.weight = int(w.SectorSettings.Atoms) - int(QuorumSize)
+	wn.weight = int(w.SectorSettings.Atoms)
 	if wn.weight < 0 {
 		wn.weight = 0
 	}

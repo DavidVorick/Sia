@@ -11,12 +11,16 @@ import (
 // small and to be sent over the wire as a complete entity, without needing
 // to be broken up or buffered.
 type Metadata struct {
-	Siblings       [QuorumSize]Sibling
-	Germ           Entropy
-	Seed           Entropy
-	EventCounter   uint32
-	StoragePrice   Balance
+	Siblings [QuorumSize]Sibling
+
+	EventCounter uint32
+	StoragePrice Balance
+
 	ParentBlock    siacrypto.Hash
 	Height         uint32
 	RecentSnapshot uint32
+
+	Germ          Entropy
+	Seed          Entropy
+	PoStorageSeed Entropy
 }
