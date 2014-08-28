@@ -215,7 +215,7 @@ func TestConsensus(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if w.SectorSettings.Atoms != 6 {
+		if w.Sector.Atoms != 6 {
 			t.Error("Sector update does not appear to have occurred in participant", i)
 		}
 	}

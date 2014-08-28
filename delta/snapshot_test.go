@@ -91,7 +91,7 @@ func TestSnapshotProcess(t *testing.T) {
 	w1 := state.Wallet{
 		ID:      8,
 		Balance: state.NewBalance(910),
-		SectorSettings: state.SectorSettings{
+		Sector: state.Sector{
 			Atoms: 11,
 			K:     12,
 			//Hash:  siacrypto.Hash{13},
@@ -103,7 +103,7 @@ func TestSnapshotProcess(t *testing.T) {
 	w2 := state.Wallet{
 		ID:      17,
 		Balance: state.NewBalance(1819),
-		SectorSettings: state.SectorSettings{
+		Sector: state.Sector{
 			Atoms: 20,
 			K:     21,
 			//Hash:  siacrypto.Hash{22},

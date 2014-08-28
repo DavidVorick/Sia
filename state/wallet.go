@@ -19,15 +19,15 @@ const (
 type WalletID uint64
 
 // A Wallet performs three important duties. It contains a Balance, allowing
-// for transactions; a SectorSettings object which manages what storage is
+// for transactions; a Sector object which manages what storage is
 // associated with the Wallet; and a Script, which can receive inputs and
 // perform actions.
 type Wallet struct {
-	ID             WalletID
-	Balance        Balance
-	SectorSettings SectorSettings
-	Script         []byte
-	KnownScripts   map[string]ScriptInputEvent
+	ID           WalletID
+	Balance      Balance
+	Sector       Sector
+	Script       []byte
+	KnownScripts map[string]ScriptInputEvent
 }
 
 // Bytes returns the WalletID as a byte slice.
@@ -53,7 +53,7 @@ func (w Wallet) CompensationWeight() (weight uint32) {
 	weight *= walletAtomMultiplier
 
 	// Add non-replicated weight according to the size of the wallet sector.
-	weight += uint32(w.SectorSettings.Atoms) + w.SectorSettings.UpdateAtoms
+	weight += uint32(w.Sector.Atoms) + w.Sector.UpdateAtoms
 
 	return
 }
@@ -84,7 +84,7 @@ func (s *State) InsertWallet(w Wallet, newWallet bool) (err error) {
 
 	wn = new(walletNode)
 	wn.id = w.ID
-	wn.weight = int(w.SectorSettings.Atoms)
+	wn.weight = int(w.Sector.Atoms)
 	s.insertWalletNode(wn)
 
 	if w.KnownScripts == nil {
@@ -95,10 +95,10 @@ func (s *State) InsertWallet(w Wallet, newWallet bool) (err error) {
 		}
 	}
 
-	if w.SectorSettings.ActiveUpdates == nil {
-		w.SectorSettings.ActiveUpdates = make([]SectorUpdate, 0)
+	if w.Sector.ActiveUpdates == nil {
+		w.Sector.ActiveUpdates = make([]SectorUpdate, 0)
 	} else {
-		for _, update := range w.SectorSettings.ActiveUpdates {
+		for _, update := range w.Sector.ActiveUpdates {
 			sue := SectorUpdateEvent{
 				WalletID:    w.ID,
 				UpdateIndex: update.Index,
@@ -162,7 +162,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 		err = fmt.Errorf("no wallet of that id exists: %v", w.ID)
 		return
 	}
-	weightDelta := int(w.SectorSettings.Atoms) - wn.nodeWeight()
+	weightDelta := int(w.Sector.Atoms) - wn.nodeWeight()
 
 	// Ideally, this would never be triggered. Instead, careful resource
 	// management in the quorum would prevent a too-heavy wallet from ever

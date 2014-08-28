@@ -34,7 +34,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	}
 
 	// Remove the weight of the update from the wallet.
-	w.SectorSettings.UpdateAtoms -= uint32(su.Atoms)
+	w.Sector.UpdateAtoms -= uint32(su.Atoms)
 
 	// Count the number of confirmations.
 	var confirmations int
@@ -47,17 +47,17 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	// Compare to the required confirmations.
 	if confirmations >= int(su.ConfirmationsRequired) {
 		// Remove all active updates leading to this update, inclusive.
-		for i := range w.SectorSettings.ActiveUpdates {
+		for i := range w.Sector.ActiveUpdates {
 			if i == int(sue.UpdateIndex) {
-				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[i+1:]
+				w.Sector.ActiveUpdates = w.Sector.ActiveUpdates[i+1:]
 				break
 			}
 		}
 
-		w.SectorSettings.Atoms = su.Atoms
-		w.SectorSettings.K = su.K
-		w.SectorSettings.D = su.D
-		w.SectorSettings.HashSet = su.HashSet
+		w.Sector.Atoms = su.Atoms
+		w.Sector.K = su.K
+		w.Sector.D = su.D
+		w.Sector.HashSet = su.HashSet
 
 		// Copy the file from the update to the file for the sector.
 		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
@@ -69,9 +69,9 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 		}
 	} else {
 		// Remove all active updates following this update, inclusive.
-		for i := range w.SectorSettings.ActiveUpdates {
-			if w.SectorSettings.ActiveUpdates[i].Index == sue.UpdateIndex {
-				w.SectorSettings.ActiveUpdates = w.SectorSettings.ActiveUpdates[:i]
+		for i := range w.Sector.ActiveUpdates {
+			if w.Sector.ActiveUpdates[i].Index == sue.UpdateIndex {
+				w.Sector.ActiveUpdates = w.Sector.ActiveUpdates[:i]
 				break
 			}
 		}

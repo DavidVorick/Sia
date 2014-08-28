@@ -37,7 +37,7 @@ func TestExecuteCompensation(t *testing.T) {
 	w2 := Wallet{
 		ID:      2,
 		Balance: NewBalance(100),
-		SectorSettings: SectorSettings{
+		Sector: Sector{
 			Atoms: 10,
 		},
 	}

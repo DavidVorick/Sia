@@ -27,13 +27,13 @@ type UpdateID struct {
 type SectorUpdate struct {
 	Index uint32 // Update # for this wallet.
 
-	// The updated SectorSettings values.
+	// The updated Sector values.
 	Atoms uint16
 	K     byte
 	D     byte
 
 	// The MerkleCollapse value that each sibling should have after the
-	// segement diff has been uploaded to them. SectorSettings.Hash is the
+	// segement diff has been uploaded to them. Sector.Hash is the
 	// hash of the HashSet.
 	HashSet [QuorumSize]siacrypto.Hash
 
@@ -69,9 +69,9 @@ func (s *State) SectorUpdateFilename(id WalletID, index uint32) (filename string
 }
 
 func (w *Wallet) LoadSectorUpdate(index uint32) (su SectorUpdate, err error) {
-	for i := range w.SectorSettings.ActiveUpdates {
-		if w.SectorSettings.ActiveUpdates[i].Index == index {
-			su = w.SectorSettings.ActiveUpdates[i]
+	for i := range w.Sector.ActiveUpdates {
+		if w.Sector.ActiveUpdates[i].Index == index {
+			su = w.Sector.ActiveUpdates[i]
 			return
 		}
 	}
@@ -88,9 +88,9 @@ func (s *State) AdvanceUpdate(ua UpdateAdvancement) (err error) {
 		return
 	}
 
-	for i := range w.SectorSettings.ActiveUpdates {
-		if w.SectorSettings.ActiveUpdates[i].Index == ua.UpdateIndex {
-			w.SectorSettings.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
+	for i := range w.Sector.ActiveUpdates {
+		if w.Sector.ActiveUpdates[i].Index == ua.UpdateIndex {
+			w.Sector.ActiveUpdates[i].Confirmations[ua.SiblingIndex] = true
 			break
 		}
 	}
@@ -134,7 +134,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	}
 
 	// Check that there aren't already too many open updates.
-	if len(w.SectorSettings.ActiveUpdates) >= MaxUpdates {
+	if len(w.Sector.ActiveUpdates) >= MaxUpdates {
 		err = errors.New("There are already the max number of open updates on the wallet")
 		return
 	}
@@ -147,17 +147,17 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 
 	// Figure out the update index.
 	var index uint32
-	if len(w.SectorSettings.ActiveUpdates) == 0 {
+	if len(w.Sector.ActiveUpdates) == 0 {
 		index = 0
 	} else {
-		index = w.SectorSettings.ActiveUpdates[len(w.SectorSettings.ActiveUpdates)-1].Index + 1
+		index = w.Sector.ActiveUpdates[len(w.Sector.ActiveUpdates)-1].Index + 1
 	}
 
 	// Append the update to the list of active updates.
-	w.SectorSettings.ActiveUpdates = append(w.SectorSettings.ActiveUpdates, su)
+	w.Sector.ActiveUpdates = append(w.Sector.ActiveUpdates, su)
 
 	// Add the weight of the update to the wallet.
-	w.SectorSettings.UpdateAtoms += uint32(su.Atoms)
+	w.Sector.UpdateAtoms += uint32(su.Atoms)
 
 	// Create the event and put it into the event list.
 	sue := &SectorUpdateEvent{

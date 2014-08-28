@@ -92,7 +92,7 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StoragePro
 		return
 		// panic(err)
 	}
-	numAtoms := w.SectorSettings.Atoms
+	numAtoms := w.Sector.Atoms
 
 	return buildProof(file, numAtoms, proofIndex)
 }
@@ -129,7 +129,7 @@ func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte,
 	if err != nil {
 		panic(err)
 	}
-	expectedHash := w.SectorSettings.HashSet[sibling]
+	expectedHash := w.Sector.HashSet[sibling]
 
 	// build the hash up from the base
 	return foldHashes(sp, proofIndex) == expectedHash
