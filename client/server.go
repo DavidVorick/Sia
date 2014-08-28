@@ -102,7 +102,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	if err != nil {
 		return
 	}
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 
 	return
 }
@@ -124,7 +124,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 
 	// Get a list of addresses for the joining participant to use while bootstrapping.
 	var siblingAddresses []network.Address
-	for _, sibling := range c.siblings {
+	for _, sibling := range c.metadata.Siblings {
 		siblingAddresses = append(siblingAddresses, sibling.Address)
 	}
 
@@ -141,7 +141,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	if err != nil {
 		return
 	}
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 
 	return
 }

@@ -19,10 +19,10 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 	// are grabbed.
 	var segments []io.Reader
 	var indicies []byte
-	for i := range c.siblings {
+	for i := range c.metadata.Siblings {
 		var segment []byte
 		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[i].Address,
+			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
 			Args: id,
 			Resp: &segment,
@@ -65,7 +65,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	// Query to verify that the wallet id is available.
 	var w state.Wallet
 	err = c.router.SendMessage(network.Message{
-		Dest: c.siblings[0].Address,
+		Dest: c.metadata.Siblings[0].Address,
 		Proc: "Participant.Wallet",
 		Args: id,
 		Resp: &w,
@@ -110,7 +110,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 
 	// Query to verify that the request was accepted by the network.
 	err = c.router.SendMessage(network.Message{
-		Dest: c.siblings[0].Address,
+		Dest: c.metadata.Siblings[0].Address,
 		Proc: "Participant.Wallet",
 		Args: id,
 		Resp: &w,
@@ -254,7 +254,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 			NewSegment:  segmentBytes[i],
 		}
 		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[i].Address,
+			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.UploadSegment",
 			Args: segmentUpload,
 			Resp: &accepted,

@@ -21,7 +21,7 @@ type GenericWallet struct {
 type Client struct {
 	// Networking Variables
 	router   *network.RPCServer
-	siblings [state.QuorumSize]state.Sibling
+	metadata state.Metadata
 
 	// Generic Wallets
 	genericWallets map[state.WalletID]GenericWallet
@@ -63,11 +63,11 @@ func (c *Client) IsServerInitialized() bool {
 
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
 func (c *Client) Broadcast(m network.Message) {
-	for i := range c.siblings {
-		if c.siblings[i].Address.Host == "" {
+	for i := range c.metadata.Siblings {
+		if c.metadata.Siblings[i].Address.Host == "" {
 			continue
 		}
-		m.Dest = c.siblings[i].Address
+		m.Dest = c.metadata.Siblings[i].Address
 		c.router.SendMessage(m)
 		break
 	}
@@ -93,7 +93,7 @@ func (c *Client) Connect(port uint16) (err error) {
 func (c *Client) GetHeight() (height uint32, err error) {
 	var m state.Metadata
 	err = c.router.SendMessage(network.Message{
-		Dest: c.siblings[0].Address,
+		Dest: c.metadata.Siblings[0].Address,
 		Proc: "Participant.Metadata",
 		Args: struct{}{},
 		Resp: &m,
@@ -110,12 +110,12 @@ func (c *Client) RefreshSiblings() (err error) {
 	// Iterate through known siblings until someone provides an updated list. The
 	// first answer given is trusted, this is insecure.
 	var metadata state.Metadata
-	for i := range c.siblings {
-		if c.siblings[i].Address.Host == "" {
+	for i := range c.metadata.Siblings {
+		if c.metadata.Siblings[i].Address.Host == "" {
 			continue
 		}
 		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[i].Address,
+			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.Metadata",
 			Args: struct{}{},
 			Resp: &metadata,
@@ -134,7 +134,7 @@ func (c *Client) RefreshSiblings() (err error) {
 	// are recieved. In the future it will instead do some smart comparison
 	// and pick the batch of siblings that seems most likely of all the
 	// batches it receives.
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 
 	return
 }
@@ -165,6 +165,6 @@ func (c *Client) BootstrapConnection(connectAddress network.Address) (err error)
 	if err != nil {
 		return
 	}
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 	return
 }
