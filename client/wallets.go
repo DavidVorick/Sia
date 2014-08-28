@@ -4,7 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/NebulousLabs/Sia/consensus"
+	"github.com/NebulousLabs/Sia/delta"
+	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/state"
@@ -36,12 +40,75 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	return
 }
 
-func (c *Client) GetGenericWallet(id state.WalletID) (gw *GenericWallet, err error) {
+func (c *Client) GenericWallet(id state.WalletID) (gw *GenericWallet, err error) {
 	if _, exists := c.genericWallets[id]; exists {
 		*gw = c.genericWallets[id]
 	} else {
 		err = fmt.Errorf("could not find generic wallet of id %v", id)
 	}
+
+	return
+}
+
+// Submit a wallet request to the fountain wallet.
+func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
+	// Query to verify that the wallet id is available.
+	var w state.Wallet
+	err = c.router.SendMessage(network.Message{
+		Dest: c.metadata.Siblings[0].Address,
+		Proc: "Participant.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+	if err == nil {
+		err = errors.New("Wallet already exists!")
+		return
+	}
+	err = nil
+
+	// Create a generic wallet with a keypair for the request.
+	pk, sk, err := siacrypto.CreateKeyPair()
+	if err != nil {
+		return
+	}
+
+	// Fill out a keypair object and insert it into the generic wallet map.
+	var gw GenericWallet
+	gw.PublicKey = pk
+	gw.SecretKey = sk
+
+	// Get the current height of the quorum.
+	// Send the requesting script input out to the network.
+	c.Broadcast(network.Message{
+		Proc: "Participant.AddScriptInput",
+		Args: state.ScriptInput{
+			WalletID: delta.FountainWalletID,
+			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
+			Deadline: c.metadata.Height + state.MaxDeadline,
+		},
+		Resp: nil,
+	})
+
+	// Wait an appropriate amount of time for the request to be accepted: 2
+	// blocks.
+	time.Sleep(time.Duration(consensus.NumSteps) * 2 * consensus.StepDuration)
+
+	// Query to verify that the request was accepted by the network.
+	err = c.router.SendMessage(network.Message{
+		Dest: c.metadata.Siblings[0].Address,
+		Proc: "Participant.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+	if err != nil {
+		return
+	}
+	if string(w.Script) != string(delta.DefaultScript(pk)) {
+		err = errors.New("Wallet already exists - someone just beat you to it.")
+		return
+	}
+
+	c.genericWallets[id] = gw
 
 	return
 }

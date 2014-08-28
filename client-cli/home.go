@@ -129,7 +129,7 @@ func loadWalletWalkthrough(c *client.Client) (err error) {
 		return
 	} else if walletType == "generic" {
 		var gw *client.GenericWallet
-		gw, err = c.GetGenericWallet(id)
+		gw, err = c.GenericWallet(id)
 		if err != nil {
 			return
 		}

@@ -28,7 +28,7 @@ type GenericWallet struct {
 	OriginalFileSize int64
 }
 
-// Download the sector into filepath 'filename'
+// Download the sector into filepath 'filename'.
 func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
 	// Download a segment from each sibling in the quorum, until StandardK
 	// segments have been downloaded.
@@ -78,84 +78,16 @@ func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
 	return
 }
 
-// Submit a wallet request to the fountain wallet.
-func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
-	// Query to verify that the wallet id is available.
-	var w state.Wallet
-	err = c.router.SendMessage(network.Message{
-		Dest: c.metadata.Siblings[0].Address,
-		Proc: "Participant.Wallet",
-		Args: id,
-		Resp: &w,
-	})
-	if err == nil {
-		err = errors.New("Wallet already exists!")
-		return
-	}
-	err = nil
-
-	// Create a generic wallet with a keypair for the request.
-	pk, sk, err := siacrypto.CreateKeyPair()
-	if err != nil {
-		return
-	}
-
-	// Fill out a keypair object and insert it into the generic wallet map.
-	var gw GenericWallet
-	gw.PublicKey = pk
-	gw.SecretKey = sk
-
-	// Get the current height of the quorum.
-	// Send the requesting script input out to the network.
-	c.Broadcast(network.Message{
-		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: delta.FountainWalletID,
-			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
-			Deadline: c.metadata.Height + state.MaxDeadline,
-		},
-		Resp: nil,
-	})
-
-	// Wait an appropriate amount of time for the request to be accepted: 2
-	// blocks.
-	time.Sleep(time.Duration(consensus.NumSteps) * 2 * consensus.StepDuration)
-
-	// Query to verify that the request was accepted by the network.
-	err = c.router.SendMessage(network.Message{
-		Dest: c.metadata.Siblings[0].Address,
-		Proc: "Participant.Wallet",
-		Args: id,
-		Resp: &w,
-	})
-	if err != nil {
-		return
-	}
-	if string(w.Script) != string(delta.DefaultScript(pk)) {
-		err = errors.New("Wallet already exists - someone just beat you to it.")
-		return
-	}
-
-	c.genericWallets[id] = gw
-
-	return
-}
-
-// Send coins from one wallet to another.
-func (c *Client) SendCoinGeneric(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
-	if _, ok := c.genericWallets[source]; !ok {
-		err = errors.New("Could not access source wallet, perhaps it's not a generic wallet?")
-		return
-	}
-
+// Send coins to wallet 'destination'.
+func (gw *GenericWallet) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
 	// Get the current height of the quorum, for setting the deadline on
 	// the script input.
 	input := state.ScriptInput{
-		WalletID: source,
+		WalletID: gw.ID,
 		Input:    delta.SendCoinInput(destination, amount),
 		Deadline: c.metadata.Height + state.MaxDeadline,
 	}
-	err = delta.SignScriptInput(&input, c.genericWallets[source].SecretKey)
+	err = delta.SignScriptInput(&input, gw.SecretKey)
 	if err != nil {
 		return
 	}

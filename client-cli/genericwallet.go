@@ -26,7 +26,7 @@ func downloadGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet
 
 // sendCoinGenericWalletWalkthrough walks the user through sending coins from
 // their generic wallet.
-func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err error) {
+func sendCoinGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet) (err error) {
 	// Get a destination and an amount
 	var destinationID state.WalletID
 	var amount uint64
@@ -41,7 +41,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err 
 		return
 	}
 
-	err = c.SendCoinGeneric(id, destinationID, state.NewBalance(amount))
+	err = gw.SendCoin(c, destinationID, state.NewBalance(amount))
 	if err != nil {
 		return
 	}
@@ -106,7 +106,7 @@ func pollGenericWallet(c *client.Client, gw *client.GenericWallet) {
 			err = downloadGenericWalletWalkthrough(c, gw)
 
 		case "s", "send", "transaction":
-			err = sendCoinGenericWalletWalkthrough(c, gw.ID)
+			err = sendCoinGenericWalletWalkthrough(c, gw)
 
 		case "u", "upload":
 			err = uploadGenericWalkthrough(c, gw.ID)
