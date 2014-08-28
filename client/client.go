@@ -10,10 +10,11 @@ import (
 
 // Keypair contains a public key and its corresponding private key. The keypair
 // is given its own struct to enforce the connection between the keys.
-type Keypair struct {
-	PublicKey    siacrypto.PublicKey
-	SecretKey    siacrypto.SecretKey
-	OriginalSize int64
+type GenericWallet struct {
+	PublicKey siacrypto.PublicKey
+	SecretKey siacrypto.SecretKey
+
+	OriginalFileSize int64
 }
 
 // Struct Client contains the state for client actions
@@ -22,8 +23,8 @@ type Client struct {
 	router   *network.RPCServer
 	siblings [state.QuorumSize]state.Sibling
 
-	// All Generic Wallets
-	genericWallets map[state.WalletID]Keypair
+	// Generic Wallets
+	genericWallets map[state.WalletID]GenericWallet
 
 	// Participant Server
 	participantServer *Server
@@ -33,7 +34,7 @@ type Client struct {
 // working client struct.
 func NewClient() (c *Client, err error) {
 	c = new(Client)
-	c.genericWallets = make(map[state.WalletID]Keypair)
+	c.genericWallets = make(map[state.WalletID]GenericWallet)
 
 	err = c.processConfigFile()
 	if err != nil {
@@ -137,17 +138,6 @@ func (c *Client) RefreshSiblings() (err error) {
 
 	return
 }
-
-/*
-// Closes and destroys the client's RPC server
-func (c *Client) Disconnect() {
-	if c.router == nil {
-		return
-	}
-	c.router.Close()
-	c.router = nil
-}
-*/
 
 // Initializes the client message router and pings the bootstrap to verify
 // connectivity.

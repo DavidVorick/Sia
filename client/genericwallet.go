@@ -52,7 +52,7 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 	if !exists {
 		return
 	}
-	err = file.Truncate(keypair.OriginalSize)
+	err = file.Truncate(keypair.OriginalFileSize)
 	if err != nil {
 		return
 	}
@@ -83,9 +83,9 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	}
 
 	// Fill out a keypair object and insert it into the generic wallet map.
-	var kp Keypair
-	kp.PublicKey = pk
-	kp.SecretKey = sk
+	var gw GenericWallet
+	gw.PublicKey = pk
+	gw.SecretKey = sk
 
 	// Get the current height of the quorum.
 	currentHeight, err := c.GetHeight()
@@ -123,7 +123,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		return
 	}
 
-	c.genericWallets[id] = kp
+	c.genericWallets[id] = gw
 
 	return
 }
@@ -266,7 +266,7 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	}
 
 	originalKeypair := c.genericWallets[id]
-	originalKeypair.OriginalSize = fileSize
+	originalKeypair.OriginalFileSize = fileSize
 	c.genericWallets[id] = originalKeypair
 
 	return

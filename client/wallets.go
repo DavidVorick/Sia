@@ -50,7 +50,7 @@ func (c *Client) SaveAllWallets() (err error) {
 	return
 }
 
-func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error) {
+func SaveWallet(id state.WalletID, keypair GenericWallet, destFile string) (err error) {
 	f, err := os.Create(destFile)
 	if err != nil {
 		return
@@ -72,7 +72,7 @@ func SaveWallet(id state.WalletID, keypair Keypair, destFile string) (err error)
 	return
 }
 
-func LoadWallet(fileName string) (id state.WalletID, keypair Keypair, err error) {
+func LoadWallet(fileName string) (id state.WalletID, keypair GenericWallet, err error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return
