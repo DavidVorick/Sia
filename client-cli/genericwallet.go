@@ -49,7 +49,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet)
 	return
 }
 
-func uploadGenericWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
+func uploadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get the name of the file to upload.
 	var filename string
 	fmt.Print("Absolute path of the file to upload: ")
@@ -70,7 +70,7 @@ func uploadGenericWalkthrough(c *client.Client, gw client.GenericWallet) (err er
 // generic wallet mode.
 func displayGenericWalletHelp() {
 	fmt.Println(
-		"h:\tHelp\n",
+		" h:\tHelp\n",
 		"q:\tQuit\n",
 		"d:\tDownload the wallet's file.\n",
 		"s:\tSend siacoins to another wallet.\n",
@@ -108,7 +108,7 @@ func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
 			err = sendCoinGenericWalletWalkthrough(c, gw)
 
 		case "u", "upload":
-			err = uploadGenericWalkthrough(c, gw)
+			err = uploadGenericWalletWalkthrough(c, gw)
 		}
 
 		if err != nil {

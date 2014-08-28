@@ -7,10 +7,34 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// IsRouterInitialized is useful for telling front end programs whether a
-// router needs to be initialized or not.
-func (c *Client) IsRouterInitialized() bool {
-	return c.router != nil
+// Initializes the client message router and pings the bootstrap to verify
+// connectivity.
+func (c *Client) BootstrapConnection(connectAddress network.Address) (err error) {
+	// A network server needs to exist in order to connect to the network.
+	if c.router == nil {
+		err = errors.New("network router is nil")
+		return
+	}
+
+	// Ping the connectAddress to verify alive-ness.
+	err = c.router.Ping(connectAddress)
+	if err != nil {
+		return
+	}
+
+	// populate initial sibling list
+	var metadata state.Metadata
+	err = c.router.SendMessage(network.Message{
+		Dest: connectAddress,
+		Proc: "Participant.Metadata",
+		Args: struct{}{},
+		Resp: &metadata,
+	})
+	if err != nil {
+		return
+	}
+	c.metadata.Siblings = metadata.Siblings
+	return
 }
 
 // There should probably be some sort of error checking, but I'm not sure the best approach to that.
@@ -38,6 +62,12 @@ func (c *Client) Connect(port uint16) (err error) {
 		return
 	}
 	return
+}
+
+// IsRouterInitialized is useful for telling front end programs whether a
+// router needs to be initialized or not.
+func (c *Client) IsRouterInitialized() bool {
+	return c.router != nil
 }
 
 // Figure out the latest list of siblings in the quorum.
@@ -69,35 +99,5 @@ func (c *Client) RefreshMetadata() (err error) {
 
 	c.metadata = metadata
 
-	return
-}
-
-// Initializes the client message router and pings the bootstrap to verify
-// connectivity.
-func (c *Client) BootstrapConnection(connectAddress network.Address) (err error) {
-	// A network server needs to exist in order to connect to the network.
-	if c.router == nil {
-		err = errors.New("network router is nil")
-		return
-	}
-
-	// Ping the connectAddress to verify alive-ness.
-	err = c.router.Ping(connectAddress)
-	if err != nil {
-		return
-	}
-
-	// populate initial sibling list
-	var metadata state.Metadata
-	err = c.router.SendMessage(network.Message{
-		Dest: connectAddress,
-		Proc: "Participant.Metadata",
-		Args: struct{}{},
-		Resp: &metadata,
-	})
-	if err != nil {
-		return
-	}
-	c.metadata.Siblings = metadata.Siblings
 	return
 }

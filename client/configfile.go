@@ -1,8 +1,14 @@
 package client
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/user"
+
+	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/state"
 )
 
 //The format for config files:
@@ -79,5 +85,74 @@ func (c *Client) processConfigFile() (err error) {
 		l, err = r.ReadString('\n')
 		l = strings.TrimSpace(l)
 	*/
+	return
+}
+
+// Iterates through the client and saves all of the wallets to disk.
+func (c *Client) SaveAllWallets() (err error) {
+	var filename string
+	for id, keypair := range c.genericWallets {
+		filename = fmt.Sprintf("%x.id", id)
+		err = SaveWallet(state.WalletID(id), keypair, filename)
+		if err != nil {
+			return
+		}
+	}
+	// Save other types of wallets as they are implemented.
+	return
+}
+
+func SaveWallet(id state.WalletID, keypair GenericWallet, destFile string) (err error) {
+	f, err := os.Create(destFile)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	_, err = f.Write(siaencoding.EncUint64(uint64(id)))
+	if err != nil {
+		return
+	}
+	_, err = f.Write(keypair.PublicKey[:])
+	if err != nil {
+		return
+	}
+	_, err = f.Write(keypair.SecretKey[:])
+	if err != nil {
+		return
+	}
+	return
+}
+
+func LoadWallet(fileName string) (id state.WalletID, keypair GenericWallet, err error) {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return
+	}
+	idSlice := make([]byte, 8)
+	pubSlice := make([]byte, siacrypto.PublicKeySize)
+	secSlice := make([]byte, siacrypto.SecretKeySize)
+	_, err = f.Read(idSlice)
+	if err != nil {
+		return
+	}
+	_, err = f.Read(pubSlice)
+	if err != nil {
+		return
+	}
+	_, err = f.Read(secSlice)
+	if err != nil {
+		return
+	}
+	id = state.WalletID(siaencoding.DecUint64(idSlice))
+	if copy(keypair.PublicKey[:], pubSlice) != siacrypto.PublicKeySize {
+		err = errors.New("bad public key length")
+		return
+	}
+	if copy(keypair.SecretKey[:], secSlice) != siacrypto.SecretKeySize {
+		err = errors.New("bad secret key length")
+		return
+	}
+
 	return
 }
