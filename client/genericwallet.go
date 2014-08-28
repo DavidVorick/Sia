@@ -27,7 +27,7 @@ type GenericWalletID state.WalletID
 // is assumed to have a 'K' value of 'state.StandardK', and is assumed to
 // decode to a file exactly 'OriginalFileSize' bytes on disk.
 type GenericWallet struct {
-	ID state.WalletID
+	WalletID state.WalletID
 
 	PublicKey siacrypto.PublicKey
 	SecretKey siacrypto.SecretKey
@@ -51,7 +51,13 @@ func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err err
 }
 
 // Download the sector into filepath 'filename'.
-func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
+func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
+	if err != nil {
+		return
+	}
+
 	// Download a segment from each sibling in the quorum, until StandardK
 	// segments have been downloaded.
 	var segments []io.Reader
@@ -61,7 +67,7 @@ func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
 		err = c.router.SendMessage(network.Message{
 			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
-			Args: gw.ID,
+			Args: gw.WalletID,
 			Resp: &segment,
 		})
 
@@ -100,12 +106,16 @@ func (gw *GenericWallet) Download(c *Client, filename string) (err error) {
 	return
 }
 
+func (gw GenericWallet) ID() GenericWalletID {
+	return GenericWalletID(gw.WalletID)
+}
+
 // Send coins to wallet 'destination'.
 func (gw *GenericWallet) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
 	// Get the current height of the quorum, for setting the deadline on
 	// the script input.
 	input := state.ScriptInput{
-		WalletID: gw.ID,
+		WalletID: gw.WalletID,
 		Input:    delta.SendCoinInput(destination, amount),
 		Deadline: c.metadata.Height + state.MaxDeadline,
 	}

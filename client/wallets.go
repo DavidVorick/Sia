@@ -40,9 +40,10 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	return
 }
 
-func (c *Client) GenericWallet(id state.WalletID) (gw *GenericWallet, err error) {
-	if _, exists := c.genericWallets[GenericWalletID(id)]; exists {
-		*gw = c.genericWallets[GenericWalletID(id)]
+// Returns the generic wallet associated with the wallet id.
+func (c *Client) GenericWallet(id GenericWalletID) (gw GenericWallet, err error) {
+	if _, exists := c.genericWallets[id]; exists {
+		gw = c.genericWallets[id]
 	} else {
 		err = fmt.Errorf("could not find generic wallet of id %v", id)
 	}

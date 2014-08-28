@@ -7,7 +7,7 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func downloadGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet) (err error) {
+func downloadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get the name of the filepath to download into.
 	var filename string
 	fmt.Print("Absolute path to download the file to: ")
@@ -16,7 +16,7 @@ func downloadGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet
 		return
 	}
 
-	err = gw.Download(c, filename)
+	err = gw.ID().Download(c, filename)
 	if err != nil {
 		return
 	}
@@ -26,7 +26,7 @@ func downloadGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet
 
 // sendCoinGenericWalletWalkthrough walks the user through sending coins from
 // their generic wallet.
-func sendCoinGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet) (err error) {
+func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get a destination and an amount
 	var destinationID state.WalletID
 	var amount uint64
@@ -49,7 +49,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, gw *client.GenericWallet
 	return
 }
 
-func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
+func uploadGenericWalkthrough(c *client.Client, id client.GenericWalletID) (err error) {
 	// Get the name of the file to upload.
 	var filename string
 	fmt.Print("Absolute path of the file to upload: ")
@@ -59,7 +59,7 @@ func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
 	}
 
 	// yep... that's it.
-	err = c.UploadFile(id, filename)
+	err = c.UploadFile(state.WalletID(id), filename)
 	if err != nil {
 		return
 	}
@@ -79,7 +79,7 @@ func displayGenericWalletHelp() {
 	)
 }
 
-func pollGenericWallet(c *client.Client, gw *client.GenericWallet) {
+func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
 	var input string
 	var err error
 	for {
@@ -109,7 +109,7 @@ func pollGenericWallet(c *client.Client, gw *client.GenericWallet) {
 			err = sendCoinGenericWalletWalkthrough(c, gw)
 
 		case "u", "upload":
-			err = uploadGenericWalkthrough(c, gw.ID)
+			err = uploadGenericWalkthrough(c, gw.ID())
 		}
 
 		if err != nil {
