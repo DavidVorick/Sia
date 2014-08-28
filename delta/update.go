@@ -2,6 +2,7 @@ package delta
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 
 	"github.com/NebulousLabs/Sia/state"
@@ -39,14 +40,15 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 		return
 	}
 
-	// Create the file nad write the new segment.
+	// Create the file and write the new segment.
 	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
+	defer file.Close()
+
 	_, err = file.Write(su.NewSegment)
 	if err != nil {
-		file.Close()
 		os.Remove(filename)
 		return
 	}
@@ -56,7 +58,6 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	empty := make([]byte, numZerosNeeded)
 	_, err = file.Write(empty)
 	if err != nil {
-		file.Close()
 		os.Remove(filename)
 		return
 	}
@@ -64,24 +65,20 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	// Run a merkle collapse on the file and see if the hash matches.
 	_, err = file.Seek(0, 0)
 	if err != nil {
-		file.Close()
 		os.Remove(filename)
 		return
 	}
 	root, err := state.MerkleCollapse(file, sectorUpdate.Atoms)
 	if err != nil {
-		file.Close()
 		os.Remove(filename)
 		return
 	}
 	if root != sectorUpdate.HashSet[e.siblingIndex] {
 		err = errors.New("hash does not match!")
-		file.Close()
 		os.Remove(filename)
 		return
 	}
 
-	file.Close()
 	accepted = true
 	return
 }
@@ -90,28 +87,7 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 // 'sector', which is then returned. It is meant as a helper function to the
 // participant.
 func (e *Engine) DownloadSector(id state.WalletID) (sector []byte, err error) {
-	// Open the sector.
-	filename := e.state.SectorFilename(id)
-	file, err := os.Open(filename)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	// Create a slice that will hold the whole sector.
-	info, err := file.Stat()
-	if err != nil {
-		return
-	}
-	sector = make([]byte, info.Size())
-
-	// Read the file into the sector.
-	_, err = file.Read(sector)
-	if err != nil {
-		return
-	}
-
-	return
+	return ioutil.ReadFile(e.state.SectorFilename(id))
 }
 
 /*
