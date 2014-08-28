@@ -11,7 +11,7 @@ import (
 
 type StorageProof struct {
 	AtomBase  [AtomSize]byte
-	HashStack []siacrypto.Hash
+	HashStack []*siacrypto.Hash
 }
 
 // buildProof constructs a list of hashes using the following procedure. The
@@ -21,14 +21,13 @@ type StorageProof struct {
 // the same parent as us.) To obtain this hash, we call MerkleCollapse on the
 // segment of data corresponding to the sister. This segment will double in
 // size on each iteration until we reach the root.
-func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byte, proofStack []*siacrypto.Hash) {
-	// get proofBytes
+func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof) {
+	// get AtomBase
 	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
 	if err != nil {
 		panic(err)
 	}
-	proofBytes = make([]byte, AtomSize)
-	_, err = rs.Read(proofBytes)
+	_, err = rs.Read(sp.AtomBase[:])
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +52,7 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 		i := sisterIndex(proofIndex, size)
 		if i >= numAtoms {
 			// append dummy hash
-			proofStack = append(proofStack, nil)
+			sp.HashStack = append(sp.HashStack, nil)
 			continue
 		}
 
@@ -71,7 +70,7 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (proofBytes []byt
 		if err != nil {
 			panic(err)
 		}
-		proofStack = append(proofStack, &hash)
+		sp.HashStack = append(sp.HashStack, &hash)
 	}
 
 	return
@@ -96,30 +95,25 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StoragePro
 	}
 	numAtoms := w.SectorSettings.Atoms
 
-	atomBase, hashStack := buildProof(file, numAtoms, proofIndex)
-	copy(sp.AtomBase[:], atomBase)
-	for i := range hashStack {
-		sp.HashStack = append(sp.HashStack, *hashStack[i])
-	}
-	return
+	return buildProof(file, numAtoms, proofIndex)
 }
 
 // foldHashes traverses a proofStack, hashing elements together to produce the
 // root-level hash. Care must be taken to ensure that the correct ordering is
 // used when concatenating hashes.
-func foldHashes(base siacrypto.Hash, proofIndex uint16, proofStack []*siacrypto.Hash) (h siacrypto.Hash) {
-	h = base
+func foldHashes(sp StorageProof, proofIndex uint16) (h siacrypto.Hash) {
+	h = siacrypto.HashBytes(sp.AtomBase[:])
 
 	var size uint16 = 1
-	for i := 0; i < len(proofStack); i, size = i+1, size*2 {
+	for i := 0; i < len(sp.HashStack); i, size = i+1, size*2 {
 		// skip dummy hashes
-		if proofStack[i] == nil {
+		if sp.HashStack[i] == nil {
 			continue
 		}
 		if proofIndex%(size*2) < size { // base is on the left branch
-			h = joinHash(h, *proofStack[i])
+			h = joinHash(h, *sp.HashStack[i])
 		} else {
-			h = joinHash(*proofStack[i], h)
+			h = joinHash(*sp.HashStack[i], h)
 		}
 	}
 

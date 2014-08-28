@@ -61,7 +61,7 @@ func TestStorageProof(t *testing.T) {
 	data := bytes.NewReader(siacrypto.RandomByteSlice(int(numAtoms) * AtomSize))
 
 	var proofIndex uint16 = 6
-	proofBase, proofStack := buildProof(data, numAtoms, proofIndex)
+	sp := buildProof(data, numAtoms, proofIndex)
 
 	// no need to call VerifyStorageProof directly; just simulate it
 	data.Seek(0, 0)
@@ -69,15 +69,15 @@ func TestStorageProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	initialHash := siacrypto.HashBytes(proofBase)
-	finalHash := foldHashes(initialHash, proofIndex, proofStack)
+	finalHash := foldHashes(sp, proofIndex)
 
 	if finalHash != expectedHash {
 		t.Fatal("proof verification failed: hashes do not match")
 	}
 
 	// run foldHashes without enough proofs
-	finalHash = foldHashes(initialHash, proofIndex, proofStack[0:1])
+	sp.HashStack = sp.HashStack[0:1]
+	finalHash = foldHashes(sp, proofIndex)
 
 	if finalHash == expectedHash {
 		t.Fatal("invalid proof was verified")
@@ -91,14 +91,13 @@ func TestStorageProof(t *testing.T) {
 	for i := uint16(1); i < 33; i++ {
 		data = bytes.NewReader(siacrypto.RandomByteSlice(int(i) * AtomSize))
 		proofIndex = siacrypto.RandomUint16() % i
-		proofBase, proofStack = buildProof(data, i, proofIndex)
+		sp = buildProof(data, i, proofIndex)
 		data.Seek(0, 0)
 		expectedHash, err := MerkleCollapse(data, i)
 		if err != nil {
 			t.Fatal(err)
 		}
-		initialHash = siacrypto.HashBytes(proofBase)
-		finalHash = foldHashes(initialHash, proofIndex, proofStack)
+		finalHash = foldHashes(sp, proofIndex)
 
 		if finalHash != expectedHash {
 			t.Fatal("proof verification failed: hashes do not match", i, proofIndex)
