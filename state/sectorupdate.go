@@ -249,7 +249,7 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 		UpdateIndex: index,
 		Deadline:    su.Deadline,
 	}
-	s.InsertEvent(sue)
+	s.InsertEvent(sue, true)
 
 	return
 }

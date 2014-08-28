@@ -20,7 +20,7 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 		ID:      FountainWalletID,
 		Balance: state.NewBalance(25000000),
 		Script:  FountainScript,
-	})
+	}, true)
 	if err != nil {
 		return
 	}
@@ -31,7 +31,7 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 		Balance: state.NewBalance(1000000),
 		Script:  DefaultScript(tetherWalletPublicKey),
 	}
-	err = e.state.InsertWallet(sibWallet)
+	err = e.state.InsertWallet(sibWallet, true)
 	if err != nil {
 		return
 	}
@@ -69,6 +69,6 @@ func (e *Engine) BootstrapSetMetadata(md state.Metadata) {
 // that this function should _only_ be called during bootstrapping. See
 // 'BootstrapSetMetadata' comment for more details.
 func (e *Engine) BootstrapInsertWallet(w state.Wallet) (err error) {
-	err = e.state.InsertWallet(w)
+	err = e.state.InsertWallet(w, false)
 	return
 }

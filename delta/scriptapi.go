@@ -78,7 +78,7 @@ func (e *Engine) CreateWallet(w *state.Wallet, childID state.WalletID, childBala
 	}
 
 	// Insert the child wallet.
-	err = e.state.InsertWallet(childWallet)
+	err = e.state.InsertWallet(childWallet, true)
 	if err != nil {
 		return
 	}

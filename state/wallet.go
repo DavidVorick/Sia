@@ -70,7 +70,12 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
 // It returns an error if the wallet already exists within the state.
-func (s *State) InsertWallet(w Wallet) (err error) {
+//
+// If the wallet is new, then it is treated slightly differnetly than if the
+// wallet is not-new (meaning it's being added as a result of synchronization.)
+// New wallets will have certain values automatically set, where non-new
+// wallets will not have any values be automatically set.
+func (s *State) InsertWallet(w Wallet, newWallet bool) (err error) {
 	wn := s.walletNode(w.ID)
 	if wn != nil {
 		err = errors.New("wallet of that id already exists in quorum")
@@ -80,16 +85,27 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 	wn = new(walletNode)
 	wn.id = w.ID
 	wn.weight = int(w.SectorSettings.Atoms)
-	if wn.weight < 0 {
-		wn.weight = 0
-	}
 	s.insertWalletNode(wn)
 
 	if w.KnownScripts == nil {
 		w.KnownScripts = make(map[string]ScriptInputEvent)
 	} else {
 		for _, scriptEvent := range w.KnownScripts {
-			s.InsertEvent(&scriptEvent)
+			s.InsertEvent(&scriptEvent, newWallet)
+		}
+	}
+
+	if w.SectorSettings.ActiveUpdates == nil {
+		w.SectorSettings.ActiveUpdates = make([]SectorUpdate, 0)
+	} else {
+		for _, update := range w.SectorSettings.ActiveUpdates {
+			sue := SectorUpdateEvent{
+				WalletID:    w.ID,
+				UpdateIndex: update.Index,
+				Deadline:    update.Deadline,
+				//EventCounter: update.EventCounter,
+			}
+			s.InsertEvent(&sue, newWallet)
 		}
 	}
 

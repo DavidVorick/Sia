@@ -109,13 +109,19 @@ func (s *State) eventNode(e Event) *eventNode {
 // InsertEvent takes a new event and inserts it into the event list.
 // It does not check that the event already exists inside of the list,
 // as duplicate events are allowed to exist in the event list.
-func (s *State) InsertEvent(e Event) {
+//
+// New events are treated differently, namely the counter is set using
+// 's.Metadata.Counter', where non-new events keep their existing counter.
+// Non-new events are only inserted during synchronization.
+func (s *State) InsertEvent(e Event, newEvent bool) {
 	// counter has the high 32 bits as the expiration of the event, which allows
 	// for sorting according to expiration. Then there's the lower 32 bits which
 	// is the eventCounter, and this allows for FCFS unique ordering of events
 	// with the same expiration.
-	e.SetCounter(s.Metadata.EventCounter)
-	s.Metadata.EventCounter++
+	if newEvent {
+		e.SetCounter(s.Metadata.EventCounter)
+		s.Metadata.EventCounter++
+	}
 	freshNode := new(eventNode)
 	freshNode.event = e
 

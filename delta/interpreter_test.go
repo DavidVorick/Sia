@@ -16,7 +16,7 @@ func initEnv() (e Engine, si state.ScriptInput) {
 		ID:      1,
 		Balance: state.NewBalance(15000),
 		Script:  []byte{0x38}, // transfer control to input
-	})
+	}, true)
 	si = state.ScriptInput{
 		WalletID: 1,
 	}

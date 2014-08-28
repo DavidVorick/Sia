@@ -56,7 +56,7 @@ func TestInsertLoadSaveRemoveWallet(t *testing.T) {
 	var s State
 	s.SetWalletPrefix(siafiles.TempFilename("TestInsertWallet."))
 	var w Wallet
-	err := s.InsertWallet(w)
+	err := s.InsertWallet(w, true)
 	if err != nil {
 		t.Error("Trouble while calling InsertWallet", err)
 	}
