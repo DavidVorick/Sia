@@ -53,7 +53,12 @@ func (w Wallet) CompensationWeight() (weight uint32) {
 	weight *= walletAtomMultiplier
 
 	// Add non-replicated weight according to the size of the wallet sector.
-	weight += uint32(w.Sector.Atoms) + w.Sector.UpdateAtoms
+	weight += uint32(w.Sector.Atoms)
+
+	// Add weight for every open update according to it's size in atoms.
+	for _, update := range w.Sector.ActiveUpdates {
+		weight += uint32(update.Atoms) + 1
+	}
 
 	return
 }

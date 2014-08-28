@@ -27,10 +27,6 @@ type Sector struct {
 	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
 
-	// The number of atoms that are currently allocated for uploading to the
-	// sector.
-	UpdateAtoms uint32
-
 	// The minimum number of sibings in the quorum that need to remain
 	// uncorrupted in order for the original data to be recoverable.
 	K byte

@@ -50,7 +50,6 @@ func printWalletList(wallets []state.Wallet) {
 		walletString += fmt.Sprintf("\t\tSector:\n")
 		{
 			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.Sector.Atoms)
-			walletString += fmt.Sprintf("\t\t\tUpdate Atoms: %v\n", wallet.Sector.UpdateAtoms)
 			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.Sector.K)
 			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.Sector.D)
 			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.Sector.Hash)

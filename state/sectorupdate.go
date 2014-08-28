@@ -156,9 +156,6 @@ func (s *State) InsertSectorUpdate(w *Wallet, su SectorUpdate) (err error) {
 	// Append the update to the list of active updates.
 	w.Sector.ActiveUpdates = append(w.Sector.ActiveUpdates, su)
 
-	// Add the weight of the update to the wallet.
-	w.Sector.UpdateAtoms += uint32(su.Atoms)
-
 	// Create the event and put it into the event list.
 	sue := &SectorUpdateEvent{
 		WalletID:    w.ID,

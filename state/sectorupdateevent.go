@@ -33,9 +33,6 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 		return
 	}
 
-	// Remove the weight of the update from the wallet.
-	w.Sector.UpdateAtoms -= uint32(su.Atoms)
-
 	// Count the number of confirmations.
 	var confirmations int
 	for _, confirmation := range su.Confirmations {
