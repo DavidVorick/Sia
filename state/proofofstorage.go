@@ -125,31 +125,15 @@ func foldHashes(sp StorageProof, proofIndex uint16) (h siacrypto.Hash) {
 // Merkle hash.
 // TODO: think about removing this function or combining it with foldHashes
 func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, sp StorageProof) bool {
-	// get the intended hash from the segment stored on disk
-	sectorFilename := s.SectorFilename(id)
-	file, err := os.Open(sectorFilename)
+	// get the expected hash from the wallet
+	w, err := s.LoadWallet(id)
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
-
-	// seek to the location where this particular siblings hash is stored
-	hashLocation := int64(sibling) * int64(siacrypto.HashSize)
-	var expectedHash siacrypto.Hash
-	_, err = file.ReadAt(expectedHash[:], hashLocation)
-	if err != nil {
-		panic(err)
-	}
+	expectedHash := w.SectorSettings.HashSet[sibling]
 
 	// build the hash up from the base
-	initialHash := siacrypto.HashBytes(sp.AtomBase[:])
-	hashStack := make([]*siacrypto.Hash, len(sp.HashStack))
-	for i := range sp.HashStack {
-		hashStack[i] = &sp.HashStack[i]
-	}
-	finalHash := foldHashes(initialHash, proofIndex, hashStack)
-
-	return finalHash == expectedHash
+	return foldHashes(sp, proofIndex) == expectedHash
 }
 
 // Proof location uses s.Metadata.PoStorageSeed to determine which atom of
