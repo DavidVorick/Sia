@@ -1,6 +1,7 @@
 package siafiles
 
 import (
+	"encoding/base64"
 	"os"
 	"path"
 )
@@ -21,4 +22,8 @@ func init() {
 // and the temp directory.
 func TempFilename(name string) string {
 	return path.Join(TempDir, name)
+}
+
+func SafeFilename(b []byte) (s string) {
+	return base64.URLEncoding.EncodeToString(b)
 }
