@@ -259,7 +259,7 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 
 	// Check that at least K segments were uploaded.
 	if successes < state.StandardConfirmations {
-		err = errors.New("not enough upload confirmations - upload failed")
+		err = fmt.Errorf("not enough upload confirmations - need %v, got %v", state.StandardConfirmations, successes)
 		return
 	}
 

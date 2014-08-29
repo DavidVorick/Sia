@@ -112,12 +112,10 @@ func (e *Engine) Compile(b Block) (err error) {
 		// Verify the storage proof.
 		verified, err = e.state.VerifyStorageProof(byte(i), heartbeat.StorageProof)
 		if err != nil {
-			// Heh
+			// Something
 		} else {
 			if !verified {
-				fmt.Println("A host has failed the storage proof.")
-				fmt.Println(i)
-				fmt.Println(e.state.Metadata.Siblings[i])
+				// Also something
 			}
 		}
 

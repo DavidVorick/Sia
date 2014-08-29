@@ -74,6 +74,10 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 				break
 			}
 		}
+
+		// Remove the update file on disk.
+		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
+		os.Remove(filename)
 	}
 
 	err = s.SaveWallet(w)
