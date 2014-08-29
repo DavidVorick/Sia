@@ -41,13 +41,8 @@ func (gw GenericWallet) ID() GenericWalletID {
 	return GenericWalletID(gw.WalletID)
 }
 
-// genericWallet is a helper function that fetches and returns a generic wallet
-// when given a generic wallet id. It's not exported because the generic
-// wallets are not meant to leave the client - all modifications that happen to
-// them should be performed from within the client package.
 func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
-	var exists bool
-	*gw, exists = c.genericWallets[gwid]
+	gw, exists := c.genericWallets[gwid]
 	if !exists {
 		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
 		return

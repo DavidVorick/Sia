@@ -13,7 +13,11 @@ type Client struct {
 	metadata state.Metadata
 
 	// Generic Wallets
-	genericWallets map[GenericWalletID]GenericWallet
+	// A pointer to the generic wallet type is stored because we wish to
+	// pass and manipulate the generic wallet by reference. Maps are not
+	// pointer safe - you can't pass a pointer to an object in the map.
+	// Instead, we make the map object a pointer and just copy that.
+	genericWallets map[GenericWalletID]*GenericWallet
 
 	// Participant Server
 	participantServer *Server
@@ -24,7 +28,7 @@ type Client struct {
 func NewClient() (c *Client, err error) {
 	// Initialize vital variables.
 	c = new(Client)
-	c.genericWallets = make(map[GenericWalletID]GenericWallet)
+	c.genericWallets = make(map[GenericWalletID]*GenericWallet)
 
 	// Process config file.
 	err = c.processConfigFile()

@@ -93,7 +93,7 @@ func (c *Client) SaveAllWallets() (err error) {
 	var filename string
 	for id, keypair := range c.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
-		err = SaveWallet(state.WalletID(id), keypair, filename)
+		err = SaveWallet(state.WalletID(id), *keypair, filename)
 		if err != nil {
 			return
 		}

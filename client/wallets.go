@@ -18,7 +18,6 @@ func (c *Client) GetWalletIDs() (ids []state.WalletID) {
 	for id := range c.genericWallets {
 		ids = append(ids, state.WalletID(id))
 	}
-	// Add other types of wallets as they are implemented.
 	return
 }
 
@@ -41,7 +40,7 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 // Returns the generic wallet associated with the wallet id.
 func (c *Client) GenericWallet(id GenericWalletID) (gw GenericWallet, err error) {
 	if _, exists := c.genericWallets[id]; exists {
-		gw = c.genericWallets[id]
+		gw = *c.genericWallets[id]
 	} else {
 		err = fmt.Errorf("could not find generic wallet of id %v", id)
 	}
@@ -107,7 +106,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		return
 	}
 
-	c.genericWallets[GenericWalletID(id)] = gw
+	c.genericWallets[GenericWalletID(id)] = &gw
 
 	return
 }

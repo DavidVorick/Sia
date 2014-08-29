@@ -14,7 +14,8 @@ import (
 // The Server houses all of the participants. It will eventually contain a
 // clock object that will be used and modified by all participants.
 type Server struct {
-	participants map[string]*consensus.Participant
+	parentDirectory string
+	participants    map[string]*consensus.Participant
 }
 
 // IsServerInitialized() is useful for telling front ent programs whether a
@@ -48,8 +49,6 @@ func (c *Client) NewServer() (err error) {
 // creates a participant that will use that directory for its files. It's
 // mostly a helper function to eliminate redundant code.
 func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
-	// NEED TO DO A CHECK ON IF THE NAME IS FILESYSTEM SAFE
-
 	// Check that the participant server has been created.
 	if c.participantServer == nil {
 		err = errors.New("participant server is nil")
@@ -96,7 +95,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	c.participantServer.participants[name] = newParticipant
 
 	// Add the wallet to the client list of generic wallets.
-	c.genericWallets[GenericWalletID(sibID)] = GenericWallet{
+	c.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
 		PublicKey: pk,
 		SecretKey: sk,
 	}
