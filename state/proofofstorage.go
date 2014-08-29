@@ -123,16 +123,23 @@ func foldHashes(sp StorageProof, proofIndex uint16) (h siacrypto.Hash) {
 // corresponding proofStack, can be used to reconstruct the original root
 // Merkle hash.
 // TODO: think about removing this function or combining it with foldHashes
-func (s *State) VerifyStorageProof(id WalletID, proofIndex uint16, sibling byte, sp StorageProof) bool {
-	// get the expected hash from the wallet
-	w, err := s.LoadWallet(id)
+func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool, err error) {
+	// Get the wallet & atom index of the bytes being proven for.
+	walletID, proofIndex, err := s.ProofLocation()
+	if err != nil {
+		return
+	}
+
+	// Get the expected hash from the wallet.
+	w, err := s.LoadWallet(walletID)
 	if err != nil {
 		panic(err)
 	}
 	expectedHash := w.Sector.HashSet[sibling]
 
 	// build the hash up from the base
-	return foldHashes(sp, proofIndex) == expectedHash
+	verified = foldHashes(sp, proofIndex) == expectedHash
+	return
 }
 
 // Proof location uses s.Metadata.PoStorageSeed to determine which atom of
