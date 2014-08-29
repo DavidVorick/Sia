@@ -41,6 +41,24 @@ func (gw GenericWallet) ID() GenericWalletID {
 	return GenericWalletID(gw.WalletID)
 }
 
+// Returns the generic wallet associated with the wallet id. This is an
+// exported function, and to protect the internal state of the client, only a
+// copy of the generic wallet is returned.
+func (c *Client) GenericWallet(gwid GenericWalletID) (gw GenericWallet, err error) {
+	gwPointer, exists := c.genericWallets[gwid]
+	if !exists {
+		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
+		return
+	}
+	gw = *gwPointer
+
+	return
+}
+
+// Returns the generic wallet assiciated with the wallet id. This is a
+// non-exported function, and return a pointer to the generic wallet stored
+// within the client. Editing the wallet returned by this function will modify
+// the clients internal state.
 func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
 	gw, exists := c.genericWallets[gwid]
 	if !exists {
@@ -204,7 +222,7 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 		Input:    delta.UpdateSectorInput(su),
 		WalletID: gw.WalletID,
 	}
-	delta.SignScriptInput(&input, c.genericWallets[gwid].SecretKey)
+	delta.SignScriptInput(&input, gw.SecretKey)
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,

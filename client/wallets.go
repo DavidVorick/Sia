@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/NebulousLabs/Sia/consensus"
@@ -34,17 +33,6 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 	// Check for other types of wallets.
 
 	err = errors.New("Wallet is not available.")
-	return
-}
-
-// Returns the generic wallet associated with the wallet id.
-func (c *Client) GenericWallet(id GenericWalletID) (gw GenericWallet, err error) {
-	if _, exists := c.genericWallets[id]; exists {
-		gw = *c.genericWallets[id]
-	} else {
-		err = fmt.Errorf("could not find generic wallet of id %v", id)
-	}
-
 	return
 }
 
@@ -84,7 +72,6 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
 			Deadline: c.metadata.Height + state.MaxDeadline,
 		},
-		Resp: nil,
 	})
 
 	// Wait an appropriate amount of time for the request to be accepted: 2
