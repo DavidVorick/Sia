@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -14,17 +15,78 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
-	// Download a segment from each person in the quorum, until k segments
-	// are grabbed.
+// A GenericWalletID is currently just a normal WalletID, but enforces type
+// safety when making calls to generic wallet functions in the client. Also,
+// when asked for a generic wallet, the client will only return the ID instead
+// of the whole wallet; this is a safer way to interact with the wallet type.
+type GenericWalletID state.WalletID
+
+// A GenericWallet is a transportable struct which points to a wallet in the
+// quorum of id 'id'. The wallet is assumed to have a generic script body which
+// uses 'PublicKey' as the public key. The data stored in the wallet's sector
+// is assumed to have a 'K' value of 'state.StandardK', and is assumed to
+// decode to a file exactly 'OriginalFileSize' bytes on disk.
+type GenericWallet struct {
+	WalletID state.WalletID
+
+	PublicKey siacrypto.PublicKey
+	SecretKey siacrypto.SecretKey
+
+	OriginalFileSize int64
+}
+
+// Helper function on GenericWallet that calculates and returns the id to the
+// wallet.
+func (gw GenericWallet) ID() GenericWalletID {
+	return GenericWalletID(gw.WalletID)
+}
+
+// Returns the generic wallet associated with the wallet id. This is an
+// exported function, and to protect the internal state of the client, only a
+// copy of the generic wallet is returned.
+func (c *Client) GenericWallet(gwid GenericWalletID) (gw GenericWallet, err error) {
+	gwPointer, exists := c.genericWallets[gwid]
+	if !exists {
+		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
+		return
+	}
+	gw = *gwPointer
+
+	return
+}
+
+// Returns the generic wallet assiciated with the wallet id. This is a
+// non-exported function, and return a pointer to the generic wallet stored
+// within the client. Editing the wallet returned by this function will modify
+// the clients internal state.
+func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
+	gw, exists := c.genericWallets[gwid]
+	if !exists {
+		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
+		return
+	}
+
+	return
+}
+
+// Download the sector into filepath 'filename'.
+func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
+	if err != nil {
+		return
+	}
+
+	// Download a segment from each sibling in the quorum, until StandardK
+	// segments have been downloaded.
 	var segments []io.Reader
 	var indicies []byte
-	for i := range c.siblings {
+	for i := range c.metadata.Siblings {
 		var segment []byte
 		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[i].Address,
+			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
-			Args: id,
+			Args: gw.WalletID,
 			Resp: &segment,
 		})
 
@@ -35,24 +97,27 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 		}
 	}
 
-	// Create the file.
+	// Check that enough pieces were retrieved.
+	if len(indicies) < state.StandardK {
+		err = errors.New("file not retrievable")
+		return
+	}
+
+	// Create the file for writing.
 	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
 
-	// Call recover, writing into the file.
+	// Recover the StandardK segments into the file.
 	_, err = state.RSRecover(segments, indicies, file, state.StandardK)
 	if err != nil {
 		return
 	}
 
-	// Sort out the padding, removing what padding has been added.
-	keypair, exists := c.genericWallets[id]
-	if !exists {
-		return
-	}
-	err = file.Truncate(keypair.OriginalSize)
+	// Truncate the file to it's original size, effectively removing any
+	// padding that may have been added.
+	err = file.Truncate(gw.OriginalFileSize)
 	if err != nil {
 		return
 	}
@@ -60,94 +125,22 @@ func (c *Client) DownloadFile(id state.WalletID, filename string) (err error) {
 	return
 }
 
-// Submit a wallet request to the fountain wallet.
-func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
-	// Query to verify that the wallet id is available.
-	var w state.Wallet
-	err = c.router.SendMessage(network.Message{
-		Dest: c.siblings[0].Address,
-		Proc: "Participant.Wallet",
-		Args: id,
-		Resp: &w,
-	})
-	if err == nil {
-		err = errors.New("Wallet already exists!")
-		return
-	}
-	err = nil
-
-	// Create a generic wallet with a keypair for the request.
-	pk, sk, err := siacrypto.CreateKeyPair()
+// Send coins to wallet 'destination'.
+func (gwid GenericWalletID) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
 	if err != nil {
-		return
-	}
-
-	// Fill out a keypair object and insert it into the generic wallet map.
-	var kp Keypair
-	kp.PublicKey = pk
-	kp.SecretKey = sk
-
-	// Get the current height of the quorum.
-	currentHeight, err := c.GetHeight()
-	if err != nil {
-		return
-	}
-
-	// Send the requesting script input out to the network.
-	c.Broadcast(network.Message{
-		Proc: "Participant.AddScriptInput",
-		Args: state.ScriptInput{
-			WalletID: delta.FountainWalletID,
-			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
-			Deadline: currentHeight + state.MaxDeadline,
-		},
-		Resp: nil,
-	})
-
-	// Wait an appropriate amount of time for the request to be accepted: 2
-	// blocks.
-	time.Sleep(time.Duration(consensus.NumSteps) * 2 * consensus.StepDuration)
-
-	// Query to verify that the request was accepted by the network.
-	err = c.router.SendMessage(network.Message{
-		Dest: c.siblings[0].Address,
-		Proc: "Participant.Wallet",
-		Args: id,
-		Resp: &w,
-	})
-	if err != nil {
-		return
-	}
-	if string(w.Script) != string(delta.DefaultScript(pk)) {
-		err = errors.New("Wallet already exists - someone just beat you to it.")
-		return
-	}
-
-	c.genericWallets[id] = kp
-
-	return
-}
-
-// Send coins from one wallet to another.
-func (c *Client) SendCoinGeneric(source state.WalletID, destination state.WalletID, amount state.Balance) (err error) {
-	if _, ok := c.genericWallets[source]; !ok {
-		err = errors.New("Could not access source wallet, perhaps it's not a generic wallet?")
 		return
 	}
 
 	// Get the current height of the quorum, for setting the deadline on
 	// the script input.
-	currentHeight, err := c.GetHeight()
-	if err != nil {
-		return
-	}
-
 	input := state.ScriptInput{
-		WalletID: source,
+		WalletID: gw.WalletID,
 		Input:    delta.SendCoinInput(destination, amount),
-		Deadline: currentHeight + state.MaxDeadline,
+		Deadline: c.metadata.Height + state.MaxDeadline,
 	}
-	err = delta.SignScriptInput(&input, c.genericWallets[source].SecretKey)
+	err = delta.SignScriptInput(&input, gw.SecretKey)
 	if err != nil {
 		return
 	}
@@ -160,18 +153,16 @@ func (c *Client) SendCoinGeneric(source state.WalletID, destination state.Wallet
 	return
 }
 
-// UpdateSectorGeneric takes the id of a generic wallet, along with a file, and
-// replaces whatever sector/file is currently housed in the generic wallet with
-// the new file.
-func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
-	// Check that the wallet is available to this client.
-	if _, exists := c.genericWallets[id]; !exists {
-		err = errors.New("do not have access to given wallet")
+// Upload takes a file as input and uploads it to the wallet.
+func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
+	// Get the wallet associated with the id.
+	gw, err := c.genericWallet(gwid)
+	if err != nil {
 		return
 	}
 
-	// Get a fresh list of siblings.
-	c.RefreshSiblings()
+	// Refresh the metadata for greatest chance of success.
+	c.RefreshMetadata()
 
 	// Calculate the size of the file.
 	file, err := os.Open(filename)
@@ -186,14 +177,10 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	fileSize := info.Size()
 
 	// Create basic sector update.
-	height, err := c.GetHeight()
-	if err != nil {
-		return
-	}
 	su := state.SectorUpdate{
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
-		Deadline:              height + 6,
+		Deadline:              c.metadata.Height + 5,
 	}
 
 	// Create segments for the encoder output.
@@ -231,11 +218,11 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 
 	// Submit the sector update.
 	input := state.ScriptInput{
-		Deadline: height + 4,
+		Deadline: c.metadata.Height + 4,
 		Input:    delta.UpdateSectorInput(su),
-		WalletID: id,
+		WalletID: gw.WalletID,
 	}
-	delta.SignScriptInput(&input, c.genericWallets[id].SecretKey)
+	delta.SignScriptInput(&input, gw.SecretKey)
 	c.Broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
@@ -246,28 +233,35 @@ func (c *Client) UploadFile(id state.WalletID, filename string) (err error) {
 	time.Sleep(consensus.StepDuration * time.Duration(state.QuorumSize) * 3)
 
 	// Upload each segment to its respective sibling.
+	var successes byte
 	for i := range segmentBytes {
-		var accepted bool
+		// Create a segment upload for the sibling of index 'i'.
 		segmentUpload := delta.SegmentUpload{
-			WalletID:    id,
+			WalletID:    gw.WalletID,
 			UpdateIndex: 0,
 			NewSegment:  segmentBytes[i],
 		}
-		err = c.router.SendMessage(network.Message{
-			Dest: c.siblings[i].Address,
+
+		var accepted bool
+		err2 := c.router.SendMessage(network.Message{
+			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.UploadSegment",
 			Args: segmentUpload,
 			Resp: &accepted,
 		})
-
-		if err != nil {
-			println("error, but handle bad.")
+		if err2 == nil {
+			successes++
 		}
 	}
 
-	originalKeypair := c.genericWallets[id]
-	originalKeypair.OriginalSize = fileSize
-	c.genericWallets[id] = originalKeypair
+	// Check that at least K segments were uploaded.
+	if successes < state.StandardConfirmations {
+		err = errors.New("not enough upload confirmations - upload failed")
+		return
+	}
+
+	// Update the file size information attached to this wallet.
+	gw.OriginalFileSize = fileSize
 
 	return
 }

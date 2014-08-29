@@ -14,7 +14,14 @@ import (
 // The Server houses all of the participants. It will eventually contain a
 // clock object that will be used and modified by all participants.
 type Server struct {
-	participants map[string]*consensus.Participant
+	parentDirectory string
+	participants    map[string]*consensus.Participant
+}
+
+// IsServerInitialized() is useful for telling front ent programs whether a
+// server needs to be initialized or not.
+func (c *Client) IsServerInitialized() bool {
+	return c.participantServer != nil
 }
 
 // NewServer takes a port number as input and returns a server object that's
@@ -42,8 +49,6 @@ func (c *Client) NewServer() (err error) {
 // creates a participant that will use that directory for its files. It's
 // mostly a helper function to eliminate redundant code.
 func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
-	// NEED TO DO A CHECK ON IF THE NAME IS FILESYSTEM SAFE
-
 	// Check that the participant server has been created.
 	if c.participantServer == nil {
 		err = errors.New("participant server is nil")
@@ -90,7 +95,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	c.participantServer.participants[name] = newParticipant
 
 	// Add the wallet to the client list of generic wallets.
-	c.genericWallets[sibID] = Keypair{
+	c.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
 		PublicKey: pk,
 		SecretKey: sk,
 	}
@@ -102,7 +107,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	if err != nil {
 		return
 	}
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 
 	return
 }
@@ -116,7 +121,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	}
 
 	// Verify that the sibID given is available to the client.
-	_, exists := c.genericWallets[sibID]
+	_, exists := c.genericWallets[GenericWalletID(sibID)]
 	if !exists {
 		err = errors.New("no known wallet of that id")
 		return
@@ -124,11 +129,11 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 
 	// Get a list of addresses for the joining participant to use while bootstrapping.
 	var siblingAddresses []network.Address
-	for _, sibling := range c.siblings {
+	for _, sibling := range c.metadata.Siblings {
 		siblingAddresses = append(siblingAddresses, sibling.Address)
 	}
 
-	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[sibID].SecretKey, siblingAddresses)
+	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[GenericWalletID(sibID)].SecretKey, siblingAddresses)
 	if err != nil {
 		return
 	}
@@ -141,7 +146,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	if err != nil {
 		return
 	}
-	c.siblings = metadata.Siblings
+	c.metadata.Siblings = metadata.Siblings
 
 	return
 }

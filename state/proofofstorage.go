@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -145,7 +144,6 @@ func (s *State) ProofLocation() (id WalletID, index uint16, err error) {
 
 	// Can't take the modulus of 0
 	if s.walletRoot.weight == 0 {
-		err = errors.New("empty quorum")
 		return
 	} else {
 		seedInt %= uint64(s.walletRoot.weight)

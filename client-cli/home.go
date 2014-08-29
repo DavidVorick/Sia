@@ -110,7 +110,7 @@ func createGenericWalletWalkthrough(c *client.Client) (err error) {
 func loadWalletWalkthrough(c *client.Client) (err error) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
-	fmt.Print("Wallet ID (hex): ")
+	fmt.Print("Wallet ID: ")
 	_, err = fmt.Scanln(&id)
 	if err != nil {
 		return
@@ -118,15 +118,22 @@ func loadWalletWalkthrough(c *client.Client) (err error) {
 
 	// Check that the wallet is available to the client.
 	walletType, err := c.WalletType(id)
+	if err != nil {
+		return
+	}
 
-	// If there was an error, print the error (most likely a not-available
-	// error). If the wallet type is recognized, switch to the polling of
-	// that wallet type. If the type is not recognized, print an error and
-	// return to the home menu.
+	// If the wallet type is recognized, switch to the polling of that wallet
+	// type. If the type is not recognized, print an error and return to the
+	// home menu.
 	if err != nil {
 		return
 	} else if walletType == "generic" {
-		pollGenericWallet(c, id)
+		var gw client.GenericWallet
+		gw, err = c.GenericWallet(client.GenericWalletID(id))
+		if err != nil {
+			return
+		}
+		pollGenericWallet(c, gw)
 	} else {
 		err = errors.New("wallet is available, but is of an unknown type.")
 		return

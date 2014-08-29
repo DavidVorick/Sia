@@ -7,7 +7,7 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func downloadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
+func downloadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get the name of the filepath to download into.
 	var filename string
 	fmt.Print("Absolute path to download the file to: ")
@@ -16,8 +16,7 @@ func downloadGenericWalkthrough(c *client.Client, id state.WalletID) (err error)
 		return
 	}
 
-	// yep... that's it.
-	err = c.DownloadFile(id, filename)
+	err = gw.ID().Download(c, filename)
 	if err != nil {
 		return
 	}
@@ -27,7 +26,7 @@ func downloadGenericWalkthrough(c *client.Client, id state.WalletID) (err error)
 
 // sendCoinGenericWalletWalkthrough walks the user through sending coins from
 // their generic wallet.
-func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err error) {
+func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get a destination and an amount
 	var destinationID state.WalletID
 	var amount uint64
@@ -42,7 +41,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err 
 		return
 	}
 
-	err = c.SendCoinGeneric(id, destinationID, state.NewBalance(amount))
+	err = gw.ID().SendCoin(c, destinationID, state.NewBalance(amount))
 	if err != nil {
 		return
 	}
@@ -50,7 +49,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, id state.WalletID) (err 
 	return
 }
 
-func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
+func uploadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
 	// Get the name of the file to upload.
 	var filename string
 	fmt.Print("Absolute path of the file to upload: ")
@@ -59,8 +58,7 @@ func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
 		return
 	}
 
-	// yep... that's it.
-	err = c.UploadFile(id, filename)
+	err = gw.ID().Upload(c, filename)
 	if err != nil {
 		return
 	}
@@ -72,7 +70,7 @@ func uploadGenericWalkthrough(c *client.Client, id state.WalletID) (err error) {
 // generic wallet mode.
 func displayGenericWalletHelp() {
 	fmt.Println(
-		"h:\tHelp\n",
+		" h:\tHelp\n",
 		"q:\tQuit\n",
 		"d:\tDownload the wallet's file.\n",
 		"s:\tSend siacoins to another wallet.\n",
@@ -80,12 +78,12 @@ func displayGenericWalletHelp() {
 	)
 }
 
-func pollGenericWallet(c *client.Client, id state.WalletID) {
+func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
 	var input string
 	var err error
 	for {
 		fmt.Println()
-		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", id)
+		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", gw.ID)
 		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)
@@ -104,13 +102,13 @@ func pollGenericWallet(c *client.Client, id state.WalletID) {
 			return
 
 		case "d", "download":
-			err = downloadGenericWalkthrough(c, id)
+			err = downloadGenericWalletWalkthrough(c, gw)
 
 		case "s", "send", "transaction":
-			err = sendCoinGenericWalletWalkthrough(c, id)
+			err = sendCoinGenericWalletWalkthrough(c, gw)
 
 		case "u", "upload":
-			err = uploadGenericWalkthrough(c, id)
+			err = uploadGenericWalletWalkthrough(c, gw)
 		}
 
 		if err != nil {

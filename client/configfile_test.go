@@ -14,7 +14,7 @@ import (
 // each. Usually this means 3-5 lines, though it can be more or less.
 func TestSaveLoadWallet(t *testing.T) {
 	var id1, id2 state.WalletID
-	var keypair1, keypair2 Keypair
+	var keypair1, keypair2 GenericWallet
 	id1 = state.WalletID(siacrypto.RandomUint64())
 	var err error
 	keypair1.PublicKey, keypair1.SecretKey, err = siacrypto.CreateKeyPair()
