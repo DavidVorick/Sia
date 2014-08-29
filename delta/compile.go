@@ -113,7 +113,6 @@ func (e *Engine) Compile(b Block) (err error) {
 		verified, err = e.state.VerifyStorageProof(byte(i), heartbeat.StorageProof)
 		if err != nil {
 			// Heh
-			fmt.Println("Error during storage proof verification:", err)
 		} else {
 			if !verified {
 				fmt.Println("A host has failed the storage proof.")

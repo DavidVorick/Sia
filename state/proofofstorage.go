@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -11,6 +12,30 @@ import (
 type StorageProof struct {
 	AtomBase  [AtomSize]byte
 	HashStack []*siacrypto.Hash
+}
+
+// Proof location uses s.Metadata.PoStorageSeed to determine which atom of
+// which wallet is being checked for during proof of storage.
+func (s *State) proofLocation() (id WalletID, index uint16, err error) {
+	// Take the first 8 bytes of the storage proof and convert to a uint64 - a
+	// random number.
+	seedInt := siaencoding.DecUint64(s.Metadata.PoStorageSeed[:])
+
+	// Can't take the modulus of 0
+	if s.walletRoot.weight == 0 {
+		err = errors.New("empty quorum")
+		return
+	} else {
+		seedInt %= uint64(s.walletRoot.weight)
+	}
+
+	// Get the node and index associated with the seed weight.
+	node, index, err := s.weightNode(seedInt)
+	if err != nil {
+		return
+	}
+	id = node.id
+	return
 }
 
 // buildProof constructs a list of hashes using the following procedure. The
@@ -76,9 +101,15 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof)
 }
 
 // BuildStorageProof is a simple wrapper around buildProof.
-func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StorageProof) {
+func (s *State) BuildStorageProof() (sp StorageProof, err error) {
+	// Get the wallet and atom being proven for.
+	walletID, proofIndex, err := s.proofLocation()
+	if err != nil {
+		return
+	}
+
 	// read the sector data
-	sectorFilename := s.SectorFilename(id)
+	sectorFilename := s.SectorFilename(walletID)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
 		return
@@ -87,14 +118,15 @@ func (s *State) BuildStorageProof(id WalletID, proofIndex uint16) (sp StoragePro
 	defer file.Close()
 
 	// determine numAtoms
-	w, err := s.LoadWallet(id)
+	w, err := s.LoadWallet(walletID)
 	if err != nil {
 		return
 		// panic(err)
 	}
 	numAtoms := w.Sector.Atoms
 
-	return buildProof(file, numAtoms, proofIndex)
+	sp = buildProof(file, numAtoms, proofIndex)
+	return
 }
 
 // foldHashes traverses a proofStack, hashing elements together to produce the
@@ -125,7 +157,7 @@ func foldHashes(sp StorageProof, proofIndex uint16) (h siacrypto.Hash) {
 // TODO: think about removing this function or combining it with foldHashes
 func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool, err error) {
 	// Get the wallet & atom index of the bytes being proven for.
-	walletID, proofIndex, err := s.ProofLocation()
+	walletID, proofIndex, err := s.proofLocation()
 	if err != nil {
 		return
 	}
@@ -139,28 +171,5 @@ func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool
 
 	// build the hash up from the base
 	verified = foldHashes(sp, proofIndex) == expectedHash
-	return
-}
-
-// Proof location uses s.Metadata.PoStorageSeed to determine which atom of
-// which wallet is being checked for during proof of storage.
-func (s *State) ProofLocation() (id WalletID, index uint16, err error) {
-	// Take the first 8 bytes of the storage proof and convert to a uint64 - a
-	// random number.
-	seedInt := siaencoding.DecUint64(s.Metadata.PoStorageSeed[:])
-
-	// Can't take the modulus of 0
-	if s.walletRoot.weight == 0 {
-		return
-	} else {
-		seedInt %= uint64(s.walletRoot.weight)
-	}
-
-	// Get the node and index associated with the seed weight.
-	node, index, err := s.weightNode(seedInt)
-	if err != nil {
-		return
-	}
-	id = node.id
 	return
 }
