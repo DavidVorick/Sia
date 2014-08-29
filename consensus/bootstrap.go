@@ -83,6 +83,9 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 	p.engine.Initialize(filePrefix)
 	p.setSiblingIndex(p.siblingIndex)
 
+	// Set up a listener for segment repairs.
+	go p.recoveryListen()
+
 	// Write-lock the updateStop to stop updates until the participant
 	// starts ticking.
 	p.updateStop.Lock()
@@ -391,8 +394,13 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	}
 	p.engineLock.Unlock()
 
-	// Once accepted as a sibling, begin downloading all files.
-	// Be careful with overwrites regarding uploads that come to fruition. I think this is as simple as rejecting/ignoring updates until downloading is complete for the given file.
-	// Once all files are downloaded, announce full siblingness.
+	// Download all files that are missing.
+	p.engineLock.RLock()
+	walletList := p.engine.WalletList()
+	p.engineLock.RUnlock()
+	for _, wallet := range walletList {
+		go p.recoverSegment(wallet)
+	}
+
 	return
 }

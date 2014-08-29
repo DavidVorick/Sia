@@ -27,6 +27,9 @@ type State struct {
 
 	// Points to the skip list that contains all of the events.
 	eventRoot *eventNode
+
+	// Communicating with consensus for repairing files.
+	RepairChan chan WalletID
 }
 
 // AtomsInUse returns the number of atoms being consumed by the whole quorum.
@@ -52,4 +55,6 @@ func (s *State) Initialize() {
 	for i := range s.Metadata.Siblings {
 		s.Metadata.Siblings[i].Status = ^byte(0)
 	}
+
+	s.RepairChan = make(chan WalletID)
 }

@@ -104,3 +104,11 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 
 	return
 }
+
+func (p *Participant) recoveryListen() {
+	repairChan := p.engine.RepairChan()
+
+	for repairRequest := range repairChan {
+		go p.recoverSegment(repairRequest)
+	}
+}

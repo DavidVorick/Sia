@@ -61,7 +61,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 		// Copy the file from the update to the file for the sector.
 		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
 		if _, err = os.Stat(filename); os.IsNotExist(err) {
-			// DO SOMETHING TO RECOVER THE FILE
+			s.RepairChan <- sue.WalletID
 		} else {
 			siafiles.Copy(s.SectorFilename(sue.WalletID), filename)
 			os.Remove(filename)
