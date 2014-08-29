@@ -2,8 +2,9 @@ package delta
 
 import (
 	"errors"
-	"os"
+	"io/ioutil"
 
+	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -28,7 +29,7 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	// indicates whether the upload has already been completed for this
 	// participant.
 	filename := e.state.SectorUpdateFilename(su.WalletID, su.UpdateIndex)
-	if _, err = os.Stat(filename); !os.IsNotExist(err) {
+	if siafiles.Exists(filename) {
 		err = errors.New("already have upload")
 		return
 	}
@@ -39,49 +40,29 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 		return
 	}
 
-	// Create the file nad write the new segment.
-	file, err := os.Create(filename)
+	// Create the file and write the new segment.
+	scratch := siafiles.Scratch()
 	if err != nil {
 		return
 	}
-	_, err = file.Write(su.NewSegment)
-	if err != nil {
-		file.Close()
-		os.Remove(filename)
-		return
-	}
+	scratch.Write(su.NewSegment)
 
-	// Pad the remaining file with '0's
-	numZerosNeeded := int(state.AtomSize)*int(sectorUpdate.Atoms) - len(su.NewSegment)
-	empty := make([]byte, numZerosNeeded)
-	_, err = file.Write(empty)
-	if err != nil {
-		file.Close()
-		os.Remove(filename)
-		return
-	}
+	// Pad as needed.
+	scratch.PadTo(state.AtomSize * int(sectorUpdate.Atoms))
 
-	// Run a merkle collapse on the file and see if the hash matches.
-	_, err = file.Seek(0, 0)
+	root, err := state.MerkleCollapse(scratch, sectorUpdate.Atoms)
 	if err != nil {
-		file.Close()
-		os.Remove(filename)
-		return
-	}
-	root, err := state.MerkleCollapse(file, sectorUpdate.Atoms)
-	if err != nil {
-		file.Close()
-		os.Remove(filename)
 		return
 	}
 	if root != sectorUpdate.HashSet[e.siblingIndex] {
 		err = errors.New("hash does not match!")
-		file.Close()
-		os.Remove(filename)
 		return
 	}
 
-	file.Close()
+	if err = scratch.SaveAs(filename); err != nil {
+		return
+	}
+
 	accepted = true
 	return
 }
@@ -90,28 +71,7 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 // 'sector', which is then returned. It is meant as a helper function to the
 // participant.
 func (e *Engine) DownloadSector(id state.WalletID) (sector []byte, err error) {
-	// Open the sector.
-	filename := e.state.SectorFilename(id)
-	file, err := os.Open(filename)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	// Create a slice that will hold the whole sector.
-	info, err := file.Stat()
-	if err != nil {
-		return
-	}
-	sector = make([]byte, info.Size())
-
-	// Read the file into the sector.
-	_, err = file.Read(sector)
-	if err != nil {
-		return
-	}
-
-	return
+	return ioutil.ReadFile(e.state.SectorFilename(id))
 }
 
 /*

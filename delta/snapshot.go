@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -121,8 +122,6 @@ func (e *Engine) saveSnapshot() (err error) {
 	var offsetTable snapshotOffsetTable
 	currentOffset := snapshotOffsetTableLength
 
-	// put encodedQuorumMetadata in its own scope so that it can be garbage
-	// collected
 	{
 		// encode the quorum and record the length
 		var encodedQuorumMetadata []byte
@@ -141,9 +140,7 @@ func (e *Engine) saveSnapshot() (err error) {
 		currentOffset += len(encodedQuorumMetadata)
 	}
 
-	// Create the wallet lookup table and save the wallets. This is again in
-	// its own scope so that the data can be garbage collected before the
-	// function returns.
+	// Create wallet lookup table and save the wallets.
 	{
 		// Retreive a list of all the wallets stored in the quorum and allocate
 		// the wallet lookup table
@@ -208,10 +205,13 @@ func (e *Engine) saveSnapshot() (err error) {
 		return
 	}
 	_, err = file.WriteAt(encodedOffset, 0)
+	if err != nil {
+		return
+	}
 
 	// Delete the oldest snapshot.
 	oldSnapshotFilename := e.snapshotFilename(e.state.Metadata.RecentSnapshot - 2*SnapshotLength)
-	err = os.RemoveAll(oldSnapshotFilename) // os.RemoveAll returns nil if the file does not exist.
+	err = siafiles.Remove(oldSnapshotFilename)
 	if err != nil {
 		return
 	}
