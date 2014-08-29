@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 const (
@@ -52,7 +53,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	var file *os.File
 	if e.activeHistoryLength == SnapshotLength {
 		// remove the recent history file, and progress the recentHistoryHead
-		os.Remove(e.recentHistoryFilename())
+		siafiles.Remove(e.recentHistoryFilename())
 		e.recentHistoryHead = e.state.Metadata.RecentSnapshot
 
 		// reset activeHistoryLength, and progress the RecentSnapshot, then save
@@ -61,8 +62,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		// snapshot is saved to the right filename.
 		e.activeHistoryLength = 0
 		e.state.Metadata.RecentSnapshot += SnapshotLength
-		err = e.saveSnapshot()
-		if err != nil {
+		if err = e.saveSnapshot(); err != nil {
 			return
 		}
 
@@ -95,19 +95,10 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		// this is a special case where the previous save did not already set the
 		// offset (because there was no previous save). We therefore need to play
 		// that role and save the offset for the 0th block.
-		encodedOffset := siaencoding.EncUint32(uint32(offset))
-		_, err = file.Seek(0, 0) // These lines shoulnd't be needed
-		if err != nil {          //
-			return //
-		} //
-		file.Write(encodedOffset)
+		file.Write(siaencoding.EncUint32(uint32(offset)))
 	} else {
 		encodedOffset := make([]byte, 4)
-		_, err = file.Seek(int64(e.activeHistoryLength*4), 0)
-		if err != nil {
-			return
-		}
-		_, err = file.Read(encodedOffset)
+		_, err = file.ReadAt(encodedOffset, int64(e.activeHistoryLength*4))
 		if err != nil {
 			return
 		}
@@ -116,13 +107,9 @@ func (e *Engine) saveBlock(b Block) (err error) {
 
 	// save the offset of the next block, but only if there is a next block
 	if e.activeHistoryLength != SnapshotLength-1 {
-		nextOffset := offset + len(encodedBlock) + 4 // +4 for the length prefix
-		_, err = file.Seek(int64(4+4*e.activeHistoryLength), 0)
-		if err != nil {
-			return
-		}
-		encodedNextOffset := siaencoding.EncUint32(uint32(nextOffset))
-		_, err = file.Write(encodedNextOffset)
+		// +4 for the length prefix
+		nextOffset := siaencoding.EncUint32(uint32(offset + len(encodedBlock) + 4))
+		_, err = file.WriteAt(nextOffset, int64(4+4*e.activeHistoryLength))
 		if err != nil {
 			return
 		}
@@ -134,11 +121,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		return
 	}
 	blockSize := siaencoding.EncUint32(uint32(len(encodedBlock)))
-	_, err = file.Write(blockSize)
-	if err != nil {
-		return
-	}
-	_, err = file.Write(encodedBlock)
+	_, err = file.Write(append(blockSize, encodedBlock...))
 	if err != nil {
 		return
 	}
@@ -161,6 +144,7 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 		if err != nil {
 			return
 		}
+		defer file.Close()
 		blockIndex = height - e.state.Metadata.RecentSnapshot
 	} else if e.recentHistoryHead != ^uint32(0) && height >= e.recentHistoryHead && height < e.recentHistoryHead+SnapshotLength {
 		// block is in recent history, load from that file
@@ -168,35 +152,28 @@ func (e *Engine) LoadBlock(height uint32) (b Block, err error) {
 		if err != nil {
 			return
 		}
+		defer file.Close()
 		blockIndex = height - e.recentHistoryHead
 	} else {
-		err = fmt.Errorf("LoadBlock: Block %v not in available history.", height)
+		err = fmt.Errorf("block %v not in available history", height)
 		return
 	}
 
 	// Fetch the block from the determined index in the opened file.
-	_, err = file.Seek(int64(4*blockIndex), 0)
-	if err != nil {
-		return
-	}
 	encodedBlockOffset := make([]byte, 4)
-	_, err = file.Read(encodedBlockOffset)
+	_, err = file.ReadAt(encodedBlockOffset, int64(blockIndex)*4)
 	if err != nil {
 		return
 	}
 	blockOffset := siaencoding.DecUint32(encodedBlockOffset)
-	_, err = file.Seek(int64(blockOffset), 0)
-	if err != nil {
-		return
-	}
 	encodedBlockLength := make([]byte, 4)
-	_, err = file.Read(encodedBlockLength)
+	_, err = file.ReadAt(encodedBlockLength, int64(blockOffset))
 	if err != nil {
 		return
 	}
 	blockLength := siaencoding.DecUint32(encodedBlockLength)
 	encodedBlock := make([]byte, blockLength)
-	_, err = file.Read(encodedBlock)
+	_, err = file.ReadAt(encodedBlock, int64(blockOffset)+4)
 	if err != nil {
 		return
 	}

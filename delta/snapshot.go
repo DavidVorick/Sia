@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -121,83 +122,74 @@ func (e *Engine) saveSnapshot() (err error) {
 	var offsetTable snapshotOffsetTable
 	currentOffset := snapshotOffsetTableLength
 
-	// put encodedQuorumMetadata in its own scope so that it can be garbage
-	// collected
-	{
-		// encode the quorum and record the length
-		var encodedQuorumMetadata []byte
-		encodedQuorumMetadata, err = siaencoding.Marshal(e.state.Metadata)
-		if err != nil {
-			return
-		}
-		offsetTable.stateMetadataLength = uint32(len(encodedQuorumMetadata))
-		offsetTable.stateMetadataOffset = uint32(currentOffset)
+	// encode the quorum and record the length
+	var encodedQuorumMetadata []byte
+	encodedQuorumMetadata, err = siaencoding.Marshal(e.state.Metadata)
+	if err != nil {
+		return
+	}
+	offsetTable.stateMetadataLength = uint32(len(encodedQuorumMetadata))
+	offsetTable.stateMetadataOffset = uint32(currentOffset)
 
-		// Write the encoded quorum to the snapshot file.
-		_, err = file.WriteAt(encodedQuorumMetadata, int64(offsetTable.stateMetadataOffset))
-		if err != nil {
-			return
-		}
-		currentOffset += len(encodedQuorumMetadata)
+	// Write the encoded quorum to the snapshot file.
+	_, err = file.WriteAt(encodedQuorumMetadata, int64(offsetTable.stateMetadataOffset))
+	if err != nil {
+		return
+	}
+	currentOffset += len(encodedQuorumMetadata)
+
+	// Retreive a list of all the wallets stored in the quorum and allocate
+	// the wallet lookup table
+	walletList := e.state.WalletList()
+	offsetTable.walletLookupTableOffset = uint32(currentOffset)
+	offsetTable.walletLookupTableLength = uint32(len(walletList) * walletOffsetLength)
+	walletLookupTable := make([]walletOffset, len(walletList))
+	currentOffset += len(walletList) * walletOffsetLength
+
+	// Seek the file to the current offset, since the offset was changed
+	// without doing a file write.
+	_, err = file.Seek(int64(currentOffset), 0)
+	if err != nil {
+		return
 	}
 
-	// Create the wallet lookup table and save the wallets. This is again in
-	// its own scope so that the data can be garbage collected before the
-	// function returns.
-	{
-		// Retreive a list of all the wallets stored in the quorum and allocate
-		// the wallet lookup table
-		walletList := e.state.WalletList()
-		offsetTable.walletLookupTableOffset = uint32(currentOffset)
-		offsetTable.walletLookupTableLength = uint32(len(walletList) * walletOffsetLength)
-		walletLookupTable := make([]walletOffset, len(walletList))
-		currentOffset += len(walletList) * walletOffsetLength
-
-		// Seek the file to the current offset, since the offset was changed
-		// without doing a file write.
-		_, err = file.Seek(int64(currentOffset), 0)
+	// Write wallets, update lookup table.
+	for i := range walletList {
+		var encodedWallet []byte
+		var wallet state.Wallet
+		wallet, err = e.state.LoadWallet(walletList[i])
 		if err != nil {
 			return
 		}
-
-		// Write wallets, update lookup table.
-		for i := range walletList {
-			var encodedWallet []byte
-			var wallet state.Wallet
-			wallet, err = e.state.LoadWallet(walletList[i])
-			if err != nil {
-				return
-			}
-			encodedWallet, err = siaencoding.Marshal(wallet)
-			if err != nil {
-				return
-			}
-			walletLookupTable[i].id = wallet.ID
-			walletLookupTable[i].length = uint32(len(encodedWallet))
-			walletLookupTable[i].offset = uint32(currentOffset)
-			_, err = file.Write(encodedWallet)
-			if err != nil {
-				return
-			}
-			currentOffset += len(encodedWallet)
-		}
-
-		// Encode lookup table.
-		encodedWalletLookupTable := make([]byte, len(walletLookupTable)*walletOffsetLength)
-		for i := range walletLookupTable {
-			var encodedLookup []byte
-			encodedLookup, err = walletLookupTable[i].encode()
-			if err != nil {
-				return
-			}
-			copy(encodedWalletLookupTable[i*walletOffsetLength:], encodedLookup)
-		}
-
-		// Write lookup table.
-		_, err = file.WriteAt(encodedWalletLookupTable, int64(offsetTable.walletLookupTableOffset))
+		encodedWallet, err = siaencoding.Marshal(wallet)
 		if err != nil {
 			return
 		}
+		walletLookupTable[i].id = wallet.ID
+		walletLookupTable[i].length = uint32(len(encodedWallet))
+		walletLookupTable[i].offset = uint32(currentOffset)
+		_, err = file.Write(encodedWallet)
+		if err != nil {
+			return
+		}
+		currentOffset += len(encodedWallet)
+	}
+
+	// Encode lookup table.
+	encodedWalletLookupTable := make([]byte, len(walletLookupTable)*walletOffsetLength)
+	for i := range walletLookupTable {
+		var encodedLookup []byte
+		encodedLookup, err = walletLookupTable[i].encode()
+		if err != nil {
+			return
+		}
+		copy(encodedWalletLookupTable[i*walletOffsetLength:], encodedLookup)
+	}
+
+	// Write lookup table.
+	_, err = file.WriteAt(encodedWalletLookupTable, int64(offsetTable.walletLookupTableOffset))
+	if err != nil {
+		return
 	}
 
 	// event list stuff here
@@ -208,10 +200,13 @@ func (e *Engine) saveSnapshot() (err error) {
 		return
 	}
 	_, err = file.WriteAt(encodedOffset, 0)
+	if err != nil {
+		return
+	}
 
 	// Delete the oldest snapshot.
 	oldSnapshotFilename := e.snapshotFilename(e.state.Metadata.RecentSnapshot - 2*SnapshotLength)
-	err = os.RemoveAll(oldSnapshotFilename) // os.RemoveAll returns nil if the file does not exist.
+	err = siafiles.Remove(oldSnapshotFilename)
 	if err != nil {
 		return
 	}

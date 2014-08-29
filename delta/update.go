@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -29,7 +30,7 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	// indicates whether the upload has already been completed for this
 	// participant.
 	filename := e.state.SectorUpdateFilename(su.WalletID, su.UpdateIndex)
-	if _, err = os.Stat(filename); !os.IsNotExist(err) {
+	if siafiles.Exists(filename) {
 		err = errors.New("already have upload")
 		return
 	}

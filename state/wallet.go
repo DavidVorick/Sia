@@ -163,8 +163,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// Check that the wallet is in the wallettree.
 	wn := s.walletNode(w.ID)
 	if wn == nil {
-		err = fmt.Errorf("no wallet of that id exists: %v", w.ID)
-		return
+		return fmt.Errorf("no wallet of that id exists: %v", w.ID)
 	}
 	weightDelta := int(w.Sector.Atoms) - wn.nodeWeight()
 
@@ -172,14 +171,12 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// management in the quorum would prevent a too-heavy wallet from ever
 	// getting this far through the insert process.
 	if s.walletRoot.weight+weightDelta > AtomsPerQuorum {
-		err = errors.New("wallet is too heavy to fit in the quorum")
-		return
+		return errors.New("wallet is too heavy to fit in the quorum")
 	}
 	s.updateWeight(w.ID, weightDelta)
 
 	// Fetch the wallet filename from the state object.
-	walletFilename := s.walletFilename(w.ID)
-	file, err := os.Create(walletFilename)
+	file, err := os.Create(s.walletFilename(w.ID))
 	if err != nil {
 		panic(err)
 	}
@@ -192,13 +189,8 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	}
 	// Encode the length of the byte slice.
 	lengthPrefix := siaencoding.EncUint32(uint32(len(walletBytes)))
-	// Write the length prefix to the file.
-	_, err = file.Write(lengthPrefix[:])
-	if err != nil {
-		panic(err)
-	}
-	// Write the wallet to the file.
-	_, err = file.Write(walletBytes[:])
+	// Write the length-prefixed wallet to the file.
+	_, err = file.Write(append(lengthPrefix, walletBytes...))
 	if err != nil {
 		panic(err)
 	}
@@ -210,8 +202,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 // the file that contains the wallet.
 func (s *State) RemoveWallet(id WalletID) {
 	filename := s.walletFilename(id)
-	err := os.Remove(filename)
-	if err != nil {
+	if err := siafiles.Remove(filename); err != nil {
 		panic(err)
 	}
 	s.removeWalletNode(id)
