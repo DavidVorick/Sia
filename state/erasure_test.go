@@ -14,33 +14,22 @@ func TestRSEncodeAndRSDecode(t *testing.T) {
 	reader := bytes.NewReader(input)
 
 	// Create segments for the output.
-	var segments [QuorumSize]io.Writer
-	var segmentBuffer [QuorumSize]bytes.Buffer
-	for i := range segments {
-		segments[i] = &segmentBuffer[i]
-	}
+	segments := make([][]byte, QuorumSize)
 	_, err := RSEncode(reader, segments, StandardK)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create the byte slices continaing the encoded data.
-	var segmentBytes [QuorumSize][]byte
-	for i := range segmentBytes {
-		segmentBytes[i] = segmentBuffer[i].Bytes()
-	}
-
-	// Build readers around the encoded data.
-	var readers [StandardK]io.Reader
-	var indicies []byte
+	readers := make([]io.Reader, StandardK)
+	var indices []byte
 	for i := range readers {
-		readers[i] = bytes.NewReader(segmentBytes[i])
-		indicies = append(indicies, byte(i))
+		readers[i] = bytes.NewReader(segments[i])
+		indices = append(indices, byte(i))
 	}
 
 	// Create an output buffer, and recover the data.
 	var output bytes.Buffer
-	_, err = RSRecover(readers[:], indicies, &output, StandardK)
+	_, err = RSRecover(readers, indices, &output, StandardK)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,17 +11,11 @@ import (
 // RSEncode acts as a wrapper around erasure.ReedSolomonEncode for
 // state-specific encoding operations. It is less flexible than
 // erasure.ReedSolomonEncode, and returns the number of atoms per sector.
-func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uint16, err error) {
+func RSEncode(input io.Reader, segments [][]byte, k int) (atoms uint16, err error) {
 	// check for nil inputs
 	if input == nil {
 		err = errors.New("received nil input")
 		return
-	}
-	for i := range segments {
-		if segments[i] == nil {
-			err = fmt.Errorf("segment %d is nil", i)
-			return
-		}
 	}
 
 	// check k for sane value, then determine m
@@ -43,7 +37,7 @@ func RSEncode(input io.Reader, segments [QuorumSize]io.Writer, k int) (atoms uin
 		var encodedSegments [][]byte
 		encodedSegments, err = erasure.ReedSolomonEncode(k, m, atom)
 		for i := range segments {
-			segments[i].Write(encodedSegments[i])
+			segments[i] = append(segments[i], encodedSegments[i]...)
 		}
 
 		atom = make([]byte, AtomSize*int(k))
@@ -92,7 +86,6 @@ func RSRecover(segments []io.Reader, indices []byte, output io.Writer, k int) (a
 	// in a loop, read into atoms and call recover
 loop:
 	for {
-		atoms++
 		for i := range atomsSlice {
 			n, _ := segments[i].Read(atomsSlice[i])
 			if n != AtomSize {
@@ -100,17 +93,18 @@ loop:
 			}
 		}
 
-		// got a bunch of new data, now recover it
-		var recoveredAtom []byte
-		recoveredAtom, err = erasure.ReedSolomonRecover(k, int(QuorumSize)-k, atomsSlice, indices)
+		recoveredAtom, err := erasure.ReedSolomonRecover(k, int(QuorumSize)-k, atomsSlice, indices)
 		if err != nil {
-			return
+			return 0, err
 		}
 		output.Write(recoveredAtom)
+		atoms++
 	}
 
 	if atoms == 0 {
-		err = errors.New("unable to read from all Readers")
+		err = errors.New("failed to read an atom from one or more Readers")
+		return
 	}
+
 	return
 }

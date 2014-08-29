@@ -187,33 +187,16 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 	su.Event.Deadline = c.metadata.Height + 5
 
 	// Create segments for the encoder output.
-	var segments [state.QuorumSize]io.Writer
-	var segmentsBuffer [state.QuorumSize]bytes.Buffer
-	for i := range segments {
-		segments[i] = &segmentsBuffer[i]
-	}
+	segments := make([][]byte, state.QuorumSize)
 	atoms, err := state.RSEncode(file, segments, state.StandardK)
 	if err != nil {
 		return
 	}
 	su.Atoms = atoms
 
-	// Covert the buffer to byte slices containing the encoded data.
-	var segmentBytes [state.QuorumSize][]byte
-	for i := range segmentBytes {
-		segmentBytes[i] = segmentsBuffer[i].Bytes()
-	}
-
-	// Now that we have written to the buffers, we have to convert them to
-	// readers so they can be merkle hashed.
-	var segmentReaders [state.QuorumSize]*bytes.Reader
-	for i := range segments {
-		segmentReaders[i] = bytes.NewReader(segmentBytes[i])
-	}
-
 	// Get the hashes of each segment.
-	for i := range segmentReaders {
-		su.HashSet[i], err = state.MerkleCollapse(segmentReaders[i], atoms)
+	for i := range segments {
+		su.HashSet[i], err = state.MerkleCollapse(bytes.NewReader(segments[i]), atoms)
 		if err != nil {
 			return
 		}
@@ -237,22 +220,22 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 
 	// Upload each segment to its respective sibling.
 	var successes byte
-	for i := range segmentBytes {
+	for i := range segments {
 		// Create a segment upload for the sibling of index 'i'.
 		segmentUpload := delta.SegmentUpload{
 			WalletID:    gw.WalletID,
 			UpdateIndex: 0,
-			NewSegment:  segmentBytes[i],
+			NewSegment:  segments[i],
 		}
 
 		var accepted bool
-		err2 := c.router.SendMessage(network.Message{
+		sendErr := c.router.SendMessage(network.Message{
 			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.UploadSegment",
 			Args: segmentUpload,
 			Resp: &accepted,
 		})
-		if err2 == nil {
+		if sendErr == nil {
 			successes++
 		}
 	}
