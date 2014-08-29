@@ -132,8 +132,13 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 
 	// Fetch the size of the wallet from disk.
 	walletLengthBytes := make([]byte, 4)
-	_, err = file.Read(walletLengthBytes)
+	i, err := file.Read(walletLengthBytes)
 	if err != nil {
+		fmt.Println("Debugging a travis error")
+		fmt.Println("Wallet:")
+		fmt.Println(id)
+		fmt.Println("Bytes read:")
+		fmt.Println(i)
 		panic(err)
 	}
 	walletLength := siaencoding.DecUint32(walletLengthBytes)
