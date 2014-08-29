@@ -111,7 +111,7 @@ func UpdateSectorInput(su state.SectorUpdate) []byte {
 		[]byte{su.K, su.D},
 		hashset,
 		[]byte{su.ConfirmationsRequired},
-		siaencoding.EncUint32(su.Deadline),
+		siaencoding.EncUint32(su.Event.Deadline),
 	)
 }
 

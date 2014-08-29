@@ -64,8 +64,9 @@ func TestConsensus(t *testing.T) {
 		K:     1,
 		D:     1,
 		ConfirmationsRequired: 3,
-		Deadline:              8,
 	}
+	su.Event.Deadline = 8
+
 	si = state.ScriptInput{
 		Deadline: 6,
 		Input:    delta.UpdateSectorInput(su),
@@ -215,7 +216,7 @@ func TestConsensus(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if w.SectorSettings.Atoms != 6 {
+		if w.Sector.Atoms != 6 {
 			t.Error("Sector update does not appear to have occurred in participant", i)
 		}
 	}

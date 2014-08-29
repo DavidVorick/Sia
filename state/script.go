@@ -96,8 +96,8 @@ func (s *State) LearnScript(si ScriptInput) (err error) {
 		WalletID: si.WalletID,
 	}
 
+	s.InsertEvent(&sie, true)
 	w.KnownScripts[siafiles.SafeFilename(hash[:])] = sie
-	s.InsertEvent(&sie)
 
 	err = s.SaveWallet(w)
 	if err != nil {

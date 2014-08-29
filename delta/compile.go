@@ -110,15 +110,12 @@ func (e *Engine) Compile(b Block) (err error) {
 		}
 
 		// Verify the storage proof.
-		walletID, proofIndex, err := e.state.ProofLocation()
+		verified, err = e.state.VerifyStorageProof(byte(i), heartbeat.StorageProof)
 		if err != nil {
-			// log the error
-			fmt.Println("Error during storage proof verification:", err)
+			// Something
 		} else {
-			if !e.state.VerifyStorageProof(walletID, proofIndex, byte(i), heartbeat.StorageProof) {
-				fmt.Println("A host has failed the storage proof.")
-				fmt.Println(i)
-				fmt.Println(e.state.Metadata.Siblings[i])
+			if !verified {
+				// Also something
 			}
 		}
 

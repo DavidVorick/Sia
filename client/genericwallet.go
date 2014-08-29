@@ -80,25 +80,28 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	// Download a segment from each sibling in the quorum, until StandardK
 	// segments have been downloaded.
 	var segments []io.Reader
-	var indicies []byte
+	var indices []byte
 	for i := range c.metadata.Siblings {
 		var segment []byte
-		err = c.router.SendMessage(network.Message{
+		err2 := c.router.SendMessage(network.Message{
 			Dest: c.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
 			Args: gw.WalletID,
 			Resp: &segment,
 		})
+		if err2 != nil {
+			continue
+		}
 
 		segments = append(segments, bytes.NewReader(segment))
-		indicies = append(indicies, byte(i))
-		if len(indicies) == state.StandardK {
+		indices = append(indices, byte(i))
+		if len(indices) == state.StandardK {
 			break
 		}
 	}
 
 	// Check that enough pieces were retrieved.
-	if len(indicies) < state.StandardK {
+	if len(indices) < state.StandardK {
 		err = errors.New("file not retrievable")
 		return
 	}
@@ -110,7 +113,7 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	}
 
 	// Recover the StandardK segments into the file.
-	_, err = state.RSRecover(segments, indicies, file, state.StandardK)
+	_, err = state.RSRecover(segments, indices, file, state.StandardK)
 	if err != nil {
 		return
 	}
@@ -180,8 +183,8 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 	su := state.SectorUpdate{
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
-		Deadline:              c.metadata.Height + 5,
 	}
+	su.Event.Deadline = c.metadata.Height + 5
 
 	// Create segments for the encoder output.
 	var segments [state.QuorumSize]io.Writer
@@ -256,7 +259,7 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 
 	// Check that at least K segments were uploaded.
 	if successes < state.StandardConfirmations {
-		err = errors.New("not enough upload confirmations - upload failed")
+		err = fmt.Errorf("not enough upload confirmations - need %v, got %v", state.StandardConfirmations, successes)
 		return
 	}
 

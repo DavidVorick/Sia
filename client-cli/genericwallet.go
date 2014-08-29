@@ -83,7 +83,7 @@ func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
 	var err error
 	for {
 		fmt.Println()
-		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", gw.ID)
+		fmt.Printf("(Generic Wallet Mode) Please enter an action for wallet %x: ", gw.ID())
 		_, err = fmt.Scanln(&input)
 		if err != nil {
 			fmt.Println("Error: ", err)

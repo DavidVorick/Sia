@@ -37,22 +37,22 @@ func TestExecuteCompensation(t *testing.T) {
 	w2 := Wallet{
 		ID:      2,
 		Balance: NewBalance(100),
-		SectorSettings: SectorSettings{
+		Sector: Sector{
 			Atoms: 10,
 		},
 	}
 
 	// Insert the wallets into the State.
-	s.InsertWallet(w0)
-	s.InsertWallet(w1)
-	s.InsertWallet(w2)
+	s.InsertWallet(w0, true)
+	s.InsertWallet(w1, true)
+	s.InsertWallet(w2, true)
 
 	// Add a sibling to the state with its own wallet.
 	sib0Wallet := Wallet{
 		ID:      3,
 		Balance: NewBalance(100),
 	}
-	s.InsertWallet(sib0Wallet)
+	s.InsertWallet(sib0Wallet, true)
 	sib0 := Sibling{
 		Status:   0,
 		Index:    0,
@@ -106,7 +106,7 @@ func TestExecuteCompensation(t *testing.T) {
 		ID:      4,
 		Balance: NewBalance(100),
 	}
-	s.InsertWallet(sib1Wallet)
+	s.InsertWallet(sib1Wallet, true)
 	sib1 := Sibling{
 		Status:   0,
 		Index:    1,

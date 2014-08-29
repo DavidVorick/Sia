@@ -96,6 +96,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 
 	// Add the wallet to the client list of generic wallets.
 	c.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
+		WalletID:  sibID,
 		PublicKey: pk,
 		SecretKey: sk,
 	}

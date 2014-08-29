@@ -47,13 +47,12 @@ func printWalletList(wallets []state.Wallet) {
 	for _, wallet := range wallets {
 		walletString += fmt.Sprintf("\tWallet: %v\n", wallet.ID)
 		walletString += fmt.Sprintf("\t\tBalance: %v\n", wallet.Balance)
-		walletString += fmt.Sprintf("\t\tSectorSettings:\n")
+		walletString += fmt.Sprintf("\t\tSector:\n")
 		{
-			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.SectorSettings.Atoms)
-			walletString += fmt.Sprintf("\t\t\tUpdate Atoms: %v\n", wallet.SectorSettings.UpdateAtoms)
-			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.SectorSettings.K)
-			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.SectorSettings.D)
-			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.SectorSettings.Hash)
+			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.Sector.Atoms)
+			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.Sector.K)
+			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.Sector.D)
+			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.Sector.Hash)
 		}
 		walletString += fmt.Sprintf("\t\tScript: %v", wallet.Script)
 		walletString += "\n\n"

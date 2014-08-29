@@ -643,8 +643,8 @@ func op_update_sector(env *scriptEnv, args []byte) (err error) {
 		D:                     d[0],
 		HashSet:               hs,
 		ConfirmationsRequired: confreq[0],
-		Deadline:              siaencoding.DecUint32(deadline),
 	}
+	su.Event.Deadline = siaencoding.DecUint32(deadline)
 
 	err = env.engine.UpdateSector(env.wallet, su)
 	return

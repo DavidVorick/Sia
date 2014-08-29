@@ -68,13 +68,13 @@ func TestEventList(t *testing.T) {
 	s.SetWalletPrefix(siafiles.TempFilename("TestEventList"))
 
 	var w Wallet
-	s.InsertWallet(w)
+	s.InsertWallet(w, true)
 
 	// Create and insert an event.
 	e := &ScriptInputEvent{
 		Deadline: 1,
 	}
-	s.InsertEvent(e)
+	s.InsertEvent(e, true)
 
 	// Verify that the event can be fetched.
 	en := s.eventNode(e)
@@ -143,7 +143,7 @@ func TestEventList(t *testing.T) {
 				Deadline: uint32(randomTimeout),
 			}
 			sieMap[sie] = struct{}{}
-			s.InsertEvent(sie)
+			s.InsertEvent(sie, true)
 
 			if countReachableEvents(s.eventRoot) != i+1 {
 				t.Error("Reached wrong number of events, expecting", i+1, "got", countReachableEvents(s.eventRoot))

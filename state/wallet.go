@@ -19,15 +19,15 @@ const (
 type WalletID uint64
 
 // A Wallet performs three important duties. It contains a Balance, allowing
-// for transactions; a SectorSettings object which manages what storage is
+// for transactions; a Sector object which manages what storage is
 // associated with the Wallet; and a Script, which can receive inputs and
 // perform actions.
 type Wallet struct {
-	ID             WalletID
-	Balance        Balance
-	SectorSettings SectorSettings
-	Script         []byte
-	KnownScripts   map[string]ScriptInputEvent
+	ID           WalletID
+	Balance      Balance
+	Sector       Sector
+	Script       []byte
+	KnownScripts map[string]ScriptInputEvent
 }
 
 // Bytes returns the WalletID as a byte slice.
@@ -53,7 +53,12 @@ func (w Wallet) CompensationWeight() (weight uint32) {
 	weight *= walletAtomMultiplier
 
 	// Add non-replicated weight according to the size of the wallet sector.
-	weight += uint32(w.SectorSettings.Atoms) + w.SectorSettings.UpdateAtoms
+	weight += uint32(w.Sector.Atoms)
+
+	// Add weight for every open update according to it's size in atoms.
+	for _, update := range w.Sector.ActiveUpdates {
+		weight += uint32(update.Atoms) + 1
+	}
 
 	return
 }
@@ -70,7 +75,12 @@ func (s *State) walletFilename(id WalletID) (filename string) {
 
 // InsertWallet takes a new wallet and inserts it into the wallet tree.
 // It returns an error if the wallet already exists within the state.
-func (s *State) InsertWallet(w Wallet) (err error) {
+//
+// If the wallet is new, then it is treated slightly differnetly than if the
+// wallet is not-new (meaning it's being added as a result of synchronization.)
+// New wallets will have certain values automatically set, where non-new
+// wallets will not have any values be automatically set.
+func (s *State) InsertWallet(w Wallet, newWallet bool) (err error) {
 	wn := s.walletNode(w.ID)
 	if wn != nil {
 		err = errors.New("wallet of that id already exists in quorum")
@@ -79,17 +89,22 @@ func (s *State) InsertWallet(w Wallet) (err error) {
 
 	wn = new(walletNode)
 	wn.id = w.ID
-	wn.weight = int(w.SectorSettings.Atoms)
-	if wn.weight < 0 {
-		wn.weight = 0
-	}
+	wn.weight = int(w.Sector.Atoms)
 	s.insertWalletNode(wn)
 
 	if w.KnownScripts == nil {
 		w.KnownScripts = make(map[string]ScriptInputEvent)
 	} else {
 		for _, scriptEvent := range w.KnownScripts {
-			s.InsertEvent(&scriptEvent)
+			s.InsertEvent(&scriptEvent, newWallet)
+		}
+	}
+
+	if w.Sector.ActiveUpdates == nil {
+		w.Sector.ActiveUpdates = make([]SectorUpdate, 0)
+	} else {
+		for _, update := range w.Sector.ActiveUpdates {
+			s.InsertEvent(&update.Event, newWallet)
 		}
 	}
 
@@ -117,8 +132,13 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 
 	// Fetch the size of the wallet from disk.
 	walletLengthBytes := make([]byte, 4)
-	_, err = file.Read(walletLengthBytes)
+	i, err := file.Read(walletLengthBytes)
 	if err != nil {
+		fmt.Println("Debugging a travis error")
+		fmt.Println("Wallet:")
+		fmt.Println(id)
+		fmt.Println("Bytes read:")
+		fmt.Println(i)
 		panic(err)
 	}
 	walletLength := siaencoding.DecUint32(walletLengthBytes)
@@ -146,7 +166,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 		err = fmt.Errorf("no wallet of that id exists: %v", w.ID)
 		return
 	}
-	weightDelta := int(w.SectorSettings.Atoms) - wn.nodeWeight()
+	weightDelta := int(w.Sector.Atoms) - wn.nodeWeight()
 
 	// Ideally, this would never be triggered. Instead, careful resource
 	// management in the quorum would prevent a too-heavy wallet from ever

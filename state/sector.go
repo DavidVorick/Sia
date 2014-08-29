@@ -20,16 +20,12 @@ const (
 	StandardK = 2
 )
 
-// SectorSettings contains all the information about the sector of a wallet,
+// Sector contains all the information about the sector of a wallet,
 // including erasure information, potential future updates, and the total cost
 // of the sector in its current state.
-type SectorSettings struct {
+type Sector struct {
 	// The number of atoms that have been allocated for the sector.
 	Atoms uint16
-
-	// The number of atoms that are currently allocated for uploading to the
-	// sector.
-	UpdateAtoms uint32
 
 	// The minimum number of sibings in the quorum that need to remain
 	// uncorrupted in order for the original data to be recoverable.
@@ -56,13 +52,12 @@ type SectorSettings struct {
 
 // SectorFilename takes a wallet id and returns the filename of the sector
 // associated with that wallet.
-func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
-	sectorFilename = s.walletFilename(id) + ".sector"
-	return
+func (s *State) SectorFilename(id WalletID) string {
+	return s.walletFilename(id) + ".sector"
 }
 
 // SectorHash returns the combined hash of 'QuorumSize' Hashes.
-func (s SectorSettings) Hash() siacrypto.Hash {
+func (s Sector) Hash() siacrypto.Hash {
 	fullSet := make([]byte, siacrypto.HashSize*int(QuorumSize))
 	for i := range s.HashSet {
 		copy(fullSet[i*siacrypto.HashSize:], s.HashSet[i][:])

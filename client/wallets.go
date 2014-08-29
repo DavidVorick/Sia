@@ -58,11 +58,6 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		return
 	}
 
-	// Fill out a keypair object and insert it into the generic wallet map.
-	var gw GenericWallet
-	gw.PublicKey = pk
-	gw.SecretKey = sk
-
 	// Get the current height of the quorum.
 	// Send the requesting script input out to the network.
 	c.Broadcast(network.Message{
@@ -93,6 +88,12 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		return
 	}
 
+	// Fill out a keypair object and insert it into the generic wallet map.
+	gw := GenericWallet{
+		WalletID:  id,
+		PublicKey: pk,
+		SecretKey: sk,
+	}
 	c.genericWallets[GenericWalletID(id)] = &gw
 
 	return

@@ -148,10 +148,14 @@ func (p *Participant) newSignedUpdate() {
 	var entropy state.Entropy
 	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))
 
+	sp, err := p.engine.BuildStorageProof()
+	if err != nil {
+		// Log something?
+	}
 	hb := delta.Heartbeat{
 		ParentBlock:  p.engine.Metadata().ParentBlock,
 		Entropy:      entropy,
-		StorageProof: p.engine.BuildStorageProof(),
+		StorageProof: sp,
 	}
 
 	signature, err := p.secretKey.SignObject(hb)
