@@ -3,7 +3,6 @@ package delta
 import (
 	"errors"
 	"io/ioutil"
-	"os"
 
 	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/NebulousLabs/Sia/state"
@@ -42,41 +41,25 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	}
 
 	// Create the file and write the new segment.
-	file, err := os.Create(filename)
+	scratch := siafiles.Scratch()
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	scratch.Write(su.NewSegment)
 
-	_, err = file.Write(su.NewSegment)
-	if err != nil {
-		os.Remove(filename)
-		return
-	}
+	// Pad as needed.
+	scratch.PadTo(state.AtomSize * int(sectorUpdate.Atoms))
 
-	// Pad the remaining file with '0's
-	numZerosNeeded := int(state.AtomSize)*int(sectorUpdate.Atoms) - len(su.NewSegment)
-	empty := make([]byte, numZerosNeeded)
-	_, err = file.Write(empty)
+	root, err := state.MerkleCollapse(scratch, sectorUpdate.Atoms)
 	if err != nil {
-		os.Remove(filename)
-		return
-	}
-
-	// Run a merkle collapse on the file and see if the hash matches.
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		os.Remove(filename)
-		return
-	}
-	root, err := state.MerkleCollapse(file, sectorUpdate.Atoms)
-	if err != nil {
-		os.Remove(filename)
 		return
 	}
 	if root != sectorUpdate.HashSet[e.siblingIndex] {
 		err = errors.New("hash does not match!")
-		os.Remove(filename)
+		return
+	}
+
+	if err = scratch.SaveAs(filename); err != nil {
 		return
 	}
 
