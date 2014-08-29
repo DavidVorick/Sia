@@ -51,34 +51,23 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	}
 
 	// Have the state decode the segments into a new sector.
-	var buffer bytes.Buffer
-	var writer io.Writer
-	writer = &buffer
-	_, err = state.RSRecover(segments, indices, writer, int(w.Sector.K))
+	buffer := new(bytes.Buffer)
+	_, err = state.RSRecover(segments, indices, buffer, int(w.Sector.K))
 	if err != nil {
 		return
 	}
 
-	// Turn the writer into a reader.
-	originalBytes := buffer.Bytes()
-	reader := bytes.NewReader(originalBytes)
-
 	// Use the writer to create the full set of segments, including the one
 	// we need.
-	var fullSegments [state.QuorumSize]io.Writer
-	var fullSegmentBytes [state.QuorumSize]bytes.Buffer
-	for i := range fullSegments {
-		fullSegments[i] = &fullSegmentBytes[i]
-	}
-	atoms, err := state.RSEncode(reader, fullSegments, int(w.Sector.K))
+	fullSegments := make([][]byte, state.QuorumSize)
+	atoms, err := state.RSEncode(buffer, fullSegments, int(w.Sector.K))
 	if err != nil {
 		return
 	}
 
 	// Take the original segment and get its hash.
-	segmentBytes := fullSegmentBytes[p.siblingIndex].Bytes()
-	segmentBytesReader := bytes.NewReader(segmentBytes)
-	hash, err := state.MerkleCollapse(segmentBytesReader, atoms)
+	segment := fullSegments[p.siblingIndex]
+	hash, err := state.MerkleCollapse(bytes.NewReader(segment), atoms)
 	if err != nil {
 		return
 	}
@@ -99,7 +88,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	if err != nil {
 		return
 	}
-	file.Write(segmentBytes)
+	file.Write(segment)
 	file.Close()
 
 	return

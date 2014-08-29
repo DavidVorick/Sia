@@ -53,7 +53,10 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	var file *os.File
 	if e.activeHistoryLength == SnapshotLength {
 		// remove the recent history file, and progress the recentHistoryHead
-		siafiles.Remove(e.recentHistoryFilename())
+		err = siafiles.Remove(e.recentHistoryFilename())
+		if err != nil {
+			return
+		}
 		e.recentHistoryHead = e.state.Metadata.RecentSnapshot
 
 		// reset activeHistoryLength, and progress the RecentSnapshot, then save
