@@ -93,29 +93,7 @@ func (p *Participant) UploadSegment(upload delta.SegmentUpload, accepted *bool) 
 	return
 }
 
-/*
-// UpdateSegment is an RPC that allows hosts to submit diffs that match updates
-// that have been confirmed by consensus.
-func (p *Participant) UpdateSegment(sd delta.SegmentDiff, accepted *bool) (err error) {
-	p.engineLock.Lock()
-	*accepted, err = p.engine.UpdateSegment(sd)
-	p.engineLock.Unlock()
-
-	if *accepted {
-		// Submit a notification to the quorum that a match has been uploaded.
-		newAdvancement := state.UpdateAdvancement{
-			Index:    p.engine.SiblingIndex(),
-			UpdateID: sd.UpdateID,
-		}
-		p.updatesLock.Lock()
-		p.updateAdvancements = append(p.updateAdvancements, newAdvancement)
-		p.updatesLock.Unlock()
-	}
-
-	return
-}
-*/
-
+// Gets a particular wallet from the engine.
 func (p *Participant) Wallet(id state.WalletID, w *state.Wallet) (err error) {
 	*w, err = p.engine.Wallet(id)
 	return

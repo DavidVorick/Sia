@@ -52,9 +52,8 @@ type Sector struct {
 
 // SectorFilename takes a wallet id and returns the filename of the sector
 // associated with that wallet.
-func (s *State) SectorFilename(id WalletID) (sectorFilename string) {
-	sectorFilename = s.walletFilename(id) + ".sector"
-	return
+func (s *State) SectorFilename(id WalletID) string {
+	return s.walletFilename(id) + ".sector"
 }
 
 // SectorHash returns the combined hash of 'QuorumSize' Hashes.

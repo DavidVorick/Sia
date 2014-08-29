@@ -12,3 +12,7 @@ func (e *Engine) BuildStorageProof() (sp state.StorageProof) {
 	sp = e.state.BuildStorageProof(id, index)
 	return
 }
+
+func (e *Engine) SegmentFilename(id state.WalletID) string {
+	return e.state.SectorFilename(id)
+}
