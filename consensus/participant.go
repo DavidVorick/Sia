@@ -16,9 +16,8 @@ type Participant struct {
 	engineLock sync.RWMutex
 
 	// Variables local to the participant
-	siblingIndex byte
-	publicKey    siacrypto.PublicKey
-	secretKey    siacrypto.SecretKey
+	publicKey siacrypto.PublicKey
+	secretKey siacrypto.SecretKey
 
 	// Network Related Variables
 	address network.Address
@@ -52,7 +51,7 @@ func (p *Participant) broadcast(message network.Message) {
 	// Send the message to all active and passive siblings in the quorum.
 	p.engineLock.Lock()
 	for i, sibling := range p.engine.Metadata().Siblings {
-		if !sibling.Inactive() && i != int(p.siblingIndex) {
+		if !sibling.Inactive() && i != int(p.engine.SiblingIndex()) {
 			message.Dest = sibling.Address
 			p.router.SendAsyncMessage(message)
 		}

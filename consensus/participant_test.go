@@ -37,7 +37,7 @@ func TestNewParticipant(t *testing.T) {
 	}
 
 	// Test that the siblingIndex has been set to the non-sibling value.
-	if p.siblingIndex != ^byte(0) {
+	if p.engine.SiblingIndex() != ^byte(0) {
 		t.Error("siblingIndex not initialized to ^byte(0)")
 	}
 
@@ -48,5 +48,3 @@ func TestNewParticipant(t *testing.T) {
 		t.Error("Participant not reachable:", err)
 	}
 }
-
-// TestBroadcast... don't really know how to write this test.

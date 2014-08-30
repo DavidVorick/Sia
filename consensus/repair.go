@@ -66,7 +66,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	}
 
 	// Take the original segment and get its hash.
-	segment := fullSegments[p.siblingIndex]
+	segment := fullSegments[p.engine.SiblingIndex()]
 	hash, err := state.MerkleCollapse(bytes.NewReader(segment), atoms)
 	if err != nil {
 		return
@@ -79,7 +79,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 		return
 	}
 
-	if hash != w.Sector.HashSet[p.siblingIndex] {
+	if hash != w.Sector.HashSet[p.engine.SiblingIndex()] {
 		err = errors.New("will not recover file - hash incorrect!")
 		return
 	}

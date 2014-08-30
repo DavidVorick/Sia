@@ -45,7 +45,12 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
+func (e *Engine) SiblingIndex() byte {
+	return e.siblingIndex
+}
+
 func (e *Engine) SetSiblingIndex(index byte) {
+	// Other things might go here eventually.
 	e.siblingIndex = index
 }
 
@@ -57,11 +62,6 @@ func (e *Engine) Initialize(filePrefix string) {
 // Metadata is a getter that returns the state.Metadata object.
 func (e *Engine) Metadata() state.Metadata {
 	return e.state.Metadata
-}
-
-// SiblingIndex is a getter that returns the engine's sibling index.
-func (e *Engine) SiblingIndex() byte {
-	return e.siblingIndex
 }
 
 func (e *Engine) Wallet(id state.WalletID) (w state.Wallet, err error) {

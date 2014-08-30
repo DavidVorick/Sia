@@ -173,7 +173,7 @@ func TestConsensus(t *testing.T) {
 	// Have 3 participants submit an update advancement.
 	for _, participant := range []*Participant{p, joiningParticipant, join3} {
 		advancement := state.UpdateAdvancement{
-			SiblingIndex: participant.siblingIndex,
+			SiblingIndex: participant.engine.SiblingIndex(),
 			WalletID:     tetherWalletID,
 			UpdateIndex:  0,
 		}

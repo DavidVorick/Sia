@@ -81,7 +81,7 @@ func (p *Participant) UploadSegment(upload delta.SegmentUpload, accepted *bool) 
 		// Add an upload advancement confirming that we have our
 		// segment of this upload.
 		newAdvancement := state.UpdateAdvancement{
-			SiblingIndex: p.siblingIndex,
+			SiblingIndex: p.engine.SiblingIndex(),
 			WalletID:     upload.WalletID,
 			UpdateIndex:  upload.UpdateIndex,
 		}
