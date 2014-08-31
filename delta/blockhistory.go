@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
-	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 const (
@@ -53,10 +52,6 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	var file *os.File
 	if e.activeHistoryLength == SnapshotLength {
 		// remove the recent history file, and progress the recentHistoryHead
-		err = siafiles.Remove(e.recentHistoryFilename())
-		if err != nil {
-			return
-		}
 		e.recentHistoryHead = e.state.Metadata.RecentSnapshot
 
 		// reset activeHistoryLength, and progress the RecentSnapshot, then save
@@ -64,12 +59,16 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		// must be progressed before saveSnapshot() is called, such that the
 		// snapshot is saved to the right filename.
 		e.activeHistoryLength = 0
-		e.state.Metadata.RecentSnapshot += SnapshotLength
+		e.state.Metadata.RecentSnapshot = e.state.Metadata.Height
+		println("SAVING A SNAPSHOT")
+		println(e.recentHistoryHead)
+		println(e.state.Metadata.RecentSnapshot)
 		if err = e.saveSnapshot(); err != nil {
 			return
 		}
 
 		// create a new activeHistory file
+		println(e.activeHistoryFilename())
 		file, err = os.Create(e.activeHistoryFilename())
 		if err != nil {
 			return

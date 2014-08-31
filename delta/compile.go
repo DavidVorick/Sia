@@ -33,6 +33,12 @@ func (e *Engine) HandleScriptInput(si state.ScriptInput) {
 // Compile takes a block and uses the information contained within to update
 // the state.
 func (e *Engine) Compile(b Block) (err error) {
+	// Save the block.
+	err = e.saveBlock(b)
+	if err != nil {
+		return
+	}
+
 	// The first thing that happens is the entropy seed for the block is
 	// determined. Though not implemented, this happens by pulling the
 	// latest external entropy source from the block and hashing it against
@@ -169,12 +175,6 @@ func (e *Engine) Compile(b Block) (err error) {
 	e.state.Metadata.ParentBlock = blockHash
 	e.state.Metadata.Height++
 	e.state.Metadata.PoStorageSeed = e.state.Metadata.Germ
-
-	// Save the block.
-	err = e.saveBlock(b)
-	if err != nil {
-		return
-	}
 
 	return
 }

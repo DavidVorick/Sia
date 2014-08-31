@@ -136,6 +136,14 @@ func TestConsensus(t *testing.T) {
 	}
 	joiningParticipant.engineLock.RUnlock()
 
+	// See that the snapshots are properly synchronized.
+	if p.engine.Metadata().RecentSnapshot != joiningParticipant.engine.Metadata().RecentSnapshot {
+		t.Error("Original participant and joining participant have differing RecentSnapshots", p.engine.Metadata().RecentSnapshot, joiningParticipant.engine.Metadata().RecentSnapshot)
+	}
+	if p.engine.ActiveHistoryLength() != joiningParticipant.engine.ActiveHistoryLength() {
+		t.Error("Original participant and joining participant have differing activeHistoryLengths", p.engine.ActiveHistoryLength(), joiningParticipant.engine.ActiveHistoryLength())
+	}
+
 	// Add 2 more participants simultaneously and see if everything is
 	// stable upon completion. The mutexing is so that non-parallel
 	// functions can run in parallel, while the program still has to wait

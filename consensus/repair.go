@@ -3,6 +3,7 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -98,6 +99,8 @@ func (p *Participant) recoveryListen() {
 	repairChan := p.engine.RepairChan()
 
 	for repairRequest := range repairChan {
+		fmt.Println("getting a recovery request")
+		fmt.Println(p.engine.SiblingIndex())
 		go p.recoverSegment(repairRequest)
 	}
 }
