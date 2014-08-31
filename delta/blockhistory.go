@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/siafiles"
 )
 
 const (
@@ -52,6 +53,7 @@ func (e *Engine) saveBlock(b Block) (err error) {
 	var file *os.File
 	if e.activeHistoryLength == SnapshotLength {
 		// remove the recent history file, and progress the recentHistoryHead
+		siafiles.Remove(e.historyFilename(e.state.Metadata.Height - 2*SnapshotLength))
 		e.recentHistoryHead = e.state.Metadata.RecentSnapshot
 
 		// reset activeHistoryLength, and progress the RecentSnapshot, then save

@@ -50,9 +50,9 @@ func printMetadataVerbose(metadata state.Metadata) {
 		} else if metadata.Siblings[i].Inactive() {
 			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
 		} else {
-			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.", siblingString, i, metadata.Siblings[i].Status)
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.\n", siblingString, i, metadata.Siblings[i].Status)
 		}
-		siblingString = fmt.Sprintf("%s\t\t\tFull Data: %v", siblingString, metadata.Siblings[i])
+		siblingString = fmt.Sprintf("%s\t\t\tFull Data: %v\n", siblingString, metadata.Siblings[i])
 	}
 
 	fmt.Println(
