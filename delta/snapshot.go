@@ -110,11 +110,6 @@ func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
 // saveSnapshot takes all of the variables listed at the top of the file,
 // encodes them, and writes to disk.
 func (e *Engine) saveSnapshot() (err error) {
-	fmt.Println("Saving Snapshot")
-	fmt.Println(e.siblingIndex)
-	fmt.Println(e.state.Metadata.Height)
-	fmt.Println(e.state.Metadata.RecentSnapshot)
-	fmt.Println(e.activeHistoryLength)
 	// Determine the filename for the snapshot
 	snapshotFilename := e.snapshotFilename(e.state.Metadata.Height)
 	file, err := os.Create(snapshotFilename)
@@ -344,7 +339,6 @@ func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID
 			err = siaencoding.Unmarshal(walletBytes, &wallet)
 
 			if wallet.KnownScripts == nil {
-				println("nil map issue")
 				wallet.KnownScripts = make(map[string]state.ScriptInputEvent)
 			}
 			return

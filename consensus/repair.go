@@ -3,7 +3,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 
@@ -13,10 +12,13 @@ import (
 
 func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	// Get the wallet so that we know what we are downloading.
+	p.engineLock.RLock()
 	w, err := p.engine.Wallet(id)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
+
 	if w.Sector.Atoms == 0 {
 		err = errors.New("wallet has no sector")
 		return
@@ -74,11 +76,12 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	}
 
 	// Reload the wallet (timing), verify the hash, and write to disk.
-	// ALSO DO A WALLET LOCK.
+	p.engineLock.RLock()
 	w, err = p.engine.Wallet(id)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
 
 	if hash != w.Sector.HashSet[p.engine.SiblingIndex()] {
 		err = errors.New("will not recover file - hash incorrect!")
@@ -99,8 +102,6 @@ func (p *Participant) recoveryListen() {
 	repairChan := p.engine.RepairChan()
 
 	for repairRequest := range repairChan {
-		fmt.Println("getting a recovery request")
-		fmt.Println(p.engine.SiblingIndex())
 		go p.recoverSegment(repairRequest)
 	}
 }

@@ -60,15 +60,11 @@ func (e *Engine) saveBlock(b Block) (err error) {
 		// snapshot is saved to the right filename.
 		e.activeHistoryLength = 0
 		e.state.Metadata.RecentSnapshot = e.state.Metadata.Height
-		println("SAVING A SNAPSHOT")
-		println(e.recentHistoryHead)
-		println(e.state.Metadata.RecentSnapshot)
 		if err = e.saveSnapshot(); err != nil {
 			return
 		}
 
 		// create a new activeHistory file
-		println(e.activeHistoryFilename())
 		file, err = os.Create(e.activeHistoryFilename())
 		if err != nil {
 			return

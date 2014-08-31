@@ -95,7 +95,9 @@ func (p *Participant) UploadSegment(upload delta.SegmentUpload, accepted *bool) 
 
 // Gets a particular wallet from the engine.
 func (p *Participant) Wallet(id state.WalletID, w *state.Wallet) (err error) {
+	p.engineLock.RLock()
 	*w, err = p.engine.Wallet(id)
+	p.engineLock.RUnlock()
 	return
 }
 
