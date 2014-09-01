@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 
@@ -50,7 +51,7 @@ func (e *Engine) ProcessSegmentUpload(su SegmentUpload) (accepted bool, err erro
 	// Pad as needed.
 	scratch.PadTo(state.AtomSize * int(sectorUpdate.Atoms))
 
-	root, err := state.MerkleCollapse(scratch, sectorUpdate.Atoms)
+	root, err := state.MerkleCollapse(bytes.NewReader(scratch.Bytes()), sectorUpdate.Atoms)
 	if err != nil {
 		return
 	}
