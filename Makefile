@@ -30,22 +30,22 @@ test-race-verbose:
 	$(cgo_ldflags) go test -short -race -v ./...
 
 test-long:
-	$(cgo_ldflags) go test -race ./...
+	$(cgo_ldflags) go test -race -timeout 1h ./...
 
 test-long-verbose:
-	$(cgo_ldflags) go test -v -race ./...
+	$(cgo_ldflags) go test -v -race -timeout 1h ./...
 
 test-client:
-	$(cgo_ldflags) go test -v -race ./client
+	$(cgo_ldflags) go test -v -race -timeout 1h ./client
 
 test-consensus:
-	$(cgo_ldflags) go test -v -race ./consensus
+	$(cgo_ldflags) go test -v -race -timeout 1h ./consensus
 
 test-delta:
-	$(cgo_ldflags) go test -v -race ./delta
+	$(cgo_ldflags) go test -v -race -timeout 1h ./delta
 
 test-state:
-	$(cgo_ldflags) go test -v -race ./state
+	$(cgo_ldflags) go test -v -race -timeout 1h ./state
 
 cover-set:
 	@mkdir -p cover

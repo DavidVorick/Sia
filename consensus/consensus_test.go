@@ -65,7 +65,7 @@ func TestConsensus(t *testing.T) {
 		D:     1,
 		ConfirmationsRequired: 3,
 	}
-	su.Event.Deadline = 8
+	su.Event.Deadline = 7
 
 	si = state.ScriptInput{
 		Deadline: 6,
@@ -115,8 +115,8 @@ func TestConsensus(t *testing.T) {
 
 	// Check that each is within 50 milliseconds of the other.
 	difference := int64(pProgress/time.Millisecond) - int64(jProgress/time.Millisecond)
-	if difference > 50 || difference < -50 {
-		t.Error("The drift on p and j exceeds 50 milliseconds")
+	if difference > 100 || difference < -100 {
+		t.Error("The drift on p and j exceeds 100 milliseconds")
 	}
 
 	p.tickLock.RUnlock()
@@ -204,8 +204,8 @@ func TestConsensus(t *testing.T) {
 		}
 	}
 
-	// Wait through three full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(NumSteps) * 5)
+	// Wait through four full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 4)
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
 		for j, sibling := range participant.engine.Metadata().Siblings {

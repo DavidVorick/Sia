@@ -29,6 +29,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	var segments []io.Reader
 	var indices []byte
 	for i := range p.engine.Metadata().Siblings {
+		p.engineLock.RLock()
 		var segment []byte
 		err2 := p.router.SendMessage(network.Message{
 			Dest: p.engine.Metadata().Siblings[i].Address,
@@ -36,6 +37,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 			Args: id,
 			Resp: &segment,
 		})
+		p.engineLock.RUnlock()
 		if err2 != nil {
 			continue
 		}
@@ -70,11 +72,13 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	}
 
 	// Take the original segment and get its hash.
+	p.engineLock.RLock()
 	segment := fullSegments[p.engine.SiblingIndex()]
 	hash, err := state.MerkleCollapse(bytes.NewReader(segment), atoms)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
 
 	// Reload the wallet (timing), verify the hash, and write to disk.
 	p.engineLock.RLock()
