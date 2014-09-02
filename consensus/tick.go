@@ -10,7 +10,7 @@ import (
 const (
 	// StepDuration is the amount of time between each step.
 	// Each block is compiled after state.QuorumSize steps.
-	StepDuration = 600 * time.Millisecond
+	StepDuration = 400 * time.Millisecond
 )
 
 func (p *Participant) tick() {
