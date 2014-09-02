@@ -35,6 +35,9 @@ test-long:
 test-long-verbose:
 	$(cgo_ldflags) go test -v -race ./...
 
+test-client:
+	$(cgo_ldflags) go test -v -race ./client
+
 test-consensus:
 	$(cgo_ldflags) go test -v -race ./consensus
 
