@@ -49,11 +49,13 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof)
 	// get AtomBase
 	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
 	if err != nil {
-		panic(err)
+		return
+		//panic(err)
 	}
 	_, err = rs.Read(sp.AtomBase[:])
 	if err != nil {
-		panic(err)
+		return
+		// panic(err)
 	}
 
 	// sisterIndex helper function:

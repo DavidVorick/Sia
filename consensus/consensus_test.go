@@ -65,7 +65,7 @@ func TestConsensus(t *testing.T) {
 		D:     1,
 		ConfirmationsRequired: 3,
 	}
-	su.Event.Deadline = 8
+	su.Event.Deadline = 7
 
 	si = state.ScriptInput{
 		Deadline: 6,
@@ -115,8 +115,8 @@ func TestConsensus(t *testing.T) {
 
 	// Check that each is within 50 milliseconds of the other.
 	difference := int64(pProgress/time.Millisecond) - int64(jProgress/time.Millisecond)
-	if difference > 50 || difference < -50 {
-		t.Error("The drift on p and j exceeds 50 milliseconds")
+	if difference > 100 || difference < -100 {
+		t.Error("The drift on p and j exceeds 100 milliseconds")
 	}
 
 	p.tickLock.RUnlock()
@@ -135,6 +135,14 @@ func TestConsensus(t *testing.T) {
 		t.Error("Joined participant is not recognizing both siblings as active.")
 	}
 	joiningParticipant.engineLock.RUnlock()
+
+	// See that the snapshots are properly synchronized.
+	if p.engine.Metadata().RecentSnapshot != joiningParticipant.engine.Metadata().RecentSnapshot {
+		t.Error("Original participant and joining participant have differing RecentSnapshots", p.engine.Metadata().RecentSnapshot, joiningParticipant.engine.Metadata().RecentSnapshot)
+	}
+	if p.engine.ActiveHistoryLength() != joiningParticipant.engine.ActiveHistoryLength() {
+		t.Error("Original participant and joining participant have differing activeHistoryLengths", p.engine.ActiveHistoryLength(), joiningParticipant.engine.ActiveHistoryLength())
+	}
 
 	// Add 2 more participants simultaneously and see if everything is
 	// stable upon completion. The mutexing is so that non-parallel
@@ -173,7 +181,7 @@ func TestConsensus(t *testing.T) {
 	// Have 3 participants submit an update advancement.
 	for _, participant := range []*Participant{p, joiningParticipant, join3} {
 		advancement := state.UpdateAdvancement{
-			SiblingIndex: participant.siblingIndex,
+			SiblingIndex: participant.engine.SiblingIndex(),
 			WalletID:     tetherWalletID,
 			UpdateIndex:  0,
 		}
@@ -196,8 +204,8 @@ func TestConsensus(t *testing.T) {
 		}
 	}
 
-	// Wait through three full blocks and try again.
-	time.Sleep(StepDuration * time.Duration(NumSteps) * 5)
+	// Wait through four full blocks and try again.
+	time.Sleep(StepDuration * time.Duration(NumSteps) * 4)
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
 		for j, sibling := range participant.engine.Metadata().Siblings {

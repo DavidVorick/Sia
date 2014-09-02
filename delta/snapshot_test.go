@@ -126,16 +126,18 @@ func TestSnapshotProcess(t *testing.T) {
 	}
 
 	// Load each component of the snapshot and see if it matches the original.
-	metadata, err := e.LoadSnapshotMetadata(0)
+	metadata, err := e.LoadSnapshotMetadata(7)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if metadata != e.state.Metadata {
 		t.Error("Upon loading from snapshot, metadata does not equal original metadata")
+		t.Error(metadata)
+		t.Error(e.state.Metadata)
 	}
 
 	// Load the list of wallets from the snapshot and verify for accuracy.
-	walletList, err := e.LoadSnapshotWalletList(0)
+	walletList, err := e.LoadSnapshotWalletList(7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +153,7 @@ func TestSnapshotProcess(t *testing.T) {
 
 	// Load each wallet individually and check for reachability.
 	for _, id := range walletList {
-		_, err := e.LoadSnapshotWallet(0, id)
+		_, err := e.LoadSnapshotWallet(7, id)
 		if err != nil {
 			t.Fatal(err)
 		}

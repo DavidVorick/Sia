@@ -3,6 +3,7 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -12,19 +13,23 @@ import (
 
 func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	// Get the wallet so that we know what we are downloading.
+	p.engineLock.RLock()
 	w, err := p.engine.Wallet(id)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
+
 	if w.Sector.Atoms == 0 {
-		err = errors.New("wallet has no sector")
+		err = fmt.Errorf("wallet %v has no sector", id)
 		return
 	}
 
 	// Download K pieces into K readers, 'segments'.
 	var segments []io.Reader
 	var indices []byte
-	for i := range segments {
+	for i := range p.engine.Metadata().Siblings {
+		p.engineLock.RLock()
 		var segment []byte
 		err2 := p.router.SendMessage(network.Message{
 			Dest: p.engine.Metadata().Siblings[i].Address,
@@ -32,6 +37,7 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 			Args: id,
 			Resp: &segment,
 		})
+		p.engineLock.RUnlock()
 		if err2 != nil {
 			continue
 		}
@@ -66,20 +72,23 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	}
 
 	// Take the original segment and get its hash.
-	segment := fullSegments[p.siblingIndex]
+	p.engineLock.RLock()
+	segment := fullSegments[p.engine.SiblingIndex()]
 	hash, err := state.MerkleCollapse(bytes.NewReader(segment), atoms)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
 
 	// Reload the wallet (timing), verify the hash, and write to disk.
-	// ALSO DO A WALLET LOCK.
+	p.engineLock.RLock()
 	w, err = p.engine.Wallet(id)
 	if err != nil {
 		return
 	}
+	p.engineLock.RUnlock()
 
-	if hash != w.Sector.HashSet[p.siblingIndex] {
+	if hash != w.Sector.HashSet[p.engine.SiblingIndex()] {
 		err = errors.New("will not recover file - hash incorrect!")
 		return
 	}

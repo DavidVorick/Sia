@@ -32,7 +32,7 @@ func (c *Client) processConfigFile() (err error) {
 		return
 	}
 	filefolder := userObj.HomeDir + "/.config/Sia/"
-	filename := filefolder + ".config"
+	filename := filefolder + "config"
 
 	// Make the folder, in case it does not yet exist.
 	err = os.MkdirAll(filefolder, os.ModeDir|os.ModePerm)

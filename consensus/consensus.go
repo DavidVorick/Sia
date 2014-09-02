@@ -140,7 +140,7 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 // broadcasts it to the network.
 func (p *Participant) newSignedUpdate() {
 	// Check that this function was not called by error.
-	if p.siblingIndex > state.QuorumSize {
+	if p.engine.SiblingIndex() > state.QuorumSize {
 		panic("error call on newSignedUpdate")
 	}
 
@@ -202,7 +202,7 @@ func (p *Participant) newSignedUpdate() {
 		Signatories: make([]byte, 1),
 		Signatures:  make([]siacrypto.Signature, 1),
 	}
-	su.Signatories[0] = p.siblingIndex
+	su.Signatories[0] = p.engine.SiblingIndex()
 	su.Signatures[0] = updateSignature
 
 	// Add the heartbeat to our own heartbeat map.
@@ -211,7 +211,7 @@ func (p *Participant) newSignedUpdate() {
 		panic(err)
 	}
 	p.updatesLock.Lock()
-	p.updates[p.siblingIndex][updateHash] = update
+	p.updates[p.engine.SiblingIndex()][updateHash] = update
 	p.updatesLock.Unlock()
 
 	// Broadcast the SignedUpdate to the network.
@@ -365,12 +365,14 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Sign the stack of signatures and append the signature to the stack, then
 	// announce the Update to everyone on the quorum
+	p.engineLock.RLock()
 	signature, err := p.secretKey.Sign(message)
 	if err != nil {
 		return
 	}
 	su.Signatures = append(su.Signatures, signature)
-	su.Signatories = append(su.Signatories, p.siblingIndex)
+	su.Signatories = append(su.Signatories, p.engine.SiblingIndex())
+	p.engineLock.RUnlock()
 
 	// broadcast the update to the quorum
 	return

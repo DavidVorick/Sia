@@ -40,6 +40,35 @@ func printMetadata(metadata state.Metadata) {
 	)
 }
 
+// printMetadataVerbose is a helper function that takes metadata and outputs it in
+// human readable form, providing much more information.
+func printMetadataVerbose(metadata state.Metadata) {
+	var siblingString string
+	for i := range metadata.Siblings {
+		if metadata.Siblings[i].Active() {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Active\n", siblingString, i)
+		} else if metadata.Siblings[i].Inactive() {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Inactive\n", siblingString, i)
+		} else {
+			siblingString = fmt.Sprintf("%s\t\tSibling %v: Passive for %v more compiles.\n", siblingString, i, metadata.Siblings[i].Status)
+		}
+		siblingString = fmt.Sprintf("%s\t\t\tFull Data: %v\n", siblingString, metadata.Siblings[i])
+	}
+
+	fmt.Println(
+		"\tSiblings: \n",
+		siblingString,
+		"\tEvent Counter:", metadata.EventCounter, "\n",
+		"\tStorage Price:", metadata.StoragePrice, "\n",
+		"\tParent Block:", metadata.ParentBlock, "\n",
+		"\tHeight:", metadata.Height, "\n",
+		"\tRecent Snapshot:", metadata.RecentSnapshot, "\n",
+		"\tGerm:", metadata.Germ, "\n",
+		"\tSeed:", metadata.Seed, "\n",
+		"\tPoStorageSeed", metadata.PoStorageSeed, "\n",
+	)
+}
+
 // printWalletList takes a slice of wallets and prints each in human readable
 // form.
 func printWalletList(wallets []state.Wallet) {
@@ -52,9 +81,32 @@ func printWalletList(wallets []state.Wallet) {
 			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.Sector.Atoms)
 			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.Sector.K)
 			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.Sector.D)
-			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.Sector.Hash)
+			walletString += fmt.Sprintf("\t\t\tHash: %v\n", wallet.Sector.Hash())
 		}
 		walletString += fmt.Sprintf("\t\tScript: %v", wallet.Script)
+		walletString += "\n\n"
+	}
+
+	fmt.Println(walletString)
+}
+
+// printWalletListVerbose takes a slice of wallets and prints each in human readable
+// form, providing much more information.
+func printWalletListVerbose(wallets []state.Wallet) {
+	var walletString string
+	for _, wallet := range wallets {
+		walletString += fmt.Sprintf("\tWallet: %v\n", wallet.ID)
+		walletString += fmt.Sprintf("\t\tBalance: %v\n", wallet.Balance)
+		walletString += fmt.Sprintf("\t\tSector:\n")
+		{
+			walletString += fmt.Sprintf("\t\t\tAtoms: %v\n", wallet.Sector.Atoms)
+			walletString += fmt.Sprintf("\t\t\tK: %v\n", wallet.Sector.K)
+			walletString += fmt.Sprintf("\t\t\tD: %v\n", wallet.Sector.D)
+			walletString += fmt.Sprintf("\t\t\tHashSet: %v\n", wallet.Sector.HashSet)
+			walletString += fmt.Sprintf("\t\t\tActiveUpdates: %v\n", wallet.Sector.ActiveUpdates)
+		}
+		walletString += fmt.Sprintf("\t\tScript: %v", wallet.Script)
+		walletString += fmt.Sprintf("\t\tKnown Scripts: %v", wallet.KnownScripts)
 		walletString += "\n\n"
 	}
 
@@ -138,6 +190,38 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+// Prints the metadata along with all of the wallets.
+func participantFullInfoWalkthrough(c *client.Client) (err error) {
+	name, err := participantName()
+	if err != nil {
+		return
+	}
+
+	metadata, err := c.ParticipantMetadata(name)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(
+		"\n",
+		name, "status:\n",
+	)
+	printMetadataVerbose(metadata)
+
+	wallets, err := c.ParticipantWallets(name)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(
+		"\n",
+		name, "wallets:\n",
+	)
+	printWalletListVerbose(wallets)
 
 	return
 }
@@ -239,6 +323,9 @@ func pollServer(c *client.Client) {
 
 		case "q", "quit", "return":
 			return
+
+		case "f", "fullinfo":
+			err = participantFullInfoWalkthrough(c)
 
 		case "j", "join":
 			err = joinQuorumWalkthrough(c)

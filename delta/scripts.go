@@ -90,8 +90,8 @@ func SendCoinInput(dest state.WalletID, amount state.Balance) []byte {
 // UpdateSectorInput returns a script that calls the UpdateSector function. It
 // is intended to be passed to a script that transfers execution to the input.
 func UpdateSectorInput(su state.SectorUpdate) []byte {
-	slen := state.QuorumSize * byte(siacrypto.HashSize) // TODO: this must be fixed for QuorumSize > 8
-	hashset := make([]byte, slen)
+	setl, seth := short(int(state.QuorumSize) * siacrypto.HashSize)
+	hashset := make([]byte, int(state.QuorumSize)*siacrypto.HashSize)
 	for i, h := range su.HashSet {
 		copy(hashset[i*siacrypto.HashSize:], h[:])
 	}
@@ -101,7 +101,9 @@ func UpdateSectorInput(su state.SectorUpdate) []byte {
 			0x34, 0x02, // push atoms
 			0x34, 0x01, // push k
 			0x34, 0x01, // push d
-			0x34, slen, // push hashset
+			0x02, setl, seth, // push length of hashset
+			0x36, 0x01, // load hashset into register 1
+			0x31, 0x01, // push hashset from register 1
 			0x34, 0x01, // push confreq
 			0x34, 0x04, // push deadline
 			0x44, //       call UpdateSector

@@ -16,11 +16,6 @@ import (
 // The Engine struct has all the fields that enable basic operations at the
 // delta level of the program. It's the 'master data structure' at this layer
 // of abstraction.
-//
-// - recentHistoryHead needs to be initialized to ^uint32(0).
-// - activeHistoryLength should be initialized to SnapshotLength.
-// - e.state.Metadata.RecentSnapshot needs to be initialized to ^uint32(0) - (SnapshotLength-1),
-//   because the turnover will result in a new blockhistory file being created.
 type Engine struct {
 	// The State
 	state state.State
@@ -37,6 +32,11 @@ type Engine struct {
 	activeHistoryLength uint32
 }
 
+func (e *Engine) Initialize(filePrefix string) {
+	e.SetFilePrefix(filePrefix)
+	e.state.Initialize()
+}
+
 // SetFilePrefix is a setter for the Engine.filePrefix field.
 // It also sets the walletPrefix field of the state object.
 func (e *Engine) SetFilePrefix(prefix string) {
@@ -45,23 +45,22 @@ func (e *Engine) SetFilePrefix(prefix string) {
 	e.state.SetWalletPrefix(walletPrefix)
 }
 
+func (e *Engine) SiblingIndex() byte {
+	return e.siblingIndex
+}
+
 func (e *Engine) SetSiblingIndex(index byte) {
+	// Other things might go here eventually.
 	e.siblingIndex = index
 }
 
-func (e *Engine) Initialize(filePrefix string) {
-	e.SetFilePrefix(filePrefix)
-	e.state.Initialize()
+func (e *Engine) ActiveHistoryLength() uint32 {
+	return e.activeHistoryLength
 }
 
 // Metadata is a getter that returns the state.Metadata object.
 func (e *Engine) Metadata() state.Metadata {
 	return e.state.Metadata
-}
-
-// SiblingIndex is a getter that returns the engine's sibling index.
-func (e *Engine) SiblingIndex() byte {
-	return e.siblingIndex
 }
 
 func (e *Engine) Wallet(id state.WalletID) (w state.Wallet, err error) {

@@ -38,8 +38,8 @@ func (e *Engine) Bootstrap(sib state.Sibling, tetherWalletPublicKey siacrypto.Pu
 	e.AddSibling(&sibWallet, sib)
 	e.state.Metadata.Siblings[0].Status = 0
 
-	e.recentHistoryHead = ^uint32(0)
-	e.state.Metadata.RecentSnapshot = ^uint32(0) - (SnapshotLength - 1)
+	// Set to SnapshotLength to trigger saving a snapshot at the first
+	// compile.
 	e.activeHistoryLength = SnapshotLength
 	return
 }

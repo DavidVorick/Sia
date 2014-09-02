@@ -68,7 +68,7 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 	if err != nil {
 		return
 	}
-	p.siblingIndex = ^byte(0)
+	p.engine.SetSiblingIndex(^byte(0))
 
 	// Create the update maps.
 	for i := range p.updates {
@@ -81,7 +81,7 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 
 	// Initialize the file prefix
 	p.engine.Initialize(filePrefix)
-	p.setSiblingIndex(p.siblingIndex)
+	p.setSiblingIndex(p.engine.SiblingIndex())
 
 	// Set up a listener for segment repairs.
 	go p.recoveryListen()
@@ -96,7 +96,6 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 // Sets the sibling index for the participant and engine, should be called once
 // the sibling index is discovered.
 func (p *Participant) setSiblingIndex(siblingIndex byte) {
-	p.siblingIndex = siblingIndex
 	p.engine.SetSiblingIndex(siblingIndex)
 }
 
@@ -387,8 +386,8 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	p.engineLock.Lock()
 	for i, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
-			p.siblingIndex = byte(i)
-			p.setSiblingIndex(p.siblingIndex)
+			p.engine.SetSiblingIndex(byte(i))
+			p.setSiblingIndex(p.engine.SiblingIndex())
 			break
 		}
 	}
@@ -399,7 +398,12 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	walletList := p.engine.WalletList()
 	p.engineLock.RUnlock()
 	for _, wallet := range walletList {
-		go p.recoverSegment(wallet)
+		// Function should not return until this has finished, but this
+		// can be parallelized.
+		err2 := p.recoverSegment(wallet)
+		if err2 != nil {
+			//fmt.Println(err2)
+		}
 	}
 
 	return

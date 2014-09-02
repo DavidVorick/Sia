@@ -111,12 +111,17 @@ func (e *Engine) snapshotFilename(height uint32) (snapshotFilename string) {
 // encodes them, and writes to disk.
 func (e *Engine) saveSnapshot() (err error) {
 	// Determine the filename for the snapshot
-	snapshotFilename := e.snapshotFilename(e.state.Metadata.RecentSnapshot)
+	snapshotFilename := e.snapshotFilename(e.state.Metadata.Height)
 	file, err := os.Create(snapshotFilename)
 	if err != nil {
 		return
 	}
 	defer file.Close()
+
+	// Set the new value for RecentSnapshot. This needs to be set before
+	// the snapshot is saved because the value of the recent snapshot needs
+	// to get included in the metadata during the save.
+	e.state.Metadata.RecentSnapshot = e.state.Metadata.Height
 
 	// List of offsets that prefix the snapshot file
 	var offsetTable snapshotOffsetTable
@@ -196,8 +201,6 @@ func (e *Engine) saveSnapshot() (err error) {
 			return
 		}
 	}
-
-	// event list stuff here
 
 	// Encode and write 'offsetTable'
 	encodedOffset, err := offsetTable.encode()
@@ -336,7 +339,6 @@ func (e *Engine) LoadSnapshotWallet(snapshotHead uint32, walletID state.WalletID
 			err = siaencoding.Unmarshal(walletBytes, &wallet)
 
 			if wallet.KnownScripts == nil {
-				println("nil map issue")
 				wallet.KnownScripts = make(map[string]state.ScriptInputEvent)
 			}
 			return

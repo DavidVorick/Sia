@@ -148,7 +148,7 @@ func (e *Engine) Execute(si state.ScriptInput) (totalCost int, err error) {
 	if debug {
 		fmt.Println("executing script:", env.script)
 	}
-	if err = env.run(); err != nil {
+	if err = env.run(); err != nil && debug {
 		fmt.Println("script execution failed:", err)
 	}
 
