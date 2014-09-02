@@ -8,7 +8,7 @@ import (
 const (
 	// SiblingPassiveWindow is the number of blocks that a sibling is
 	// allowed to be passive.
-	SiblingPassiveWindow = 3
+	SiblingPassiveWindow = 20
 )
 
 // A Sibling is the public facing information of participants on the quorum.
