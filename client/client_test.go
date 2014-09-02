@@ -41,9 +41,6 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Create a bootstrap participant.
-	if err != nil {
-		t.Fatal(err)
-	}
 	err = c.NewBootstrapParticipant("0", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -63,9 +60,6 @@ func TestUploadAndRepair(t *testing.T) {
 	filesize := 250
 	uploadFilename := siafiles.TempFilename("TestClient-UploadFile")
 	randomBytes := siacrypto.RandomByteSlice(filesize)
-	if err != nil {
-		t.Fatal(err)
-	}
 	file, err := os.Create(uploadFilename)
 	if err != nil {
 		t.Fatal(err)
@@ -98,9 +92,13 @@ func TestUploadAndRepair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := range downloadBytes {
-		if downloadBytes[i] != randomBytes[i] {
-			t.Error("Mismatch on byte:", i)
+	if len(downloadBytes) != len(randomBytes) {
+		t.Error("Mismatch on file lengths between download and original.")
+	} else {
+		for i := range downloadBytes {
+			if downloadBytes[i] != randomBytes[i] {
+				t.Error("Mismatch on byte:", i)
+			}
 		}
 	}
 
@@ -109,8 +107,7 @@ func TestUploadAndRepair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Stat(filepath.Join(testFolder, "3", "wallet.AQAAAAAAAAA=.sector"))
-	if err != nil {
-		t.Fatal(err)
+	if !siafiles.Exists(filepath.Join(testFolder, "3", "wallet.AQAAAAAAAAA=.sector")) {
+		t.Fatal(" Repaired wallet sector doesn't exist - something went wrong during repair.")
 	}
 }

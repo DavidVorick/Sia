@@ -217,7 +217,7 @@ func participantMetadataWalkthrough(c *client.Client) (err error) {
 }
 
 // Prints the metadata along with all of the wallets.
-func participantVerboseWalkthrough(c *client.Client) (err error) {
+func participantVerboseServerInfoWalkthrough(c *client.Client) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
@@ -333,8 +333,8 @@ func pollServer(c *client.Client) {
 		case "n", "new", "bootstrap":
 			err = newQuorumWalkthrough(c)
 
-		case "v", "verbose":
-			err = participantVerboseWalkthrough(c)
+		case "v", "verbose", "server-info":
+			err = participantVerboseServerInfoWalkthrough(c)
 
 		case "w", "wallets":
 			err = participantWalletsWalkthrough(c)
