@@ -386,8 +386,7 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	p.engineLock.Lock()
 	for i, sibling := range p.engine.Metadata().Siblings {
 		if sibling.Address == p.address && sibling.PublicKey == p.publicKey {
-			p.engine.SetSiblingIndex(byte(i))
-			p.setSiblingIndex(p.engine.SiblingIndex())
+			p.setSiblingIndex(byte(i))
 			break
 		}
 	}

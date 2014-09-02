@@ -137,12 +137,16 @@ func TestConsensus(t *testing.T) {
 	joiningParticipant.engineLock.RUnlock()
 
 	// See that the snapshots are properly synchronized.
+	p.engineLock.RLock()
+	joiningParticipant.engineLock.RLock()
 	if p.engine.Metadata().RecentSnapshot != joiningParticipant.engine.Metadata().RecentSnapshot {
 		t.Error("Original participant and joining participant have differing RecentSnapshots", p.engine.Metadata().RecentSnapshot, joiningParticipant.engine.Metadata().RecentSnapshot)
 	}
 	if p.engine.ActiveHistoryLength() != joiningParticipant.engine.ActiveHistoryLength() {
 		t.Error("Original participant and joining participant have differing activeHistoryLengths", p.engine.ActiveHistoryLength(), joiningParticipant.engine.ActiveHistoryLength())
 	}
+	joiningParticipant.engineLock.RUnlock()
+	p.engineLock.RUnlock()
 
 	// Add 2 more participants simultaneously and see if everything is
 	// stable upon completion. The mutexing is so that non-parallel
@@ -170,8 +174,8 @@ func TestConsensus(t *testing.T) {
 	// participant recognizes each other participant as active siblings.
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
-		for j, sibling := range participant.engine.Metadata().Siblings {
-			if sibling.Inactive() {
+		for j := 0; j < 4; j++ {
+			if participant.engine.Metadata().Siblings[j].Inactive() {
 				t.Error("Sibling recognized as inactive for iterators", i, ",", j)
 			}
 		}
@@ -208,9 +212,9 @@ func TestConsensus(t *testing.T) {
 	time.Sleep(StepDuration * time.Duration(NumSteps) * 4)
 	for i, participant := range []*Participant{p, joiningParticipant, join2, join3} {
 		participant.engineLock.RLock()
-		for j, sibling := range participant.engine.Metadata().Siblings {
-			if sibling.Inactive() {
-				t.Error("Second check: sibling recognized as inactive for iterators", i, ",", j)
+		for j := 0; j < 4; j++ {
+			if participant.engine.Metadata().Siblings[j].Inactive() {
+				t.Error("Sibling recognized as inactive for iterators", i, ",", j)
 			}
 		}
 		participant.engineLock.RUnlock()
