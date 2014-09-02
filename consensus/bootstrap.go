@@ -398,7 +398,12 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 	walletList := p.engine.WalletList()
 	p.engineLock.RUnlock()
 	for _, wallet := range walletList {
-		go p.recoverSegment(wallet)
+		// Function should not return until this has finished, but this
+		// can be parallelized.
+		err2 := p.recoverSegment(wallet)
+		if err2 != nil {
+			//fmt.Println(err2)
+		}
 	}
 
 	return

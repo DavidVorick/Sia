@@ -2,6 +2,7 @@ package client
 
 import (
 	"io/ioutil"
+	"path/filepath"
 	"os"
 	"testing"
 	"time"
@@ -16,8 +17,13 @@ import (
 // in consensus, uploads a file to them, then adds a 4th participant to see if
 // repair works without issues.
 func TestUploadAndRepair(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	// Clean out any previous test files.
-	os.RemoveAll(siafiles.TempFilename("TestClient"))
+	testFolder := siafiles.TempFilename("TestClient")
+	os.RemoveAll(testFolder)
 
 	// Initialize a client.
 	c, err := NewClient()
@@ -38,17 +44,17 @@ func TestUploadAndRepair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.NewBootstrapParticipant("0", siafiles.TempFilename("TestClient"), 1)
+	err = c.NewBootstrapParticipant("0", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create 2 more participants to upload files to.
-	err = c.NewJoiningParticipant("1", siafiles.TempFilename("TestClient"), 1)
+	err = c.NewJoiningParticipant("1", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.NewJoiningParticipant("2", siafiles.TempFilename("TestClient"), 1)
+	err = c.NewJoiningParticipant("2", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,5 +102,15 @@ func TestUploadAndRepair(t *testing.T) {
 		if downloadBytes[i] != randomBytes[i] {
 			t.Error("Mismatch on byte:", i)
 		}
+	}
+
+	// Add another participant and see that the repair triggers.
+	err = c.NewJoiningParticipant("3", testFolder, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = os.Stat(filepath.Join(testFolder, "3", "wallet.AQAAAAAAAAA=.sector"))
+	if err != nil {
+		t.Fatal(err)
 	}
 }

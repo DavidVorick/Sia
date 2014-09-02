@@ -3,6 +3,7 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -20,14 +21,14 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	p.engineLock.RUnlock()
 
 	if w.Sector.Atoms == 0 {
-		err = errors.New("wallet has no sector")
+		err = fmt.Errorf("wallet %v has no sector", id)
 		return
 	}
 
 	// Download K pieces into K readers, 'segments'.
 	var segments []io.Reader
 	var indices []byte
-	for i := range segments {
+	for i := range p.engine.Metadata().Siblings {
 		var segment []byte
 		err2 := p.router.SendMessage(network.Message{
 			Dest: p.engine.Metadata().Siblings[i].Address,
