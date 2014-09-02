@@ -194,30 +194,8 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-// participantMetadataWalkthrough gets the name of a participant and then
-// prints the metadata of that participant.
-func participantMetadataWalkthrough(c *client.Client) (err error) {
-	name, err := participantName()
-	if err != nil {
-		return
-	}
-
-	metadata, err := c.ParticipantMetadata(name)
-	if err != nil {
-		return
-	}
-
-	fmt.Println(
-		"\n",
-		name, "status:\n",
-	)
-	printMetadata(metadata)
-
-	return
-}
-
 // Prints the metadata along with all of the wallets.
-func participantVerboseServerInfoWalkthrough(c *client.Client) (err error) {
+func participantFullInfoWalkthrough(c *client.Client) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
@@ -244,6 +222,28 @@ func participantVerboseServerInfoWalkthrough(c *client.Client) (err error) {
 		name, "wallets:\n",
 	)
 	printWalletListVerbose(wallets)
+
+	return
+}
+
+// participantMetadataWalkthrough gets the name of a participant and then
+// prints the metadata of that participant.
+func participantMetadataWalkthrough(c *client.Client) (err error) {
+	name, err := participantName()
+	if err != nil {
+		return
+	}
+
+	metadata, err := c.ParticipantMetadata(name)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(
+		"\n",
+		name, "status:\n",
+	)
+	printMetadata(metadata)
 
 	return
 }
@@ -324,6 +324,9 @@ func pollServer(c *client.Client) {
 		case "q", "quit", "return":
 			return
 
+		case "f", "fullinfo":
+			err = participantFullInfoWalkthrough(c)
+
 		case "j", "join":
 			err = joinQuorumWalkthrough(c)
 
@@ -332,9 +335,6 @@ func pollServer(c *client.Client) {
 
 		case "n", "new", "bootstrap":
 			err = newQuorumWalkthrough(c)
-
-		case "v", "verbose", "server-info":
-			err = participantVerboseServerInfoWalkthrough(c)
 
 		case "w", "wallets":
 			err = participantWalletsWalkthrough(c)

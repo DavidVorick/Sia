@@ -2,20 +2,11 @@ Sia Release Notes:
 
 The release branch of Sia is meant to function in a real world scenario, with turbulence and high internet latency. The constants have been changed as follows:
 
-# The step duration has been changed to 10 seconds, which gives the hosts a bit of drift room, and plenty of time to pass heartbeats around. The Quorum Size is set to 16, because I want to see how stable things are when there are actually 16 full participants in different parts of the world. This results in a block time of 160 seconds and an upload time of 320 seconds, which I think is tolerable at this stage.
-Quorum Size: 16
-Step Duration: 10 seconds
+Quorum size has been changed to 16, which brings us closer to the intended 128 of the full Sia release.
+Step duration has been changed to 10 seconds, which means blocks will take about 170 seconds each. 10 seconds is needed to provide enough time for servers worldwide to communicate. Clock drift may be a significant issue during this release.
 
-# Each participant is expected to contribute 1GB at this point, and each file can be up to 768kb in size, which leaves room for lots of files in the quorum. At the StandardK of 3, you can fit about 4000 files on the quorum.
-Atoms Per Quorum: 2^25 (1 GB)
-Atoms Per Sector: 8192 (256kb)
-Standard K: 3 (corresponding to max size of 768kb, max of 3900 files @ 768kb)
+Atoms per quorum has been adjusted to 2^25, which results in a participant size of 1GB. This means that (depending on redundancy settings) the release quorum can hold between 1GB and 6GB of files. The sector size has been adjusted to 2^13 atoms, or 256kb. This means that the largest size for a single file is between 256kb and 1.5mb (again depending on redundancy settings). The client will be using a K of 3, which means the max file size is 768kb.
 
-# Files are not currently allowed to be stored at a lower redundancy than 16/6
-Max K: 6 (no code exists to utilize this however)
+The minimum redundancy allowed currently is 16/6.
 
-# Siblings have 5 blocks, or about 12 minutes to download all the files that they are missing. This is at most 1GB.
-Sibling Passive Window: 5
-
-# This should probably stay approx. the same size as the Sibling Passive Window.
-Snapshot Length: 5
+The sibing passive window has been adjusted to 20 blocks, or just under 1 hour. Siblings will need to download the quorum in this timeframe, which could mean up to 6GB of downloading, but will more realisticially max out around 2.5GB of downloading. Even at 6GB, only a 2mbps connection is needed to fit inside of the window.

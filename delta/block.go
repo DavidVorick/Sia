@@ -7,7 +7,7 @@ import (
 
 const (
 	// SnapshotLength is the number of blocks separating each snapshot
-	SnapshotLength = 3
+	SnapshotLength = state.SiblingPassiveWindow
 )
 
 // A Heartbeat is the set of information that siblings are required to submit
