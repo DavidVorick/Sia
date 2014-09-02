@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/state"
@@ -107,6 +108,13 @@ func (p *Participant) recoveryListen() {
 	repairChan := p.engine.RepairChan()
 
 	for repairRequest := range repairChan {
+		p.engineLock.RLock()
+		for p.engine.SiblingIndex() == 255 {
+			p.engineLock.RUnlock()
+			time.Sleep(StepDuration)
+			p.engineLock.RLock()
+		}
+		p.engineLock.RUnlock()
 		go p.recoverSegment(repairRequest)
 	}
 }
