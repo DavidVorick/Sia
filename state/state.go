@@ -2,11 +2,11 @@ package state
 
 const (
 	// QuorumSize is the maximum number of siblings in a quorum.
-	QuorumSize byte = 4
+	QuorumSize byte = 16
 
 	// AtomsPerQuorum is the maximum number of atoms that can be stored on
 	// a single quorum.
-	AtomsPerQuorum int = 16777216
+	AtomsPerQuorum int = 33554432
 )
 
 // The State struct contains all of the information about the current state of

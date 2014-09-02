@@ -11,13 +11,13 @@ import (
 // exceed 2^32, since the number of atoms is measured using 32bit integers.
 const (
 	AtomSize         = 32   // In bytes
-	AtomsPerSector   = 2048 // Eventually 2^16
+	AtomsPerSector   = 8192 // Eventually 2^16
 	MaxUpdates       = 8    // Eventually 64
 	MinConfirmations = 3    // Eventually 65
-	MaxK             = 2    // Eventually 51
+	MaxK             = 6    // Eventually 51
 	MinK             = 1
 
-	StandardK = 2
+	StandardK = 3
 )
 
 // Sector contains all the information about the sector of a wallet,
