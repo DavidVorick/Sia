@@ -85,7 +85,7 @@ func connectWalkthrough(c *client.Client) (err error) {
 		return
 	}
 
-	c.Connect(port)
+	err = c.Connect(port)
 	return
 }
 
@@ -193,7 +193,6 @@ func pollHome(c *client.Client) {
 		fmt.Print("(Home) Please enter a command: ")
 		_, err = fmt.Scanln(&input)
 		if err != nil {
-			fmt.Println("Error: ", err)
 			continue
 		}
 		fmt.Println()
@@ -230,7 +229,7 @@ func pollHome(c *client.Client) {
 		}
 
 		if err != nil {
-			fmt.Println("Error: ", err)
+			fmt.Println("Error:", err)
 			err = nil
 		}
 	}
