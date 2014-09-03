@@ -1,8 +1,10 @@
 package network
 
 import (
+	"bytes"
 	"errors"
 	"net"
+	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"reflect"
@@ -56,13 +58,16 @@ func NewRPCServer(port uint16) (rpcs *RPCServer, err error) {
 	}
 
 	// determine our public hostname
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	// this is disgusting and will (hopefully) be replaced soon
+	resp, err := http.Get("http://myexternalip.com/raw")
 	if err != nil {
 		tcpServ.Close()
 		return
 	}
-	host := strings.Split(conn.LocalAddr().String(), ":")[0]
-	conn.Close()
+	var buf bytes.Buffer
+	buf.ReadFrom(resp.Body)
+	resp.Body.Close()
+	host := strings.Trim(buf.String(), "\n")
 
 	rpcs = &RPCServer{
 		addr:     Address{host, port, 0},
