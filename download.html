@@ -41,7 +41,7 @@
                 However, an unstable alpha version is available for download.
                 Currently, Sia is available for Linux only.
                 Binaries for other platforms will be available during the beta.
-                <br>
+                <br><br>
                 Please read the "What's not in the alpha?" section below before downloading.
 				<br><br>
                 <b>GitHub (recommended):</b>
@@ -64,37 +64,56 @@
                     <li>Client and server binaries can be found in the extracted folder.</li>
                 </ul>
                 <br>
-                You will need libsodium installed.
-                Running 'make dependencies' should install libsodium automatically, however you will need autotools and you will need to provide your root password.
-                For more help with libsodium, please read <a href="http://github.com/jedisct1/libsodium">here</a>.
-                <i>(Since Go compiles binaries statically, this should be compatible across most Linux distributions.
-                    Please <a href=mailto:luke@nebulouslabs.com>let us know</a> if you encounter problems.)</i>
+                Since Go compiles binaries statically, this should be compatible across most Linux distributions.
+                    Please <a href=https://github.com/NebulousLabs/Sia/issues>let us know</a> if you encounter problems.
                 <br><br>
-                <b>How do I use Sia?</b>
-                <br>
-                To create a new server, run the "server" binary and enter "j" to join a quorum, or "e" to establish a new quorum.
-                You will see scrolling output as the server compiles blocks and receives input.
-                After you join a quorum, the server will stop accepting input, so we recommend running the server in its own window.
-                <br><br>
-                To connect to a quorum as a client, run the "client" binary.
-                The client will attempt to auto-connect to a quorum running on localhost:9988.
-                Enter "h" to view a list of client commands.
+                <b>How do I use the alpha?</b>
+		<br>
+		Run 'client-cli' to bring up the home menu.
+		Type 'h' or 'help' at any menu screen to see what your options are.
+		First you need to connect to the network, which you can do by typing 'c'.
+		You will be asked to provide a port number to listen on, this is what port your local computer will listen on.
+		Then you will be asked to provide a hostname, port number, and ID to connect to.
+		Using the values '23.239.14.98', '9989', '1' will connect you to the official Sia test network.
+		Alternatively, you can join a different network or create your own.
+		When creating your own, you do not need to do the 'connect' step.
+		<br><br>
+		Once connected to the network, you need a wallet.
+		This wallet will be used to pay you for providing storage to the network.
+		To get a wallet, type 'g' from the home screen, and put in a wallet ID that you would like to have.
+		Your requested ID may already be taken, which means you need to try again with a different ID.
+		Creating a wallet will take a few minutes.
+		<br><br>
+		Once you have a wallet, you are ready to switch to server mode and create a server.
+		Switch to server mode by typing 's', and join the network with a new participant by typing 'j' (for join).
+		This will ask you to name your server, and to provide a directory for the server.
+		Creating a server will take several minutes, perhaps as many as 6.
+		There is only room on the official server for 16 participants, it may be full when you try to join.
+		This number will be vastly increased in future releases.
+		<br><br>
+		To do things like upload, download, and send money, you need to load a wallet that you control.
+		To do this, go to the home screen (press 'q' if you are on another screen) and type 'l', putting in the wallet you wish to load.
+		This will bring you to the wallet menu.
+		Type 'h' for a list of available actions.
+		<br><br>
+		Because it's just a cli, the client is not terribly intuitive.
+		We have tried to make the help menus (available by pressing 'h') reasonably useful.
+		Please feel free to play around, and remember to file a bug report if something breaks.
+		This is an early alpha, things are likely to break.
+		Mostly, have fun!
                 <br><br>
                 <b>What's not in the alpha?</b>
                 <br>
                 Sia is a complex project with lots of features that are not represented in the alpha.
                 You should view this release as a "proof of concept" instead of a usable product.
-                <br>
-                The following features are not available in this release:
+                <br><br>
+                Here are some limitations of the alpha:
                 <ul>
-                    <li>A fully trust-free quorum: hosts are assumed to be honest.</li>
-                    <li>Bankruptcy: wallets are not deleted when they reach a balance of 0.</li>
-                    <li>Self-repairing files: sectors are not repaired when hosts leave the network.</li>
-                    <li>Large files: uploading a large file will cause hosts to desynchronize.</li>
-                    <li>Automatic port negotiation: cross-router connections must ensure ports are forwarded.</li>
-                    <li>Meta quorums: communication is restricted to a single quorum.</li>
+                    <li>You must trust the address you use to join a quorum.</li>
+                    <li>Multiple quorums are not supported, a maximum of 16 participants can form any single network.</li>
+                    <li>The maximum file size is a mere 768kb. This will be vastly increased in the future.</li>
+                    <li>You may have trouble joining if you are behind NAT. We are working on this, but you should do manual port-forwarding to join behind NAT. Users with public IP addresses should not have issues.</li>
                 </ul>
-                These features are considered high-priority for the next release.
 				</div>
 			</div>
 		</div>
