@@ -14,8 +14,8 @@ install: fmt
 
 release: fmt
 	$(cgo_ldflags) go install -ldflags '-extldflags "-static"' ./...
-	cd $(GOPATH)/bin && tar -cJvf release.xz client-cli
-	mv $(GOPATH)/bin/release.xz .
+	cp $(GOPATH)/bin/client-cli sia-cli
+	tar -cJvf release.xz sia-cli Release.md && rm -f sia-cli
 
 test:
 	$(cgo_ldflags) go test -short ./...
