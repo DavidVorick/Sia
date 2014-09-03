@@ -35,10 +35,9 @@ func TestUploadAndRepair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.NewServer()
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Manually create server to avoid hostname problems.
+	c.participantServer = new(Server)
+	c.participantServer.participants = make(map[string]*consensus.Participant)
 
 	// Create a bootstrap participant.
 	err = c.NewBootstrapParticipant("0", testFolder, 1)
