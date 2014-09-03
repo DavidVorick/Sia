@@ -175,8 +175,7 @@ func displayHomeHelp() {
 	fmt.Println(
 		" h:\tHelp\n",
 		"q:\tQuit\n",
-		"b:\tBootstrap through an address\n",
-		"c:\tConnect to network\n",
+		"c:\tConnect to the network using a bootstrap address\n",
 		"g:\tRequest a new generic wallet\n",
 		"l:\tLoad wallet\n",
 		"p:\tPrint wallets\n",
@@ -209,7 +208,7 @@ func pollHome(c *client.Client) {
 		case "q", "quit":
 			return
 
-		case "b", "bootstrap":
+		case "b", "bootstrap", "c", "connect":
 			err = bootstrapToNetworkWalkthrough(c)
 
 		case "g", "generic", "request", "new":

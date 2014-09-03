@@ -293,6 +293,7 @@ func displayServerHelp() {
 	fmt.Println(
 		" h:\tHelp\n",
 		"q:\tReturn to home mode.\n",
+		"f:\tPrint full information/status of a server - large output!",
 		"j:\tCreate a new participant and join an existing quorum.\n",
 		"m:\tPrint the metadata of a participant.\n",
 		"n:\tCreate a new quorum with a bootstrap participant.\n",
@@ -318,7 +319,7 @@ func pollServer(c *client.Client) {
 		default:
 			fmt.Println("unrecognized command")
 
-		case "h", "help":
+		case "h", "help", "?":
 			displayServerHelp()
 
 		case "q", "quit", "return":
