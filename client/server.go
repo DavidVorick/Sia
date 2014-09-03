@@ -39,6 +39,12 @@ func (c *Client) NewServer() (err error) {
 		return
 	}
 
+	// Determine our external IP
+	err = c.router.LearnHostname()
+	if err != nil {
+		return errors.New("could not determine external IP")
+	}
+
 	// Establish c.participantServer.
 	c.participantServer = new(Server)
 	c.participantServer.participants = make(map[string]*consensus.Participant)

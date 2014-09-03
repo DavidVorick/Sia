@@ -22,6 +22,14 @@ func (c *Client) BootstrapConnection(connectAddress network.Address) (err error)
 		return
 	}
 
+	// Discover our external IP.
+	// Eventually, LearnHostname will ask the boostrap address instead of an
+	// external service.
+	err = c.router.LearnHostname()
+	if err != nil {
+		return errors.New("failed to determine external IP")
+	}
+
 	// populate initial sibling list
 	var metadata state.Metadata
 	err = c.router.SendMessage(network.Message{
