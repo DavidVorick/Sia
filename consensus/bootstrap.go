@@ -259,14 +259,14 @@ func CreateJoiningParticipant(rpcs *network.RPCServer, filePrefix string, tether
 			return
 		}
 
-		p.engineLock.Lock()
 		for p.engine.Metadata().Height < currentMetadata.Height {
+			p.engineLock.Lock()
 			err = p.fetchAndCompileNextBlock(quorumSiblings)
+			p.engineLock.Unlock()
 			if err != nil {
 				return
 			}
 		}
-		p.engineLock.Unlock()
 	}
 
 	// Synchronize to the quorum (this implementation is non-cryptographic)

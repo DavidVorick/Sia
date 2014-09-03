@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/consensus"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -95,12 +97,23 @@ func createGenericWalletWalkthrough(c *client.Client) (err error) {
 		return
 	}
 
-	err = c.RequestGenericWallet(id)
+	errChan := make(chan error)
+	go func() {
+		err := c.RequestGenericWallet(id)
+		errChan <- err
+	}()
+
+	for i := byte(0); i < consensus.NumSteps*2; i++ {
+		time.Sleep(consensus.StepDuration)
+		fmt.Printf("Step %v of %v\n", i, consensus.NumSteps*2)
+	}
+
+	err = <-errChan
 	if err != nil {
 		return
-	} else {
-		fmt.Println("Wallet requested")
 	}
+
+	fmt.Println("Wallet Recieved")
 
 	return
 }

@@ -1,6 +1,7 @@
 cover
 servers
 todo
+release.xz
 *.swp
 doc/*.log
 doc/*.aux

@@ -283,7 +283,7 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 		// Unlock all mutexes, sleep, and then relock all mutexes.
 		p.engineLock.RUnlock()
 		p.tickLock.RUnlock()
-		time.Sleep(timeRemainingThisStep + 15*time.Millisecond) // 15 extra milliseconds for good luck.
+		time.Sleep(timeRemainingThisStep + 5*time.Millisecond) // 5 extra milliseconds for good luck.
 		p.engineLock.RLock()
 		p.tickLock.RLock()
 
@@ -365,11 +365,11 @@ func (p *Participant) HandleSignedUpdate(su SignedUpdate, _ *struct{}) (err erro
 
 	// Sign the stack of signatures and append the signature to the stack, then
 	// announce the Update to everyone on the quorum
-	p.engineLock.RLock()
 	signature, err := p.secretKey.Sign(message)
 	if err != nil {
 		return
 	}
+	p.engineLock.RLock()
 	su.Signatures = append(su.Signatures, signature)
 	su.Signatories = append(su.Signatories, p.engine.SiblingIndex())
 	p.engineLock.RUnlock()

@@ -14,7 +14,7 @@ install: fmt
 
 release: fmt
 	$(cgo_ldflags) go install -ldflags '-extldflags "-static"' ./...
-	cd $(GOPATH) && tar -cJvf release.xz bin/server bin/client-cli
+	cd $(GOPATH) && tar -cJvf release.xz bin/client-cli
 	mv $(GOPATH)/release.xz .
 
 test:

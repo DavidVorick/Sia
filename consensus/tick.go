@@ -49,10 +49,10 @@ func (p *Participant) tick() {
 				// Compile the block.
 				p.engineLock.Lock()
 				err := p.engine.Compile(block)
+				p.engineLock.Unlock()
 				if err != nil {
 					fmt.Println(err)
 				}
-				p.engineLock.Unlock()
 
 				// Broadcast a new update to the quorum.
 				p.newSignedUpdate()

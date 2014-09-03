@@ -63,7 +63,6 @@ func (e *Engine) Compile(b Block) (err error) {
 		}
 		if !verified {
 			if debug {
-				println("Tossing sibling for invalid signature")
 
 				fmt.Println(e.siblingIndex)
 				fmt.Println(i)
@@ -91,7 +90,6 @@ func (e *Engine) Compile(b Block) (err error) {
 		// Verify the parent block of the heartbeat.
 		if heartbeat.ParentBlock != e.state.Metadata.ParentBlock {
 			if debug {
-				println("Tossing sibling for invalid parent block")
 				fmt.Println(e.siblingIndex)
 				fmt.Println(i)
 				fmt.Println(b.Height)
