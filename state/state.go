@@ -50,11 +50,13 @@ func (s *State) SetWalletPrefix(walletPrefix string) {
 	s.walletPrefix = walletPrefix
 }
 
-// Initialize takes all the siblings and sets them to inactive
+// Initialize puts the state in the default configuration, initializing the
+// repair channel, setting all of the siblings to inactive, and setting the
+// default storage price.
 func (s *State) Initialize() {
 	for i := range s.Metadata.Siblings {
 		s.Metadata.Siblings[i].Status = ^byte(0)
 	}
-
 	s.RepairChan = make(chan WalletID)
+	s.Metadata.StoragePrice = NewBalance(1)
 }

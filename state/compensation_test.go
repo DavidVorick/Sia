@@ -21,7 +21,6 @@ func TestExecuteCompensation(t *testing.T) {
 	s.Initialize()
 
 	s.SetWalletPrefix(siafiles.TempFilename("TestExecuteCompensation"))
-	s.Metadata.StoragePrice = NewBalance(1)
 
 	// Create 3 wallets, a base wallet, a wallet with a script, and a wallet with
 	// a sector.
