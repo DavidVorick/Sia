@@ -16,10 +16,10 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	// Get the wallet so that we know what we are downloading.
 	p.engineLock.RLock()
 	w, err := p.engine.Wallet(id)
+	p.engineLock.RUnlock()
 	if err != nil {
 		return
 	}
-	p.engineLock.RUnlock()
 
 	if w.Sector.Atoms == 0 {
 		err = fmt.Errorf("wallet %v has no sector", id)
@@ -31,14 +31,15 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	var indices []byte
 	for i := range p.engine.Metadata().Siblings {
 		p.engineLock.RLock()
+		address := p.engine.Metadata().Siblings[i].Address
+		p.engineLock.RUnlock()
 		var segment []byte
 		err2 := p.router.SendMessage(network.Message{
-			Dest: p.engine.Metadata().Siblings[i].Address,
+			Dest: address,
 			Proc: "Participant.DownloadSegment",
 			Args: id,
 			Resp: &segment,
 		})
-		p.engineLock.RUnlock()
 		if err2 != nil {
 			continue
 		}
@@ -76,18 +77,18 @@ func (p *Participant) recoverSegment(id state.WalletID) (err error) {
 	p.engineLock.RLock()
 	segment := fullSegments[p.engine.SiblingIndex()]
 	hash, err := state.MerkleCollapse(bytes.NewReader(segment), atoms)
+	p.engineLock.RUnlock()
 	if err != nil {
 		return
 	}
-	p.engineLock.RUnlock()
 
 	// Reload the wallet (timing), verify the hash, and write to disk.
 	p.engineLock.RLock()
 	w, err = p.engine.Wallet(id)
+	p.engineLock.RUnlock()
 	if err != nil {
 		return
 	}
-	p.engineLock.RUnlock()
 
 	if hash != w.Sector.HashSet[p.engine.SiblingIndex()] {
 		err = errors.New("will not recover file - hash incorrect!")

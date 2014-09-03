@@ -49,12 +49,14 @@ func (p *Participant) Ping(_ struct{}, _ *struct{}) error {
 // received.
 func (p *Participant) broadcast(message network.Message) {
 	// Send the message to all active and passive siblings in the quorum.
-	p.engineLock.Lock()
-	for i, sibling := range p.engine.Metadata().Siblings {
-		if !sibling.Inactive() && i != int(p.engine.SiblingIndex()) {
+	p.engineLock.RLock()
+	metadata := p.engine.Metadata()
+	index := p.engine.SiblingIndex()
+	p.engineLock.RUnlock()
+	for i, sibling := range metadata.Siblings {
+		if !sibling.Inactive() && i != int(index) {
 			message.Dest = sibling.Address
 			p.router.SendAsyncMessage(message)
 		}
 	}
-	p.engineLock.Unlock()
 }
