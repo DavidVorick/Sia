@@ -1,8 +1,10 @@
 package network
 
 import (
+	"bytes"
 	"errors"
 	"net"
+	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"reflect"
@@ -55,17 +57,10 @@ func NewRPCServer(port uint16) (rpcs *RPCServer, err error) {
 		return
 	}
 
-	// determine our public hostname
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		tcpServ.Close()
-		return
-	}
-	host := strings.Split(conn.LocalAddr().String(), ":")[0]
-	conn.Close()
-
+	// The server's hostname is initially set to localhost. This can be updated
+	// by calling LearnHostname().
 	rpcs = &RPCServer{
-		addr:     Address{host, port, 0},
+		addr:     Address{"localhost", port, 0},
 		rpcServ:  rpc.NewServer(),
 		listener: tcpServ,
 		curID:    1, // ID 0 is reserved for the RPCServer itself
@@ -79,6 +74,21 @@ func NewRPCServer(port uint16) (rpcs *RPCServer, err error) {
 // tcpServ.Accept() to return an err, ending the serverHandler process.
 func (rpcs *RPCServer) Close() {
 	rpcs.listener.Close()
+}
+
+// LearnHostname determines the external IP of the RPCserver by asking an
+// external source.  This will be updated in the future to ask a Participant
+// instead of a third-party service.
+func (rpcs *RPCServer) LearnHostname() (err error) {
+	resp, err := http.Get("http://myexternalip.com/raw")
+	if err != nil {
+		return
+	}
+	var buf bytes.Buffer
+	buf.ReadFrom(resp.Body)
+	resp.Body.Close()
+	rpcs.addr.Host = strings.Trim(buf.String(), "\n")
+	return
 }
 
 // serverHandler runs in the background, accepting incoming RPCs and serving

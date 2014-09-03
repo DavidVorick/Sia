@@ -310,7 +310,6 @@ func pollServer(c *client.Client) {
 		fmt.Print("(Server Mode) Please enter a command: ")
 		_, err = fmt.Scanln(&input)
 		if err != nil {
-			fmt.Println("Error: ", err)
 			continue
 		}
 		fmt.Println()
@@ -342,7 +341,7 @@ func pollServer(c *client.Client) {
 		}
 
 		if err != nil {
-			fmt.Println("Error: ", err)
+			fmt.Println("Error:", err)
 			err = nil
 		}
 	}
