@@ -11,22 +11,22 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// The Server houses all of the participants. It will eventually contain a
+// The ParticipantManager houses all of the participants. It will eventually contain a
 // clock object that will be used and modified by all participants.
-type Server struct {
+type ParticipantManager struct {
 	parentDirectory string
 	participants    map[string]*consensus.Participant
 }
 
-// IsServerInitialized() is useful for telling front ent programs whether a
+// IsParticipantManagerInitialized() is useful for telling front ent programs whether a
 // server needs to be initialized or not.
-func (c *Client) IsServerInitialized() bool {
-	return c.participantServer != nil
+func (c *Client) IsParticipantManagerInitialized() bool {
+	return c.participantManager != nil
 }
 
-// NewServer takes a port number as input and returns a server object that's
+// NewParticipantManager takes a port number as input and returns a server object that's
 // ready to be populated with participants.
-func (c *Client) NewServer() (err error) {
+func (c *Client) NewParticipantManager() (err error) {
 	// If the network router is nil, a server can't exist.
 	if c.router == nil {
 		err = errors.New("need to have a connection before creating a server")
@@ -34,7 +34,7 @@ func (c *Client) NewServer() (err error) {
 	}
 
 	// Prevent any existing server from being overwritten.
-	if c.participantServer != nil {
+	if c.participantManager != nil {
 		err = errors.New("server already exists")
 		return
 	}
@@ -45,9 +45,9 @@ func (c *Client) NewServer() (err error) {
 		return errors.New("could not determine external IP")
 	}
 
-	// Establish c.participantServer.
-	c.participantServer = new(Server)
-	c.participantServer.participants = make(map[string]*consensus.Participant)
+	// Establish c.participantManager.
+	c.participantManager = new(ParticipantManager)
+	c.participantManager.participants = make(map[string]*consensus.Participant)
 	return
 }
 
@@ -56,13 +56,13 @@ func (c *Client) NewServer() (err error) {
 // mostly a helper function to eliminate redundant code.
 func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
 	// Check that the participant server has been created.
-	if c.participantServer == nil {
+	if c.participantManager == nil {
 		err = errors.New("participant server is nil")
 		return
 	}
 
 	// Check that a participant of the given name does not already exist.
-	_, exists := c.participantServer.participants[name]
+	_, exists := c.participantManager.participants[name]
 	if exists {
 		err = errors.New("a participant of that name already exists.")
 		return
@@ -98,7 +98,7 @@ func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID sta
 	if err != nil {
 		return
 	}
-	c.participantServer.participants[name] = newParticipant
+	c.participantManager.participants[name] = newParticipant
 
 	// Add the wallet to the client list of generic wallets.
 	c.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
@@ -144,7 +144,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 	if err != nil {
 		return
 	}
-	c.participantServer.participants[name] = joiningParticipant
+	c.participantManager.participants[name] = joiningParticipant
 
 	// Update the list of siblings to contain the bootstrap address, by
 	// getting a list of siblings out of the joiningParticipant metadata.
@@ -161,7 +161,7 @@ func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state
 // ParticipantMetadata returns the metadata for the participant with the given
 // name. If no participant of that name exists, an error is returned.
 func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) {
-	participant, exists := c.participantServer.participants[name]
+	participant, exists := c.participantManager.participants[name]
 	if !exists {
 		err = errors.New("no participant of that name found")
 		return
@@ -178,7 +178,7 @@ func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) 
 // ParticipantWallets returns every wallet known to the participant of the
 // given name.
 func (c *Client) ParticipantWallets(name string) (wallets []state.Wallet, err error) {
-	participant, exists := c.participantServer.participants[name]
+	participant, exists := c.participantManager.participants[name]
 	if !exists {
 		err = errors.New("no participant of that name found")
 		return

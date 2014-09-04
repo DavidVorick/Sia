@@ -280,7 +280,7 @@ func serverCreationWalkthrough(c *server.Client) (err error) {
 	}
 
 	// Create the server.
-	err = c.NewServer()
+	err = c.NewParticipantManager()
 	if err != nil {
 		return
 	}

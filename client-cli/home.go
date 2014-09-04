@@ -158,7 +158,7 @@ func loadWalletWalkthrough(c *server.Client) (err error) {
 // serverModeSwitch will transition the server from being in home mode to being
 // in server mode, creating a new server and a new router if necessary.
 func serverModeSwitch(c *server.Client) (err error) {
-	init := c.IsServerInitialized()
+	init := c.IsParticipantManagerInitialized()
 	if !init {
 		err = serverCreationWalkthrough(c)
 		if err != nil {

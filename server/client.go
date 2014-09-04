@@ -16,11 +16,9 @@ type Client struct {
 	// A pointer to the generic wallet type is stored because we wish to
 	// pass and manipulate the generic wallet by reference. Maps are not
 	// pointer safe - you can't pass a pointer to an object in the map.
-	// Instead, we make the map object a pointer and just copy that.
 	genericWallets map[GenericWalletID]*GenericWallet
 
-	// Participant Server
-	participantServer *Server
+	participantManager *ParticipantManager
 }
 
 // Uses the configuration file to create a new client, initializing variables
