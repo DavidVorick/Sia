@@ -12,9 +12,9 @@ import (
 )
 
 // printWallets provides a list of every wallet available to the Client.
-func printWallets(c *server.Client) {
+func printWallets(s *server.Server) {
 	fmt.Println("All Stored Wallet IDs:")
-	wallets := c.GetWalletIDs()
+	wallets := s.GetWalletIDs()
 	for _, id := range wallets {
 		fmt.Printf("%x\n", id)
 	}
@@ -23,10 +23,10 @@ func printWallets(c *server.Client) {
 // connectWalkthrough guides the user through providing a hostname, port, and
 // id which can be used to create a Sia address. Then the connection is
 // committed.
-func bootstrapToNetworkWalkthrough(c *server.Client) (err error) {
+func bootstrapToNetworkWalkthrough(s *server.Server) (err error) {
 	fmt.Println("Starting connect walkthrough.")
-	if !c.IsRouterInitialized() {
-		err = connectWalkthrough(c)
+	if !s.IsRouterInitialized() {
+		err = connectWalkthrough(s)
 		if err != nil {
 			return
 		}
@@ -57,7 +57,7 @@ func bootstrapToNetworkWalkthrough(c *server.Client) (err error) {
 	}
 
 	// Call server.Connect using the provided information.
-	err = c.BootstrapConnection(connectAddress)
+	err = s.BootstrapConnection(connectAddress)
 	if err != nil {
 		return
 	} else {
@@ -69,9 +69,9 @@ func bootstrapToNetworkWalkthrough(c *server.Client) (err error) {
 
 // connectWalkthrough requests a port and then calls server.Connect(port),
 // initializing the server network router.
-func connectWalkthrough(c *server.Client) (err error) {
+func connectWalkthrough(s *server.Server) (err error) {
 	// Do nothing if the router is already initialized.
-	if c.IsRouterInitialized() {
+	if s.IsRouterInitialized() {
 		err = errors.New("router is already initialized")
 		return
 	}
@@ -85,11 +85,11 @@ func connectWalkthrough(c *server.Client) (err error) {
 		return
 	}
 
-	err = c.Connect(port)
+	err = s.Connect(port)
 	return
 }
 
-func createGenericWalletWalkthrough(c *server.Client) (err error) {
+func createGenericWalletWalkthrough(s *server.Server) (err error) {
 	var id state.WalletID
 	fmt.Print("Enter desired Wallet ID: ")
 	_, err = fmt.Scanln(&id)
@@ -99,7 +99,7 @@ func createGenericWalletWalkthrough(c *server.Client) (err error) {
 
 	errChan := make(chan error)
 	go func() {
-		err := c.RequestGenericWallet(id)
+		err := s.RequestGenericWallet(id)
 		errChan <- err
 	}()
 
@@ -120,7 +120,7 @@ func createGenericWalletWalkthrough(c *server.Client) (err error) {
 
 // loadWallet switches the cli into wallet-mode, where actions are taken
 // against a specific wallet.
-func loadWalletWalkthrough(c *server.Client) (err error) {
+func loadWalletWalkthrough(s *server.Server) (err error) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID: ")
@@ -130,7 +130,7 @@ func loadWalletWalkthrough(c *server.Client) (err error) {
 	}
 
 	// Check that the wallet is available to the server.
-	walletType, err := c.WalletType(id)
+	walletType, err := s.WalletType(id)
 	if err != nil {
 		return
 	}
@@ -142,11 +142,11 @@ func loadWalletWalkthrough(c *server.Client) (err error) {
 		return
 	} else if walletType == "generic" {
 		var gw server.GenericWallet
-		gw, err = c.GenericWallet(server.GenericWalletID(id))
+		gw, err = s.GenericWallet(server.GenericWalletID(id))
 		if err != nil {
 			return
 		}
-		pollGenericWallet(c, gw)
+		pollGenericWallet(s, gw)
 	} else {
 		err = errors.New("wallet is available, but is of an unknown type.")
 		return
@@ -157,15 +157,15 @@ func loadWalletWalkthrough(c *server.Client) (err error) {
 
 // serverModeSwitch will transition the server from being in home mode to being
 // in server mode, creating a new server and a new router if necessary.
-func serverModeSwitch(c *server.Client) (err error) {
-	init := c.IsParticipantManagerInitialized()
+func serverModeSwitch(s *server.Server) (err error) {
+	init := s.IsParticipantManagerInitialized()
 	if !init {
-		err = serverCreationWalkthrough(c)
+		err = serverCreationWalkthrough(s)
 		if err != nil {
 			return
 		}
 	}
-	pollServer(c)
+	pollServer(s)
 	return
 }
 
@@ -185,7 +185,7 @@ func displayHomeHelp() {
 }
 
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.
-func pollHome(c *server.Client) {
+func pollHome(s *server.Server) {
 	var input string
 	var err error
 	for {
@@ -208,23 +208,23 @@ func pollHome(c *server.Client) {
 			return
 
 		case "b", "bootstrap", "c", "connect":
-			err = bootstrapToNetworkWalkthrough(c)
+			err = bootstrapToNetworkWalkthrough(s)
 
 		case "g", "generic", "request", "new":
-			err = createGenericWalletWalkthrough(c)
+			err = createGenericWalletWalkthrough(s)
 
 		case "l", "load", "enter":
-			err = loadWalletWalkthrough(c)
+			err = loadWalletWalkthrough(s)
 
 		case "p", "ls", "print", "list":
-			printWallets(c)
+			printWallets(s)
 
 		case "s", "server":
-			err = serverModeSwitch(c)
+			err = serverModeSwitch(s)
 
 		case "S", "save":
 			fmt.Println("Saving all wallets...")
-			c.SaveAllWallets()
+			s.SaveAllWallets()
 			fmt.Println("...finished!")
 		}
 

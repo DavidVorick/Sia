@@ -24,7 +24,7 @@ directories:
 
 // processConfigFile opens, parses, and processes the config file, which will
 // be stored in the home directory at .config/Sia/config
-func (c *Client) processConfigFile() (err error) {
+func (s *Server) processConfigFile() (err error) {
 	// Get the filename of the config file, which will be stored in
 	// $HOME/.config/Sia/config
 	userObj, err := user.Current()
@@ -89,9 +89,9 @@ func (c *Client) processConfigFile() (err error) {
 }
 
 // Iterates through the client and saves all of the wallets to disk.
-func (c *Client) SaveAllWallets() (err error) {
+func (s *Server) SaveAllWallets() (err error) {
 	var filename string
-	for id, keypair := range c.genericWallets {
+	for id, keypair := range s.genericWallets {
 		filename = fmt.Sprintf("%x.id", id)
 		err = SaveWallet(state.WalletID(id), *keypair, filename)
 		if err != nil {

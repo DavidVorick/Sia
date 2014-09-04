@@ -17,7 +17,7 @@ func printWelcomeMessage() {
 func main() {
 	printWelcomeMessage()
 
-	c, err := server.NewClient()
+	s, err := server.NewServer()
 	if err != nil {
 		fmt.Println("Error on startup:", err)
 	}
@@ -26,5 +26,5 @@ func main() {
 	// managed by the config file loader), if not, post some message about
 	// not being connected.
 
-	pollHome(c)
+	pollHome(s)
 }

@@ -26,7 +26,7 @@ func TestUploadAndRepair(t *testing.T) {
 	os.RemoveAll(testFolder)
 
 	// Initialize a client.
-	c, err := NewClient()
+	c, err := NewServer()
 	if err != nil {
 		// For some reason this error is okay.
 		//t.Fatal(err)

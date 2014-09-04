@@ -1,204 +1,45 @@
+// Server is the server half of the client-server model that makes up the
+// frontend of Sia. The client talks to the server via RPC, and the server runs
+// all of the logic that manages participants, wallets, joining the network,
+// uploads, etc.
 package server
 
 import (
-	"errors"
-	"os"
-	"path"
-
-	"github.com/NebulousLabs/Sia/consensus"
 	"github.com/NebulousLabs/Sia/network"
-	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// The ParticipantManager houses all of the participants. It will eventually contain a
-// clock object that will be used and modified by all participants.
-type ParticipantManager struct {
-	parentDirectory string
-	participants    map[string]*consensus.Participant
+// Struct Server contains the variables that persist on the server between RPC
+// calls. It is the foundation of all operations that require persistence on
+// the network.
+type Server struct {
+	// Networking Variables
+	router   *network.RPCServer
+	metadata state.Metadata
+
+	// Generic Wallets
+	// A pointer to the generic wallet type is stored because we wish to
+	// pass and manipulate the generic wallet by reference. Maps are not
+	// pointer safe - you can't pass a pointer to an object in the map.
+	genericWallets map[GenericWalletID]*GenericWallet
+
+	participantManager *ParticipantManager
 }
 
-// IsParticipantManagerInitialized() is useful for telling front ent programs whether a
-// server needs to be initialized or not.
-func (c *Client) IsParticipantManagerInitialized() bool {
-	return c.participantManager != nil
-}
+// NewServer creates a new server object, initializing varibles like maps, and
+// processing the configuration file.
+func NewServer() (c *Server, err error) {
+	// Initialize vital variables.
+	c = new(Server)
+	c.genericWallets = make(map[GenericWalletID]*GenericWallet)
 
-// NewParticipantManager takes a port number as input and returns a server object that's
-// ready to be populated with participants.
-func (c *Client) NewParticipantManager() (err error) {
-	// If the network router is nil, a server can't exist.
-	if c.router == nil {
-		err = errors.New("need to have a connection before creating a server")
-		return
-	}
-
-	// Prevent any existing server from being overwritten.
-	if c.participantManager != nil {
-		err = errors.New("server already exists")
-		return
-	}
-
-	// Determine our external IP
-	err = c.router.LearnHostname()
-	if err != nil {
-		return errors.New("could not determine external IP")
-	}
-
-	// Establish c.participantManager.
-	c.participantManager = new(ParticipantManager)
-	c.participantManager.participants = make(map[string]*consensus.Participant)
-	return
-}
-
-// NewParticipant creates a directory 'name' at location 'filepath' and then
-// creates a participant that will use that directory for its files. It's
-// mostly a helper function to eliminate redundant code.
-func (c *Client) createParticipantStructures(name string, filepath string) (fullname string, err error) {
-	// Check that the participant server has been created.
-	if c.participantManager == nil {
-		err = errors.New("participant server is nil")
-		return
-	}
-
-	// Check that a participant of the given name does not already exist.
-	_, exists := c.participantManager.participants[name]
-	if exists {
-		err = errors.New("a participant of that name already exists.")
-		return
-	}
-
-	// Create a directory 'name' at location 'filepath' for use of the
-	// participant.
-	fullname = path.Join(filepath, name) + "/"
-	err = os.MkdirAll(fullname, os.ModeDir|os.ModePerm)
+	// Process config file.
+	err = c.processConfigFile()
 	if err != nil {
 		return
 	}
 
-	return
-}
-
-// NewBootstrapParticipant creates a new participant that is the first in it's
-// quorum; it creates the quorum along with the participant.
-func (c *Client) NewBootstrapParticipant(name string, filepath string, sibID state.WalletID) (err error) {
-	fullname, err := c.createParticipantStructures(name, filepath)
-	if err != nil {
-		return
-	}
-
-	// Create a keypair for the wallet that the sibling will tether to.
-	pk, sk, err := siacrypto.CreateKeyPair()
-	if err != nil {
-		return
-	}
-
-	// Create the participant and add it to the server map.
-	newParticipant, err := consensus.CreateBootstrapParticipant(c.router, fullname, sibID, pk)
-	if err != nil {
-		return
-	}
-	c.participantManager.participants[name] = newParticipant
-
-	// Add the wallet to the client list of generic wallets.
-	c.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
-		WalletID:  sibID,
-		PublicKey: pk,
-		SecretKey: sk,
-	}
-
-	// Update the list of siblings to contain the bootstrap address, by
-	// getting a list of siblings out of the newParticipant metadata.
-	var metadata state.Metadata
-	err = newParticipant.Metadata(struct{}{}, &metadata)
-	if err != nil {
-		return
-	}
-	c.metadata.Siblings = metadata.Siblings
-
-	return
-}
-
-// NewJoiningParticipant creates a participant that joins the network known to
-// the client as a sibling.
-func (c *Client) NewJoiningParticipant(name string, filepath string, sibID state.WalletID) (err error) {
-	fullname, err := c.createParticipantStructures(name, filepath)
-	if err != nil {
-		return
-	}
-
-	// Verify that the sibID given is available to the client.
-	_, exists := c.genericWallets[GenericWalletID(sibID)]
-	if !exists {
-		err = errors.New("no known wallet of that id")
-		return
-	}
-
-	// Get a list of addresses for the joining participant to use while bootstrapping.
-	var siblingAddresses []network.Address
-	for _, sibling := range c.metadata.Siblings {
-		siblingAddresses = append(siblingAddresses, sibling.Address)
-	}
-
-	joiningParticipant, err := consensus.CreateJoiningParticipant(c.router, fullname, sibID, c.genericWallets[GenericWalletID(sibID)].SecretKey, siblingAddresses)
-	if err != nil {
-		return
-	}
-	c.participantManager.participants[name] = joiningParticipant
-
-	// Update the list of siblings to contain the bootstrap address, by
-	// getting a list of siblings out of the joiningParticipant metadata.
-	var metadata state.Metadata
-	err = joiningParticipant.Metadata(struct{}{}, &metadata)
-	if err != nil {
-		return
-	}
-	c.metadata.Siblings = metadata.Siblings
-
-	return
-}
-
-// ParticipantMetadata returns the metadata for the participant with the given
-// name. If no participant of that name exists, an error is returned.
-func (c *Client) ParticipantMetadata(name string) (m state.Metadata, err error) {
-	participant, exists := c.participantManager.participants[name]
-	if !exists {
-		err = errors.New("no participant of that name found")
-		return
-	}
-
-	err = participant.Metadata(struct{}{}, &m)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-// ParticipantWallets returns every wallet known to the participant of the
-// given name.
-func (c *Client) ParticipantWallets(name string) (wallets []state.Wallet, err error) {
-	participant, exists := c.participantManager.participants[name]
-	if !exists {
-		err = errors.New("no participant of that name found")
-		return
-	}
-
-	var walletIDList []state.WalletID
-	err = participant.WalletIDs(struct{}{}, &walletIDList)
-	if err != nil {
-		return
-	}
-
-	for _, id := range walletIDList {
-		var wallet state.Wallet
-		err = participant.Wallet(id, &wallet)
-		if err != nil {
-			return
-		}
-
-		wallets = append(wallets, wallet)
-	}
+	// more here
 
 	return
 }
