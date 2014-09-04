@@ -2,7 +2,7 @@
 // frontend of Sia. The client talks to the server via RPC, and the server runs
 // all of the logic that manages participants, wallets, joining the network,
 // uploads, etc.
-package server
+package main
 
 import (
 	"github.com/NebulousLabs/Sia/network"

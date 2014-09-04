@@ -78,6 +78,7 @@ bench:
 
 dependencies: submodule-update race-libs
 	cd siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
+	go get github.com/spf13/cobra
 
 race-libs:
 	go install -race std
