@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"errors"
 	"fmt"
@@ -234,3 +235,4 @@ func pollHome(s *server.Server) {
 		}
 	}
 }
+*/

@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 
@@ -117,3 +118,4 @@ func pollGenericWallet(s *server.Server, gw server.GenericWallet) {
 		}
 	}
 }
+*/

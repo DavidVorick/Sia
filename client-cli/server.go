@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 
@@ -346,3 +347,4 @@ func pollServer(s *server.Server) {
 		}
 	}
 }
+*/
