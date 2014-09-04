@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/server"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -115,7 +115,7 @@ func printWalletListVerbose(wallets []state.Wallet) {
 
 // serverNameAndFilepathWalkthrough is a helper function that gets and returns
 // the name and folderpath of a server.
-func serverNameAndFilepathWalkthrough(c *client.Client) (name string, filepath string, err error) {
+func serverNameAndFilepathWalkthrough(c *server.Client) (name string, filepath string, err error) {
 	// Get a name for the server, this is what will be used to query the
 	// server for status updates in the future.
 	fmt.Print("Please provide a name for the server: ")
@@ -138,7 +138,7 @@ func serverNameAndFilepathWalkthrough(c *client.Client) (name string, filepath s
 // joinQuorumWalkthrough gets input about the bootstrap address, the file
 // prefix for the particpant, etc. Then the participant is created and
 // bootstrapped to an existing quorum.
-func joinQuorumWalkthrough(c *client.Client) (err error) {
+func joinQuorumWalkthrough(c *server.Client) (err error) {
 	fmt.Println("Entering 'Join Quorum' Walkthrough")
 
 	// Get a name and filepath.
@@ -167,9 +167,9 @@ func joinQuorumWalkthrough(c *client.Client) (err error) {
 }
 
 // newQuorumWalkthrough walks the user through creating a new quorum.
-func newQuorumWalkthrough(c *client.Client) (err error) {
+func newQuorumWalkthrough(c *server.Client) (err error) {
 	fmt.Println("Entering 'New Quorum' walkthorugh")
-	fmt.Println("Warning: The client you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
+	fmt.Println("Warning: The server you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
 	fmt.Println("Double Warning: This feature is really only be meant to be used by developers. A lot can go wrong, just please be careful and realized that you were warned if bad stuff happens.")
 
 	name, filepath, err := serverNameAndFilepathWalkthrough(c)
@@ -195,7 +195,7 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 }
 
 // Prints the metadata along with all of the wallets.
-func participantFullInfoWalkthrough(c *client.Client) (err error) {
+func participantFullInfoWalkthrough(c *server.Client) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
@@ -228,7 +228,7 @@ func participantFullInfoWalkthrough(c *client.Client) (err error) {
 
 // participantMetadataWalkthrough gets the name of a participant and then
 // prints the metadata of that participant.
-func participantMetadataWalkthrough(c *client.Client) (err error) {
+func participantMetadataWalkthrough(c *server.Client) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
@@ -250,7 +250,7 @@ func participantMetadataWalkthrough(c *client.Client) (err error) {
 
 // participantWalletsWalkthrough gets the name of a participant and prints all
 // of the wallets being tracked by that participant.
-func participantWalletsWalkthrough(c *client.Client) (err error) {
+func participantWalletsWalkthrough(c *server.Client) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
@@ -272,7 +272,7 @@ func participantWalletsWalkthrough(c *client.Client) (err error) {
 
 // serverCreationWalkthrough gets a bunch of input from the user and uses it to
 // create a new server.
-func serverCreationWalkthrough(c *client.Client) (err error) {
+func serverCreationWalkthrough(c *server.Client) (err error) {
 	fmt.Println("No server exists, starting server creation.")
 
 	if !c.IsRouterInitialized() {
@@ -302,7 +302,7 @@ func displayServerHelp() {
 }
 
 // pollHome is a loop asking users for questions about managing participants.
-func pollServer(c *client.Client) {
+func pollServer(c *server.Client) {
 	var input string
 	var err error
 	for {

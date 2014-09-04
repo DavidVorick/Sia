@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/server"
 	"github.com/NebulousLabs/Sia/state"
 )
 
-func downloadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
+func downloadGenericWalletWalkthrough(c *server.Client, gw server.GenericWallet) (err error) {
 	// Get the name of the filepath to download into.
 	var filename string
 	fmt.Print("Absolute path to download the file to: ")
@@ -26,7 +26,7 @@ func downloadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet)
 
 // sendCoinGenericWalletWalkthrough walks the user through sending coins from
 // their generic wallet.
-func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
+func sendCoinGenericWalletWalkthrough(c *server.Client, gw server.GenericWallet) (err error) {
 	// Get a destination and an amount
 	var destinationID state.WalletID
 	var amount uint64
@@ -49,7 +49,7 @@ func sendCoinGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet)
 	return
 }
 
-func uploadGenericWalletWalkthrough(c *client.Client, gw client.GenericWallet) (err error) {
+func uploadGenericWalletWalkthrough(c *server.Client, gw server.GenericWallet) (err error) {
 	// Get the name of the file to upload.
 	var filename string
 	fmt.Print("Absolute path of the file to upload: ")
@@ -78,7 +78,7 @@ func displayGenericWalletHelp() {
 	)
 }
 
-func pollGenericWallet(c *client.Client, gw client.GenericWallet) {
+func pollGenericWallet(c *server.Client, gw server.GenericWallet) {
 	var input string
 	var err error
 	for {

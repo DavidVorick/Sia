@@ -1,5 +1,5 @@
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/erasure/longhair/bin/liblonghair.a -lstdc++"
-packages = client consensus delta erasure network siacrypto siaencoding state
+packages = consensus delta erasure network server siacrypto siaencoding state
 
 all: submodule-update install
 
@@ -35,14 +35,14 @@ test-long:
 test-long-verbose:
 	$(cgo_ldflags) go test -v -race -timeout 1h ./...
 
-test-client:
-	$(cgo_ldflags) go test -v -race -timeout 1h ./client
-
 test-consensus:
 	$(cgo_ldflags) go test -v -race -timeout 1h ./consensus
 
 test-delta:
 	$(cgo_ldflags) go test -v -race -timeout 1h ./delta
+
+test-server:
+	$(cgo_ldflags) go test -v -race -timeout 1h ./server
 
 test-state:
 	$(cgo_ldflags) go test -v -race -timeout 1h ./state

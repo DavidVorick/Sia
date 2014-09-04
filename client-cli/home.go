@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/NebulousLabs/Sia/client"
 	"github.com/NebulousLabs/Sia/consensus"
 	"github.com/NebulousLabs/Sia/network"
+	"github.com/NebulousLabs/Sia/server"
 	"github.com/NebulousLabs/Sia/state"
 )
 
 // printWallets provides a list of every wallet available to the Client.
-func printWallets(c *client.Client) {
+func printWallets(c *server.Client) {
 	fmt.Println("All Stored Wallet IDs:")
 	wallets := c.GetWalletIDs()
 	for _, id := range wallets {
@@ -23,7 +23,7 @@ func printWallets(c *client.Client) {
 // connectWalkthrough guides the user through providing a hostname, port, and
 // id which can be used to create a Sia address. Then the connection is
 // committed.
-func bootstrapToNetworkWalkthrough(c *client.Client) (err error) {
+func bootstrapToNetworkWalkthrough(c *server.Client) (err error) {
 	fmt.Println("Starting connect walkthrough.")
 	if !c.IsRouterInitialized() {
 		err = connectWalkthrough(c)
@@ -56,7 +56,7 @@ func bootstrapToNetworkWalkthrough(c *client.Client) (err error) {
 		return
 	}
 
-	// Call client.Connect using the provided information.
+	// Call server.Connect using the provided information.
 	err = c.BootstrapConnection(connectAddress)
 	if err != nil {
 		return
@@ -67,9 +67,9 @@ func bootstrapToNetworkWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-// connectWalkthrough requests a port and then calls client.Connect(port),
-// initializing the client network router.
-func connectWalkthrough(c *client.Client) (err error) {
+// connectWalkthrough requests a port and then calls server.Connect(port),
+// initializing the server network router.
+func connectWalkthrough(c *server.Client) (err error) {
 	// Do nothing if the router is already initialized.
 	if c.IsRouterInitialized() {
 		err = errors.New("router is already initialized")
@@ -78,7 +78,7 @@ func connectWalkthrough(c *client.Client) (err error) {
 
 	// Get a port.
 	var port uint16
-	fmt.Print("Port the client should listen on: ")
+	fmt.Print("Port the server should listen on: ")
 	_, err = fmt.Scanln(&port)
 	if err != nil {
 		err = errors.New("invalid port")
@@ -89,7 +89,7 @@ func connectWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-func createGenericWalletWalkthrough(c *client.Client) (err error) {
+func createGenericWalletWalkthrough(c *server.Client) (err error) {
 	var id state.WalletID
 	fmt.Print("Enter desired Wallet ID: ")
 	_, err = fmt.Scanln(&id)
@@ -120,7 +120,7 @@ func createGenericWalletWalkthrough(c *client.Client) (err error) {
 
 // loadWallet switches the cli into wallet-mode, where actions are taken
 // against a specific wallet.
-func loadWalletWalkthrough(c *client.Client) (err error) {
+func loadWalletWalkthrough(c *server.Client) (err error) {
 	// Fetch the wallet id from the user.
 	var id state.WalletID
 	fmt.Print("Wallet ID: ")
@@ -129,7 +129,7 @@ func loadWalletWalkthrough(c *client.Client) (err error) {
 		return
 	}
 
-	// Check that the wallet is available to the client.
+	// Check that the wallet is available to the server.
 	walletType, err := c.WalletType(id)
 	if err != nil {
 		return
@@ -141,8 +141,8 @@ func loadWalletWalkthrough(c *client.Client) (err error) {
 	if err != nil {
 		return
 	} else if walletType == "generic" {
-		var gw client.GenericWallet
-		gw, err = c.GenericWallet(client.GenericWalletID(id))
+		var gw server.GenericWallet
+		gw, err = c.GenericWallet(server.GenericWalletID(id))
 		if err != nil {
 			return
 		}
@@ -155,9 +155,9 @@ func loadWalletWalkthrough(c *client.Client) (err error) {
 	return
 }
 
-// serverModeSwitch will transition the client from being in home mode to being
+// serverModeSwitch will transition the server from being in home mode to being
 // in server mode, creating a new server and a new router if necessary.
-func serverModeSwitch(c *client.Client) (err error) {
+func serverModeSwitch(c *server.Client) (err error) {
 	init := c.IsServerInitialized()
 	if !init {
 		err = serverCreationWalkthrough(c)
@@ -185,7 +185,7 @@ func displayHomeHelp() {
 }
 
 // pollHome maintains the loop that asks users for actions that are relevant to the home screen.
-func pollHome(c *client.Client) {
+func pollHome(c *server.Client) {
 	var input string
 	var err error
 	for {
