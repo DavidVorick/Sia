@@ -11,16 +11,19 @@ import (
 // defaultConfigLocation checks a bunch of places for the config file, in a
 // particular order, and then returns the first one found.
 func defaultConfigLocation() (configLocation string) {
-	// First check the home directory.
-	// homeLocation := path.Join(siafiles.Home(), ".config", "Sia", "config-server")
-	// if siafiles.Exists(homelocation) {
-	// 	return
-	// }
-	//
-	// homeLocation2 := path.Join(siafiles.Home(), ".Sia", "config-server")
-	// etc.
+	// Check the home directory for a config file.
+	homeLocation, err := siafiles.HomeFilename("config-server")
+	if err != nil {
+		// Log something, but somewhere that normal users will never see.
+	} else {
+		if siafiles.Exists(homeLocation) {
+			configLocation = homeLocation
+			return
+		}
+	}
 
-	// Really need some way to get the root location through siafiles too... this isn't Windows friendly
+	// Check the /etc directory for a config file... not sure what the
+	// windows equivalent would be.
 	rootLocation := "/etc/siaserver-config"
 	if siafiles.Exists(rootLocation) {
 		configLocation = rootLocation
