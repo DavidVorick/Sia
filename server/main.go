@@ -6,8 +6,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func version(cmd *cobra.Command, args []string) {
+	fmt.Println("Sia Server v0.0.3")
+}
+
 func main() {
-	var rootCommand = &cobra.Command{
+	root := &cobra.Command{
 		Use:   "server",
 		Short: "Sia server",
 		Long:  "Sia server, meant to run in the background and interface with a client.",
@@ -16,5 +20,13 @@ func main() {
 		},
 	}
 
-	rootCommand.Execute()
+	version := &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run:   version,
+	}
+
+	root.AddCommand(version)
+
+	root.Execute()
 }
