@@ -68,12 +68,15 @@ func main() {
 	// Search for a config file, and use that as the default.
 	dcl := defaultConfigLocation()
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
+	// parse the config file into a struct
 
 	// Load the config file into a struct, use the struct to see if a default port was set.
 	// Set the default port to the value specified by the default config file.
 	defaultPort := uint16(9988)
-
 	root.Flags().Uint16VarP(&port, "port", "p", defaultPort, "Which port the server should listen on.")
+
+	// Flag for determining if the server should be local or public.
+	root.Flags().BoolVarP(&publicConnection, "public", "P", false, "Set this flag to have a publically visible hostname.")
 
 	version := &cobra.Command{
 		Use:   "version",
