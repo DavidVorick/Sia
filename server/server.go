@@ -51,8 +51,7 @@ func (s *Server) connect(port uint16, learnHostname bool) (err error) {
 	// Create a participant manager.
 	s.participantManager, err = newParticipantManager()
 	if err != nil {
-		fmt.Println("Participant Manager Error:", err)
-		fmt.Println("This error means that you will be unable to contribute your own storage space to the network.")
+		fmt.Printf("Participant Manager Error: %v!\n ", err)
 	}
 
 	return

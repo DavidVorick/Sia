@@ -10,6 +10,7 @@ import (
 var configLocation string
 var port uint16
 var publicConnection bool
+var walletDir string
 
 // defaultConfigLocation checks a bunch of places for the config file, in a
 // particular order, and then returns the first one found.
@@ -44,7 +45,11 @@ func start(cmd *cobra.Command, args []string) {
 	s := newServer()
 
 	// Connect the server, which will prepare it to listen for rpc's.
-	s.connect(port, publicConnection)
+	err := s.connect(port, publicConnection)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	// Let the server run indefinitely.
 	for {
@@ -70,10 +75,19 @@ func main() {
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
 	// parse the config file into a struct
 
-	// Load the config file into a struct, use the struct to see if a default port was set.
-	// Set the default port to the value specified by the default config file.
+	// Use the config file struct to determine the default port value.  Set
+	// the default port to the value specified by the default config file.
 	defaultPort := uint16(9988)
 	root.Flags().Uint16VarP(&port, "port", "p", defaultPort, "Which port the server should listen on.")
+
+	// Use the config file struct to determine the default wallet folder.
+	// If none is specified, use the homedir.
+	defaultWalletFolder, err := siafiles.HomeFilename("wallets")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	root.Flags().StringVarP(&walletDir, "wallet-directory", "w", defaultWalletFolder, "Which directory files will be loaded from and saved to.")
 
 	// Flag for determining if the server should be local or public.
 	root.Flags().BoolVarP(&publicConnection, "public", "P", false, "Set this flag to have a publically visible hostname.")

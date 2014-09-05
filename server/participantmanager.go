@@ -21,14 +21,12 @@ type ParticipantManager struct {
 // NewParticipantManager takes a port number as input and returns a server object that's
 // ready to be populated with participants.
 func newParticipantManager() (p *ParticipantManager, err error) {
-	// Have some way of figuring out if LearnHostname() has been called or
-	// not. If not, print some statement indicating that one cannot join
-	// Sia as a host / hard-drive-provider.
-	// if err != nil {
-	// 	return
-	// }
+	// Determine whether the server is public.
+	if !publicConnection {
+		err = errors.New("server is not public - the whole network will be local")
+	}
 
-	// Establish s.participantManager.
+	// Create the participant manager.
 	p = new(ParticipantManager)
 	p.participants = make(map[string]*consensus.Participant)
 	return
@@ -38,12 +36,6 @@ func newParticipantManager() (p *ParticipantManager, err error) {
 // creates a participant that will use that directory for its files. It's
 // mostly a helper function to eliminate redundant code.
 func (s *Server) createParticipantStructures(name string, filepath string) (fullname string, err error) {
-	// Check that the participant server has been created.
-	if s.participantManager == nil {
-		err = errors.New("participant server is nil")
-		return
-	}
-
 	// Check that a participant of the given name does not already exist.
 	_, exists := s.participantManager.participants[name]
 	if exists {
@@ -104,6 +96,7 @@ func (s *Server) NewBootstrapParticipant(name string, filepath string, sibID sta
 
 // NewJoiningParticipant creates a participant that joins the network known to
 // the client as a sibling.
+//func (s *Server) NewJoiningParticipant(input string, output thing) (err error) {
 func (s *Server) NewJoiningParticipant(name string, filepath string, sibID state.WalletID) (err error) {
 	fullname, err := s.createParticipantStructures(name, filepath)
 	if err != nil {
