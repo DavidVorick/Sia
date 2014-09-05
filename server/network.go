@@ -7,30 +7,25 @@ import (
 	"github.com/NebulousLabs/Sia/state"
 )
 
-// Initializes the client message router and pings the bootstrap to verify
-// connectivity.
-func (s *Server) BootstrapConnection(connectAddress network.Address) (err error) {
-	// A network server needs to exist in order to connect to the network.
-	if s.router == nil {
-		err = errors.New("network router is nil")
-		return
+// There should probably be some sort of error checking, but I'm not sure the best approach to that.
+func (s *Server) broadcast(m network.Message) {
+	for i := range s.metadata.Siblings {
+		if s.metadata.Siblings[i].Address.Host == "" {
+			continue
+		}
+		m.Dest = s.metadata.Siblings[i].Address
+		s.router.SendMessage(m)
+		break
 	}
+}
 
-	// Ping the connectAddress to verify alive-ness.
-	err = s.router.Ping(connectAddress)
-	if err != nil {
-		return
-	}
-
-	// Discover our external IP.
-	// Eventually, LearnHostname will ask the boostrap address instead of an
-	// external service.
-	err = s.router.LearnHostname()
-	if err != nil {
-		return errors.New("failed to determine external IP")
-	}
-
-	// populate initial sibling list
+// Eventually, instead of taking a hostname, there'll be a structure for
+// establishing a connection to Sia as a whole, and then finding specific
+// quorums within Sia.
+func (s *Server) connectToQuorum(connectAddress network.Address) (err error) {
+	// Clear out the current metadata and replace it with the new metadata.
+	// This is done with an intermediate variable because we do not want to
+	// clear the old metadata in the event of an error.
 	var metadata state.Metadata
 	err = s.router.SendMessage(network.Message{
 		Dest: connectAddress,
@@ -45,20 +40,8 @@ func (s *Server) BootstrapConnection(connectAddress network.Address) (err error)
 	return
 }
 
-// There should probably be some sort of error checking, but I'm not sure the best approach to that.
-func (s *Server) Broadcast(m network.Message) {
-	for i := range s.metadata.Siblings {
-		if s.metadata.Siblings[i].Address.Host == "" {
-			continue
-		}
-		m.Dest = s.metadata.Siblings[i].Address
-		s.router.SendMessage(m)
-		break
-	}
-}
-
 // Figure out the latest list of siblings in the quorum.
-func (s *Server) RefreshMetadata() (err error) {
+func (s *Server) refreshMetadata() (err error) {
 	// Iterate through known siblings until someone provides an updated list.
 	// The first answer given is trusted, this is insecure. A separate
 	// variable, 'metadata', is used instead of 's.metadata' because an

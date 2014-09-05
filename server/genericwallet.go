@@ -148,7 +148,7 @@ func (gwid GenericWalletID) SendCoin(s *Server, destination state.WalletID, amou
 		return
 	}
 
-	s.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
 		Resp: nil,
@@ -165,7 +165,7 @@ func (gwid GenericWalletID) Upload(s *Server, filename string) (err error) {
 	}
 
 	// Refresh the metadata for greatest chance of success.
-	s.RefreshMetadata()
+	s.refreshMetadata()
 
 	// Calculate the size of the file.
 	file, err := os.Open(filename)
@@ -209,7 +209,7 @@ func (gwid GenericWalletID) Upload(s *Server, filename string) (err error) {
 		WalletID: gw.WalletID,
 	}
 	delta.SignScriptInput(&input, gw.SecretKey)
-	s.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
 		Resp: nil,

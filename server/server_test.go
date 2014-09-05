@@ -26,7 +26,7 @@ func TestUploadAndRepair(t *testing.T) {
 	os.RemoveAll(testFolder)
 
 	// Initialize a client.
-	s := NewServer()
+	s := newServer()
 	err := s.connect(14000, false)
 	if err != nil {
 		t.Fatal(err)

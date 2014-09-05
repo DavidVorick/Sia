@@ -41,7 +41,7 @@ func defaultConfigLocation() (configLocation string) {
 func start(cmd *cobra.Command, args []string) {
 	// Initialize the server.
 	fmt.Println("Starting Sia Server...")
-	s := NewServer()
+	s := newServer()
 
 	// Connect the server, which will prepare it to listen for rpc's.
 	s.connect(port, publicConnection)

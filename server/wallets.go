@@ -60,7 +60,7 @@ func (s *Server) RequestGenericWallet(id state.WalletID) (err error) {
 
 	// Get the current height of the quorum.
 	// Send the requesting script input out to the network.
-	s.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: state.ScriptInput{
 			WalletID: delta.FountainWalletID,

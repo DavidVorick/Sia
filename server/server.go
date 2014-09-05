@@ -5,6 +5,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/state"
 )
@@ -30,11 +32,14 @@ type Server struct {
 // connect creates a router for the server, learning a public hostname if the
 // flag is set.
 func (s *Server) connect(port uint16, learnHostname bool) (err error) {
+	// Create a router.
 	s.router, err = network.NewRPCServer(port)
 	if err != nil {
 		return
 	}
 
+	// Register with the router, calling LearnHostname() if we wish to be
+	// available to the public.
 	if learnHostname {
 		err = s.router.LearnHostname()
 		if err != nil {
@@ -42,12 +47,20 @@ func (s *Server) connect(port uint16, learnHostname bool) (err error) {
 		}
 	}
 	s.address = s.router.RegisterHandler(s)
+
+	// Create a participant manager.
+	s.participantManager, err = newParticipantManager()
+	if err != nil {
+		fmt.Println("Participant Manager Error:", err)
+		fmt.Println("This error means that you will be unable to contribute your own storage space to the network.")
+	}
+
 	return
 }
 
 // NewServer creates a server struct, initializing key variables like maps.
 // Note that it does not initialize the router.
-func NewServer() (s *Server) {
+func newServer() (s *Server) {
 	s = new(Server)
 	s.genericWallets = make(map[GenericWalletID]*GenericWallet)
 	return

@@ -18,36 +18,19 @@ type ParticipantManager struct {
 	participants    map[string]*consensus.Participant
 }
 
-// IsParticipantManagerInitialized() is useful for telling front ent programs whether a
-// server needs to be initialized or not.
-func (s *Server) IsParticipantManagerInitialized() bool {
-	return s.participantManager != nil
-}
-
 // NewParticipantManager takes a port number as input and returns a server object that's
 // ready to be populated with participants.
-func (s *Server) NewParticipantManager() (err error) {
-	// If the network router is nil, a server can't exist.
-	if s.router == nil {
-		err = errors.New("need to have a connection before creating a server")
-		return
-	}
-
-	// Prevent any existing server from being overwritten.
-	if s.participantManager != nil {
-		err = errors.New("server already exists")
-		return
-	}
-
-	// Determine our external IP
-	err = s.router.LearnHostname()
-	if err != nil {
-		return errors.New("could not determine external IP")
-	}
+func newParticipantManager() (p *ParticipantManager, err error) {
+	// Have some way of figuring out if LearnHostname() has been called or
+	// not. If not, print some statement indicating that one cannot join
+	// Sia as a host / hard-drive-provider.
+	// if err != nil {
+	// 	return
+	// }
 
 	// Establish s.participantManager.
-	s.participantManager = new(ParticipantManager)
-	s.participantManager.participants = make(map[string]*consensus.Participant)
+	p = new(ParticipantManager)
+	p.participants = make(map[string]*consensus.Participant)
 	return
 }
 
