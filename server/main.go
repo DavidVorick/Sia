@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/NebulousLabs/Sia/siafiles"
-
 	"github.com/spf13/cobra"
 )
 
@@ -44,14 +43,22 @@ func version(cmd *cobra.Command, args []string) {
 func main() {
 	root := &cobra.Command{
 		Use:   "server",
-		Short: "Sia server",
-		Long:  "Sia server, meant to run in the background and interface with a client.",
+		Short: "Sia server v0.0.3",
+		Long:  "Sia server, meant to run in the background and interface with a client. Version 0.0.3",
 		Run:   start,
 	}
 
+	// Search for a config file, and use that as the default.
 	dcl := defaultConfigLocation()
 	var configLocation string
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
+
+	// Load the config file into a struct, use the struct to see if a default port was set.
+	// Set the default port to the value specified by the default config file.
+	defaultPort := uint16(9988)
+
+	var port uint16
+	root.Flags().Uint16VarP(&port, "port", "p", defaultPort, "Which port the server should listen on.")
 
 	version := &cobra.Command{
 		Use:   "version",
@@ -60,6 +67,5 @@ func main() {
 	}
 
 	root.AddCommand(version)
-
 	root.Execute()
 }
