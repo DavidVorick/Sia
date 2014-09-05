@@ -26,31 +26,27 @@ func TestUploadAndRepair(t *testing.T) {
 	os.RemoveAll(testFolder)
 
 	// Initialize a client.
-	c, err := NewServer()
-	if err != nil {
-		// For some reason this error is okay.
-		//t.Fatal(err)
-	}
-	err = c.Connect(14000)
+	s := NewServer()
+	err := s.connect(14000, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Manually create server to avoid hostname problems.
-	c.participantManager = new(ParticipantManager)
-	c.participantManager.participants = make(map[string]*consensus.Participant)
+	s.participantManager = new(ParticipantManager)
+	s.participantManager.participants = make(map[string]*consensus.Participant)
 
 	// Create a bootstrap participant.
-	err = c.NewBootstrapParticipant("0", testFolder, 1)
+	err = s.NewBootstrapParticipant("0", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create 2 more participants to upload files to.
-	err = c.NewJoiningParticipant("1", testFolder, 1)
+	err = s.NewJoiningParticipant("1", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.NewJoiningParticipant("2", testFolder, 1)
+	err = s.NewJoiningParticipant("2", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +67,7 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Upload a file to the network.
 	gwid := GenericWalletID(1)
-	err = gwid.Upload(c, uploadFilename)
+	err = gwid.Upload(s, uploadFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +77,7 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Download the file from the network.
 	downloadFilename := siafiles.TempFilename("TestClient-DownloadFile")
-	err = gwid.Download(c, downloadFilename)
+	err = gwid.Download(s, downloadFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +98,7 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Add another participant and see that the repair triggers.
-	err = c.NewJoiningParticipant("3", testFolder, 1)
+	err = s.NewJoiningParticipant("3", testFolder, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

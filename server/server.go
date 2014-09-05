@@ -15,6 +15,7 @@ import (
 type Server struct {
 	// Networking Variables
 	router   *network.RPCServer
+	address  network.Address
 	metadata state.Metadata
 
 	// Generic Wallets
@@ -26,20 +27,28 @@ type Server struct {
 	participantManager *ParticipantManager
 }
 
-// NewServer creates a new server object, initializing varibles like maps, and
-// processing the configuration file.
-func NewServer() (c *Server, err error) {
-	// Initialize vital variables.
-	c = new(Server)
-	c.genericWallets = make(map[GenericWalletID]*GenericWallet)
-
-	// Process config file.
-	err = c.processConfigFile()
+// connect creates a router for the server, learning a public hostname if the
+// flag is set.
+func (s *Server) connect(port uint16, learnHostname bool) (err error) {
+	s.router, err = network.NewRPCServer(port)
 	if err != nil {
 		return
 	}
 
-	// more here
+	if learnHostname {
+		err = s.router.LearnHostname()
+		if err != nil {
+			return
+		}
+	}
+	s.address = s.router.RegisterHandler(s)
+	return
+}
 
+// NewServer creates a server struct, initializing key variables like maps.
+// Note that it does not initialize the router.
+func NewServer() (s *Server) {
+	s = new(Server)
+	s.genericWallets = make(map[GenericWalletID]*GenericWallet)
 	return
 }

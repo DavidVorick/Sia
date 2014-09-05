@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var configLocation string
+var port uint16
+var publicConnection bool
+
 // defaultConfigLocation checks a bunch of places for the config file, in a
 // particular order, and then returns the first one found.
 func defaultConfigLocation() (configLocation string) {
@@ -32,14 +36,27 @@ func defaultConfigLocation() (configLocation string) {
 	return
 }
 
+// start takes all the values parsed by the flags and config files, and creates
+// the server.
 func start(cmd *cobra.Command, args []string) {
-	fmt.Println("Hello World!")
+	// Initialize the server.
+	fmt.Println("Starting Sia Server...")
+	s := NewServer()
+
+	// Connect the server, which will prepare it to listen for rpc's.
+	s.connect(port, publicConnection)
+
+	// Let the server run indefinitely.
+	for {
+	}
 }
 
+// version prints version information about the server.
 func version(cmd *cobra.Command, args []string) {
 	fmt.Println("Sia Server v0.0.3")
 }
 
+// main uses cobra to parse commands and flags.
 func main() {
 	root := &cobra.Command{
 		Use:   "server",
@@ -50,14 +67,12 @@ func main() {
 
 	// Search for a config file, and use that as the default.
 	dcl := defaultConfigLocation()
-	var configLocation string
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
 
 	// Load the config file into a struct, use the struct to see if a default port was set.
 	// Set the default port to the value specified by the default config file.
 	defaultPort := uint16(9988)
 
-	var port uint16
 	root.Flags().Uint16VarP(&port, "port", "p", defaultPort, "Which port the server should listen on.")
 
 	version := &cobra.Command{

@@ -57,27 +57,6 @@ func (s *Server) Broadcast(m network.Message) {
 	}
 }
 
-// Connect will create a new router, listening on the input port. If there is
-// already a non-nil router in the client, an error will be returned.
-func (s *Server) Connect(port uint16) (err error) {
-	if s.router != nil {
-		err = errors.New("router already initialized")
-		return
-	}
-
-	s.router, err = network.NewRPCServer(port)
-	if err != nil {
-		return
-	}
-	return
-}
-
-// IsRouterInitialized is useful for telling front end programs whether a
-// router needs to be initialized or not.
-func (s *Server) IsRouterInitialized() bool {
-	return s.router != nil
-}
-
 // Figure out the latest list of siblings in the quorum.
 func (s *Server) RefreshMetadata() (err error) {
 	// Iterate through known siblings until someone provides an updated list.
