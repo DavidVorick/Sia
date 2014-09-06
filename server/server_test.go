@@ -22,31 +22,39 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Clean out any previous test files.
-	testFolder := siafiles.TempFilename("TestClient")
-	os.RemoveAll(testFolder)
+	participantDir = siafiles.TempFilename("TestClient")
+	os.RemoveAll(participantDir)
 
 	// Initialize a client.
 	s := newServer()
 	err := s.connect(14000, false)
 	if err != nil {
-		t.Fatal(err)
+		// a 'local only' error gets returned, which is intentional.
+		// t.Fatal(err)
 	}
 	// Manually create server to avoid hostname problems.
 	s.participantManager = new(ParticipantManager)
 	s.participantManager.participants = make(map[string]*consensus.Participant)
 
 	// Create a bootstrap participant.
-	err = s.NewBootstrapParticipant("0", testFolder, 1)
+	npi := NewParticipantInfo{
+		Name:      "0",
+		SiblingID: 1,
+	}
+
+	err = s.NewBootstrapParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create 2 more participants to upload files to.
-	err = s.NewJoiningParticipant("1", testFolder, 1)
+	npi.Name = "1"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.NewJoiningParticipant("2", testFolder, 1)
+	npi.Name = "2"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,11 +106,12 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Add another participant and see that the repair triggers.
-	err = s.NewJoiningParticipant("3", testFolder, 1)
+	npi.Name = "3"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !siafiles.Exists(filepath.Join(testFolder, "3", "wallet.AQAAAAAAAAA=.sector")) {
+	if !siafiles.Exists(filepath.Join(participantDir, "3", "wallet.AQAAAAAAAAA=.sector")) {
 		t.Fatal(" Repaired wallet sector doesn't exist - something went wrong during repair.")
 	}
 }

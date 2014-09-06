@@ -10,6 +10,7 @@ import (
 var configLocation string
 var port uint16
 var publicConnection bool
+var participantDir string
 var walletDir string
 
 // defaultConfigLocation checks a bunch of places for the config file, in a

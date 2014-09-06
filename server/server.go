@@ -57,7 +57,7 @@ func (s *Server) connect(port uint16, learnHostname bool) (err error) {
 	return
 }
 
-// NewServer creates a server struct, initializing key variables like maps.
+// newServer creates a server struct, initializing key variables like maps.
 // Note that it does not initialize the router.
 func newServer() (s *Server) {
 	s = new(Server)

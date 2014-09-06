@@ -18,6 +18,14 @@ type ParticipantManager struct {
 	participants    map[string]*consensus.Participant
 }
 
+type NewParticipantInfo struct {
+	Name      string
+	SiblingID state.WalletID
+
+	UseUniqueDirectory bool
+	UniqueDirectory    string
+}
+
 // NewParticipantManager takes a port number as input and returns a server object that's
 // ready to be populated with participants.
 func newParticipantManager() (p *ParticipantManager, err error) {
@@ -35,18 +43,22 @@ func newParticipantManager() (p *ParticipantManager, err error) {
 // NewParticipant creates a directory 'name' at location 'filepath' and then
 // creates a participant that will use that directory for its files. It's
 // mostly a helper function to eliminate redundant code.
-func (s *Server) createParticipantStructures(name string, filepath string) (fullname string, err error) {
+func (s *Server) createParticipantStructures(npi NewParticipantInfo) (dirname string, err error) {
 	// Check that a participant of the given name does not already exist.
-	_, exists := s.participantManager.participants[name]
+	_, exists := s.participantManager.participants[npi.Name]
 	if exists {
 		err = errors.New("a participant of that name already exists.")
 		return
 	}
 
-	// Create a directory 'name' at location 'filepath' for use of the
-	// participant.
-	fullname = path.Join(filepath, name) + "/"
-	err = os.MkdirAll(fullname, os.ModeDir|os.ModePerm)
+	// Create a directory for the participant, using the unique directory
+	// if the flag is set, and using the participantDir/Name if not.
+	if npi.UseUniqueDirectory {
+		dirname = npi.UniqueDirectory
+	} else {
+		dirname = path.Join(participantDir, npi.Name) + "/"
+	}
+	err = os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return
 	}
@@ -56,8 +68,8 @@ func (s *Server) createParticipantStructures(name string, filepath string) (full
 
 // NewBootstrapParticipant creates a new participant that is the first in it's
 // quorum; it creates the quorum along with the participant.
-func (s *Server) NewBootstrapParticipant(name string, filepath string, sibID state.WalletID) (err error) {
-	fullname, err := s.createParticipantStructures(name, filepath)
+func (s *Server) NewBootstrapParticipant(npi NewParticipantInfo, _ *struct{}) (err error) {
+	dirname, err := s.createParticipantStructures(npi)
 	if err != nil {
 		return
 	}
@@ -69,15 +81,15 @@ func (s *Server) NewBootstrapParticipant(name string, filepath string, sibID sta
 	}
 
 	// Create the participant and add it to the server map.
-	newParticipant, err := consensus.CreateBootstrapParticipant(s.router, fullname, sibID, pk)
+	newParticipant, err := consensus.CreateBootstrapParticipant(s.router, dirname, npi.SiblingID, pk)
 	if err != nil {
 		return
 	}
-	s.participantManager.participants[name] = newParticipant
+	s.participantManager.participants[npi.Name] = newParticipant
 
 	// Add the wallet to the client list of generic wallets.
-	s.genericWallets[GenericWalletID(sibID)] = &GenericWallet{
-		WalletID:  sibID,
+	s.genericWallets[GenericWalletID(npi.SiblingID)] = &GenericWallet{
+		WalletID:  npi.SiblingID,
 		PublicKey: pk,
 		SecretKey: sk,
 	}
@@ -96,31 +108,35 @@ func (s *Server) NewBootstrapParticipant(name string, filepath string, sibID sta
 
 // NewJoiningParticipant creates a participant that joins the network known to
 // the client as a sibling.
-//func (s *Server) NewJoiningParticipant(input string, output thing) (err error) {
-func (s *Server) NewJoiningParticipant(name string, filepath string, sibID state.WalletID) (err error) {
-	fullname, err := s.createParticipantStructures(name, filepath)
+func (s *Server) NewJoiningParticipant(npi NewParticipantInfo, _ *struct{}) (err error) {
+	dirname, err := s.createParticipantStructures(npi)
 	if err != nil {
 		return
 	}
 
 	// Verify that the sibID given is available to the client.
-	_, exists := s.genericWallets[GenericWalletID(sibID)]
+	_, exists := s.genericWallets[GenericWalletID(npi.SiblingID)]
 	if !exists {
 		err = errors.New("no known wallet of that id")
 		return
 	}
 
-	// Get a list of addresses for the joining participant to use while bootstrapping.
+	// Refresh the metadata and then grab all the addresses for the joining
+	// participant to use.
+	err = s.refreshMetadata()
+	if err != nil {
+		return
+	}
 	var siblingAddresses []network.Address
 	for _, sibling := range s.metadata.Siblings {
 		siblingAddresses = append(siblingAddresses, sibling.Address)
 	}
 
-	joiningParticipant, err := consensus.CreateJoiningParticipant(s.router, fullname, sibID, s.genericWallets[GenericWalletID(sibID)].SecretKey, siblingAddresses)
+	joiningParticipant, err := consensus.CreateJoiningParticipant(s.router, dirname, npi.SiblingID, s.genericWallets[GenericWalletID(npi.SiblingID)].SecretKey, siblingAddresses)
 	if err != nil {
 		return
 	}
-	s.participantManager.participants[name] = joiningParticipant
+	s.participantManager.participants[npi.Name] = joiningParticipant
 
 	// Update the list of siblings to contain the bootstrap address, by
 	// getting a list of siblings out of the joiningParticipant metadata.
