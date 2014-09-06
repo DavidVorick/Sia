@@ -88,7 +88,16 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	root.Flags().StringVarP(&walletDir, "wallet-directory", "w", defaultWalletFolder, "Which directory files will be loaded from and saved to.")
+	root.Flags().StringVarP(&walletDir, "wallet-directory", "w", defaultWalletFolder, "Which directory wallets will be loaded from and saved to.")
+
+	// Use the config file struct to determine the default participant
+	// folder. If none is specified, use the homedir.
+	defaultParticipantFolder, err := siafiles.HomeFilename("participants")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	root.Flags().StringVarP(&walletDir, "participant-directory", "d", defaultParticipantFolder, "Which directory participant files will be saved to.")
 
 	// Flag for determining if the server should be local or public.
 	root.Flags().BoolVarP(&publicConnection, "public", "P", false, "Set this flag to have a publically visible hostname.")
