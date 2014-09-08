@@ -152,14 +152,14 @@ func (s *Server) NewJoiningParticipant(npi NewParticipantInfo, _ *struct{}) (err
 
 // ParticipantMetadata returns the metadata for the participant with the given
 // name. If no participant of that name exists, an error is returned.
-func (s *Server) ParticipantMetadata(name string) (m state.Metadata, err error) {
+func (s *Server) ParticipantMetadata(name string, m *state.Metadata) (err error) {
 	participant, exists := s.participantManager.participants[name]
 	if !exists {
 		err = errors.New("no participant of that name found")
 		return
 	}
 
-	err = participant.Metadata(struct{}{}, &m)
+	err = participant.Metadata(struct{}{}, m)
 	if err != nil {
 		return
 	}
@@ -169,7 +169,7 @@ func (s *Server) ParticipantMetadata(name string) (m state.Metadata, err error) 
 
 // ParticipantWallets returns every wallet known to the participant of the
 // given name.
-func (s *Server) ParticipantWallets(name string) (wallets []state.Wallet, err error) {
+func (s *Server) ParticipantWallets(name string, wallets *[]state.Wallet) (err error) {
 	participant, exists := s.participantManager.participants[name]
 	if !exists {
 		err = errors.New("no participant of that name found")
@@ -189,7 +189,7 @@ func (s *Server) ParticipantWallets(name string) (wallets []state.Wallet, err er
 			return
 		}
 
-		wallets = append(wallets, wallet)
+		*wallets = append(*wallets, wallet)
 	}
 
 	return
