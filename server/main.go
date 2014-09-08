@@ -7,11 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var configLocation string
-var port uint16
-var publicConnection bool
-var participantDir string
-var walletDir string
+var (
+	configLocation   string
+	port             uint16
+	publicConnection bool
+	participantDir   string
+	walletDir        string
+)
 
 // defaultConfigLocation checks a bunch of places for the config file, in a
 // particular order, and then returns the first one found.
@@ -53,8 +55,7 @@ func start(cmd *cobra.Command, args []string) {
 	}
 
 	// Let the server run indefinitely.
-	for {
-	}
+	select {}
 }
 
 // version prints version information about the server.

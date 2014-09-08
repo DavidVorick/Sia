@@ -8,8 +8,12 @@ import (
 	"path"
 )
 
-var siahome string
-var homefound bool // using homefound is more secure than checking homdir == ""
+var (
+	siahome   string
+	homefound bool
+
+	tempdir string
+)
 
 // Homedir returns the users home directory.
 func HomeDir() (homedir string, err error) {
@@ -24,12 +28,15 @@ func HomeDir() (homedir string, err error) {
 
 // TempDir returns the Sia temp directory.
 func TempDir() string {
-	return path.Join(os.TempDir(), "Sia")
+	return tempdir
 }
 
 // siafiles.init scans the directory structure of Sia, and creates necessary
 // folders.
 func init() {
+	// Set the tempdir.
+	tempdir = path.Join(os.TempDir(), "Sia")
+
 	// Create a temp directory for Sia.
 	if err := os.MkdirAll(TempDir(), os.ModeDir|os.ModePerm); err != nil {
 		// Perhaps something more gentle can be done?

@@ -20,15 +20,15 @@ func main() {
 	/*
 		printWelcomeMessage()
 
-			s, err := server.NewServer()
-			if err != nil {
-				fmt.Println("Error on startup:", err)
-			}
+		s, err := server.NewServer()
+		if err != nil {
+			fmt.Println("Error on startup:", err)
+		}
 
-			// Check if new server has connected to the network (this would be
-			// managed by the config file loader), if not, post some message about
-			// not being connected.
+		// Check if new server has connected to the network (this would be
+		// managed by the config file loader), if not, post some message about
+		// not being connected.
 
-			pollHome(s)
+		pollHome(s)
 	*/
 }
