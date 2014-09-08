@@ -12,21 +12,21 @@ import (
 )
 
 // Returns a list of all wallets available to the client.
-func (s *Server) GetWalletIDs() (ids []state.WalletID) {
-	ids = make([]state.WalletID, 0, len(s.genericWallets))
+func (s *Server) WalletIDs(_ struct{}, ids *[]state.WalletID) (err error) {
+	*ids = make([]state.WalletID, 0, len(s.genericWallets))
 	for id := range s.genericWallets {
-		ids = append(ids, state.WalletID(id))
+		*ids = append(*ids, state.WalletID(id))
 	}
 	return
 }
 
 // Wallet type takes an id as input and returns the wallet type. An error is
 // returned if the wallet is not found by the client.
-func (s *Server) WalletType(id state.WalletID) (walletType string, err error) {
+func (s *Server) WalletType(id state.WalletID, walletType *string) (err error) {
 	// Check if the wallet is a generic type.
 	_, exists := s.genericWallets[GenericWalletID(id)]
 	if exists {
-		walletType = "generic"
+		*walletType = "generic"
 		return
 	}
 
@@ -37,7 +37,7 @@ func (s *Server) WalletType(id state.WalletID) (walletType string, err error) {
 }
 
 // Submit a wallet request to the fountain wallet.
-func (s *Server) RequestGenericWallet(id state.WalletID) (err error) {
+func (s *Server) RequestGenericWallet(id state.WalletID, _ *struct{}) (err error) {
 	// Query to verify that the wallet id is available.
 	var w state.Wallet
 	err = s.router.SendMessage(network.Message{
