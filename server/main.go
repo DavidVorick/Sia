@@ -79,6 +79,35 @@ func version(cmd *cobra.Command, args []string) {
 	fmt.Println("Sia Server v0.0.3")
 }
 
+// Set the config file values to all of the defaults, and then the config file
+// at configLocation is read into the struct, overwriting the defauls where
+// values are set.
+func parseConfigFile() (err error) {
+	config.Network.Port = 9988
+	config.Network.PublicConnection = false
+	config.Filesystem.ParticipantDir, err = siafiles.HomeFilename("participants")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	config.Filesystem.WalletDir, err = siafiles.HomeFilename("wallets")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Parse the config file if it exists.
+	if siafiles.Exists(configLocation) {
+		err = gcfg.ReadFileInto(&config, configLocation)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
+	return
+}
+
 // main uses cobra to parse commands and flags.
 func main() {
 	root := &cobra.Command{
@@ -91,29 +120,10 @@ func main() {
 	// Search for a config file, and use that as the default.
 	dcl := defaultConfigLocation()
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
-
-	// Parse the config file if it exists.
-	if siafiles.Exists(configLocation) {
-		err := gcfg.ReadFileInto(&config, configLocation)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	} else {
-		config.Network.Port = 9988
-		config.Network.PublicConnection = false
-
-		var err error
-		config.Filesystem.ParticipantDir, err = siafiles.HomeFilename("participants")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		config.Filesystem.WalletDir, err = siafiles.HomeFilename("wallets")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+	err := parseConfigFile()
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	// Use the config file struct to determine the default port value.  Set
