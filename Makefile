@@ -1,5 +1,5 @@
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/erasure/longhair/bin/liblonghair.a -lstdc++"
-packages = consensus delta erasure network server siacrypto siaencoding state
+packages = client-termbox consensus delta erasure network server siacrypto siaencoding state
 
 all: submodule-update install
 
@@ -80,6 +80,7 @@ dependencies: submodule-update race-libs
 	cd siacrypto/libsodium && sudo ./autogen.sh && sudo ./configure && sudo make check && sudo make install && sudo ldconfig
 	go get -u code.google.com/p/gcfg
 	go get -u github.com/spf13/cobra
+	go get -u github.com/nsf/termbox-go
 
 race-libs:
 	go install -race std
