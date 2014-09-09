@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 
-	"code.google.com/p/gcfg"
 	"github.com/NebulousLabs/Sia/siafiles"
+
+	"code.google.com/p/gcfg"
 	"github.com/spf13/cobra"
 )
 
@@ -131,7 +132,7 @@ func main() {
 	root.Flags().Uint16VarP(&config.Network.Port, "port", "p", config.Network.Port, "Which port the server should listen on.")
 
 	// Flag for determining if the server should be local or public.
-	root.Flags().BoolVarP(&config.Network.PublicConnection, "public", "P", config.Network.PublicConnection, "Set this flag to have a publically visible hostname.")
+	root.Flags().BoolVarP(&config.Network.PublicConnection, "public", "P", config.Network.PublicConnection, "Set this flag to have a publicly visible hostname.")
 
 	// Use the config file struct to determine the default participant
 	// folder. If none is specified, use the homedir.

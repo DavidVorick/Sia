@@ -77,9 +77,9 @@ bench:
 	$(cgo_ldflags) go test -run=XXX -bench=. ./...
 
 dependencies: submodule-update race-libs
-	cd siacrypto/libsodium && ./autogen.sh && ./configure && make check && sudo make install && sudo ldconfig
-	go get github.com/spf13/cobra
-	go get code.google.com/p/gcfg
+	cd siacrypto/libsodium && sudo ./autogen.sh && sudo ./configure && sudo make check && sudo make install && sudo ldconfig
+	go get -u code.google.com/p/gcfg
+	go get -u github.com/spf13/cobra
 
 race-libs:
 	go install -race std
