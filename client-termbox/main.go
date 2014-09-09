@@ -13,13 +13,15 @@ const (
 	Border       = 1
 
 	HomeHeaderColor   = termbox.ColorRed
-	HomeActiveColor   = termbox.ColorBlue
+	HomeActiveColor   = termbox.ColorYellow
 	HomeInactiveColor = termbox.ColorGreen
 
 	DividerColor = termbox.ColorBlue
 )
 
 type Context struct {
+	Focus string
+
 	WalletsActive      bool
 	ParticipantsActive bool
 	SettingsActive     bool
@@ -102,17 +104,28 @@ func main() {
 		}
 	}()
 
+	context.Focus = "home"
+	context.WalletsActive = true
+
 	draw()
 
 	for {
 		select {
-		case ev := <-event_queue:
-			if ev.Type == termbox.EventKey && ev.Key == termbox.KeyEsc {
+		case event := <-event_queue:
+			// Check for the quit signal.
+			if event.Type == termbox.EventKey && event.Key == termbox.KeyEsc {
 				return
+			}
+
+			switch context.Focus {
+			case "home":
+				homeEvent(event)
+			default:
+				panic("focus not home!") // Panic because focus should never be off of home yet!
 			}
 		default:
 			draw()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(25 * time.Millisecond)
 		}
 	}
 }
