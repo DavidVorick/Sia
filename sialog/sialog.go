@@ -152,21 +152,21 @@ func (l *Logger) Log(msg string, priority string, flags uint32) {
 }
 
 // Info prints the log message with the INFO tag.
-func (l *Logger) Info(msg string) {
-	l.Log(msg, Linfo, File)
+func (l *Logger) Info(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Linfo, File)
 }
 
 // Warn prints the log message with the WARN tag.
-func (l *Logger) Warn(msg string) {
-	l.Log(msg, Lwarn, File)
+func (l *Logger) Warn(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Lwarn, File)
 }
 
 // Error prints the log message with the ERROR tag.
-func (l *Logger) Error(msg string) {
-	l.Log(msg, Lerror, File)
+func (l *Logger) Error(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Lerror, File)
 }
 
 // Fatal prints the log message with a trace and calls os.Exit(1)
-func (l *Logger) Fatal(msg string) {
-	l.Log(msg, Lfatal, File|Stderr|Trace|Exit)
+func (l *Logger) Fatal(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Lfatal, File|Stderr|Trace|Exit)
 }
