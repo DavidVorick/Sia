@@ -51,7 +51,8 @@ func (s *Server) connect(port uint16, learnHostname bool) (err error) {
 	// Create a participant manager.
 	s.participantManager, err = newParticipantManager()
 	if err != nil {
-		fmt.Printf("Participant Manager Error: %v!\n ", err)
+		fmt.Printf("Participant Manager Error: %v!\n", err)
+		err = nil
 	}
 
 	return

@@ -22,8 +22,8 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Clean out any previous test files.
-	participantDir = siafiles.TempFilename("TestClient")
-	os.RemoveAll(participantDir)
+	config.Filesystem.ParticipantDir = siafiles.TempFilename("TestClient")
+	os.RemoveAll(config.Filesystem.ParticipantDir)
 
 	// Initialize a client.
 	s := newServer()
@@ -119,7 +119,7 @@ func TestUploadAndRepair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !siafiles.Exists(filepath.Join(participantDir, "3", "wallet.AQAAAAAAAAA=.sector")) {
+	if !siafiles.Exists(filepath.Join(config.Filesystem.ParticipantDir, "3", "wallet.AQAAAAAAAAA=.sector")) {
 		t.Fatal(" Repaired wallet sector doesn't exist - something went wrong during repair.")
 	}
 }

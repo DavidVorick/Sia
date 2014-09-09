@@ -30,7 +30,7 @@ type NewParticipantInfo struct {
 // ready to be populated with participants.
 func newParticipantManager() (p *ParticipantManager, err error) {
 	// Determine whether the server is public.
-	if !publicConnection {
+	if !config.Network.PublicConnection {
 		err = errors.New("server is not public - the whole network will be local")
 	}
 
@@ -56,7 +56,7 @@ func (s *Server) createParticipantStructures(npi NewParticipantInfo) (dirname st
 	if npi.UseUniqueDirectory {
 		dirname = npi.UniqueDirectory
 	} else {
-		dirname = path.Join(participantDir, npi.Name) + "/"
+		dirname = path.Join(config.Filesystem.ParticipantDir, npi.Name) + "/"
 	}
 	err = os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
 	if err != nil {
