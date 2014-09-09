@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"errors"
@@ -12,21 +12,21 @@ import (
 )
 
 // Returns a list of all wallets available to the client.
-func (c *Client) GetWalletIDs() (ids []state.WalletID) {
-	ids = make([]state.WalletID, 0, len(c.genericWallets))
-	for id := range c.genericWallets {
-		ids = append(ids, state.WalletID(id))
+func (s *Server) WalletIDs(_ struct{}, ids *[]state.WalletID) (err error) {
+	*ids = make([]state.WalletID, 0, len(s.genericWallets))
+	for id := range s.genericWallets {
+		*ids = append(*ids, state.WalletID(id))
 	}
 	return
 }
 
 // Wallet type takes an id as input and returns the wallet type. An error is
 // returned if the wallet is not found by the client.
-func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
+func (s *Server) WalletType(id state.WalletID, walletType *string) (err error) {
 	// Check if the wallet is a generic type.
-	_, exists := c.genericWallets[GenericWalletID(id)]
+	_, exists := s.genericWallets[GenericWalletID(id)]
 	if exists {
-		walletType = "generic"
+		*walletType = "generic"
 		return
 	}
 
@@ -37,11 +37,11 @@ func (c *Client) WalletType(id state.WalletID) (walletType string, err error) {
 }
 
 // Submit a wallet request to the fountain wallet.
-func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
+func (s *Server) RequestGenericWallet(id state.WalletID, _ *struct{}) (err error) {
 	// Query to verify that the wallet id is available.
 	var w state.Wallet
-	err = c.router.SendMessage(network.Message{
-		Dest: c.metadata.Siblings[0].Address,
+	err = s.router.SendMessage(network.Message{
+		Dest: s.metadata.Siblings[0].Address,
 		Proc: "Participant.Wallet",
 		Args: id,
 		Resp: &w,
@@ -60,12 +60,12 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 
 	// Get the current height of the quorum.
 	// Send the requesting script input out to the network.
-	c.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: state.ScriptInput{
 			WalletID: delta.FountainWalletID,
 			Input:    delta.CreateFountainWalletInput(id, delta.DefaultScript(pk)),
-			Deadline: c.metadata.Height + state.MaxDeadline,
+			Deadline: s.metadata.Height + state.MaxDeadline,
 		},
 	})
 
@@ -74,8 +74,8 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 	time.Sleep(time.Duration(consensus.NumSteps) * 2 * consensus.StepDuration)
 
 	// Query to verify that the request was accepted by the network.
-	err = c.router.SendMessage(network.Message{
-		Dest: c.metadata.Siblings[0].Address,
+	err = s.router.SendMessage(network.Message{
+		Dest: s.metadata.Siblings[0].Address,
 		Proc: "Participant.Wallet",
 		Args: id,
 		Resp: &w,
@@ -94,7 +94,7 @@ func (c *Client) RequestGenericWallet(id state.WalletID) (err error) {
 		PublicKey: pk,
 		SecretKey: sk,
 	}
-	c.genericWallets[GenericWalletID(id)] = &gw
+	s.genericWallets[GenericWalletID(id)] = &gw
 
 	return
 }

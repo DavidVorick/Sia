@@ -1,9 +1,10 @@
 package main
 
+/*
 import (
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/client"
+	"github.com/NebulousLabs/Sia/server"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -115,7 +116,7 @@ func printWalletListVerbose(wallets []state.Wallet) {
 
 // serverNameAndFilepathWalkthrough is a helper function that gets and returns
 // the name and folderpath of a server.
-func serverNameAndFilepathWalkthrough(c *client.Client) (name string, filepath string, err error) {
+func serverNameAndFilepathWalkthrough(s *server.Server) (name string, filepath string, err error) {
 	// Get a name for the server, this is what will be used to query the
 	// server for status updates in the future.
 	fmt.Print("Please provide a name for the server: ")
@@ -136,13 +137,13 @@ func serverNameAndFilepathWalkthrough(c *client.Client) (name string, filepath s
 }
 
 // joinQuorumWalkthrough gets input about the bootstrap address, the file
-// prefix for the particpant, etc. Then the participant is created and
+// prefix for the particpant, ets. Then the participant is created and
 // bootstrapped to an existing quorum.
-func joinQuorumWalkthrough(c *client.Client) (err error) {
+func joinQuorumWalkthrough(s *server.Server) (err error) {
 	fmt.Println("Entering 'Join Quorum' Walkthrough")
 
 	// Get a name and filepath.
-	name, filepath, err := serverNameAndFilepathWalkthrough(c)
+	name, filepath, err := serverNameAndFilepathWalkthrough(s)
 	if err != nil {
 		return
 	}
@@ -157,7 +158,7 @@ func joinQuorumWalkthrough(c *client.Client) (err error) {
 	}
 
 	fmt.Println("Creating a joining participant and bootstrapping it to the network. Note that this will take several blocks.")
-	err = c.NewJoiningParticipant(name, filepath, tetherID)
+	err = s.NewJoiningParticipant(name, filepath, tetherID)
 	if err != nil {
 		return
 	}
@@ -167,12 +168,12 @@ func joinQuorumWalkthrough(c *client.Client) (err error) {
 }
 
 // newQuorumWalkthrough walks the user through creating a new quorum.
-func newQuorumWalkthrough(c *client.Client) (err error) {
+func newQuorumWalkthrough(s *server.Server) (err error) {
 	fmt.Println("Entering 'New Quorum' walkthorugh")
-	fmt.Println("Warning: The client you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
+	fmt.Println("Warning: The server you are using was only intended to work with a single network. This function creates a new Sia network. If you have existing wallets, it's possible that there will be problems.")
 	fmt.Println("Double Warning: This feature is really only be meant to be used by developers. A lot can go wrong, just please be careful and realized that you were warned if bad stuff happens.")
 
-	name, filepath, err := serverNameAndFilepathWalkthrough(c)
+	name, filepath, err := serverNameAndFilepathWalkthrough(s)
 	if err != nil {
 		return
 	}
@@ -186,7 +187,7 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 	}
 
 	// Create the participant.
-	err = c.NewBootstrapParticipant(name, filepath, sibID)
+	err = s.NewBootstrapParticipant(name, filepath, sibID)
 	if err != nil {
 		return
 	}
@@ -195,13 +196,13 @@ func newQuorumWalkthrough(c *client.Client) (err error) {
 }
 
 // Prints the metadata along with all of the wallets.
-func participantFullInfoWalkthrough(c *client.Client) (err error) {
+func participantFullInfoWalkthrough(s *server.Server) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
 	}
 
-	metadata, err := c.ParticipantMetadata(name)
+	metadata, err := s.ParticipantMetadata(name)
 	if err != nil {
 		return
 	}
@@ -212,7 +213,7 @@ func participantFullInfoWalkthrough(c *client.Client) (err error) {
 	)
 	printMetadataVerbose(metadata)
 
-	wallets, err := c.ParticipantWallets(name)
+	wallets, err := s.ParticipantWallets(name)
 	if err != nil {
 		return
 	}
@@ -228,13 +229,13 @@ func participantFullInfoWalkthrough(c *client.Client) (err error) {
 
 // participantMetadataWalkthrough gets the name of a participant and then
 // prints the metadata of that participant.
-func participantMetadataWalkthrough(c *client.Client) (err error) {
+func participantMetadataWalkthrough(s *server.Server) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
 	}
 
-	metadata, err := c.ParticipantMetadata(name)
+	metadata, err := s.ParticipantMetadata(name)
 	if err != nil {
 		return
 	}
@@ -250,13 +251,13 @@ func participantMetadataWalkthrough(c *client.Client) (err error) {
 
 // participantWalletsWalkthrough gets the name of a participant and prints all
 // of the wallets being tracked by that participant.
-func participantWalletsWalkthrough(c *client.Client) (err error) {
+func participantWalletsWalkthrough(s *server.Server) (err error) {
 	name, err := participantName()
 	if err != nil {
 		return
 	}
 
-	wallets, err := c.ParticipantWallets(name)
+	wallets, err := s.ParticipantWallets(name)
 	if err != nil {
 		return
 	}
@@ -272,15 +273,15 @@ func participantWalletsWalkthrough(c *client.Client) (err error) {
 
 // serverCreationWalkthrough gets a bunch of input from the user and uses it to
 // create a new server.
-func serverCreationWalkthrough(c *client.Client) (err error) {
+func serverCreationWalkthrough(s *server.Server) (err error) {
 	fmt.Println("No server exists, starting server creation.")
 
-	if !c.IsRouterInitialized() {
-		connectWalkthrough(c)
+	if !s.IsRouterInitialized() {
+		connectWalkthrough(s)
 	}
 
 	// Create the server.
-	err = c.NewServer()
+	err = s.NewParticipantManager()
 	if err != nil {
 		return
 	}
@@ -302,7 +303,7 @@ func displayServerHelp() {
 }
 
 // pollHome is a loop asking users for questions about managing participants.
-func pollServer(c *client.Client) {
+func pollServer(s *server.Server) {
 	var input string
 	var err error
 	for {
@@ -325,19 +326,19 @@ func pollServer(c *client.Client) {
 			return
 
 		case "f", "fullinfo":
-			err = participantFullInfoWalkthrough(c)
+			err = participantFullInfoWalkthrough(s)
 
 		case "j", "join":
-			err = joinQuorumWalkthrough(c)
+			err = joinQuorumWalkthrough(s)
 
 		case "m", "metadata", "status":
-			err = participantMetadataWalkthrough(c)
+			err = participantMetadataWalkthrough(s)
 
 		case "n", "new", "bootstrap":
-			err = newQuorumWalkthrough(c)
+			err = newQuorumWalkthrough(s)
 
 		case "w", "wallets":
-			err = participantWalletsWalkthrough(c)
+			err = participantWalletsWalkthrough(s)
 		}
 
 		if err != nil {
@@ -346,3 +347,4 @@ func pollServer(c *client.Client) {
 		}
 	}
 }
+*/

@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"io/ioutil"
@@ -22,35 +22,39 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Clean out any previous test files.
-	testFolder := siafiles.TempFilename("TestClient")
-	os.RemoveAll(testFolder)
+	participantDir = siafiles.TempFilename("TestClient")
+	os.RemoveAll(participantDir)
 
 	// Initialize a client.
-	c, err := NewClient()
+	s := newServer()
+	err := s.connect(14000, false)
 	if err != nil {
-		// For some reason this error is okay.
-		//t.Fatal(err)
-	}
-	err = c.Connect(14000)
-	if err != nil {
-		t.Fatal(err)
+		// a 'local only' error gets returned, which is intentional.
+		// t.Fatal(err)
 	}
 	// Manually create server to avoid hostname problems.
-	c.participantServer = new(Server)
-	c.participantServer.participants = make(map[string]*consensus.Participant)
+	s.participantManager = new(ParticipantManager)
+	s.participantManager.participants = make(map[string]*consensus.Participant)
 
 	// Create a bootstrap participant.
-	err = c.NewBootstrapParticipant("0", testFolder, 1)
+	npi := NewParticipantInfo{
+		Name:      "0",
+		SiblingID: 1,
+	}
+
+	err = s.NewBootstrapParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create 2 more participants to upload files to.
-	err = c.NewJoiningParticipant("1", testFolder, 1)
+	npi.Name = "1"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.NewJoiningParticipant("2", testFolder, 1)
+	npi.Name = "2"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +75,11 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Upload a file to the network.
 	gwid := GenericWalletID(1)
-	err = gwid.Upload(c, uploadFilename)
+	gup := GenericUploadParams{
+		GWID:     gwid,
+		Filename: uploadFilename,
+	}
+	err = s.GenericUpload(gup, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +89,11 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Download the file from the network.
 	downloadFilename := siafiles.TempFilename("TestClient-DownloadFile")
-	err = gwid.Download(c, downloadFilename)
+	gdp := GenericDownloadParams{
+		GWID:     gwid,
+		Filename: downloadFilename,
+	}
+	err = s.GenericDownload(gdp, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,11 +114,12 @@ func TestUploadAndRepair(t *testing.T) {
 	}
 
 	// Add another participant and see that the repair triggers.
-	err = c.NewJoiningParticipant("3", testFolder, 1)
+	npi.Name = "3"
+	err = s.NewJoiningParticipant(npi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !siafiles.Exists(filepath.Join(testFolder, "3", "wallet.AQAAAAAAAAA=.sector")) {
+	if !siafiles.Exists(filepath.Join(participantDir, "3", "wallet.AQAAAAAAAAA=.sector")) {
 		t.Fatal(" Repaired wallet sector doesn't exist - something went wrong during repair.")
 	}
 }

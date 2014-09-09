@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"bytes"
@@ -44,13 +44,13 @@ func (gw GenericWallet) ID() GenericWalletID {
 // Returns the generic wallet associated with the wallet id. This is an
 // exported function, and to protect the internal state of the client, only a
 // copy of the generic wallet is returned.
-func (c *Client) GenericWallet(gwid GenericWalletID) (gw GenericWallet, err error) {
-	gwPointer, exists := c.genericWallets[gwid]
+func (s *Server) GenericWallet(gwid GenericWalletID, gw *GenericWallet) (err error) {
+	gwPointer, exists := s.genericWallets[gwid]
 	if !exists {
 		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
 		return
 	}
-	gw = *gwPointer
+	*gw = *gwPointer
 
 	return
 }
@@ -59,8 +59,8 @@ func (c *Client) GenericWallet(gwid GenericWalletID) (gw GenericWallet, err erro
 // non-exported function, and return a pointer to the generic wallet stored
 // within the client. Editing the wallet returned by this function will modify
 // the clients internal state.
-func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
-	gw, exists := c.genericWallets[gwid]
+func (s *Server) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err error) {
+	gw, exists := s.genericWallets[gwid]
 	if !exists {
 		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
 		return
@@ -69,10 +69,16 @@ func (c *Client) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err err
 	return
 }
 
+// Input to the GenericDownload function.
+type GenericDownloadParams struct {
+	GWID     GenericWalletID
+	Filename string
+}
+
 // Download the sector into filepath 'filename'.
-func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
+func (s *Server) GenericDownload(gdp GenericDownloadParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := c.genericWallet(gwid)
+	gw, err := s.genericWallet(gdp.GWID)
 	if err != nil {
 		return
 	}
@@ -81,10 +87,10 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	// segments have been downloaded.
 	var segments []io.Reader
 	var indices []byte
-	for i := range c.metadata.Siblings {
+	for i := range s.metadata.Siblings {
 		var segment []byte
-		err2 := c.router.SendMessage(network.Message{
-			Dest: c.metadata.Siblings[i].Address,
+		err2 := s.router.SendMessage(network.Message{
+			Dest: s.metadata.Siblings[i].Address,
 			Proc: "Participant.DownloadSegment",
 			Args: gw.WalletID,
 			Resp: &segment,
@@ -107,7 +113,7 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	}
 
 	// Create the file for writing.
-	file, err := os.Create(filename)
+	file, err := os.Create(gdp.Filename)
 	if err != nil {
 		return
 	}
@@ -128,10 +134,17 @@ func (gwid GenericWalletID) Download(c *Client, filename string) (err error) {
 	return
 }
 
+// Input to the GenericSendCoin RPC.
+type GenericSendCoinParams struct {
+	GWID        GenericWalletID // source
+	Destination state.WalletID
+	Amount      state.Balance
+}
+
 // Send coins to wallet 'destination'.
-func (gwid GenericWalletID) SendCoin(c *Client, destination state.WalletID, amount state.Balance) (err error) {
+func (s *Server) GenericSendCoin(gscp GenericSendCoinParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := c.genericWallet(gwid)
+	gw, err := s.genericWallet(gscp.GWID)
 	if err != nil {
 		return
 	}
@@ -140,15 +153,15 @@ func (gwid GenericWalletID) SendCoin(c *Client, destination state.WalletID, amou
 	// the script input.
 	input := state.ScriptInput{
 		WalletID: gw.WalletID,
-		Input:    delta.SendCoinInput(destination, amount),
-		Deadline: c.metadata.Height + state.MaxDeadline,
+		Input:    delta.SendCoinInput(gscp.Destination, gscp.Amount),
+		Deadline: s.metadata.Height + state.MaxDeadline,
 	}
 	err = delta.SignScriptInput(&input, gw.SecretKey)
 	if err != nil {
 		return
 	}
 
-	c.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
 		Resp: nil,
@@ -156,19 +169,25 @@ func (gwid GenericWalletID) SendCoin(c *Client, destination state.WalletID, amou
 	return
 }
 
+// Input to the GenericUpload RPC.
+type GenericUploadParams struct {
+	GWID     GenericWalletID
+	Filename string
+}
+
 // Upload takes a file as input and uploads it to the wallet.
-func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
+func (s *Server) GenericUpload(gup GenericUploadParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := c.genericWallet(gwid)
+	gw, err := s.genericWallet(gup.GWID)
 	if err != nil {
 		return
 	}
 
 	// Refresh the metadata for greatest chance of success.
-	c.RefreshMetadata()
+	s.refreshMetadata()
 
 	// Calculate the size of the file.
-	file, err := os.Open(filename)
+	file, err := os.Open(gup.Filename)
 	if err != nil {
 		return
 	}
@@ -184,7 +203,7 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 		K: state.StandardK,
 		ConfirmationsRequired: state.StandardConfirmations,
 	}
-	su.Event.Deadline = c.metadata.Height + 5
+	su.Event.Deadline = s.metadata.Height + 5
 
 	// Create segments for the encoder output.
 	segments := make([][]byte, state.QuorumSize)
@@ -204,12 +223,12 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 
 	// Submit the sector update.
 	input := state.ScriptInput{
-		Deadline: c.metadata.Height + 4,
+		Deadline: s.metadata.Height + 4,
 		Input:    delta.UpdateSectorInput(su),
 		WalletID: gw.WalletID,
 	}
 	delta.SignScriptInput(&input, gw.SecretKey)
-	c.Broadcast(network.Message{
+	s.broadcast(network.Message{
 		Proc: "Participant.AddScriptInput",
 		Args: input,
 		Resp: nil,
@@ -229,8 +248,8 @@ func (gwid GenericWalletID) Upload(c *Client, filename string) (err error) {
 		}
 
 		var accepted bool
-		sendErr := c.router.SendMessage(network.Message{
-			Dest: c.metadata.Siblings[i].Address,
+		sendErr := s.router.SendMessage(network.Message{
+			Dest: s.metadata.Siblings[i].Address,
 			Proc: "Participant.UploadSegment",
 			Args: segmentUpload,
 			Resp: &accepted,
