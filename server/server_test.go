@@ -75,7 +75,11 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Upload a file to the network.
 	gwid := GenericWalletID(1)
-	err = gwid.Upload(s, uploadFilename)
+	gup := GenericUploadParams{
+		GWID:     gwid,
+		Filename: uploadFilename,
+	}
+	err = s.GenericUpload(gup, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +89,11 @@ func TestUploadAndRepair(t *testing.T) {
 
 	// Download the file from the network.
 	downloadFilename := siafiles.TempFilename("TestClient-DownloadFile")
-	err = gwid.Download(s, downloadFilename)
+	gdp := GenericDownloadParams{
+		GWID:     gwid,
+		Filename: downloadFilename,
+	}
+	err = s.GenericDownload(gdp, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

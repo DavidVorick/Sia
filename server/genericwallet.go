@@ -44,13 +44,13 @@ func (gw GenericWallet) ID() GenericWalletID {
 // Returns the generic wallet associated with the wallet id. This is an
 // exported function, and to protect the internal state of the client, only a
 // copy of the generic wallet is returned.
-func (s *Server) GenericWallet(gwid GenericWalletID) (gw GenericWallet, err error) {
+func (s *Server) GenericWallet(gwid GenericWalletID, gw *GenericWallet) (err error) {
 	gwPointer, exists := s.genericWallets[gwid]
 	if !exists {
 		err = fmt.Errorf("could not find generic wallet of id %v", gwid)
 		return
 	}
-	gw = *gwPointer
+	*gw = *gwPointer
 
 	return
 }
@@ -69,10 +69,16 @@ func (s *Server) genericWallet(gwid GenericWalletID) (gw *GenericWallet, err err
 	return
 }
 
+// Input to the GenericDownload function.
+type GenericDownloadParams struct {
+	GWID     GenericWalletID
+	Filename string
+}
+
 // Download the sector into filepath 'filename'.
-func (gwid GenericWalletID) Download(s *Server, filename string) (err error) {
+func (s *Server) GenericDownload(gdp GenericDownloadParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := s.genericWallet(gwid)
+	gw, err := s.genericWallet(gdp.GWID)
 	if err != nil {
 		return
 	}
@@ -107,7 +113,7 @@ func (gwid GenericWalletID) Download(s *Server, filename string) (err error) {
 	}
 
 	// Create the file for writing.
-	file, err := os.Create(filename)
+	file, err := os.Create(gdp.Filename)
 	if err != nil {
 		return
 	}
@@ -128,10 +134,17 @@ func (gwid GenericWalletID) Download(s *Server, filename string) (err error) {
 	return
 }
 
+// Input to the GenericSendCoin RPC.
+type GenericSendCoinParams struct {
+	GWID        GenericWalletID // source
+	Destination state.WalletID
+	Amount      state.Balance
+}
+
 // Send coins to wallet 'destination'.
-func (gwid GenericWalletID) SendCoin(s *Server, destination state.WalletID, amount state.Balance) (err error) {
+func (s *Server) GenericSendCoin(gscp GenericSendCoinParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := s.genericWallet(gwid)
+	gw, err := s.genericWallet(gscp.GWID)
 	if err != nil {
 		return
 	}
@@ -140,7 +153,7 @@ func (gwid GenericWalletID) SendCoin(s *Server, destination state.WalletID, amou
 	// the script input.
 	input := state.ScriptInput{
 		WalletID: gw.WalletID,
-		Input:    delta.SendCoinInput(destination, amount),
+		Input:    delta.SendCoinInput(gscp.Destination, gscp.Amount),
 		Deadline: s.metadata.Height + state.MaxDeadline,
 	}
 	err = delta.SignScriptInput(&input, gw.SecretKey)
@@ -156,10 +169,16 @@ func (gwid GenericWalletID) SendCoin(s *Server, destination state.WalletID, amou
 	return
 }
 
+// Input to the GenericUpload RPC.
+type GenericUploadParams struct {
+	GWID     GenericWalletID
+	Filename string
+}
+
 // Upload takes a file as input and uploads it to the wallet.
-func (gwid GenericWalletID) Upload(s *Server, filename string) (err error) {
+func (s *Server) GenericUpload(gup GenericUploadParams, _ *struct{}) (err error) {
 	// Get the wallet associated with the id.
-	gw, err := s.genericWallet(gwid)
+	gw, err := s.genericWallet(gup.GWID)
 	if err != nil {
 		return
 	}
@@ -168,7 +187,7 @@ func (gwid GenericWalletID) Upload(s *Server, filename string) (err error) {
 	s.refreshMetadata()
 
 	// Calculate the size of the file.
-	file, err := os.Open(filename)
+	file, err := os.Open(gup.Filename)
 	if err != nil {
 		return
 	}
