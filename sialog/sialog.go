@@ -50,31 +50,45 @@ func timestamp() string {
 
 // trace returns formatted output displaying the stack trace of the current
 // call. sialog-specific calls are omitted.
-func trace() (s string) {
+func trace() string {
+	var calls []string
+	var prefixLen int
 	for i := 1; ; i++ {
 		// look up i-th caller
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
 			panic("stack trace failed")
 		}
-		pcname := runtime.FuncForPC(pc).Name()
-		pkg := strings.Split(pcname[strings.LastIndex(pcname, "/")+1:], ".")[0]
-		proc := pcname[strings.LastIndex(pcname, ".")+1:]
 
-		// break if we've reached main, and skip if we're inside sialog
-		if pkg == "runtime" && proc == "main" {
-			break
-		} else if pkg == "testing" {
+		// format variables
+		pcname := runtime.FuncForPC(pc).Name()
+		pkgproc := strings.SplitN(pcname[strings.LastIndex(pcname, "/")+1:], ".", 2)
+		pkg, proc := pkgproc[0], pkgproc[1]
+		file = file[strings.LastIndex(file, "/")+1:]
+
+		// break if we've reached main or testing, skip if we're inside sialog
+		if (pkg == "runtime" && proc == "main") || pkg == "testing" {
 			break
 		} else if pkg != "sialog" {
 			continue
 		}
 
-		file = file[strings.LastIndex(file, "/")+1:]
+		call := fmt.Sprintf("\t\t%s/%s:%d %s\n", pkg, file, line, proc)
 
-		s += fmt.Sprintf("\t\t%s/%s:%d %s\n", pkg, file, line, proc)
+		if pl := strings.Index(call, " "); pl > prefixLen {
+			prefixLen = pl
+		}
+
+		calls = append(calls, call)
 	}
-	return
+
+	// pad as necessary to align columns
+	for i := range calls {
+		spaces := strings.Repeat(" ", prefixLen-strings.Index(calls[i], " ")+1)
+		calls[i] = strings.Replace(calls[i], " ", spaces, -1)
+	}
+
+	return strings.Join(calls, "")
 }
 
 // Log is the most generic logging function. It allows the user to specify both
