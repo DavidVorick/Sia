@@ -3,16 +3,26 @@ package main
 import (
 	"fmt"
 
+	"code.google.com/p/gcfg"
 	"github.com/NebulousLabs/Sia/siafiles"
 	"github.com/spf13/cobra"
 )
 
+type Config struct {
+	Network struct {
+		Port             uint16
+		PublicConnection bool
+	}
+
+	Filesystem struct {
+		ParticipantDir string
+		WalletDir      string
+	}
+}
+
 var (
-	configLocation   string
-	port             uint16
-	publicConnection bool
-	participantDir   string
-	walletDir        string
+	configLocation string
+	config         Config
 )
 
 // defaultConfigLocation checks a bunch of places for the config file, in a
@@ -48,11 +58,17 @@ func start(cmd *cobra.Command, args []string) {
 	s := newServer()
 
 	// Connect the server, which will prepare it to listen for rpc's.
-	err := s.connect(port, publicConnection)
+	err := s.connect(config.Network.Port, config.Network.PublicConnection)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	fmt.Println("Operating Variables:")
+	fmt.Println("Port:", config.Network.Port)
+	fmt.Println("Public Connection:", config.Network.PublicConnection)
+	fmt.Println("Participant Directory:", config.Filesystem.ParticipantDir)
+	fmt.Println("Wallet Directory:", config.Filesystem.WalletDir)
 
 	// Let the server run indefinitely.
 	select {}
@@ -75,33 +91,45 @@ func main() {
 	// Search for a config file, and use that as the default.
 	dcl := defaultConfigLocation()
 	root.Flags().StringVarP(&configLocation, "config", "c", dcl, "Where to find the server configuration file.")
-	// parse the config file into a struct
+
+	// Parse the config file if it exists.
+	if siafiles.Exists(configLocation) {
+		err := gcfg.ReadFileInto(&config, configLocation)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		config.Network.Port = 9988
+		config.Network.PublicConnection = false
+
+		var err error
+		config.Filesystem.ParticipantDir, err = siafiles.HomeFilename("participants")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		config.Filesystem.WalletDir, err = siafiles.HomeFilename("wallets")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
 
 	// Use the config file struct to determine the default port value.  Set
 	// the default port to the value specified by the default config file.
-	defaultPort := uint16(9988)
-	root.Flags().Uint16VarP(&port, "port", "p", defaultPort, "Which port the server should listen on.")
+	root.Flags().Uint16VarP(&config.Network.Port, "port", "p", config.Network.Port, "Which port the server should listen on.")
 
-	// Use the config file struct to determine the default wallet folder.
-	// If none is specified, use the homedir.
-	defaultWalletFolder, err := siafiles.HomeFilename("wallets")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	root.Flags().StringVarP(&walletDir, "wallet-directory", "w", defaultWalletFolder, "Which directory wallets will be loaded from and saved to.")
+	// Flag for determining if the server should be local or public.
+	root.Flags().BoolVarP(&config.Network.PublicConnection, "public", "P", config.Network.PublicConnection, "Set this flag to have a publically visible hostname.")
 
 	// Use the config file struct to determine the default participant
 	// folder. If none is specified, use the homedir.
-	defaultParticipantFolder, err := siafiles.HomeFilename("participants")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	root.Flags().StringVarP(&walletDir, "participant-directory", "d", defaultParticipantFolder, "Which directory participant files will be saved to.")
+	root.Flags().StringVarP(&config.Filesystem.ParticipantDir, "participant-directory", "d", config.Filesystem.ParticipantDir, "Which directory participant files will be saved to.")
 
-	// Flag for determining if the server should be local or public.
-	root.Flags().BoolVarP(&publicConnection, "public", "P", false, "Set this flag to have a publically visible hostname.")
+	// Use the config file struct to determine the default wallet folder.
+	// If none is specified, use the homedir.
+	root.Flags().StringVarP(&config.Filesystem.WalletDir, "wallet-directory", "w", config.Filesystem.WalletDir, "Which directory wallets will be loaded from and saved to.")
 
 	version := &cobra.Command{
 		Use:   "version",
