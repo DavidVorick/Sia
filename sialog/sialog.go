@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-// priority levels
+// These flags define the priority level of a log entry. Only one can be used
+// at a time.
 const (
 	Ldebug = "DEBUG:"
 	Linfo  = "INFO: "
@@ -17,25 +18,31 @@ const (
 	Lerror = "ERROR:"
 	Lfatal = "FATAL:"
 
-	// mask determines which log messages are printed
+	// mask determines which priority levels are logged. This allows a debugger
+	// to filter out irrelevant log entries.
 	mask = Ldebug + Linfo + Lwarn + Lerror + Lfatal
 )
 
-// behavior flags
+// The flags define the behavior of a log operation. Any number of them can be
+// OR'd together.
 const (
-	Exit = 1 << iota
-	File
-	Stdout
-	Stderr
-	Trace
+	Exit   = 1 << iota // terminate program after logging this entry
+	File               // write this entry to logFile
+	Stdout             // write this entry to stdout
+	Stderr             // write this entry to stderr
+	Trace              // append a stack trace to this entry
 )
 
+// A Logger is a logging object that can write to stdout, stderr, and/or a
+// file. (Note that this makes it less flexible than the standard logger, which
+// can write to any io.Writer.) It can safely be used from multiple goroutines.
 type Logger struct {
-	sync.Mutex
-	logFile string
+	writeLock sync.Mutex
+	logFile   string
 }
 
-func NewLogger(logFile string) *Logger {
+// New returns a new Logger object capable of writing to the specified file.
+func New(logFile string) *Logger {
 	return &Logger{logFile: logFile}
 }
 
@@ -114,8 +121,8 @@ func (l *Logger) Log(msg string, priority string, flags uint32) {
 	}
 
 	// print to each output
-	l.Lock()
-	defer l.Unlock()
+	l.writeLock.Lock()
+	defer l.writeLock.Unlock()
 	if flags&File != 0 {
 		// create file if it doesn't already exist, and append to it
 		f, err := os.OpenFile(l.logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
