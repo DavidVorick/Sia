@@ -9,7 +9,7 @@ import (
 func drawHome() {
 	// Determine how to draw the home field.
 	var homeSeparator int
-	if width <= HomeBoxWidth {
+	if context.Width <= HomeBoxWidth {
 		// If there isn't enough room for the home box, then just draw
 		// the home box as red. This will be context dependent, the
 		// program will try to have enough room for whatever box the
@@ -20,7 +20,7 @@ func drawHome() {
 
 	// Draw the home box.
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	for y := 0; y < height; y++ {
+	for y := 0; y < context.Height; y++ {
 		termbox.SetCell(homeSeparator, y, ' ', termbox.ColorDefault, DividerColor)
 	}
 

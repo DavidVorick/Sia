@@ -19,6 +19,9 @@ const (
 )
 
 type Context struct {
+	Width  int
+	Height int
+
 	Focus string
 
 	WalletsActive      bool
@@ -26,12 +29,7 @@ type Context struct {
 	SettingsActive     bool
 }
 
-var (
-	width  int
-	height int
-
-	context Context
-)
+var context Context
 
 // Draw uses the context field to determine what functions to call when drawing
 // the image. Siabox uses a box-style of programming, each function receives a
@@ -39,7 +37,7 @@ var (
 // where that box is.
 func draw() {
 	// Get size of whole window.
-	width, height = termbox.Size()
+	context.Width, context.Height = termbox.Size()
 	drawHome()
 	termbox.Flush()
 }
