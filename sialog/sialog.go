@@ -19,8 +19,9 @@ const (
 	Lfatal = "FATAL:"
 
 	// mask determines which priority levels are logged. This allows a debugger
-	// to filter out irrelevant log entries.
-	mask = Ldebug + Linfo + Lwarn + Lerror + Lfatal
+	// to filter out irrelevant log entries. Note that by default, debug
+	// messages are excluded.
+	mask = Linfo + Lwarn + Lerror + Lfatal
 )
 
 // The flags define the behavior of a log operation. Any number of them can be
@@ -149,6 +150,11 @@ func (l *Logger) Log(msg string, priority string, flags uint32) {
 	if flags&Exit != 0 {
 		os.Exit(1)
 	}
+}
+
+// Debug prints the log message with the DEBUG tag.
+func (l *Logger) Debug(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Ldebug, File)
 }
 
 // Info prints the log message with the INFO tag.
