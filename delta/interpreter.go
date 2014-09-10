@@ -98,13 +98,8 @@ func (env *scriptEnv) deductResources(op instruction) error {
 	for i := range env.registers {
 		env.memUsage += len(env.registers[i])
 	}
-	p := env.stack
-	for {
-		if p == nil {
-			break
-		}
+	for p := env.stack; p != nil; p = p.next {
 		env.memUsage += len(p.val)
-		p = p.next
 	}
 
 	// check each resource for exhaustion
@@ -124,7 +119,7 @@ func (env *scriptEnv) deductResources(op instruction) error {
 // Execute loads the requested script, appends the script input data, sets up
 // an execution environment, and interprets bytecodes until a termination
 // condition is reached.
-func (e *Engine) Execute(si state.ScriptInput) (totalCost int, err error) {
+func (e *Engine) Execute(si state.ScriptInput) (err error) {
 	// load wallet
 	w, err := e.state.LoadWallet(si.WalletID)
 	if err != nil {
@@ -145,11 +140,12 @@ func (e *Engine) Execute(si state.ScriptInput) (totalCost int, err error) {
 	}
 
 	// run script
-	if debug {
-		fmt.Println("executing script:", env.script)
-	}
-	if err = env.run(); err != nil && debug {
-		fmt.Println("script execution failed:", err)
+	e.logger.Debug("executing script:", env.script)
+	if err = env.run(); err != nil {
+		err = fmt.Errorf("wallet %x script execution failed: %v\n\tstack: %s",
+			si.WalletID, err, env.stack.print())
+		e.logger.Info(err)
+		return
 	}
 
 	e.state.SaveWallet(w)
@@ -184,26 +180,15 @@ func (env *scriptEnv) run() error {
 		env.iptr += copy(fnArgs, env.script[env.iptr:])
 
 		// call associated opcode function and check for error
-		if err := op.fn(env, fnArgs); err != nil {
-			switch err {
-			case errExit:
-				return nil
-			case errRejected:
-				return err
-			default:
-				return errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
-			}
-		}
-
-		if debug {
-			fmt.Println(op.print(fnArgs))
-			fmt.Println("\tstack:", env.stack.print())
-			//b := make([]byte, 20)
-			//copy(b, env.registers[1])
-			//fmt.Println("    register 1:", len(env.registers[1]), b)
-			//b = make([]byte, 20)
-			//copy(b, env.registers[2])
-			//fmt.Println("    register 2:", len(env.registers[2]), b)
+		switch err := op.fn(env, fnArgs); err {
+		case nil:
+			continue
+		case errExit:
+			return nil
+		case errRejected:
+			return err
+		default:
+			return errors.New("instruction \"" + op.print(fnArgs) + "\" failed: " + err.Error())
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -79,8 +80,9 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 	p.address = rpcs.RegisterHandler(p)
 	p.router = rpcs
 
-	// Initialize the file prefix
-	p.engine.Initialize(filePrefix)
+	// Initialize the logger and file prefix
+	p.logger = sialog.Default // TODO: figure out logger initialization
+	p.engine.Initialize(p.logger, filePrefix)
 	p.setSiblingIndex(p.engine.SiblingIndex())
 
 	// Set up a listener for segment repairs.
