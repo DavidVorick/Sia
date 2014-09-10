@@ -2,6 +2,7 @@ package sialog
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -12,23 +13,22 @@ import (
 // These flags define the priority level of a log entry. Only one can be used
 // at a time.
 const (
-	Ldebug = "DEBUG:"
-	Linfo  = "INFO: "
-	Lwarn  = "WARN: "
-	Lerror = "ERROR:"
-	Lfatal = "FATAL:"
+	Ldebug = 1 << iota
+	Ltrace
+	Linfo
+	Lwarn
+	Lerror
+	Lfatal
 
 	// mask determines which priority levels are logged. This allows a debugger
 	// to filter out irrelevant log entries. Note that by default, debug
-	// messages are excluded.
-	mask = Linfo + Lwarn + Lerror + Lfatal
+	// and trace messages are excluded.
+	mask = Linfo | Lwarn | Lerror | Lfatal
 )
 
-// The flags define the behavior of a log operation. Any number of them can be
-// OR'd together.
+// These flags define the behavior of a log operation. Any number of them can be
 const (
-	Exit   = 1 << iota // terminate program after logging this entry
-	File               // write this entry to logFile
+	Exit   = 1 << iota // terminate the program after logging this entry
 	Stdout             // write this entry to stdout
 	Stderr             // write this entry to stderr
 	Trace              // append a stack trace to this entry
@@ -38,14 +38,17 @@ const (
 // file. (Note that this makes it less flexible than the standard logger, which
 // can write to any io.Writer.) It can safely be used from multiple goroutines.
 type Logger struct {
-	writeLock sync.Mutex
-	logFile   string
+	mu sync.Mutex
+	w  io.Writer
 }
 
 // New returns a new Logger object capable of writing to the specified file.
-func New(logFile string) *Logger {
-	return &Logger{logFile: logFile}
+func New(w io.Writer) *Logger {
+	return &Logger{w: w}
 }
+
+// Default is the default logger.
+var Default = New(os.Stderr)
 
 // timestamp returns a properly formatted timestamp
 func timestamp() string {
@@ -54,6 +57,18 @@ func timestamp() string {
 		timestamp += strings.Repeat("0", 11-len(timestamp))
 	}
 	return timestamp
+}
+
+// tag returns a properly formatted set of tags
+func tag(priority uint32) string {
+	return map[uint32]string{
+		Ldebug: "DEBUG:",
+		Ltrace: "TRACE:",
+		Linfo:  "INFO: ",
+		Lwarn:  "WARN: ",
+		Lerror: "ERROR:",
+		Lfatal: "FATAL:",
+	}[priority]
 }
 
 // trace returns formatted output displaying the stack trace of the current
@@ -102,45 +117,32 @@ func trace() string {
 // Log is the most generic logging function. It allows the user to specify both
 // the priority and flags of the logging operation. To print a formatted
 // message, use fmt.Sprintf() to create the message string.
-func (l *Logger) Log(msg string, priority string, flags uint32) {
+func (l *Logger) Log(msg string, priority, flags uint32) {
 	// add timestamp and priority tag
-	entry := fmt.Sprintf("[%s] %s %s\n", timestamp(), priority, msg)
+	entry := fmt.Sprintf("[%s] %s %s\n", timestamp(), tag(priority), msg)
 
 	// check that this priority level is unmasked
-	if !strings.Contains(mask, priority) {
+	if priority&mask == 0 {
 		return
 	}
 
-	if priority == Lfatal {
-		fmt.Println(flags)
-	}
-
 	// if Trace flag is set, add trace output
-
 	if flags&Trace != 0 {
 		entry += "\tTrace:\n" + trace()
 	}
 
 	// print to each output
-	l.writeLock.Lock()
-	defer l.writeLock.Unlock()
-	if flags&File != 0 {
-		// create file if it doesn't already exist, and append to it
-		f, err := os.OpenFile(l.logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
-		if err != nil {
-			panic(err)
-		}
-		if _, err := f.WriteString(entry); err != nil {
-			panic(err)
-		}
-		f.Close()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if _, err := l.w.Write([]byte(entry)); err != nil {
+		panic(err)
 	}
 	if flags&Stdout != 0 {
 		if _, err := os.Stdout.WriteString(entry); err != nil {
 			panic(err)
 		}
 	}
-	if flags&Stderr != 0 {
+	if flags&Stderr != 0 && l != Default {
 		if _, err := os.Stderr.WriteString(entry); err != nil {
 			panic(err)
 		}
@@ -154,25 +156,31 @@ func (l *Logger) Log(msg string, priority string, flags uint32) {
 
 // Debug prints the log message with the DEBUG tag.
 func (l *Logger) Debug(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Ldebug, File)
+	l.Log(fmt.Sprint(v...), Ldebug, 0)
+}
+
+// Trace prints the log message with the TRACE tag. It appends a trace.
+func (l *Logger) Trace(v ...interface{}) {
+	l.Log(fmt.Sprint(v...), Ltrace, Trace)
 }
 
 // Info prints the log message with the INFO tag.
 func (l *Logger) Info(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Linfo, File)
+	l.Log(fmt.Sprint(v...), Linfo, 0)
 }
 
 // Warn prints the log message with the WARN tag.
 func (l *Logger) Warn(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lwarn, File)
+	l.Log(fmt.Sprint(v...), Lwarn, 0)
 }
 
 // Error prints the log message with the ERROR tag.
 func (l *Logger) Error(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lerror, File)
+	l.Log(fmt.Sprint(v...), Lerror, 0)
 }
 
-// Fatal prints the log message with a trace and calls os.Exit(1)
+// Fatal prints the log message with the FATAL tag. It appends a trace and
+// calls os.Exit(1).
 func (l *Logger) Fatal(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lfatal, File|Stderr|Trace|Exit)
+	l.Log(fmt.Sprint(v...), Lfatal, Trace|Exit)
 }
