@@ -140,11 +140,11 @@ func (e *Engine) Execute(si state.ScriptInput) (err error) {
 	}
 
 	// run script
-	e.logger.Debug("executing script:", env.script)
+	e.log.Debug("executing script:", env.script)
 	if err = env.run(); err != nil {
 		err = fmt.Errorf("wallet %x script execution failed: %v\n\tstack: %s",
 			si.WalletID, err, env.stack.print())
-		e.logger.Info(err)
+		e.log.Info(err)
 		return
 	}
 

@@ -81,8 +81,8 @@ func newParticipant(rpcs *network.RPCServer, filePrefix string) (p *Participant,
 	p.router = rpcs
 
 	// Initialize the logger and file prefix
-	p.logger = sialog.Default // TODO: figure out logger initialization
-	p.engine.Initialize(p.logger, filePrefix)
+	p.log = sialog.Default // TODO: figure out logger initialization
+	p.engine.Initialize(p.log, filePrefix)
 	p.setSiblingIndex(p.engine.SiblingIndex())
 
 	// Set up a listener for segment repairs.

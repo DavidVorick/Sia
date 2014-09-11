@@ -14,7 +14,8 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) (quorumWeight uint
 	// storing the atoms on all of the siblings currently active in the quorum.
 	w, err := s.LoadWallet(wn.id)
 	if err != nil {
-		panic(err)
+		s.log.Error("failed to load wallet:", err)
+		return
 	}
 	weightedPrice := s.Metadata.StoragePrice
 	weightedPrice.Multiply(NewBalance(uint64(w.CompensationWeight())))
@@ -64,7 +65,8 @@ func (s *State) ExecuteCompensation() {
 
 		w, err := s.LoadWallet(s.Metadata.Siblings[i].WalletID)
 		if err != nil {
-			panic(err)
+			s.log.Error("failed to load wallet:", err)
+			continue
 		}
 		w.Balance.Add(compensation)
 		s.SaveWallet(w)

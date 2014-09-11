@@ -45,17 +45,13 @@ func (s *State) proofLocation() (id WalletID, index uint16, err error) {
 // the same parent as us.) To obtain this hash, we call MerkleCollapse on the
 // segment of data corresponding to the sister. This segment will double in
 // size on each iteration until we reach the root.
-func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof) {
+func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof, err error) {
 	// get AtomBase
-	_, err := rs.Seek(int64(proofIndex)*int64(AtomSize), 0)
-	if err != nil {
+	if _, err = rs.Seek(int64(proofIndex)*int64(AtomSize), 0); err != nil {
 		return
-		//panic(err)
 	}
-	_, err = rs.Read(sp.AtomBase[:])
-	if err != nil {
+	if _, err = rs.Read(sp.AtomBase[:]); err != nil {
 		return
-		// panic(err)
 	}
 
 	// sisterIndex helper function:
@@ -92,9 +88,10 @@ func buildProof(rs io.ReadSeeker, numAtoms, proofIndex uint16) (sp StorageProof)
 		}
 
 		// calculate and append hash
-		hash, err := MerkleCollapse(rs, truncSize)
+		var hash siacrypto.Hash
+		hash, err = MerkleCollapse(rs, truncSize)
 		if err != nil {
-			panic(err)
+			return
 		}
 		sp.HashStack = append(sp.HashStack, &hash)
 	}
@@ -107,6 +104,7 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	// Get the wallet and atom being proven for.
 	walletID, proofIndex, err := s.proofLocation()
 	if err != nil {
+		s.log.Error("could not determine proof location:", err)
 		return
 	}
 
@@ -114,20 +112,24 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	sectorFilename := s.SectorFilename(walletID)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
+		s.log.Error("failed to open sector:", err)
 		return
-		// panic(err)
 	}
 	defer file.Close()
 
 	// determine numAtoms
 	w, err := s.LoadWallet(walletID)
 	if err != nil {
+		s.log.Error("failed to load wallet:", err)
 		return
-		// panic(err)
 	}
 	numAtoms := w.Sector.Atoms
 
-	sp = buildProof(file, numAtoms, proofIndex)
+	sp, err = buildProof(file, numAtoms, proofIndex)
+	if err != nil {
+		s.log.Error("failed to build storage proof:", err)
+		return
+	}
 	return
 }
 
@@ -156,7 +158,6 @@ func foldHashes(sp StorageProof, proofIndex uint16) (h siacrypto.Hash) {
 // VerifyStorageProof verifies that a specified atom, along with a
 // corresponding proofStack, can be used to reconstruct the original root
 // Merkle hash.
-// TODO: think about removing this function or combining it with foldHashes
 func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool, err error) {
 	// Get the wallet & atom index of the bytes being proven for.
 	walletID, proofIndex, err := s.proofLocation()
@@ -167,7 +168,8 @@ func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool
 	// Get the expected hash from the wallet.
 	w, err := s.LoadWallet(walletID)
 	if err != nil {
-		panic(err)
+		s.log.Error("failed to load wallet:", err)
+		return
 	}
 	expectedHash := w.Sector.HashSet[sibling]
 

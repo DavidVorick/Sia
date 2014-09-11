@@ -1,8 +1,6 @@
 package state
 
 import (
-	"os"
-
 	"github.com/NebulousLabs/Sia/siafiles"
 )
 
@@ -25,13 +23,11 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 	// Need to be able to navigate from the event to the wallet.
 	w, err := s.LoadWallet(sue.WalletID)
 	if err != nil {
-		panic(err)
 		return
 	}
 
 	su, err := w.LoadSectorUpdate(sue.UpdateIndex)
 	if err != nil {
-		panic(err)
 		return
 	}
 
@@ -64,7 +60,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 			s.RepairChan <- sue.WalletID
 		} else {
 			siafiles.Copy(s.SectorFilename(sue.WalletID), filename)
-			os.Remove(filename)
+			siafiles.Remove(filename)
 		}
 	} else {
 		// Remove all active updates following this update, inclusive.
@@ -77,7 +73,7 @@ func (sue *SectorUpdateEvent) HandleEvent(s *State) (err error) {
 
 		// Remove the update file on disk.
 		filename := s.SectorUpdateFilename(sue.WalletID, sue.UpdateIndex)
-		os.Remove(filename)
+		siafiles.Remove(filename)
 	}
 
 	err = s.SaveWallet(w)

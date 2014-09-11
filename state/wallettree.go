@@ -360,7 +360,7 @@ func (s *State) weightNode(weightUint uint64) (wn *walletNode, index uint16, err
 
 	// Safety check - the inside of this loop should never be reached.
 	if index >= uint16(wn.nodeWeight()) {
-		panic("illegal index reached - inconsistency somewhere in wallet tree!")
+		s.log.Fatal("illegal index reached - inconsistency somewhere in wallet tree!")
 	}
 	return
 }
