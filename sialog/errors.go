@@ -1,16 +1,20 @@
 package sialog
 
 import (
-	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 )
 
-// A siaerror is an error with context.
+// A siaerror is a set of contexts that characterize an error.
 type siaerror struct {
-	error
 	ctxs []string
+}
+
+// Error implements the error interface. It returns a formatted string
+// containing the full context of the error.
+func (se siaerror) Error() string {
+	return strings.Join(se.ctxs, "\n\t")
 }
 
 // fnName returns the name of the calling function. Actually, it goes one level
@@ -27,10 +31,8 @@ func fnName() string {
 // Error returns a new siaerror, including the first level of context.
 func Error(v ...interface{}) siaerror {
 	errString := strings.Trim(fmt.Sprintln(v...), "\n")
-	return siaerror{
-		errors.New(errString),
-		[]string{fmt.Sprintf("%s: %s", fnName(), errString)},
-	}
+	ctx := []string{fmt.Sprintf("%s: %s", fnName(), errString)}
+	return siaerror{ctx}
 }
 
 // Error returns a formatted siaerror, including the first level of context.
@@ -42,14 +44,13 @@ func Errorf(fmtString string, v ...interface{}) siaerror {
 // context is added to ctxs. If it is a standard error, a new siaerror is
 // created and returned.
 func AddCtx(err error, ctx string) (se siaerror) {
-	fullCtx := fmt.Sprint(fnName(), ": ", ctx)
+	fullCtx := fmt.Sprintf("%s: %s", fnName(), ctx)
 	switch err.(type) {
-	case error:
-		se.error = err
-		se.ctxs = []string{fullCtx}
 	case siaerror:
 		se = err.(siaerror)
-		se.ctxs = append(se.ctxs, fullCtx)
+		se.ctxs = append([]string{fullCtx}, se.ctxs...)
+	case error:
+		se.ctxs = []string{fullCtx}
 	}
 	return
 }
