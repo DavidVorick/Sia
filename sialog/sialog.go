@@ -119,7 +119,11 @@ func trace() string {
 // message, use fmt.Sprintf() to create the message string.
 func (l *Logger) Log(msg string, priority, flags uint32) {
 	// add timestamp and priority tag
-	entry := fmt.Sprintf("[%s] %s %s\n", timestamp(), tag(priority), msg)
+	entry := fmt.Sprintf("[%s] %s %s", timestamp(), tag(priority), msg)
+	// add newline if necessary
+	if entry[len(entry)-1] != '\n' {
+		entry += "\n"
+	}
 
 	// check that this priority level is unmasked
 	if priority&mask == 0 {
@@ -156,31 +160,31 @@ func (l *Logger) Log(msg string, priority, flags uint32) {
 
 // Debug prints the log message with the DEBUG tag.
 func (l *Logger) Debug(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Ldebug, 0)
+	l.Log(fmt.Sprintln(v...), Ldebug, 0)
 }
 
 // Trace prints the log message with the TRACE tag. It appends a trace.
 func (l *Logger) Trace(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Ltrace, Trace)
+	l.Log(fmt.Sprintln(v...), Ltrace, Trace)
 }
 
 // Info prints the log message with the INFO tag.
 func (l *Logger) Info(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Linfo, 0)
+	l.Log(fmt.Sprintln(v...), Linfo, 0)
 }
 
 // Warn prints the log message with the WARN tag.
 func (l *Logger) Warn(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lwarn, 0)
+	l.Log(fmt.Sprintln(v...), Lwarn, 0)
 }
 
 // Error prints the log message with the ERROR tag.
 func (l *Logger) Error(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lerror, 0)
+	l.Log(fmt.Sprintln(v...), Lerror, 0)
 }
 
 // Fatal prints the log message with the FATAL tag. It appends a trace and
 // calls os.Exit(1).
 func (l *Logger) Fatal(v ...interface{}) {
-	l.Log(fmt.Sprint(v...), Lfatal, Trace|Exit)
+	l.Log(fmt.Sprintln(v...), Lfatal, Trace|Exit)
 }
