@@ -150,7 +150,9 @@ func (p *Participant) newSignedUpdate() {
 	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))
 
 	sp, err := p.engine.BuildStorageProof()
-	if err != nil {
+	if err == state.ErrEmptyQuorum {
+		p.log.Debug("could not build storage proof:", err)
+	} else if err != nil {
 		p.log.Error("failed to construct storage proof:", err)
 		return
 	}

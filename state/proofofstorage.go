@@ -14,6 +14,8 @@ type StorageProof struct {
 	HashStack []*siacrypto.Hash
 }
 
+var ErrEmptyQuorum = errors.New("quorum is not storing any data")
+
 // Proof location uses s.Metadata.PoStorageSeed to determine which atom of
 // which wallet is being checked for during proof of storage.
 func (s *State) proofLocation() (id WalletID, index uint16, err error) {
@@ -23,7 +25,7 @@ func (s *State) proofLocation() (id WalletID, index uint16, err error) {
 
 	// Can't take the modulus of 0
 	if s.walletRoot.weight == 0 {
-		err = errors.New("empty quorum")
+		err = ErrEmptyQuorum
 		return
 	} else {
 		seedInt %= uint64(s.walletRoot.weight)
@@ -104,7 +106,6 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	// Get the wallet and atom being proven for.
 	walletID, proofIndex, err := s.proofLocation()
 	if err != nil {
-		s.log.Error("could not determine proof location:", err)
 		return
 	}
 
@@ -112,7 +113,6 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	sectorFilename := s.SectorFilename(walletID)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
-		s.log.Error("failed to open sector:", err)
 		return
 	}
 	defer file.Close()
@@ -120,14 +120,12 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	// determine numAtoms
 	w, err := s.LoadWallet(walletID)
 	if err != nil {
-		s.log.Error("failed to load wallet:", err)
 		return
 	}
 	numAtoms := w.Sector.Atoms
 
 	sp, err = buildProof(file, numAtoms, proofIndex)
 	if err != nil {
-		s.log.Error("failed to build storage proof:", err)
 		return
 	}
 	return
@@ -168,7 +166,6 @@ func (s *State) VerifyStorageProof(sibling byte, sp StorageProof) (verified bool
 	// Get the expected hash from the wallet.
 	w, err := s.LoadWallet(walletID)
 	if err != nil {
-		s.log.Error("failed to load wallet:", err)
 		return
 	}
 	expectedHash := w.Sector.HashSet[sibling]
