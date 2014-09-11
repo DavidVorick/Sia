@@ -90,9 +90,10 @@ func trace() string {
 		file = file[strings.LastIndex(file, "/")+1:]
 
 		// break if we've reached main or testing, skip if we're inside sialog
-		if (pkg == "runtime" && proc == "main") || pkg == "testing" {
+		if pkg == "runtime" && proc == "main" ||
+			pkg == "testing" && proc == "tRunner" {
 			break
-		} else if pkg != "sialog" {
+		} else if pkg == "sialog" {
 			continue
 		}
 
