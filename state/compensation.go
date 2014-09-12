@@ -1,5 +1,9 @@
 package state
 
+import (
+	"github.com/NebulousLabs/Sia/sialog"
+)
+
 // chargeWallets subtracts a balance from the wallet depending on the number of
 // siblings in the quorum, which is measured by 'multiplier'.
 func (s *State) chargeWallets(wn *walletNode, multiplier int) (quorumWeight uint64) {
@@ -14,7 +18,7 @@ func (s *State) chargeWallets(wn *walletNode, multiplier int) (quorumWeight uint
 	// storing the atoms on all of the siblings currently active in the quorum.
 	w, err := s.LoadWallet(wn.id)
 	if err != nil {
-		s.log.Error("failed to load wallet:", err)
+		s.log.Error(sialog.AddCtx(err, "failed to load wallet"))
 		return
 	}
 	weightedPrice := s.Metadata.StoragePrice
@@ -65,7 +69,7 @@ func (s *State) ExecuteCompensation() {
 
 		w, err := s.LoadWallet(s.Metadata.Siblings[i].WalletID)
 		if err != nil {
-			s.log.Error("failed to load wallet:", err)
+			s.log.Error(sialog.AddCtx(err, "failed to load wallet"))
 			continue
 		}
 		w.Balance.Add(compensation)

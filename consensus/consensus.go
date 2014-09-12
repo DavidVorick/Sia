@@ -9,6 +9,7 @@ import (
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -153,7 +154,7 @@ func (p *Participant) newSignedUpdate() {
 	if err == state.ErrEmptyQuorum {
 		p.log.Debug("could not build storage proof:", err)
 	} else if err != nil {
-		p.log.Error("failed to construct storage proof:", err)
+		p.log.Error(sialog.AddCtx(err, "failed to construct storage proof"))
 		return
 	}
 	hb := delta.Heartbeat{

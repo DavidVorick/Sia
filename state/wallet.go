@@ -7,6 +7,7 @@ import (
 
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/sialog"
 )
 
 const (
@@ -126,7 +127,7 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	walletFilename := s.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		s.log.Error("failed to open wallet file:", err)
+		err = sialog.CtxError("failed to open sector:", err)
 		return
 	}
 	defer file.Close()
@@ -147,11 +148,11 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	// Fetch the wallet from disk and decode it.
 	walletBytes := make([]byte, walletLength)
 	if _, err = file.Read(walletBytes); err != nil {
-		s.log.Error("failed to read wallet file:", err)
+		err = sialog.CtxError("failed to read wallet file:", err)
 		return
 	}
 	if err = siaencoding.Unmarshal(walletBytes, &w); err != nil {
-		s.log.Error("failed to decode wallet file:", err)
+		err = sialog.CtxError("failed to decode wallet file:", err)
 		return
 	}
 

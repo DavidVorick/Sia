@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-// A siaerror is a set of contexts that characterize an error.
-type siaerror struct {
+// A ctxError is a set of contexts that characterize an error.
+type ctxError struct {
 	ctxs []string
 }
 
 // Error implements the error interface. It returns a formatted string
 // containing the full context of the error.
-func (se siaerror) Error() string {
-	return strings.Join(se.ctxs, "\n\t")
+func (ce ctxError) Error() string {
+	return strings.Join(ce.ctxs, "\n\t")
 }
 
 // fnName returns the name of the calling function. Actually, it goes one level
@@ -28,29 +28,29 @@ func fnName() string {
 	return strings.SplitN(pcname[strings.LastIndex(pcname, "/")+1:], ".", 2)[1]
 }
 
-// Error returns a new siaerror, including the first level of context.
-func Error(v ...interface{}) siaerror {
+// Error returns a new ctxError, including the first level of context.
+func CtxError(v ...interface{}) ctxError {
 	errString := strings.Trim(fmt.Sprintln(v...), "\n")
 	ctx := []string{fmt.Sprintf("%s: %s", fnName(), errString)}
-	return siaerror{ctx}
+	return ctxError{ctx}
 }
 
-// Error returns a formatted siaerror, including the first level of context.
-func Errorf(fmtString string, v ...interface{}) siaerror {
-	return Error(fmt.Sprintf(fmtString, v...))
+// Error returns a formatted ctxError, including the first level of context.
+func CtxErrorf(fmtString string, v ...interface{}) ctxError {
+	return CtxError(fmt.Sprintf(fmtString, v...))
 }
 
-// AddCtx adds context to an error message. If the error is a siaerror, the
-// context is added to ctxs. If it is a standard error, a new siaerror is
+// AddCtx adds context to an error message. If the error is a ctxError, the
+// context is added to ctxs. If it is a standard error, a new ctxError is
 // created and returned.
-func AddCtx(err error, ctx string) (se siaerror) {
+func AddCtx(err error, ctx string) (ce ctxError) {
 	fullCtx := fmt.Sprintf("%s: %s", fnName(), ctx)
 	switch err.(type) {
-	case siaerror:
-		se = err.(siaerror)
-		se.ctxs = append([]string{fullCtx}, se.ctxs...)
+	case ctxError:
+		ce = err.(ctxError)
+		ce.ctxs = append([]string{fullCtx}, ce.ctxs...)
 	case error:
-		se.ctxs = []string{fullCtx}
+		ce.ctxs = []string{fullCtx}
 	}
 	return
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siaencoding"
+	"github.com/NebulousLabs/Sia/sialog"
 )
 
 type StorageProof struct {
@@ -113,6 +114,7 @@ func (s *State) BuildStorageProof() (sp StorageProof, err error) {
 	sectorFilename := s.SectorFilename(walletID)
 	file, err := os.Open(sectorFilename)
 	if err != nil {
+		err = sialog.CtxError("failed to open sector:", err)
 		return
 	}
 	defer file.Close()
