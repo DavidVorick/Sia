@@ -3,7 +3,7 @@
 \begin{document}
 \frenchspacing
 
-\title{Low Bandwidth Random File Federating}
+\title{Byzantine Federated Storage}
 
 \author{
 {\rm David Vorick}\\
@@ -24,46 +24,51 @@ In protecting consensus, we only wish to make sure that no malicious party can g
 Assumptions:
 \begin{itemize}
 	\item No party will ever control greater than 50\% of the raw storage on the network.
-	\item No party will ever control greater than 50\% of the files on the network.
-	\item All non-malicious files are fully compressed and non-redudnat.
+	\item No party
+	\item All non-malicious files are fully compressed and non-redundant.
+	\item There is a mechanism of proof of storage that requires a host to demonstrate that they can summon all of the data they are required to store.
+	\item No party can afford more than 50\% of the networks sum resources. This means that a party cannot do a 50\% attack by buying enough storage hardware, and cannot do a 50\% attack by renting 50\% of the space available on the network, and cannot have some combination of each that exceeds 50\% of the networks total resources.
+	\item Renting a volume of storage on the network for a given period of time is at least as economically expensive as owning or renting the same volume of raw storage for the same period of time off of the network.
 \end{itemize}
-The third item is perhaps a stretch.
+In a practical environment, the third requirement may be difficult to achieve, however for simplicity we maintain it as a feature of the network.
 
 From these assumptions alone, we wish to build a network that satisfies the following properties:
 \begin{itemize}
 	\item Every file is stored on a host
 	\item The number of files each host stores follows a normal distirbution.
-	\item A set of hosts controlling less than 50\% of the raw storage on the network cannot appear to control greater than 50\% of the raw storage on the network.
+	\item A set of hosts controlling less than 50\% of the raw storage on the network cannot appear to control greater than 50\% of the raw storage on the network without spending more money than it would cost to merely own 50\% of the raw storage on the network.
 \end{itemize}
 
 In proving the third item, I establish that following these two conditions is sufficient:
 \begin{itemize}
-	\item A set of hosts less than 50\% of the network cannot have a greater than 50\% chance of uploading a file to machines they control.
+	\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
+	\item A set of hosts controlling less than 50\% of the files on the network cannot perform any action which results in the expected percentage of files across all machines under their control to exceed 50\% of the files under their control.
+\end{itemize}
+Because we assume that the mechanism behind proof of storage does its job properly, I hold that the only way for a party to appear to control greater storage than it actually controls is to upload some file to the network which can be calculated, but which only the party knows how to calculate.
+In this manner, the malicious party can upload 'fake files' to the network, and if these fake files land on the hosts in the party's control, the host can pretend to store the file (thus appearing to have that raw storage) while actually calculating the data to do the proof, instead of storing the data.
+We do allow artificial inflation of storage under one condition: the cost of artificially inflating apparent storage is more expensive than the cost of genuinely inflating storage.
+If the only way to inflate the apparent storage is by getting fake files on machines under malicious control, we must prove that under the replacement conditions, a host containing little enough economic power to control 50\% of the files or storage (exclusive or) on the network will not be able to inflate their apparent storage above 50\%.
+If a host controlling less than 50\% of the network cannot probabilistically have 50\% of files landing on machines in their control, they can only fake storage on less than half of the files that they are uploading.
+Because files cost money equivalent or greater than the cost of raw storage, by being unable to probabilistically get fake files on to their machines at a rate greater than 50\%, they cannot save money by using the fake files technique when they control a great number of hosts.
+So while the malicious party is able to appear that they have more raw storage than they actually have, their expenses are too high and thus we can rely on our assumption about the attackers limited economic power.
+Therefore, if an attacker cannot probabilistically control files they upload at greater than 50\% when they control less than 50\% of the machines, they cannot appear to store greater than 50\% of the network by controlling a large volume of hosts.
+The only other approach to faking storage is to own a large number of files, and to add machines to the network in a way that allows the machines to consist of more than 50\% fake files.
+At that rate, apparent storage can be added to the network at a cost less than raw storage.
+By preventing this from happening, the party has no other way to increase their apparent storage beyond 50\% of the network that is within their assumed economic power.
+
+The rest of the paper shall then design a system that enforces the following conditions, given the prior assumptions:
+\begin{itemize}
+	\item Every file is stored on a host
+	\item The number of files each host stores follows a normal distirbution.
+	\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
 	\item A set of hosts controlling less than 50\% of the files on the network cannot perform any action which results in the expected percentage of files across all machines under their control to exceed 50\% of the files under their control.
 \end{itemize}
 
-\section{Introduction}
-This is one piece of a larger federated proof-of-storage cryptosystem that is being built.
-The system as a whole is far from complete, however the scope of this paper extends only to the method which hosts are distributed files on which they will perform proof of storage.
-The goal of the larger system as a whole is to provide a cheap and secure way to store files in a decentralized manner.
-To keep costs as minimal as possible, a few constraints are enforced:
-\begin{itemize}
-	\item The amount of expense required to maintain consensus outside the cost of storing files should be minimal.
-	\item The bandwidth consumed by uploading a non-reudundant file should not exceed the size of the file.
-	\item The bandwidth consumed by maintaining the file on the network should be minimal.
-	\item A host should not ever have to release a file unless it is giving the file directly to a new host.
-	\item A host should not ever have to take on a file unless the file is new to the network, or unless the file is being taken from a host that has gone offline. (assuming the file is still recoverable in some way)
-\end{itemize}
-Because we expect the hosts to be doing storage proofs on their files, and we expect to use the storage proofs to drive consensus, we must make sure that there is no way for a host to manipulate the files that they are storing such that they can perform proof-of-storage on a greater volume of storage than their economic power allows.
-This is achieved by using a special type of addressing to assign files to hosts.
-
-Rough Draft note: I'm wondering if some of the things that I am doing here are in some way convoluted or unnecessary, and I'm looking for security flaws, proof shortcomings, as well as suggestions on improving/simplifying the system.
-
 \section{Addressing Scheme}
-There is a 80bit addressing space which helps to determine which hosts will store which files, containing $$2^80$$ slots for files.
+There is a 80bit addressing space which helps to determine which hosts will store which files, containing $2^{80}$ slots for files.
 Collisions are permissable - multiple files or hosts can be in the same slot.
-This address space is only partially in use at a time, depending on the number of hosts in the network. For each host, 2^24 slots are open on the network.
-Each host has a 'spanning area' of 2^30 slots, cenetered around the hosts 'home' slot. This means that there is an overlap of 2^6 - each slot on the network will probabilistically be covered by 2^6 hosts.
+This address space is only partially in use at a time, depending on the number of hosts in the network. For each host, $2^{24}$ slots are open on the network.
+Each host has a 'spanning area' of $2^{30}$ slots, cenetered around the hosts 'home' slot. This means that there is an overlap of $2^6$ - each slot on the network will probabilistically be covered by $2^6$ hosts.
 A hosts home slot will never change.
 This is a feature of the network because if a host's home slot were to change, the files which it stores would also change entirely, resulting in a large bandwidth expense to the network, which is undesirable.
 
@@ -80,10 +85,10 @@ This process is repeated until a slot value appears that is between 0 and 100 in
 The expected number of hashes is approximately equivalent to the log of the number of slots that are inactive minus the log of the slots that are active.
 
 When a file is added to the network, a slot is chosen within the active space.
-This slot is likely to be covered by 2^6 potential hosts, yet only 1 host is allowed to store the file.
+This slot is likely to be covered by $2^6$ potential hosts, yet only 1 host is allowed to store the file.
 This conflict is resolved using rondeveus hashing - explained later.
 
-When a host is added to the network, the active addresses are expanded by 2^24 slots.
+When a host is added to the network, the active addresses are expanded by $2^{24}$ slots.
 The host is then given a random seed derived from an external source of entropy.
 This seed is used to determine a permanent slot for the host to reside.
 
