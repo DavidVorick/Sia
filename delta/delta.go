@@ -10,6 +10,7 @@ package delta
 // and its current designs are passable, but not elegant, clean, or beautiful.
 
 import (
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -30,11 +31,20 @@ type Engine struct {
 	// Snapshot Variables
 	recentHistoryHead   uint32
 	activeHistoryLength uint32
+
+	// Logger
+	log *sialog.Logger
 }
 
-func (e *Engine) Initialize(filePrefix string) {
+func (e *Engine) Initialize(logger *sialog.Logger, filePrefix string) {
+	e.SetLogger(logger)
 	e.SetFilePrefix(filePrefix)
 	e.state.Initialize()
+}
+
+func (e *Engine) SetLogger(logger *sialog.Logger) {
+	e.state.SetLogger(logger)
+	e.log = logger
 }
 
 // SetFilePrefix is a setter for the Engine.filePrefix field.

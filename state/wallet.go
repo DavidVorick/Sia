@@ -7,6 +7,7 @@ import (
 
 	"github.com/NebulousLabs/Sia/siaencoding"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/sialog"
 )
 
 const (
@@ -126,7 +127,8 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 	walletFilename := s.walletFilename(id)
 	file, err := os.Open(walletFilename)
 	if err != nil {
-		panic(err)
+		err = sialog.CtxError("failed to open sector:", err)
+		return
 	}
 	defer file.Close()
 
@@ -145,13 +147,13 @@ func (s *State) LoadWallet(id WalletID) (w Wallet, err error) {
 
 	// Fetch the wallet from disk and decode it.
 	walletBytes := make([]byte, walletLength)
-	_, err = file.Read(walletBytes)
-	if err != nil {
-		panic(err)
+	if _, err = file.Read(walletBytes); err != nil {
+		err = sialog.CtxError("failed to read wallet file:", err)
+		return
 	}
-	err = siaencoding.Unmarshal(walletBytes, &w)
-	if err != nil {
-		panic(err)
+	if err = siaencoding.Unmarshal(walletBytes, &w); err != nil {
+		err = sialog.CtxError("failed to decode wallet file:", err)
+		return
 	}
 
 	return
@@ -178,21 +180,23 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 	// Fetch the wallet filename from the state object.
 	file, err := os.Create(s.walletFilename(w.ID))
 	if err != nil {
-		panic(err)
+		s.log.Error("failed to create wallet file:", err)
+		return
 	}
 	defer file.Close()
 
 	// Encode the wallet to a byte slice.
 	walletBytes, err := siaencoding.Marshal(w)
 	if err != nil {
-		panic(err)
+		s.log.Error("failed to encode wallet data:", err)
+		return
 	}
 	// Encode the length of the byte slice.
 	lengthPrefix := siaencoding.EncUint32(uint32(len(walletBytes)))
 	// Write the length-prefixed wallet to the file.
-	_, err = file.Write(append(lengthPrefix, walletBytes...))
-	if err != nil {
-		panic(err)
+	if _, err = file.Write(append(lengthPrefix, walletBytes...)); err != nil {
+		s.log.Error("failed to write wallet file:", err)
+		return
 	}
 
 	return
@@ -203,7 +207,7 @@ func (s *State) SaveWallet(w Wallet) (err error) {
 func (s *State) RemoveWallet(id WalletID) {
 	filename := s.walletFilename(id)
 	if err := siafiles.Remove(filename); err != nil {
-		panic(err)
+		s.log.Error("failed to remove wallet file:", err)
 	}
 	s.removeWalletNode(id)
 }

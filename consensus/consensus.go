@@ -9,6 +9,7 @@ import (
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -141,7 +142,8 @@ func (p *Participant) condenseBlock() (b delta.Block) {
 func (p *Participant) newSignedUpdate() {
 	// Check that this function was not called by error.
 	if p.engine.SiblingIndex() > state.QuorumSize {
-		panic("error call on newSignedUpdate")
+		p.log.Error("error call on newSignedUpdate")
+		return
 	}
 
 	// Generate the entropy for this round of random numbers.
@@ -149,8 +151,11 @@ func (p *Participant) newSignedUpdate() {
 	copy(entropy[:], siacrypto.RandomByteSlice(state.EntropyVolume))
 
 	sp, err := p.engine.BuildStorageProof()
-	if err != nil {
-		// Log something?
+	if err == state.ErrEmptyQuorum {
+		p.log.Debug("could not build storage proof:", err)
+	} else if err != nil {
+		p.log.Error(sialog.AddCtx(err, "failed to construct storage proof"))
+		return
 	}
 	hb := delta.Heartbeat{
 		ParentBlock:  p.engine.Metadata().ParentBlock,
@@ -160,7 +165,8 @@ func (p *Participant) newSignedUpdate() {
 
 	signature, err := p.secretKey.SignObject(hb)
 	if err != nil {
-		panic(err)
+		p.log.Error("failed to sign heartbeat:", err)
+		return
 	}
 
 	// Create the update with the heartbeat and heartbeat signature.
@@ -208,7 +214,8 @@ func (p *Participant) newSignedUpdate() {
 	// Add the heartbeat to our own heartbeat map.
 	updateHash, err := siacrypto.HashObject(update)
 	if err != nil {
-		panic(err)
+		p.log.Error("failed to hash update:", err)
+		return
 	}
 	p.updatesLock.Lock()
 	p.updates[p.engine.SiblingIndex()][updateHash] = update
