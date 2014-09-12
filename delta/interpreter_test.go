@@ -5,11 +5,13 @@ import (
 
 	"github.com/NebulousLabs/Sia/siacrypto"
 	"github.com/NebulousLabs/Sia/siafiles"
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
 // initialize a script execution environment
 func initEnv() (e Engine, si state.ScriptInput) {
+	e.SetLogger(sialog.Default)
 	e.state.SetWalletPrefix(siafiles.TempFilename("InterpreterTest"))
 	// create a wallet that immediately passes control to its input
 	e.state.InsertWallet(state.Wallet{
@@ -34,8 +36,7 @@ func TestOpCodes(t *testing.T) {
 		// if 2 == 3, jump ahead 10 instructions (causing an error)
 		0x16, 0x1F, 0x0A, 0x00,
 	}
-	_, err := e.Execute(si)
-	if err != nil {
+	if err := e.Execute(si); err != nil {
 		t.Error(err)
 	}
 
@@ -48,8 +49,7 @@ func TestOpCodes(t *testing.T) {
 		// if 2 != 2, jump ahead 10 instructions (causing an error)
 		0x17, 0x1F, 0x0A, 0x00,
 	}
-	_, err = e.Execute(si)
-	if err != nil {
+	if err := e.Execute(si); err != nil {
 		t.Error(err)
 	}
 
@@ -64,8 +64,7 @@ func TestOpCodes(t *testing.T) {
 		0xFE, //       reject (error)
 		0xFF, //       terminate (no error)
 	}
-	_, err = e.Execute(si)
-	if err != nil {
+	if err := e.Execute(si); err != nil {
 		t.Error(err)
 	}
 }
@@ -77,22 +76,19 @@ func TestInvalidScripts(t *testing.T) {
 	si.Input = []byte{
 		0x01, 0xAA, 0x06,
 	}
-	_, err := e.Execute(si)
-	if err == nil {
+	if e.Execute(si) == nil {
 		t.Error("expected stack empty error")
 	}
 	si.Input = []byte{
 		0x11,
 	}
-	_, err = e.Execute(si)
-	if err == nil {
+	if e.Execute(si) == nil {
 		t.Error("expected missing argument error")
 	}
 	si.Input = []byte{
 		0x21, 0xFF, 0x7F,
 	}
-	_, err = e.Execute(si)
-	if err == nil {
+	if e.Execute(si) == nil {
 		t.Error("expected out of bounds error")
 	}
 }
@@ -130,9 +126,7 @@ func TestVerify(t *testing.T) {
 		message,
 	)
 
-	// execute script
-	_, err = e.Execute(si)
-	if err != nil {
+	if err := e.Execute(si); err != nil {
 		t.Error(err)
 	}
 }
@@ -151,8 +145,7 @@ func TestExhaustion(t *testing.T) {
 		0xFF, //             unreachable (hopefully...)
 	}
 
-	_, err := e.Execute(si)
-	if err == nil {
+	if e.Execute(si) == nil {
 		t.Error("expected resource exhaustion error")
 	}
 
@@ -167,8 +160,7 @@ func TestExhaustion(t *testing.T) {
 		0xFF, //             unreachable (hopefully...)
 	}
 
-	_, err = e.Execute(si)
-	if err == nil {
+	if e.Execute(si) == nil {
 		t.Error("expected resource exhaustion error")
 	}
 }

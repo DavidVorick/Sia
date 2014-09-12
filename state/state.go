@@ -1,5 +1,9 @@
 package state
 
+import (
+	"github.com/NebulousLabs/Sia/sialog"
+)
+
 const (
 	// QuorumSize is the maximum number of siblings in a quorum.
 	QuorumSize byte = 4
@@ -30,11 +34,18 @@ type State struct {
 
 	// Communicating with consensus for repairing files.
 	RepairChan chan WalletID
+
+	log *sialog.Logger
 }
 
 // AtomsInUse returns the number of atoms being consumed by the whole quorum.
 func (s *State) AtomsInUse() int {
 	return s.walletRoot.weight
+}
+
+// SetLogger sets the state logger field.
+func (s *State) SetLogger(logger *sialog.Logger) {
+	s.log = logger
 }
 
 // SetWalletPrefix is a setter that sets the state walletPrefix field.

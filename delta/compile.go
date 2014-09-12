@@ -169,7 +169,8 @@ func (e *Engine) Compile(b Block) (err error) {
 	// Update the metadata of the quorum.
 	blockHash, err := siacrypto.HashObject(b)
 	if err != nil {
-		panic(err)
+		e.log.Error("failed to hash block:", err)
+		return
 	}
 	e.state.Metadata.ParentBlock = blockHash
 	e.state.Metadata.Height++

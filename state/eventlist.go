@@ -276,7 +276,10 @@ func (s *State) DeleteEvent(e Event) {
 // the list.
 func (s *State) ProcessExpiringEvents() {
 	for s.eventRoot != nil && s.eventRoot.event.Expiration() < s.Metadata.Height {
-		s.eventRoot.event.HandleEvent(s)
+		err := s.eventRoot.event.HandleEvent(s)
+		if err != nil {
+			s.log.Fatal("failed to process event:", err)
+		}
 		s.DeleteEvent(s.eventRoot.event)
 	}
 }

@@ -61,7 +61,10 @@ func TestStorageProof(t *testing.T) {
 	data := bytes.NewReader(siacrypto.RandomByteSlice(int(numAtoms) * AtomSize))
 
 	var proofIndex uint16 = 6
-	sp := buildProof(data, numAtoms, proofIndex)
+	sp, err := buildProof(data, numAtoms, proofIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// no need to call VerifyStorageProof directly; just simulate it
 	data.Seek(0, 0)
@@ -91,7 +94,10 @@ func TestStorageProof(t *testing.T) {
 	for i := uint16(1); i < 33; i++ {
 		data = bytes.NewReader(siacrypto.RandomByteSlice(int(i) * AtomSize))
 		proofIndex = siacrypto.RandomUint16() % i
-		sp = buildProof(data, i, proofIndex)
+		sp, err = buildProof(data, i, proofIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
 		data.Seek(0, 0)
 		expectedHash, err := MerkleCollapse(data, i)
 		if err != nil {

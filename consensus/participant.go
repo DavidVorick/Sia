@@ -7,6 +7,7 @@ import (
 	"github.com/NebulousLabs/Sia/delta"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/siacrypto"
+	"github.com/NebulousLabs/Sia/sialog"
 	"github.com/NebulousLabs/Sia/state"
 )
 
@@ -35,6 +36,9 @@ type Participant struct {
 	currentStep byte
 	tickLock    sync.RWMutex
 	updateStop  sync.RWMutex
+
+	// Logger
+	log *sialog.Logger
 }
 
 // Ping is the simplest RPC possible. It exists only to confirm that a
