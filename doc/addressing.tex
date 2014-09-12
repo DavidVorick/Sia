@@ -60,29 +60,28 @@ By preventing this from happening, the party has no other way to increase their 
 The rest of the paper shall then design a system that enforces the following conditions, given the prior assumptions:
 \begin{itemize}
 	\item Every file is stored on a host
-	\item The number of files each host stores follows a normal distirbution.
-	\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
+	a\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
 	\item A set of hosts controlling less than 50\% of the files on the network cannot perform any action which results in the expected percentage of files across all machines under their control to exceed 50\% of the files under their control.
+	\item On a large network, the number of files stored by each host has a bounded standard deviation.
 \end{itemize}
 
-\section{A Simple Solution}
-A simple system that upholds these properties is a rendezvouz hashing scheme.
+\section{A Non-Scaling Solution}
+A system that upholds these properties is a modified rendezvouz hashing scheme.
 Every host is added to the network with a trusted random seed, and every file is added to the network also with a trusted random seed.
 The source of these seeds is outside the scope of this paper (though something like the hash of the next future bitcoin block could be used).
 To determine which host gets a file, each host gets a number determined by taking the hash of it's trusted random seed + the file's trusted random seed.
 The host with the largest number (largest hash) wins the file.
 
-This satisfies the condition that the number of files each host stores follows a normal distribution.
-We can also get the condition that every file is stored on a host by requiring that at least one host be on the network at all times.
+We can get the condition that every file is stored on a host by requiring that at least one host be on the network at all times.
 
 The remaining conditions are slightly trickier, as hosts and files can attempt to manipulate the trusted random number by getting re-rolls, whereby a file or host joins the network for a short period of time, and then stays for a longer period of time if the random number is favorable.
 The solution for files is easy: files must pay for their storage time before the random number is rolled, and once placed on the network, a file cannot add more to the storage balance, nor can the storage balance be recovered.
-This takes care of the third condition.
+This takes care of the second condition.
 If a set of hosts less than 50\% of the total hosts uploads a file, it will probabilistically end up on a machine that is not controlled by the hosts.
 The hosts will have to pay more for uploading fake files than they will economically recover, which keeps the network protected.
 
-The fourth condition needs an alternate solution, because hosts can withdraw and rejoin at-will; nothing is forcing a host to stick around and complete storage proofs.
-In situations where the number of random files on the network is high, a joining host can re-join multiple times to get a favorable set, and then can stick around after getting the favorable set, violating condition 4.
+The third condition needs an alternate solution, because hosts can withdraw and rejoin at-will; nothing is forcing a host to stick around and complete storage proofs.
+In situations where the number of random files on the network is high, a joining host can re-join multiple times to get a favorable set, and then can stick around after getting the favorable set, violating condition three.
 This can be stopped by forcing the host to make a down payment securing him to finish the proof of storage.
 He only receives his down payment back linearly as he completes the storage proofs.
 The down payment is large enough that the cost of leaving is greater than the probabilistic reward of performing a re-roll, then this condition add safety to the network.
@@ -92,18 +91,32 @@ Expected return on 1 reroll is dependent on the number of files on the network, 
 When the number of files is large, and the number of files stored on the host is large, the expected return on 1 re-roll will be small, thus security in this manner will be cheap for large networks.
 After the host has completed the storage proofs, they must make another down payment and roll a new random seed.
 
-One final condition is noted on the storage proofs.
+The distribution of files cannot be disrupted by adding files to the network, as files join with a random seed, are sent to random hosts, and then are forced to remain for a preset duration of time.
+The distribution of files can be disrupted by adding hosts to the network, and then removing them unless the number of files the host has pushes the network distribution in the desired direction.
+Significant file distribution manipulation takes significant economic power, and takes a larger volume of rerolls when the number of files per machine is large - because the variance as a percentage will be much smaller.
+A single host performing around 7 rerolls will be able to be one standard deviation of advatage.
+Assuming 100 files per host, the standard deviation will be 10 files per host.
+Assuming that the manipulator controls nearly 50\% of the hosts on the network, and can afford 7 rerolls per host, the attacker will be able to affect the distribution of the files on the network by 1 standard deviation per direction, such that non-party machines have ~110 files each (or 90 files each) and party machines have ~90 files each (or 110 files each, depending on the goals of the attack).
+Adding more files per host results in a lower percent deviation (1000 files per host has a standard deviation of 31.6 files), resulting in reduced ability of an attacker to manipulate the distribution of files.
+And this is overly generous; once an attacker has manipulated the distribution of files in a direction, a newcomer is more likely to pull files from the heavy side of the network than the light side of the network; it will take even more rerolls of the random seed to get a set of files that further stretches the distribution of files on the network.
+
+If this attack vector is a significant concern, the required down payment for hosts on the network can be increased, or the number of files per host can be increased.
+
+One final rule is noted on the storage proofs.
 A host either has the whole set of files, or it doesn't, and a host cannot report that a single file has corrupted.
 If the host claims a single file has corrupted, the host is considered to have failed the storage proof and must pay the same penalty as if it was being non-cooperative.
+This is to prevent hosts from selectively manipulating files to boost the percentage of compromised files under their control.
 
-We observe 3 shortcomings with this approach:
+We observe 4 shortcomings with this approach:
 \begin{itemize}
 	\item Files need to get new seeds after their original payment expires. This causes turbulence.
 	\item Hosts need to get new seeds after their original payment expires. This causes turbulence.
+	\item Hosts need to make a down payment. This discourages hosts from joining.
 	\item The number of hashes needed to determine the state of the network is the number of hosts times the number of files. This will not scale.
 \end{itemize}
 A better scheme should be looked for.
 
+\iffalse
 \section{Addressing Scheme}
 There is a 80 bit addressing space which helps to determine which hosts will store which files, containing $2^{80}$ slots for files.
 Collisions are permissable - multiple files or hosts can be in the same slot.
@@ -136,6 +149,7 @@ This is achieved by looking at the iterated hashes used to find a file's current
 If a slot in a previous iteration opens up, that slot is given priority for the file, and so the file is moved from its current address to the now-available space.
 
 When a host leaves the network, every file that the host was storing is given a completely new seed.
+\fi
 
 \end{document}
 
