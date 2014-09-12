@@ -18,83 +18,83 @@ We explore a method of randomly distributing files to hosts in a dynamic system,
 \section{Introduction}
 We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
 This network is dynamic, meaning that files can be added at any time, and hosts can be added at any time.
-We wish to use this network to store arbitrary data, however we also wish to use this network as a basis for consensus by proof of storage (a host is allowed to participante in consensus if they are completing a sufficient volume of proof of storage).
-In protecting consensus, we only wish to make sure that no malicious party can gain control of a majority of the voting power.
+We further wish to perform consensus operations on this network.
+To prevent Sybil attacks, hosts must submit storage proofs to be eligible to participate in consensus.
+In order to protect consensus, we only wish to make sure that no malicious party can gain control of a majority of the voting power.
 
-Assumptions:
+We make the following assumptions:
 \begin{itemize}
-	\item No party will ever control greater than 50\% of the raw storage on the network.
+	\item No party can control greater than 50\% of the raw storage on the network.
 	\item All non-malicious files are fully compressed and non-redundant.
-	\item There is a mechanism of proof of storage that requires a host to demonstrate that they can summon all of the data they are required to store.
-	\item No party can afford more than 50\% of the networks sum resources. This means that a party cannot do a 50\% attack by buying enough storage hardware, and cannot do a 50\% attack by renting 50\% of the space available on the network, and cannot have some combination of each that exceeds 50\% of the networks total resources.
-	\item Renting a volume of storage on the network for a given period of time is at least as economically expensive as owning or renting the same volume of raw storage for the same period of time off of the network.
-\end{itemize}
-In a practical environment, the third requirement may be difficult to achieve, however for simplicity we maintain it as a feature of the network.
-
-From these assumptions alone, we wish to build a network that satisfies the following properties:
-\begin{itemize}
-	\item Every file is stored on a host
-	\item The number of files each host stores follows a normal distirbution.
-	\item A set of hosts controlling less than 50\% of the raw storage on the network cannot appear to control greater than 50\% of the raw storage on the network without spending more money than it would cost to merely own 50\% of the raw storage on the network.
+	\item A mechanism for proof of storage exists.
+	\item No party can afford more than 50\% of the total resources available to the network. That is, a party cannot perform a 50\% attack by buying enough storage hardware, renting 50\% of the storage available on the network, or some combination of the two.
+	\item Renting a volume of storage on the network is at least as expensive as renting the same volume off the network.
 \end{itemize}
 
-In proving the third item, I establish that following these two conditions is sufficient:
+Given these assumptions, we wish to build a network that satisfies the following properties:
 \begin{itemize}
-	\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
+	\item Every file is stored on a host.
+    \item The distribution of files amongst hosts is normal (Gaussian).
+	\item A party controlling less than 50\% of the storage on the network cannot appear to control greater than 50\% of the storage without spending more money than the cost of owning 50\% of the storage.
+\end{itemize}
+
+We establish that the following two conditions are sufficient to prove the third property:
+\begin{itemize}
+	\item A set of hosts that comprise less than 50\% of the network cannot probabilistically control greater than 50\% of the files they have uploaded at any time.
 	\item A set of hosts controlling less than 50\% of the files on the network cannot perform any action which results in the expected percentage of files across all machines under their control to exceed 50\% of the files under their control.
 \end{itemize}
-Because we assume that the mechanism behind proof of storage does its job properly, I hold that the only way for a party to appear to control greater storage than it actually controls is to upload some file to the network which can be calculated, but which only the party knows how to calculate.
-In this manner, the malicious party can upload 'fake files' to the network, and if these fake files land on the hosts in the party's control, the host can pretend to store the file (thus appearing to have that raw storage) while actually calculating the data to do the proof, instead of storing the data.
-We do allow artificial inflation of storage under one condition: the cost of artificially inflating apparent storage is more expensive than the cost of genuinely inflating storage.
+Because we assume a mechanism for proof of storage, we hold that the only way for a party to appear to control greater storage than it actually controls is to through the use of a specially constructed ``fake file'' whose storage proof can be spoofed.
+This allows the malicious party to pretend to store the file without needing to consume physical storage.
+To prevent such attacks, we must ensure that the cost of spoofing the storage proof is more expensive than the cost of genuinely storing the file.
 
-If the only way to inflate the apparent storage is by getting fake files on machines under malicious control, we must prove that under the replacement conditions, a host containing little enough economic power to control 50\% of the files or storage (exclusive or) on the network will not be able to inflate their apparent storage above 50\%.
-If a host controlling less than 50\% of the network cannot probabilistically have 50\% of files landing on machines in their control, they can only fake storage on less than half of the files that they are uploading.
-Because files cost money equivalent or greater than the cost of raw storage, by being unable to probabilistically get fake files on to their machines at a rate greater than 50\%, they cannot save money by using the fake files technique when they control a great number of hosts.
-So while the malicious party is able to appear that they have more raw storage than they actually have, their expenses are too high and thus we can rely on our assumption about the attackers limited economic power.
-Therefore, if an attacker cannot probabilistically control files they upload at greater than 50\% when they control less than 50\% of the machines, they cannot appear to store greater than 50\% of the network by controlling a large volume of hosts.
+Note that this attack requires that the attacker be responsible for storing the fake file that it uploads.
+Thus, we must prove that under the replacement conditions, a host containing only enough economic power to control 50\% of the files XOR storage on the network will not be able to inflate their apparent storage above 50\%.
+If a host controlling less than 50\% of the network cannot probabilistically have 50\% of files landing on machines in their control, they can only fake storage on less than 50\% of the files that they are uploading.
+Because the cost of storage on the network is equivalent or greater than the cost of raw storage, and the attacker cannot probabilistically store more than 50\% of their own fake files, they cannot save money by using this attack.
+So while the malicious party is able to appear that they have more raw storage than they actually have, this would require them to spend more than the total cost of resources available to the network, which contradicts assumption 4.
+Therefore, if an attacker cannot probabilistically store greater than 50\% of the files they upload when they control less than 50\% of the machines, they cannot appear to store greater than 50\% of the network via this attack.
 
 The only other approach to faking storage is to own a large number of files, and to add machines to the network in a way that allows the machines to consist of more than 50\% fake files.
-At that rate, apparent storage can be added to the network at a cost less than raw storage.
+At that percentage, apparent storage can be added to the network at a cost less than raw storage.
 By preventing this from happening, the party has no other way to increase their apparent storage beyond 50\% of the network that is within their assumed economic power.
-
-The rest of the paper shall then design a system that enforces the following conditions, given the prior assumptions:
+The remainder of the paper shall design a system that prevents such an attack. The following properties will be achieved (given the prior assumptions):
 \begin{itemize}
-	\item Every file is stored on a host
-	a\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
+	\item Every file is stored on a host.
+	\item A set of hosts less than 50\% of the network cannot probabilistically have a greater than 50\% of the files they have uploaded under control of their machines at any time.
 	\item A set of hosts controlling less than 50\% of the files on the network cannot perform any action which results in the expected percentage of files across all machines under their control to exceed 50\% of the files under their control.
-	\item On a large network, the number of files stored by each host has a bounded standard deviation.
+	\item On a sufficiently large network, the variance in the number of files stored by each host is bounded.
 \end{itemize}
 
 \section{A Non-Scaling Solution}
-A system that upholds these properties is a modified rendezvouz hashing scheme.
-Every host is added to the network with a trusted random seed, and every file is added to the network also with a trusted random seed.
-The source of these seeds is outside the scope of this paper (though something like the hash of the next future bitcoin block could be used).
-To determine which host gets a file, each host gets a number determined by taking the hash of it's trusted random seed + the file's trusted random seed.
-The host with the largest number (largest hash) wins the file.
+A modified rendezvouz hashing scheme will be used to achieve the aforementioned goals.
+Every host and file on the network is paired with a trusted random seed.
+The source of these seeds is outside the scope of this paper, though something like the hash of the next future Bitcoin block could be used.
+To determine which host stores a file, each host is assigned a number determined by concatenating its seed with the seed of file and hashing the result.
+The host with the largest hash is chosen to store the file.
+Because this process assigns files to hosts in a suitably random fashion, property 4 is achieved.
 
-We can get the condition that every file is stored on a host by requiring that at least one host be on the network at all times.
+To achieve the property that every file is stored on a host, we simply require that at least one host be on the network at all times.
 
-The remaining conditions are slightly trickier, as hosts and files can attempt to manipulate the trusted random number by getting re-rolls, whereby a file or host joins the network for a short period of time, and then stays for a longer period of time if the random number is favorable.
-The solution for files is easy: files must pay for their storage time before the random number is rolled, and once placed on the network, a file cannot add more to the storage balance, nor can the storage balance be recovered.
+The remaining properties are slightly trickier, as hosts and files can attempt to manipulate the trusted random number by forcing rerolls.
+After joining the network, the random number is checked, and if it is unfavorable, the attacker simply leaves the network and tries again.
+The solution for files is easy: the cost of storage must be paid before the random number is rolled, and once placed on the network, a file cannot add more to the storage balance, nor can the storage balance be recovered.
 This takes care of the second condition.
 If a set of hosts less than 50\% of the total hosts uploads a file, it will probabilistically end up on a machine that is not controlled by the hosts.
 The hosts will have to pay more for uploading fake files than they will economically recover, which keeps the network protected.
 
-The third condition needs an alternate solution, because hosts can withdraw and rejoin at-will; nothing is forcing a host to stick around and complete storage proofs.
-In situations where the number of random files on the network is high, a joining host can re-join multiple times to get a favorable set, and then can stick around after getting the favorable set, violating condition three.
-This can be stopped by forcing the host to make a down payment securing him to finish the proof of storage.
-He only receives his down payment back linearly as he completes the storage proofs.
-The down payment is large enough that the cost of leaving is greater than the probabilistic reward of performing a re-roll, then this condition add safety to the network.
-The required minimum down payment can be calculated by:
-Espected return on 1 reroll assuming that 50\% of the files are controlled by the party focing the re-roll.
-Expected return on 1 reroll is dependent on the number of files on the network, and the number of files being sent to the host.
-When the number of files is large, and the number of files stored on the host is large, the expected return on 1 re-roll will be small, thus security in this manner will be cheap for large networks.
+Unfortunately, the third property cannot be satisfied using this approach, because hosts can withdraw and rejoin at will; nothing is forcing a host to stick around and complete storage proofs.
+In situations where the number of random files on the network is large, a joining host can re-join multiple times until it receives a favorable set.
+This can be prevented by forcing the host to make a down payment, which is returned linearly as the host completes the storage proofs.
+The down payment must be large enough that the cost of leaving is greater than the probabilistic reward of performing a reroll.
+Therefore, if 50\% of the files are controlled by the party forcing the reroll, the minimum down payment must be equal to the expected return on one reroll.
+The expected return on 1 reroll is dependent on the number of files on the network, and the number of files being sent to the host.
+When the number of files is large, and the number of files stored on the host is large, the expected return on 1 reroll will be small, so security in this manner will be cheap for large networks.
 After the host has completed the storage proofs, they must make another down payment and roll a new random seed.
 
-The distribution of files cannot be disrupted by adding files to the network, as files join with a random seed, are sent to random hosts, and then are forced to remain for a preset duration of time.
-The distribution of files can be disrupted by adding hosts to the network, and then removing them unless the number of files the host has pushes the network distribution in the desired direction.
-Significant file distribution manipulation takes significant economic power, and takes a larger volume of rerolls when the number of files per machine is large - because the variance as a percentage will be much smaller.
-A single host performing around 7 rerolls will be able to be one standard deviation of advatage.
+The distribution of files cannot be disrupted by adding files to the network, as files join with a random seed, are sent to random hosts, and are stored for a fixed amount of time.
+However, the distribution of files can be disrupted by adding \textit{hosts} to the network, and then removing them if the number of files assigned to those hosts is unfavorable.
+Significant distribution manipulation takes significant economic power, and takes a larger volume of rerolls when the number of files per machine is large, because the variance as a percentage will be much smaller.
+A single host performing around 7 rerolls will be able to be one standard deviation of advantage.
 Assuming 100 files per host, the standard deviation will be 10 files per host.
 Assuming that the manipulator controls nearly 50\% of the hosts on the network, and can afford 7 rerolls per host, the attacker will be able to affect the distribution of the files on the network by 1 standard deviation per direction, such that non-party machines have ~110 files each (or 90 files each) and party machines have ~90 files each (or 110 files each, depending on the goals of the attack).
 Adding more files per host results in a lower percent deviation (1000 files per host has a standard deviation of 31.6 files), resulting in reduced ability of an attacker to manipulate the distribution of files.
