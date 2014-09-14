@@ -24,7 +24,6 @@ In order to protect consensus, we only wish to make sure that no malicious party
 
 We make the following assumptions:
 \begin{itemize}
-	\item No party can control greater than 50\% of the raw storage on the network.
 	\item All non-malicious files are fully compressed and non-redundant.
 	\item A mechanism for proof of storage exists.
 	\item No party can afford more than 50\% of the total resources available to the network. That is, a party cannot perform a 50\% attack by buying enough storage hardware, renting 50\% of the storage available on the network, or some combination of the two.
@@ -35,7 +34,7 @@ Given these assumptions, we wish to build a network that satisfies the following
 \begin{itemize}
 	\item Every file is stored on a host.
 	\item On a sufficiently large network, the varience in the number of files stored by each host is bounded.
-	\item A party controlling less than 50\% of the storage on the network cannot appear to control greater than 50\% of the storage without incurring greater economic cost than the cost of owning 50\% of the storage.
+	\item A party controlling less than 50\% of the physical storage on the network cannot appear to control greater than 50\% of the storage without incurring greater economic cost than the cost of owning 50\% of the storage.
 \end{itemize}
 
 We establish that the following condition is sufficient to achieve the third property:
@@ -48,7 +47,7 @@ To prevent such attacks, we must ensure that the cost of spoofing the storage pr
 
 The fake file attack requires that the fake file uploaded to the network land on a conspiring host.
 If the fake file has a greater chance of being on a non-conspiring host than a conspiring host, the cost of keeping the fake file will exceed the cost required to just buy raw storage.
-If, under no circumstances, can a set of hosts comprising less than 50\% of the hosts on the network probabilistically be responsible for hosting greater than 50\% of the fake files they have uploaded without incurring prohibitive economic cost, then the conspiring hosts will never be able to appear as though they control greater than 50\% of the raw storage space on the network.
+If under no circumstances can a set of hosts comprising less than 50\% of the hosts on the network probabilistically be responsible for hosting greater than 50\% of the fake files they have uploaded without incurring prohibitive economic cost, then the conspiring hosts will never be able to appear as though they control greater than 50\% of the raw storage space on the network.
 
 The remainder of the paper shall design a system that prevents such an attack. The following properties will be achieved (given the prior assumptions):
 \begin{enumerate}
@@ -79,6 +78,7 @@ The network will reconfigure during the following actions:
 \end{itemize}
 We can keep things easy by enforcing that only one of these actions can happen at a time.
 
+\subsection{Adding and Removing Files}
 When a file is added to the network, it is given a random seed which will result in it being put onto a random host in the network.
 This process is sufficiently random, unless a conspirator tries to 'reroll' the seed of a file by uploading the file, then having the file taken off of the network, and then re-uploading the file.
 We limit this by forcing files to be pre-paid, preventing funds from being added to a file after it has been uploaded, and preventing a file from being removed from the network until the funds are gone.
@@ -98,6 +98,7 @@ This is good for legal reasons, as it allows hosts under legal pressure to delet
 This may satisfy potential participants who are concerned about the legal and moral responsibilities accompanying hosting potentially objectionable files.
 It is also noted that this property does not eliminate privacy: through encryption and obfuscation, an uploader can protect their own privacy, while still allowing law enforcement to prevent the distribution of illegal content without disrupting the foundational functioning of the network.
 
+\subsection{Adding Hosts}
 When a host joins the network, it receives a random set of files from throughout the network, taking them from random places.
 The host can manipulate the outcome of this random event by leaving and rejoining, effectively grabbing a reroll on which random files it receives.
 If we assume that the host is performing a reroll to increase the likelihood of receiving fake files, we can penalize the host for leaving early a greater amount than the host stands to gain by performing a reroll.
@@ -118,6 +119,7 @@ On networks where hosts are expected to have a large number of files, say O(10,0
 70.6 is a small fraction of 10,000, and so a host storing an expected 10,000 files will have at most a penalty that is less than 1\% of the total expected income for storing the files.
 This penalty is a reasonable risk for honest hosts to take.
 
+\subsection{Removing Hosts}
 When a host leaves the network, whether early or late, it has the responsibility of transferring all files to the next owner.
 The host has the ability to decide not to transfer the file, which is the same as corrupting the file.
 Preventing manipulation upon leaving the network is already covered if the same file corruption penalties are applied to hosts who do not properly transer a file to their successor upon leaving the network.
@@ -132,6 +134,7 @@ A host moving files favoriably at 4 standard deviations, in the case of 10,000 f
 Therefore we set the penalty of wholesale corruption equivalent to the benefit of moving 560 files, or about 6\%, where you pay for the average time remaining on the files.
 Though a bit scarier than the leaving early penalty, the wholesale corruption penalty is managable.
 
+\subsection{Distribution of Files Per Host}
 The distribution of files cannot be disrupted by adding files to the network, as files join with a random seed, are sent to random hosts, and are stored for a fixed amount of time.
 The distribution of files can be disrupted however by removing hosts when the hosts get an unfavorable random seed, or are able have a set of files sent to a favorable location by leaving,
 All of the penalities associated with manipulating the distribution of files are expensive, regardless of whether the goal of manipulation involves fake files or not.
@@ -139,6 +142,7 @@ A conspiring set of hosts comprising 50\% of the hosts on the network looking to
 Getting the average conspiring host to have 2.5 standard deviations fewer files than what is probabilistically expected would require well over 100 rerolls per host, something that we can assume is economically prohibitive.
 In conclusion, disrupting the distribution of files per host beyond any reasonable value (defined as a 5\% gap) is economically prohibitive.
 
+\subsection{Summary of Non Scaling Solution}
 A full summary of the rules of the network follows:
 \begin{itemize}
 	\item Files and hosts join the network with a precise, prepaid lifetime.
