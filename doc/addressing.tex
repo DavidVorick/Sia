@@ -59,7 +59,7 @@ The remainder of the paper shall design a system that prevents such an attack. T
 Throughout this paper, only the quantity of files is discussed, with no mention of how large these files might be.
 It can be assumed that all files are given a weight equal to their size in bytes when calculating penalties or making other considerations.
 
-\section{A Non-Scaling Solution}
+\section{Rendezvouz Hashing Scheme}
 A modified rendezvouz hashing scheme will be used to achieve the aforementioned goals.
 Every host and file on the network is paired with a trusted random seed after joining the network.
 The source of these seeds is outside the scope of this paper, though something like the hash of a future Bitcoin block could be used.
@@ -163,40 +163,39 @@ We observe 4 shortcomings with this approach:
 \end{itemize}
 A better scheme should be looked for.
 
-\iffalse
-\section{Addressing Scheme}
-There is a 80 bit addressing space which helps to determine which hosts will store which files, containing $2^{80}$ slots for files.
-Collisions are permissable - multiple files or hosts can be in the same slot.
-This address space is only partially in use at a time, depending on the number of hosts in the network. For each host, $2^{24}$ slots are open on the network.
-Each host has a 'spanning area' of $2^{30}$ slots, cenetered around the hosts 'home' slot. This means that there is an overlap of $2^6$ - each slot on the network will probabilistically be covered by $2^6$ hosts.
-A hosts home slot will never change.
-This is a feature of the network because if a host's home slot were to change, the files which it stores would also change entirely, resulting in a large bandwidth expense to the network, which is undesirable.
+\section{Balanced Tree Distribution}
+There are two valuable properties to the rendezcouz hashing that make it work in a byzantine environment:
+\begin{itemize}
+	\item When adding a host to the network, the host has an equal chance of receiving every single file in the network.
+	\item When adding a file to the network, the file has an equal chance of landing on every host in the network.
+\end{itemize}
+We can reduce the volume of hashing required by organizing hosts into a tree, and putting files on the hosts.
+Because hosts can leave at any time, this tree is not guaranteed to be balanced, however it is known how many hosts remain on each side of the tree at all times.
+When a file is added, it is given a random seed to determine which host it shall end up on.
+At each level of the tree, the file will use to randomly pick a side weighted according to the total number of hosts in each side of the tree.
+The seed is then hashed to produce a new seed for picking a direction at the next level.
+When the file hits the bottom of the tree, it will be on a random host.
 
-When a file is added to the network, it is assigned a random seed 256 bits in length.
-The seed is assigend from an external source of entropy - it is not the hash of the file nor has any relationship to the file.
-This seed is truncated to produce a random slot in the 80 bit address space.
-If the slot assigned to the file is outside of the active space, the hash of the seed is taken and used to produce a new slot between the 0th slot and the initial slot.
-This process is repeated until the file ends in a slot within the active address space.
-\textbf{Example:} We have a full address space of 512 slots with an active space of 100 slots.
-A new file is randomly assigned a seed that is used to produce a random slot between the 0th slot
-The seed is hashed to prodouce a new value, and this value is used to choose a new slot between index 0 and index 386 (inclusive).
-The new slot is 105, still outside of the address space.
-This process is repeated until a slot value appears that is between 0 and 100 inclusive.
-The expected number of hashes is approximately equivalent to the log of the number of slots that are inactive minus the log of the slots that are active.
-Because the process itself uses the hashes of a trusted random seed, and stops preciely when a value is first available in active space, which space of the active spaces gets chosen is completely random.
-Therefore, adding a file to the network will always result in the file being placed in a random slot.
+When a host is added to the network, it is placed on the lightest side of the tree.
+This helps to maintain balance, and does not distrubt the randomness of the network because hosts do not draw files from their neighbors.
+Instead, the host uses a random seed to pull files from around the network.
+To get a file, the host hashes the seed and uses that as a random number to transverse the tree, similiar to adding a file.
+When it arrives at a host, it will draw a file at random from the host, using the next iteration of the original seed to pick a file.
+This will be repeated for every file that the host draws, and the host will draw files until it has pulled a number of files equivalent to the average number of files per host across the network.
 
-When a host is added to the network, the active addresses are expanded by $2^{24}$ slots.
-The host is then given a random seed derived from an external source of entropy.
-This seed is used to determine a permanent slot for the host to reside.
+When a host leaves the network, its files are assigned new random seeds and given a new position on the network, which eliminates the possibility of leaving hosts to know where on the network the files will end up.
 
-As a host is added to the network, new address space is opened up.
-We wish to put files in this new address space at random, taken from the other slots on the network.
-This is achieved by looking at the iterated hashes used to find a file's current location.
-If a slot in a previous iteration opens up, that slot is given priority for the file, and so the file is moved from its current address to the now-available space.
+A few things to note about this setup:
+\begin{itemize}
+	\item Files don't have a permanent seed anymore. They use a random seed to get placed, but then they tether to that host, getting a new seed if the host disappears.
+	\item Where a host is in the tree doesn't matter. The tree can be arranged arbitrarily, and the host will just bring its files along.
+	\item The same penalties for leaving early or losing files apply as in the rendezvouz hashing.
+\end{itemize}
 
-When a host leaves the network, every file that the host was storing is given a completely new seed.
-\fi
+\section{Conclusion}
+This paper has introduced a logarithmically scaling solution for randomly assigning untrusted files to untrusted hosts in a way that prevents a dishonest set of hosts from gaining control of more than 50\% of the network without having the economic resources required to own 50\% of the raw storage on the network.
+We have also shown that a single entity without significant economic resources cannot significantly manipulate the distribution of the number of files per host on the network.
+These two features combined pave the way for using this storage model as a basis for creating a proof-of-storage mechanism for achieving consensus.
 
 \end{document}
 
