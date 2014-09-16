@@ -20,21 +20,20 @@ type View interface {
 // Because the window is a View and MenuWindow implements the View interface,
 // MenuWindows can be nested.
 type MenuWindow struct {
-	Menu struct {
-		Width int
-		Title string
-		Items []string
-	}
-	Windows  []View
-	sel      int
-	winFocus bool
+	Title     string
+	MenuWidth int
+	Items     []string
+	Windows   []View
+	sel       int
+	hasFocus  bool
 }
 
-// Draw implements the View.Draw method.
+// Draw implements the View.Draw method, drawing the MenuWindow inside the
+// given rectangle.
 func (mw *MenuWindow) Draw(r Rectangle) {
 	// draw menu
-	drawString(r.MinX+1, r.MinY+1, mw.Menu.Title, HomeHeaderColor, termbox.ColorDefault)
-	for i, s := range mw.Menu.Items {
+	drawString(r.MinX+1, r.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
+	for i, s := range mw.Items {
 		if i == mw.sel {
 			drawString(r.MinX+1, r.MinY+2*i+3, s, HomeActiveColor, termbox.ColorDefault)
 		} else {
@@ -44,18 +43,18 @@ func (mw *MenuWindow) Draw(r Rectangle) {
 
 	// draw divider
 	for y := r.MinY; y < r.MaxY; y++ {
-		termbox.SetCell(mw.Menu.Width, y, '│', DividerColor, termbox.ColorDefault)
+		termbox.SetCell(mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
 	}
 
 	// draw window
-	r.MinX += mw.Menu.Width + DividerWidth
+	r.MinX += mw.MenuWidth + DividerWidth
 	mw.Windows[mw.sel].Draw(r)
 }
 
 // HandleKey implements the view.HandleKey method. If the current focus is on
 // the window (instead of the menu), the input is forwarded to the window View.
 func (mw *MenuWindow) HandleKey(key termbox.Key) {
-	if mw.winFocus {
+	if !mw.hasFocus {
 		mw.Windows[mw.sel].HandleKey(key)
 		return
 	}
@@ -66,7 +65,7 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 			mw.sel--
 		}
 	case termbox.KeyArrowDown:
-		if mw.sel+1 < len(mw.Menu.Items) {
+		if mw.sel+1 < len(mw.Items) {
 			mw.sel++
 		}
 	default:

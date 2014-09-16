@@ -16,17 +16,11 @@ const (
 func newHomeView() View {
 	// create MenuWindow
 	mw := &MenuWindow{
-		Menu: struct {
-			Width int
-			Title string
-			Items []string
-		}{
-			HomeMenuWidth,
-			"Sia Alpha v3",
-			[]string{"Wallets", "Participants", "Settings"},
-		},
-		sel:      0,
-		winFocus: false,
+		Title:     "Sia Alpha v3",
+		MenuWidth: HomeMenuWidth,
+		Items:     []string{"Wallets", "Participants", "Settings"},
+		sel:       0,
+		hasFocus:  true,
 	}
 
 	// add subviews
