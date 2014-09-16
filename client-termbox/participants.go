@@ -6,12 +6,20 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+type ParticipantsView struct {
+	Parent View
+}
+
 // Draw the wallets section in the priary screen.
-func drawParticipants(startColumn int) {
+func (pv *ParticipantsView) Draw(r Rectangle) {
 	// Fill remaining space with random colors.
-	for y := 0; y < context.Height; y++ {
-		for x := startColumn; x < context.Width; x++ {
+	for y := r.MinY; y < r.MaxY; y++ {
+		for x := r.MinX; x < r.MaxX; x++ {
 			termbox.SetCell(x, y, ' ', termbox.ColorDefault, termbox.Attribute(rand.Int()%2)+3)
 		}
 	}
+}
+
+func (pv *ParticipantsView) HandleKey(key termbox.Key) {
+
 }

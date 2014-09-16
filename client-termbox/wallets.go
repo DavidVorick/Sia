@@ -9,9 +9,24 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-// Draw the wallets section in the priary screen.
+type WalletsView struct {
+	Parent View
+}
+
+func (wv *WalletsView) Draw(r Rectangle) {
+	for y := r.MinY; y < r.MaxY; y++ {
+		for x := r.MinX; x < r.MaxX; x++ {
+			termbox.SetCell(x, y, ' ', termbox.ColorDefault, termbox.Attribute(rand.Int()%2)+1)
+		}
+	}
+}
+
+func (wv *WalletsView) HandleKey(key termbox.Key) {
+
+}
+
+/*
 func drawWallets(startColumn int) {
-	/*
 		// Fetch a list of wallets from the server.
 		var ids *[]state.WalletID
 		err := networkState.Router.SendMessage(network.Message{
@@ -24,12 +39,5 @@ func drawWallets(startColumn int) {
 			// Draw an error message.
 			// return
 		}
-	*/
-
-	// Fill remaining space with random colors.
-	for y := 0; y < context.Height; y++ {
-		for x := startColumn; x < context.Width; x++ {
-			termbox.SetCell(x, y, ' ', termbox.ColorDefault, termbox.Attribute(rand.Int()%2)+1)
-		}
-	}
 }
+*/
