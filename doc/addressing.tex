@@ -3,7 +3,7 @@
 \begin{document}
 \frenchspacing
 
-\title{Byzantine Federated Storage}
+\title{Sia: Building Federated Decentralized Storage From First Principles}
 
 \author{
 {\rm David Vorick}\\
@@ -13,9 +13,50 @@ Nebulous Labs
 \maketitle
 
 \subsection*{Abstract}
-We explore a method of randomly distributing files to hosts in a dynamic system, in a way that prevents malicious hosts from manipulating the distribution of files on the network under certain constraints.
+We use first principles and basic elements to construct a working federated system for decentralized storage, and then we take that system and add features to improve the scalability and functionality. This is a work in progress.
 
 \section{Introduction}
+This section will contain a brief discussion about the benefits of decentralizing storage, and how the time is right.
+
+\section{Proof of Storage}
+Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
+We will do this by taking a merkle hash of the file, hashing every 64 bytes into a 32 bytes hash, forming a tree.
+The network topology will store a list of hosts and the merkle roots of every file that each host is responsible for storing.
+A challenge can then be periodically issued to the hosts, asking them to prove that they have a random 64 byte segment of the file.
+The proof is constructed by providing the 64 byte piece, and every hash in the tree that is required to build up to the merkle root.
+The size of the proof is 64 bytes + log(filesize / 64 bytes) * 32 bytes.
+On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is less than 500 bytes.
+
+A proof does not have to be submitted for every file however, a file can be randomly selected from a host's set of files.
+If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
+
+There is also a paper called 'Compact Proofs of Storage', which may provide a more compact way to do storage proofs.
+Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
+
+\section{Proof of File Transfer}
+There are many cases in which we wish to transfer files from one host to another.
+Sometimes, there may be a dispute, where the uploader claims to have uploaded the file, and the downloader claims not to have received it.
+Or, there may be claims of connectivity problems.
+
+We have a solution that involves the use of moderators.
+If there is a dispute, moderators are called in at random from the network.
+The uploader uploads the file to the moderators, who then pass the file along to the downloader.
+If the moderators get the file from the uploader, they sign that the transaction was attempted by the uploader, and that the downloader is at fault.
+If half or more of the moderators sign, then the downloader is penalized.
+Otherwise, the uploader is penalized.
+
+Assuming that 51\% of the chosen moderators behave honestly, this provides a resolution to disputes that is secure.
+If one side feels that the moderators were not 51\% honest, it is possible to bring in additional moderators, which makes it less likely that a minority of dishonest hosts can form a majority of moderators.
+The request for more moderators will only be honored if statistical analysis reveals that it's possible that the batch of moderators was bad. (If 80\% of mods agree, and only 5 were chosen, then a bad batch of mods is possible. If 80\% of mods agree, and 15 have been chosen, a bad batch is less likely.)
+Eventually, requests for more moderators will stop being honored, and the decision will be final.
+An optimal number needs to be chosen.
+Using moderators to assist uploads is very expensive.
+
+One problem with the moderator approach is that there's currently nothing incentivizing the moderators to be honest about the completetion of the upload.
+The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
+The incentive structure of this approach needs to be tuned.
+
+\section{Federated Storage}
 We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
 This network is dynamic, meaning that files can be added at any time, and hosts can be added at any time.
 We further wish to perform consensus operations on this network.
@@ -26,6 +67,7 @@ We make the following assumptions:
 \begin{itemize}
 	\item All non-malicious files are fully compressed and non-redundant.
 	\item A mechanism for proof of storage exists.
+	\item A mechanism for proving that a file has been uploaded and downloaded exists.
 	\item No party can afford more than 50\% of the total resources available to the network. That is, a party cannot perform a 50\% attack by buying enough storage hardware, renting 50\% of the storage available on the network, or some combination of the two.
 	\item Renting a volume of storage on the network is at least as expensive as renting the same volume off the network.
 \end{itemize}
@@ -83,7 +125,7 @@ When a file is added to the network, it is given a random seed which will determ
 This process is sufficiently random, unless a conspirator tries to ``reroll'' the seed of a file by repeatedly adding and removing it from the network.
 We limit this by forcing files to be pre-paid, preventing funds from being added to a file after it has been uploaded, and preventing a file from being removed from the network until the funds are depleted.
 We also prevent the contents of the file from being altered, so that a conspiring uploader cannot edit a file to be ``fake'' after uploading it.
-(This attack is only useful if the attacker intends to upload legitimate files anyway; files that land on conspiring hosts are made fake, and the original file is reuploaded to the network.)
+(This attack is only useful if the attacker intends to upload legitimate files anyway; files that land on conspiring hosts are made fake, and the original file is reuploaded to the network. Various social engineering attacks, like offering cheap storage, could be used to help the attacker locate a source of legitimate files that provide extra funds for the attack.)
 With these limitations, there is no way for an uploader to manipulate the probability of a file landing on a conspiring host.
 
 Files can be removed from the network prematurely if (and only if) the host that was storing the file loses the file.
@@ -92,6 +134,7 @@ A conspiring host can corrupt or remove valid files in order to increase the per
 When a file is lost or corrupt, the host is no longer responsible for storing it.
 Therefore, a penalty must be incurred on the host that is as economically expensive as holding onto the file for the duration of the file's life.
 This is as simple as forcing the host to refund the uploader an amount equal to the funds remaining in the file.
+This holds even if the file had enough funds to outlive the host; at the end of a hosts life all of its files are transferred to another location on the network.
 
 Using this penalty has a nice property: it allows hosts to selectively corrupt files without having to leave the network entirely.
 This is good for legal reasons, as it allows hosts under legal pressure to delete files that are illegal without being forced away from participation in the network.
@@ -195,9 +238,7 @@ A few notes on this setup:
 \end{itemize}
 
 \section{Conclusion}
-This paper has introduced a logarithmically scaling solution for randomly assigning untrusted files to untrusted hosts in a way that prevents a dishonest set of hosts from gaining control of more than 50\% of the network without having the economic resources required to own 50\% of the raw storage on the network.
-We have also shown that a single entity without significant economic resources cannot significantly manipulate the distribution of the number of files per host on the network.
-These two features combined pave the way for using this storage model as a basis for creating a proof-of-storage mechanism for achieving consensus.
+A brief description of the system, close to a protocol but less well defined, followed by a summary of the weaknesses of the protocol.
 
 \end{document}
 
