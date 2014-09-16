@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/nsf/termbox-go"
 )
@@ -46,25 +45,18 @@ func termboxRun() {
 		return
 	}
 	defer termbox.Close()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	termbox.Flush()
 
 	// create main window
 	mw := newHomeView()
 	w, h := termbox.Size()
 
-	// redraw screen at 10 Hz forever
-	go func() {
-		for {
-			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-			mw.Draw(Rectangle{0, 0, w, h})
-			termbox.Flush()
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-
-	// handle input until exit
 	for {
+		// update view
+		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+		mw.Draw(Rectangle{0, 0, w, h})
+		termbox.Flush()
+
+		// handle next event
 		event := termbox.PollEvent()
 		switch event.Type {
 		case termbox.EventKey:
