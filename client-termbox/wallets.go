@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"time"
 
 	//"github.com/NebulousLabs/Sia/network"
 	//"github.com/NebulousLabs/Sia/state"
@@ -21,6 +22,17 @@ func (wv *WalletsView) SetDims(r Rectangle) {
 
 func (wv *WalletsView) GiveFocus() {
 	wv.hasFocus = true
+	go func() {
+		for {
+			if !wv.hasFocus {
+				return
+			}
+			clearRectangle(wv.Rectangle)
+			wv.Draw()
+			termbox.Flush()
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
 }
 
 func (wv *WalletsView) Draw() {
@@ -32,7 +44,11 @@ func (wv *WalletsView) Draw() {
 }
 
 func (wv *WalletsView) HandleKey(key termbox.Key) {
-
+	switch key {
+	case termbox.KeyArrowLeft:
+		wv.hasFocus = false
+		wv.Parent.GiveFocus()
+	}
 }
 
 /*
