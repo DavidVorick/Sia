@@ -25,10 +25,11 @@ The network topology will store a list of hosts and the merkle roots of every fi
 A challenge can then be periodically issued to the hosts, asking them to prove that they have a random 64 byte segment of the file.
 The proof is constructed by providing the 64 byte piece, and every hash in the tree that is required to build up to the merkle root.
 The size of the proof is 64 bytes + log(filesize / 64 bytes) * 32 bytes.
-On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is less than 500 bytes.
+On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is 480 bytes (64 bytes, plus 13 tiers of merkle tree hashes, one hash per tier at 32 bytes each).
 
 A proof does not have to be submitted for every file however, a file can be randomly selected from a host's set of files.
 If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
+This does give a host the opportunity to throw out a very small percentage of the data that it's supposed to be storing with a low probability of detection.
 
 There is also a paper called 'Compact Proofs of Storage', which may provide a more compact way to do storage proofs.
 Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
@@ -56,6 +57,11 @@ One problem with the moderator approach is that there's currently nothing incent
 The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
 The incentive structure of this approach needs to be tuned.
 
+\section{Proof of Capacity}
+It would be convenient for Sia to be able to measure the volume of free space on the network.
+This would be best done using some sort of proof-of-capacity.
+So far nothing efficient has been contrived.
+
 \section{Federated Storage}
 We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
 This network is dynamic, meaning that files can be added at any time, and hosts can be added at any time.
@@ -66,8 +72,6 @@ In order to protect consensus, we only wish to make sure that no malicious party
 We make the following assumptions:
 \begin{itemize}
 	\item All non-malicious files are fully compressed and non-redundant.
-	\item A mechanism for proof of storage exists.
-	\item A mechanism for proving that a file has been uploaded and downloaded exists.
 	\item No party can afford more than 50\% of the total resources available to the network. That is, a party cannot perform a 50\% attack by buying enough storage hardware, renting 50\% of the storage available on the network, or some combination of the two.
 	\item Renting a volume of storage on the network is at least as expensive as renting the same volume off the network.
 \end{itemize}
@@ -100,6 +104,10 @@ The remainder of the paper shall design a system that prevents such an attack. T
 
 Throughout this paper, only the quantity of files is discussed, with no mention of how large these files might be.
 It can be assumed that all files are given a weight equal to their size in bytes when calculating penalties or making other considerations.
+Additionally, hosts are discussed, with no mention of how much each host is stored.
+It can be assumed that hosts are given a weight equal to the volume of files that they are storing.
+Parts of this paper mention numbers like 10,000 files per host.
+It can be assumed that there is a minimum volume of files that need to be stored, and that files have a maximum size.
 
 \section{Rendezvouz Hashing Scheme}
 A modified rendezvouz hashing scheme will be used to achieve the aforementioned goals.
@@ -186,7 +194,7 @@ A conspiring set of hosts comprising 50\% of the hosts on the network looking to
 Shifting the average conspiring host by 2.5 standard deviations would require well over 100 rerolls per host, something that we can assume is economically prohibitive.
 In conclusion, disrupting the distribution of files per host beyond any reasonable value (defined as a 5\% gap) is economically prohibitive.
 
-\subsection{Summary of Non Scaling Solution}
+\subsection{Summary of Rendezvouz Hashing}
 A full summary of the rules of the network follows:
 \begin{itemize}
 	\item Files and hosts join the network with a precise, prepaid lifetime.
@@ -205,7 +213,12 @@ We observe four shortcomings with this approach:
 	\item Hosts can be penalized, and there must be a reliable way to enforce the penalties.
 	\item The number of hashes needed to determine the state of the network is the number of hosts times the number of files. This will not scale.
 \end{itemize}
-A better scheme should be looked for.
+
+\section{Topology Consensus}
+A byzantine network needs some method for achieving consensus around the network topology.
+Multiple algorithms exist for maintaining byzantine fault tolerant consensus, and are employed by existing cryptocurrencies.
+By looking at how many files a host is storing, we can assign a volume of voting power to a host.
+Hosts can then participate in consensus to have a combined perception of the network topology.
 
 \section{Balanced Tree Distribution}
 There are two valuable properties to the rendezvouz hashing that make it work in a Byzantine environment:
@@ -226,7 +239,9 @@ This helps to maintain balance, and does not disrupt the randomness of the netwo
 Instead, the host uses a random seed to pull files from around the network.
 To get a file, the host hashes the seed and uses that as a random number to transverse the tree, similar to adding a file.
 When it arrives at a host, it will draw a file at random from the host, using the next iteration of the original seed to pick a file.
-This will be repeated for every file that the host draws, and the host will draw files until it has pulled a number of files equivalent to the average number of files per host across the network.
+This will be repeated for every file that the host draws, and the host will draw files until it has pulled a number of files equivalent the amount of storage it is bringing to the network.
+The host will need to leave some extra space for new files that join the network and have a chance of landing of the host.
+It is left to the host to optimize this process.
 
 When a host leaves the network, its files are assigned new random seeds and given a new position on the network, which eliminates the possibility of leaving hosts to know where on the network the files will end up.
 
