@@ -77,7 +77,7 @@ func start(cmd *cobra.Command, args []string) {
 
 // version prints version information about the server.
 func version(cmd *cobra.Command, args []string) {
-	fmt.Println("Sia Server v0.0.3")
+	fmt.Println("Sia Server v0.0.2.1")
 }
 
 // Set the config file values to all of the defaults, and then the config file
