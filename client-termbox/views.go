@@ -11,15 +11,17 @@ const (
 
 // A View is an area on screen capable of drawing itself and handling input.
 type View interface {
-	Draw(Rectangle)
-	HandleKey(termbox.Key)
+	SetDims(Rectangle)
 	GiveFocus()
+	Draw()
+	HandleKey(termbox.Key)
 }
 
 // A MenuWindow is a navigable menu and viewing window, vertically separated.
 // Because the window is a View and MenuWindow implements the View interface,
 // MenuWindows can be nested.
 type MenuWindow struct {
+	Rectangle
 	Title     string
 	MenuWidth int
 	Items     []string
@@ -28,25 +30,32 @@ type MenuWindow struct {
 	hasFocus  bool
 }
 
+func (mw *MenuWindow) SetDims(r Rectangle) {
+	mw.Rectangle = r
+	r.MinX += mw.MenuWidth + DividerWidth
+	for i := range mw.Windows {
+		mw.Windows[i].SetDims(r)
+	}
+}
+
 // Draw implements the View.Draw method, drawing the MenuWindow inside the
 // given rectangle.
-func (mw *MenuWindow) Draw(r Rectangle) {
+func (mw *MenuWindow) Draw() {
 	// draw menu
-	drawString(r.MinX+1, r.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
+	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for i, s := range mw.Items {
-		drawString(r.MinX+1, r.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
+		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
 	}
 	// highlight selected item
-	drawString(r.MinX+1, r.MinY+2*mw.sel+3, mw.Items[mw.sel], HomeActiveColor, termbox.ColorDefault)
+	drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], HomeActiveColor, termbox.ColorDefault)
 
 	// draw divider
-	for y := r.MinY; y < r.MaxY; y++ {
+	for y := mw.MinY; y < mw.MaxY; y++ {
 		termbox.SetCell(mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
 	}
 
 	// draw window
-	r.MinX += mw.MenuWidth + DividerWidth
-	mw.Windows[mw.sel].Draw(r)
+	mw.Windows[mw.sel].Draw()
 }
 
 // HandleKey implements the View.HandleKey method. If the current focus is on

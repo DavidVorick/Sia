@@ -42,13 +42,14 @@ func termboxRun() {
 
 	// create main window
 	mw := newHomeView()
-	mw.GiveFocus()
 	w, h := termbox.Size()
+	mw.SetDims(Rectangle{0, 0, w, h})
+	mw.GiveFocus()
 
 	for {
 		// update view
 		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-		mw.Draw(Rectangle{0, 0, w, h})
+		mw.Draw()
 		termbox.Flush()
 
 		// handle next event

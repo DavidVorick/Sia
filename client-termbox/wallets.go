@@ -10,13 +10,22 @@ import (
 )
 
 type WalletsView struct {
+	Rectangle
 	Parent   View
 	hasFocus bool
 }
 
-func (wv *WalletsView) Draw(r Rectangle) {
-	for y := r.MinY; y < r.MaxY; y++ {
-		for x := r.MinX; x < r.MaxX; x++ {
+func (wv *WalletsView) SetDims(r Rectangle) {
+	wv.Rectangle = r
+}
+
+func (wv *WalletsView) GiveFocus() {
+	wv.hasFocus = true
+}
+
+func (wv *WalletsView) Draw() {
+	for y := wv.MinY; y < wv.MaxY; y++ {
+		for x := wv.MinX; x < wv.MaxX; x++ {
 			termbox.SetCell(x, y, ' ', termbox.ColorDefault, termbox.Attribute(rand.Int()%2)+1)
 		}
 	}
@@ -24,10 +33,6 @@ func (wv *WalletsView) Draw(r Rectangle) {
 
 func (wv *WalletsView) HandleKey(key termbox.Key) {
 
-}
-
-func (wv *WalletsView) GiveFocus() {
-	wv.hasFocus = true
 }
 
 /*
