@@ -61,7 +61,8 @@ func termboxRun() {
 			mw.HandleKey(event.Key)
 
 		case termbox.EventResize:
-			w, h = termbox.Size()
+			w, h = event.Width, event.Height
+			mw.SetDims(Rectangle{0, 0, w, h})
 
 		case termbox.EventMouse:
 			// mouse events not yet supported
