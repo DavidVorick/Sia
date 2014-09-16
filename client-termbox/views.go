@@ -44,7 +44,7 @@ func (mw *MenuWindow) Draw(r Rectangle) {
 
 	// draw divider
 	for y := r.MinY; y < r.MaxY; y++ {
-		termbox.SetCell(mw.Menu.Width, y, ' ', termbox.ColorDefault, DividerColor)
+		termbox.SetCell(mw.Menu.Width, y, '│', DividerColor, termbox.ColorDefault)
 	}
 
 	// draw window
