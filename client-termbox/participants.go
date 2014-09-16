@@ -7,7 +7,8 @@ import (
 )
 
 type ParticipantsView struct {
-	Parent View
+	Parent   View
+	hasFocus bool
 }
 
 // Draw the wallets section in the priary screen.
@@ -22,4 +23,8 @@ func (pv *ParticipantsView) Draw(r Rectangle) {
 
 func (pv *ParticipantsView) HandleKey(key termbox.Key) {
 
+}
+
+func (pv *ParticipantsView) GiveFocus() {
+	pv.hasFocus = true
 }

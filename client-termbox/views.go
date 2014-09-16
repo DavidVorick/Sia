@@ -13,7 +13,7 @@ const (
 type View interface {
 	Draw(Rectangle)
 	HandleKey(termbox.Key)
-	//GiveFocus(View)
+	GiveFocus()
 }
 
 // A MenuWindow is a navigable menu and viewing window, vertically separated.
@@ -34,12 +34,10 @@ func (mw *MenuWindow) Draw(r Rectangle) {
 	// draw menu
 	drawString(r.MinX+1, r.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for i, s := range mw.Items {
-		if i == mw.sel {
-			drawString(r.MinX+1, r.MinY+2*i+3, s, HomeActiveColor, termbox.ColorDefault)
-		} else {
-			drawString(r.MinX+1, r.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
-		}
+		drawString(r.MinX+1, r.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
 	}
+	// highlight selected item
+	drawString(r.MinX+1, r.MinY+2*mw.sel+3, mw.Items[mw.sel], HomeActiveColor, termbox.ColorDefault)
 
 	// draw divider
 	for y := r.MinY; y < r.MaxY; y++ {
@@ -51,7 +49,7 @@ func (mw *MenuWindow) Draw(r Rectangle) {
 	mw.Windows[mw.sel].Draw(r)
 }
 
-// HandleKey implements the view.HandleKey method. If the current focus is on
+// HandleKey implements the View.HandleKey method. If the current focus is on
 // the window (instead of the menu), the input is forwarded to the window View.
 func (mw *MenuWindow) HandleKey(key termbox.Key) {
 	if !mw.hasFocus {
@@ -68,7 +66,17 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 		if mw.sel+1 < len(mw.Items) {
 			mw.sel++
 		}
+	case termbox.KeyArrowRight:
+		mw.hasFocus = false
+		mw.Windows[mw.sel].GiveFocus()
+		//mw.Windows[mw.sel].Draw(r)
+
 	default:
 		//drawError("Invalid key")
 	}
+}
+
+// GiveFocus implements the View.GiveFocus method.
+func (mw *MenuWindow) GiveFocus() {
+	mw.hasFocus = true
 }

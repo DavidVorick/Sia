@@ -7,7 +7,8 @@ import (
 )
 
 type SettingsView struct {
-	Parent View
+	Parent   View
+	hasFocus bool
 }
 
 // Draw the wallets section in the priary screen.
@@ -22,4 +23,8 @@ func (sv *SettingsView) Draw(r Rectangle) {
 
 func (sv *SettingsView) HandleKey(key termbox.Key) {
 
+}
+
+func (sv *SettingsView) GiveFocus() {
+	sv.hasFocus = true
 }

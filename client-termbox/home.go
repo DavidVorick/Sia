@@ -20,7 +20,7 @@ func newHomeView() View {
 		MenuWidth: HomeMenuWidth,
 		Items:     []string{"Wallets", "Participants", "Settings"},
 		sel:       0,
-		hasFocus:  true,
+		hasFocus:  false,
 	}
 
 	// add subviews
@@ -42,6 +42,7 @@ func termboxRun() {
 
 	// create main window
 	mw := newHomeView()
+	mw.GiveFocus()
 	w, h := termbox.Size()
 
 	for {

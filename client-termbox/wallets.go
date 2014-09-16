@@ -10,7 +10,8 @@ import (
 )
 
 type WalletsView struct {
-	Parent View
+	Parent   View
+	hasFocus bool
 }
 
 func (wv *WalletsView) Draw(r Rectangle) {
@@ -23,6 +24,10 @@ func (wv *WalletsView) Draw(r Rectangle) {
 
 func (wv *WalletsView) HandleKey(key termbox.Key) {
 
+}
+
+func (wv *WalletsView) GiveFocus() {
+	wv.hasFocus = true
 }
 
 /*
