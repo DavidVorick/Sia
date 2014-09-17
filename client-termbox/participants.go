@@ -7,9 +7,7 @@ import (
 )
 
 type ParticipantsView struct {
-	Rectangle
-	Parent   View
-	hasFocus bool
+	DefaultView
 }
 
 func (pv *ParticipantsView) SetDims(r Rectangle) {

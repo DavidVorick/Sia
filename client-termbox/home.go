@@ -16,18 +16,16 @@ const (
 func newHomeView() View {
 	// create MenuWindow
 	mw := &MenuWindow{
-		Parent:    nil,
 		Title:     "Sia Alpha v3",
 		MenuWidth: HomeMenuWidth,
 		Items:     []string{"Wallets", "Participants", "Settings"},
 		sel:       0,
-		hasFocus:  false,
 	}
 
 	// add subviews
 	mw.Windows = []View{
 		newWalletMenuView(mw),
-		&ParticipantsView{Parent: mw},
+		&ParticipantsView{DefaultView{Parent: mw}},
 		newSettingsView(mw),
 	}
 

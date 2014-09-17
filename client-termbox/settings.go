@@ -15,11 +15,9 @@ type Field struct {
 }
 
 type Section struct {
-	Rectangle
-	Parent   View
-	hasFocus bool
-	title    string
-	fields   []Field
+	DefaultView
+	title  string
+	fields []Field
 }
 
 func (s *Section) SetDims(r Rectangle) {
@@ -44,9 +42,7 @@ func (s *Section) HandleInput(key termbox.Key) {
 }
 
 type SettingsView struct {
-	Rectangle
-	Parent   View
-	hasFocus bool
+	DefaultView
 	sections []Section
 	sel      int
 }
@@ -82,8 +78,6 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 
 func newSettingsView(parent View) View {
 	sv := &SettingsView{
-		Parent:   parent,
-		hasFocus: false,
 		sections: []Section{
 			{title: "Client", fields: []Field{
 				{name: "Port:", width: 20},
@@ -95,6 +89,7 @@ func newSettingsView(parent View) View {
 			}},
 		},
 	}
+	sv.Parent = parent
 	for i := range sv.sections {
 		sv.sections[i].Parent = sv
 	}

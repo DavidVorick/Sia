@@ -17,18 +17,23 @@ type View interface {
 	HandleKey(termbox.Key)
 }
 
+// The DefaultView contains fields common to most Views.
+type DefaultView struct {
+	Rectangle
+	Parent   View
+	hasFocus bool
+}
+
 // A MenuWindow is a navigable menu and viewing window, vertically separated.
 // Because the window is a View and MenuWindow implements the View interface,
 // MenuWindows can be nested.
 type MenuWindow struct {
-	Rectangle
-	Parent    View
+	DefaultView
 	Title     string
 	MenuWidth int
 	Items     []string
 	Windows   []View
 	sel       int
-	hasFocus  bool
 }
 
 func (mw *MenuWindow) SetDims(r Rectangle) {
