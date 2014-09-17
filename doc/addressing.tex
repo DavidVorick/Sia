@@ -44,7 +44,46 @@ Suppliers can look at the price of storage (which directly corresponds with thei
 Suppliers who can provide storage for less will jump on the network proftiably and help to drive the price down for consumers.
 By looking at the extreme efficiency that Bitcoin has achieved around POW hashing, we can assume that a similarly extreme efficiency will be achieved around storing files.
 
-\section{Desirable Traits}
+\section{Building Blocks - Overview}
+We wish to use the following building blocks to create a federated storage system.
+\begin{itemize}
+	\item Consensus: each node needs to be in agreement about the state of the network.
+	\item Random Number Generation: the network must have some expensive source of random numbers, where expensive is clearly defined.
+	\item Proof of Retrivability: hosts must be able to prove that they have access to the data they have been assigned to store.
+	\item Proof of Capacity: The network is likely to have storage available that's not in use. An algorithm for proving the existence of empty storage can be useful.
+	\item Proof of File Transfer: if a file is transfered from one party to another, there must be a way to resolve a dispute (where the uploader says they sent the file, the downloader says they did not receive it).
+	\item Scalable Network Topology: there must be a way to figure out where each file is stored, such that the storage requirements and computational requirments per node are minimal.
+\end{itemize}
+
+Proofs of retrivability (also commonly called proof of storage) are fundamental to any byzantine file storage system.
+
+Random number generation is useful in a byzantine federated system, because we wish to randomize which hosts store files in a way that is not manipulatable by either the hosts or the file uploaders.
+We use this randomness so that network wide statistics about reliability can be trusted when uploading a set of files to the network.
+Randomness also helps prevent a malicious host from targeting specific files.
+
+Proofs of file transfer are useful in a byzantine federated system because there can be situations where one host is required to transfer a file to another host (perhaps the first host is deciding to power off), and there may be a dispute about whether the file was actually transferred.
+It is useful to have a tool to guarantee that a file was or wasn't transferred.
+
+Scalable network topology is needed because the end goal is to have billions to trillions of files stored across thousands to millions of datacenters, all within a trust free environment.
+It will not suffice for each node to have a complete view of the network topology, as that is an extreme amount of overhead.
+There must be a method for nodes to navagate a topology without needing to see the entire topology in a byzantine environment.
+
+Consensus is of course the foundation of any distributed system.
+Everybody must be able to agree on the current state of the system.
+
+\section{Consensus}
+Two forms of consensus have been considered for Sia.
+The first is POW based blockchain consensus, which has been tested by Bitcoin and proven to be sufficient in real world conditions.
+The second is message passing consensus, in the form of byzantine paxos or similar algorithms.
+
+The advantage to message passing consesus is the lack of need for mining rigs churning out mostly useless work.
+The disadvantage is that message passing consensus often has more relaxed assumptions about what portion of the network is malicious, has more strict synchronization requirements, and has no protection against someone spoofing a very long alternate history for the network, which could be used to confuse/trick newcomers and outsiders.
+
+Sia has chosen a hybrid model, using message passing consensus to manage network topology and to obserse host compliance (uptime, resource proofs), while using proof of work as the foundation of consensus, to prevent alternate histories from being trivially created.
+
+This section will probably go into greater detail in future drafts.
+
+\section{Random Number Generation}
 
 \section{Proof of Storage}
 Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
@@ -61,6 +100,11 @@ This does give a host the opportunity to throw out a very small percentage of th
 
 There is also a paper called 'Compact Proofs of Retrievability', which may provide a more compact way to do storage proofs.
 Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
+
+\section{Proof of Capacity}
+It would be convenient for Sia to be able to measure the volume of free space on the network.
+This would be best done using some sort of proof-of-capacity.
+So far nothing efficient has been contrived.
 
 \section{Proof of File Transfer}
 There are many cases in which we wish to transfer files from one host to another.
@@ -84,11 +128,6 @@ Using moderators to assist uploads is very expensive.
 One problem with the moderator approach is that there's currently nothing incentivizing the moderators to be honest about the completetion of the upload.
 The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
 The incentive structure of this approach needs to be tuned.
-
-\section{Proof of Capacity}
-It would be convenient for Sia to be able to measure the volume of free space on the network.
-This would be best done using some sort of proof-of-capacity.
-So far nothing efficient has been contrived.
 
 \section{Federated Storage}
 We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
