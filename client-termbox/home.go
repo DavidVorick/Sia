@@ -16,6 +16,7 @@ const (
 func newHomeView() View {
 	// create MenuWindow
 	mw := &MenuWindow{
+		Parent:    nil,
 		Title:     "Sia Alpha v3",
 		MenuWidth: HomeMenuWidth,
 		Items:     []string{"Wallets", "Participants", "Settings"},
@@ -27,7 +28,7 @@ func newHomeView() View {
 	mw.Windows = []View{
 		&WalletsView{Parent: mw},
 		&ParticipantsView{Parent: mw},
-		&SettingsView{Parent: mw},
+		newSettingsView(mw),
 	}
 
 	return mw

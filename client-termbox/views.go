@@ -22,6 +22,7 @@ type View interface {
 // MenuWindows can be nested.
 type MenuWindow struct {
 	Rectangle
+	Parent    View
 	Title     string
 	MenuWidth int
 	Items     []string
@@ -83,6 +84,12 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 			mw.sel++
 		}
 		mw.Draw()
+	case termbox.KeyArrowLeft:
+		if mw.Parent != nil {
+			mw.hasFocus = false
+			mw.Parent.GiveFocus()
+			mw.Parent.Draw()
+		}
 	case termbox.KeyArrowRight:
 		mw.hasFocus = false
 		mw.Windows[mw.sel].GiveFocus()
