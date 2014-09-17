@@ -23,6 +23,12 @@ func clearRectangle(r Rectangle) {
 	drawRectangle(r, termbox.ColorDefault)
 }
 
+func drawLine(x, y, w int, color termbox.Attribute) {
+	for i := x; i < x+w; i++ {
+		termbox.SetCell(i, y, ' ', color, color)
+	}
+}
+
 func drawString(x, y int, s string, fg, bg termbox.Attribute) {
 	// i must be manually incremented because range iterates over code points,
 	// not bytes, meaning i would be incremented multiple times per rune.
