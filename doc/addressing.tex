@@ -80,10 +80,21 @@ The advantage to message passing consesus is the lack of need for mining rigs ch
 The disadvantage is that message passing consensus often has more relaxed assumptions about what portion of the network is malicious, has more strict synchronization requirements, and has no protection against someone spoofing a very long alternate history for the network, which could be used to confuse/trick newcomers and outsiders.
 
 Sia has chosen a hybrid model, using message passing consensus to manage network topology and to obserse host compliance (uptime, resource proofs), while using proof of work as the foundation of consensus, to prevent alternate histories from being trivially created.
+Each time the message consensus creates a new block, the hash of this block is stored on the POW ledger.
+When a newcomer sees two alternate histories, it can resolve them by looking for the first to appear in the POW ledger.
+If each appears within some number of blocks (say, 3 days), then the alternate history with the least turbulence is chosen.
+Turbulence will need to be defined in greater detail.
+
+Because this POW blockchain is just being used to store hashes, an existing blockchain such as Bitcoin could be used.
+However, I believe that because Bitcoin consumes a non-trivial volume of resources (even for SPV nodes), that an alternate chain should be used.
+The idea would be to have a light blockchain that, by protocol, is only ever a few kilobytes in size and takes very minimial bandwidth and processing to download and verify.
+We could see something like a merge-mined blockchain, with a target of 25 minute blocks, with a limit of 1 kilobyte per block.
+This makes the blockchain less useful for small transactions, but makes it more useful for doing full verification on important transactions using super lightweight clients.
 
 This section will probably go into greater detail in future drafts.
 
 \section{Random Number Generation}
+The same POW blockchain that is used for foundational consensus can be used as a source of random numbers.
 
 \section{Proof of Storage}
 Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
