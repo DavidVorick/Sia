@@ -3,7 +3,7 @@
 \begin{document}
 \frenchspacing
 
-\title{Sia: Building Federated Decentralized Storage From First Principles}
+\title{Sia: Federated Decentralized Storage}
 
 \author{
 {\rm David Vorick}\\
@@ -13,10 +13,38 @@ Nebulous Labs
 \maketitle
 
 \subsection*{Abstract}
-We use first principles and basic elements to construct a working federated system for decentralized storage, and then we take that system and add features to improve the scalability and functionality. This is a work in progress.
+This paper discusses the desired traits for constructing a federated, decentralized, byzantine fault tolerant file storage system, and then builds up the tools required to implement such a system. Finally, a protocol overview is provided of a system that could possess all of the desired traits.
 
 \section{Introduction}
-This section will contain a brief discussion about the benefits of decentralizing storage, and how the time is right.
+The traditional model for cloud storage involves one centralized party setting up a data center or a set of data centers and having the consumer trust their data to a single host.
+Many times, such in the case of iCloud, the uses of the cloud storage are segmented into a particular ecosystem, or the user is forced to accept terms of service that they either don't read, don't trust, don't like, or don't understand.
+New services looking to offer cloud storage need to find a customer base, and are in competition with existing services.
+A decentralized approach erases many of these problems.
+With decentralized storage, the consumer can use any client that follows the protocol, and is not boxed into unfavorable terms of service or long term contracts.
+The client can withdraw the data at any time.
+New datacenters can join the network and immediately have a payout for the storage they provide.
+
+We also wish to make our storage system efficient, which will require federating storage.
+Maximum efficiency is to have one file be stored on exactly one machine, with no chance of any storage being needlessly redundant throught the entire system.
+Uploaders looking for reliability can employ erasure coding before uploading, which protects their file against corruption even in the event that individual components are lost.
+The uploader can estimate the required minimum redundancy by looking at the stability statistics across the network.
+
+A decentralized storage platform is likely to run on many datacenters and home connections.
+This gives the network great flexibility in providing parallelism to uploaders and downloaders.
+A 100MB file can be reasonably broken into several hundred pieces after redundancy is applied, which means downloads can draw from several hundred uploaders simultaneously.
+Even where the average connection is slow, the throughput on optimized files will be enormous.
+
+Latency can also be driven down significantly by using high redundancy.
+If a small file such as a webpage is stored at a redundancy of 10 or 100, then the closest set of hosts containing the full file is likely to be within just a few milliseconds, regardless of where in the world you are downloading the file from.
+
+By creating a self-regulating price for storage based on supply and demand, competitive and smooth pricing can be maintained.
+Traditional services typically have a set price that occasionally drops significantly.
+Sia updates the price on a frequent basis based on supply and demand.
+Suppliers can look at the price of storage (which directly corresponds with their compensation) and decide whether it is profitable to add storage to the network.
+Suppliers who can provide storage for less will jump on the network proftiably and help to drive the price down for consumers.
+By looking at the extreme efficiency that Bitcoin has achieved around POW hashing, we can assume that a similarly extreme efficiency will be achieved around storing files.
+
+\section{Desirable Traits}
 
 \section{Proof of Storage}
 Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
@@ -31,7 +59,7 @@ A proof does not have to be submitted for every file however, a file can be rand
 If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
 This does give a host the opportunity to throw out a very small percentage of the data that it's supposed to be storing with a low probability of detection.
 
-There is also a paper called 'Compact Proofs of Storage', which may provide a more compact way to do storage proofs.
+There is also a paper called 'Compact Proofs of Retrievability', which may provide a more compact way to do storage proofs.
 Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
 
 \section{Proof of File Transfer}
