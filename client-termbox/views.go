@@ -38,10 +38,16 @@ func (mw *MenuWindow) SetDims(r Rectangle) {
 	}
 }
 
+// GiveFocus implements the View.GiveFocus method.
+func (mw *MenuWindow) GiveFocus() {
+	mw.hasFocus = true
+}
+
 // Draw implements the View.Draw method, drawing the MenuWindow inside the
 // given rectangle.
 func (mw *MenuWindow) Draw() {
 	// draw menu
+	clearRectangle(mw.Rectangle)
 	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for i, s := range mw.Items {
 		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
@@ -71,21 +77,17 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 		if mw.sel > 0 {
 			mw.sel--
 		}
+		mw.Draw()
 	case termbox.KeyArrowDown:
 		if mw.sel+1 < len(mw.Items) {
 			mw.sel++
 		}
+		mw.Draw()
 	case termbox.KeyArrowRight:
 		mw.hasFocus = false
 		mw.Windows[mw.sel].GiveFocus()
-		//mw.Windows[mw.sel].Draw(r)
-
+		mw.Draw()
 	default:
-		//drawError("Invalid key")
+		drawError("Invalid key")
 	}
-}
-
-// GiveFocus implements the View.GiveFocus method.
-func (mw *MenuWindow) GiveFocus() {
-	mw.hasFocus = true
 }
