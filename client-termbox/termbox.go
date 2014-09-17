@@ -24,8 +24,12 @@ func clearRectangle(r Rectangle) {
 }
 
 func drawString(x, y int, s string, fg, bg termbox.Attribute) {
-	for i, c := range s {
+	// i must be manually incremented because range iterates over code points,
+	// not bytes, meaning i would be incremented multiple times per rune.
+	var i int
+	for _, c := range s {
 		termbox.SetCell(x+i, y, c, fg, bg)
+		i++
 	}
 }
 
