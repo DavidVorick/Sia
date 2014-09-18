@@ -31,13 +31,53 @@ func (f *Field) HandleKey(key termbox.Key) {
 		if f.pos > 0 {
 			f.pos--
 		}
-		termbox.SetCursor(f.MinX+f.pos, f.MinY)
+		f.updateCursor()
 	case termbox.KeyArrowRight:
 		if f.pos < len(f.text) {
 			f.pos++
 		}
-		termbox.SetCursor(f.MinX+f.pos, f.MinY)
+		f.updateCursor()
+	case termbox.KeySpace:
+		f.HandleChar(' ')
+		f.Draw()
+	case termbox.KeyTab:
+		f.HandleChar('\t')
+		f.Draw()
+	case termbox.KeyDelete:
+		if f.pos < len(f.text) {
+			f.deleteForward()
+		}
+		f.Draw()
+	case termbox.KeyBackspace, termbox.KeyBackspace2:
+		if f.pos > 0 {
+			f.deleteBackward()
+			f.pos--
+			f.updateCursor()
+		}
+		f.Draw()
 	}
+}
+
+func (f *Field) HandleChar(r rune) {
+	if len(f.text) >= f.MaxX-f.MinX-1 {
+		return
+	}
+	f.text = f.text[:f.pos] + string(r) + f.text[f.pos:]
+	f.pos++
+	f.updateCursor()
+	f.Draw()
+}
+
+func (f *Field) updateCursor() {
+	termbox.SetCursor(f.MinX+f.pos, f.MinY)
+}
+
+func (f *Field) deleteForward() {
+	f.text = f.text[:f.pos] + f.text[f.pos+1:]
+}
+
+func (f *Field) deleteBackward() {
+	f.text = f.text[:f.pos-1] + f.text[f.pos:]
 }
 
 func (f *Field) SetColor(color termbox.Attribute) {

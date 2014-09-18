@@ -82,6 +82,13 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 	}
 }
 
+func (sv *SettingsView) HandleChar(r rune) {
+	if !sv.hasFocus {
+		sv.settings[sv.sel].HandleChar(r)
+		return
+	}
+}
+
 func newSettingsView(parent View) View {
 	// convert config values to strings
 	clientPort := fmt.Sprint(config.Client.Port)

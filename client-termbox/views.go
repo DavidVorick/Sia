@@ -113,3 +113,10 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 		drawError("Invalid key")
 	}
 }
+
+func (mw *MenuWindow) HandleChar(r rune) {
+	if !mw.hasFocus {
+		mw.Windows[mw.sel].HandleChar(r)
+		return
+	}
+}
