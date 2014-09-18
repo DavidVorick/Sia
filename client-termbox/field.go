@@ -4,10 +4,6 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const (
-	FieldFocusColor = termbox.ColorRed
-)
-
 type Field struct {
 	DefaultView
 	color termbox.Attribute

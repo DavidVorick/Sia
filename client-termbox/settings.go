@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	SettingColor = termbox.ColorBlue
+	SettingColor      = termbox.ColorBlue
+	SettingFocusColor = termbox.ColorRed
 )
 
 type Setting struct {
@@ -48,7 +49,12 @@ func (sv *SettingsView) SetDims(r Rectangle) {
 }
 
 func (sv *SettingsView) Draw() {
-	for _, s := range sv.settings {
+	for i, s := range sv.settings {
+		if i == sv.sel {
+			s.SetColor(SettingFocusColor)
+		} else {
+			s.SetColor(SettingColor)
+		}
 		s.Draw()
 	}
 }
@@ -65,10 +71,12 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 		if sv.sel > 0 {
 			sv.sel--
 		}
+		sv.Draw()
 	case termbox.KeyArrowDown:
 		if sv.sel+1 < len(sv.settings) {
 			sv.sel++
 		}
+		sv.Draw()
 	case termbox.KeyEnter:
 		sv.GiveFocus(sv.settings[sv.sel])
 	}
