@@ -12,11 +12,13 @@ type Field struct {
 	DefaultView
 	color termbox.Attribute
 	text  string
+	pos   int
 }
 
 func (f *Field) Focus() {
 	f.hasFocus = true
-	termbox.SetCursor(f.MinX+len(f.text), f.MinY)
+	f.pos = len(f.text)
+	termbox.SetCursor(f.MinX+f.pos, f.MinY)
 }
 
 func (f *Field) Draw() {
@@ -25,6 +27,21 @@ func (f *Field) Draw() {
 }
 
 func (f *Field) HandleKey(key termbox.Key) {
+	switch key {
+	case termbox.KeyEnter:
+		termbox.HideCursor()
+		f.GiveFocus(f.Parent)
+	case termbox.KeyArrowLeft:
+		if f.pos > 0 {
+			f.pos--
+		}
+		termbox.SetCursor(f.MinX+f.pos, f.MinY)
+	case termbox.KeyArrowRight:
+		if f.pos < len(f.text) {
+			f.pos++
+		}
+		termbox.SetCursor(f.MinX+f.pos, f.MinY)
+	}
 }
 
 func (f *Field) SetColor(color termbox.Attribute) {

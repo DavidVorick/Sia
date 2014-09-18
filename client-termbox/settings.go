@@ -47,11 +47,6 @@ func (sv *SettingsView) SetDims(r Rectangle) {
 	}
 }
 
-func (sv *SettingsView) Focus() {
-	// focus the first setting
-	sv.GiveFocus(sv.settings[0])
-}
-
 func (sv *SettingsView) Draw() {
 	for _, s := range sv.settings {
 		s.Draw()
@@ -59,19 +54,22 @@ func (sv *SettingsView) Draw() {
 }
 
 func (sv *SettingsView) HandleKey(key termbox.Key) {
+	if !sv.hasFocus {
+		sv.settings[sv.sel].HandleKey(key)
+		return
+	}
 	switch key {
 	case termbox.KeyArrowLeft:
-		termbox.HideCursor()
 		sv.GiveFocus(sv.Parent)
 	case termbox.KeyArrowUp:
 		if sv.sel > 0 {
 			sv.sel--
 		}
-		sv.GiveFocus(sv.settings[sv.sel])
 	case termbox.KeyArrowDown:
 		if sv.sel+1 < len(sv.settings) {
 			sv.sel++
 		}
+	case termbox.KeyEnter:
 		sv.GiveFocus(sv.settings[sv.sel])
 	}
 }
