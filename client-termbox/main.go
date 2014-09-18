@@ -15,9 +15,9 @@ type Config struct {
 		Port uint16
 	}
 	Server struct {
-		Hostname string
-		Port     uint16
-		ID       byte
+		Host string
+		Port uint16
+		ID   byte
 	}
 	// not present in config file
 	Router *network.RPCServer
@@ -70,7 +70,7 @@ func main() {
 
 	// The config data is initially set here. These default have the lowest priority.
 	root.Flags().Uint16VarP(&config.Client.Port, "port", "p", 9980, "Which port the client messenger should listen on")
-	root.Flags().StringVarP(&config.Server.Hostname, "server-hostname", "H", "localhost", "The hostname of the server you are connecting to.")
+	root.Flags().StringVarP(&config.Server.Host, "server-hostname", "H", "localhost", "The hostname of the server you are connecting to.")
 	root.Flags().Uint16VarP(&config.Server.Port, "server-port", "P", 9988, "The port on which the server is listening.")
 	root.Flags().Uint8VarP(&config.Server.ID, "server-id", "I", 1, "The id of the server you are connecting to.")
 

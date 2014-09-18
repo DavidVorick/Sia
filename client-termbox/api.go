@@ -7,7 +7,7 @@ import (
 
 func serverAddress() network.Address {
 	return network.Address{
-		config.Server.Hostname,
+		config.Server.Host,
 		config.Server.Port,
 		network.Identifier(config.Server.ID),
 	}

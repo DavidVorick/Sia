@@ -85,7 +85,7 @@ func newSettingsView(parent View) View {
 	sv := &SettingsView{
 		settings: []*Setting{
 			{Field: Field{text: clientPort}, name: "Client Port:", width: 20, offset: 1},
-			{Field: Field{text: config.Server.Hostname}, name: "Server Host:", width: 20, offset: 3},
+			{Field: Field{text: config.Server.Host}, name: "Server Host:", width: 20, offset: 3},
 			{Field: Field{text: serverPort}, name: "Server Port:", width: 20, offset: 4},
 			{Field: Field{text: serverID}, name: "Server ID:  ", width: 20, offset: 5},
 		},
