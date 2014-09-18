@@ -24,7 +24,7 @@ func (s *Section) SetDims(r Rectangle) {
 	s.Rectangle = r
 }
 
-func (s *Section) GiveFocus() {
+func (s *Section) Focus() {
 	s.hasFocus = true
 }
 
@@ -38,7 +38,10 @@ func (s *Section) Draw() {
 }
 
 func (s *Section) HandleInput(key termbox.Key) {
-
+	switch key {
+	case termbox.KeyArrowLeft:
+		s.GiveFocus(s.Parent)
+	}
 }
 
 type SettingsView struct {
@@ -55,7 +58,7 @@ func (sv *SettingsView) SetDims(r Rectangle) {
 	}
 }
 
-func (sv *SettingsView) GiveFocus() {
+func (sv *SettingsView) Focus() {
 	sv.hasFocus = true
 	// move cursor to first field
 	termbox.SetCursor(sv.MinX+6+len(sv.sections[0].fields[0].name), sv.MinY+2)
@@ -70,9 +73,8 @@ func (sv *SettingsView) Draw() {
 func (sv *SettingsView) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyArrowLeft:
-		sv.hasFocus = false
 		termbox.HideCursor()
-		sv.Parent.GiveFocus()
+		sv.GiveFocus(sv.Parent)
 	}
 }
 

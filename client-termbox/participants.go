@@ -14,7 +14,7 @@ func (pv *ParticipantsView) SetDims(r Rectangle) {
 	pv.Rectangle = r
 }
 
-func (pv *ParticipantsView) GiveFocus() {
+func (pv *ParticipantsView) Focus() {
 	pv.hasFocus = true
 }
 

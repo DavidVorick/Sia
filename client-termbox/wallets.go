@@ -14,19 +14,16 @@ type WalletsMenuView struct {
 }
 
 func newWalletMenuView(parent View) View {
-	wmv := &WalletsMenuView{
-		MenuWindow: MenuWindow{
-			Title:     "Wallets",
-			MenuWidth: WalletMenuWidth,
-			sel:       0,
-		},
-	}
+	wmv := new(WalletsMenuView)
+	wmv.Parent = parent
+	wmv.Title = "Wallets"
+	wmv.MenuWidth = WalletMenuWidth
 	// load wallet IDs and create views
 	wmv.loadWallets()
 	return wmv
 }
 
-func (wmv *WalletsMenuView) GiveFocus() {
+func (wmv *WalletsMenuView) Focus() {
 	wmv.hasFocus = true
 	wmv.loadWallets()
 }
@@ -59,7 +56,7 @@ func (wv *WalletView) SetDims(r Rectangle) {
 	wv.Rectangle = r
 }
 
-func (wv *WalletView) GiveFocus() {
+func (wv *WalletView) Focus() {
 	wv.hasFocus = true
 }
 
@@ -70,7 +67,6 @@ func (wv *WalletView) Draw() {
 func (wv *WalletView) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyArrowLeft:
-		wv.hasFocus = false
-		wv.Parent.GiveFocus()
+		wv.GiveFocus(wv.Parent)
 	}
 }

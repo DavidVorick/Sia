@@ -43,7 +43,7 @@ func termboxRun() {
 	mw := newHomeView()
 	w, h := termbox.Size()
 	mw.SetDims(Rectangle{0, 0, w, h})
-	mw.GiveFocus()
+	mw.Focus()
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	mw.Draw()
 	termbox.Flush()

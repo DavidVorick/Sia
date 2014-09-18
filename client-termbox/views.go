@@ -12,7 +12,7 @@ const (
 // A View is an area on screen capable of drawing itself and handling input.
 type View interface {
 	SetDims(Rectangle)
-	GiveFocus()
+	Focus()
 	Draw()
 	HandleKey(termbox.Key)
 }
@@ -22,6 +22,11 @@ type DefaultView struct {
 	Rectangle
 	Parent   View
 	hasFocus bool
+}
+
+func (dv *DefaultView) GiveFocus(v View) {
+	dv.hasFocus = false
+	v.Focus()
 }
 
 // A MenuWindow is a navigable menu and viewing window, vertically separated.
@@ -44,8 +49,8 @@ func (mw *MenuWindow) SetDims(r Rectangle) {
 	}
 }
 
-// GiveFocus implements the View.GiveFocus method.
-func (mw *MenuWindow) GiveFocus() {
+// Focus implements the View.Focus method.
+func (mw *MenuWindow) Focus() {
 	mw.hasFocus = true
 }
 
@@ -91,13 +96,11 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 		mw.Draw()
 	case termbox.KeyArrowLeft:
 		if mw.Parent != nil {
-			mw.hasFocus = false
-			mw.Parent.GiveFocus()
+			mw.GiveFocus(mw.Parent)
 			mw.Parent.Draw()
 		}
 	case termbox.KeyArrowRight:
-		mw.hasFocus = false
-		mw.Windows[mw.sel].GiveFocus()
+		mw.GiveFocus(mw.Windows[mw.sel])
 		mw.Draw()
 	default:
 		drawError("Invalid key")
