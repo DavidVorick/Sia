@@ -15,10 +15,11 @@ type View interface {
 	Focus()
 	Draw()
 	HandleKey(termbox.Key)
+	HandleChar(rune)
 }
 
 // The DefaultView contains fields common to most Views.
-// It also implements simple versions of SetDims and Focus, to cut down on
+// It also implements a very basic View interface, to cut down on
 // boilerplate code.
 type DefaultView struct {
 	Rectangle
@@ -26,13 +27,11 @@ type DefaultView struct {
 	hasFocus bool
 }
 
-func (dv *DefaultView) SetDims(r Rectangle) {
-	dv.Rectangle = r
-}
-
-func (dv *DefaultView) Focus() {
-	dv.hasFocus = true
-}
+// Bare-bones implementation of the View interface
+func (dv *DefaultView) SetDims(r Rectangle)     { dv.Rectangle = r }
+func (dv *DefaultView) Focus()                  { dv.hasFocus = true }
+func (dv *DefaultView) HandleKey(_ termbox.Key) {}
+func (dv *DefaultView) HandleChar(_ rune)       {}
 
 func (dv *DefaultView) GiveFocus(v View) {
 	dv.hasFocus = false

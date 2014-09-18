@@ -18,8 +18,11 @@ func newHomeView() View {
 	mw := &MenuWindow{
 		Title:     "Sia Alpha v3",
 		MenuWidth: HomeMenuWidth,
-		Items:     []string{"Wallets", "Participants", "Settings"},
-		sel:       0,
+		Items: []string{
+			"Wallets",
+			"Participants",
+			"Settings",
+		},
 	}
 
 	// add subviews
@@ -53,10 +56,14 @@ func termboxRun() {
 		event := termbox.PollEvent()
 		switch event.Type {
 		case termbox.EventKey:
-			if event.Key == termbox.KeyEsc {
+			switch {
+			case event.Ch != 0:
+				mw.HandleChar(event.Ch)
+			case event.Key == termbox.KeyEsc:
 				return
+			default:
+				mw.HandleKey(event.Key)
 			}
-			mw.HandleKey(event.Key)
 
 		case termbox.EventResize:
 			w, h = event.Width, event.Height

@@ -19,7 +19,3 @@ func (pv *ParticipantsView) Draw() {
 		}
 	}
 }
-
-func (pv *ParticipantsView) HandleKey(key termbox.Key) {
-
-}
