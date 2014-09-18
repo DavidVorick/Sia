@@ -1,61 +1,60 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/nsf/termbox-go"
 )
 
 const (
-	FieldColor = termbox.ColorBlue
+	SettingColor = termbox.ColorBlue
 )
 
-type Field struct {
-	DefaultView
+type Setting struct {
+	Rectangle
+	Field
 	name   string
 	width  int
 	offset int
 }
 
-func (f *Field) Focus() {
-	f.hasFocus = true
-	// move cursor to first field
-	termbox.SetCursor(f.MinX+1+len(f.name), f.MinY)
+func (s *Setting) SetDims(r Rectangle) {
+	s.Rectangle = r
+	r.MinX += len(s.name) + 1
+	s.Field.SetDims(r)
 }
 
-func (f *Field) Draw() {
-	clearRectangle(f.Rectangle)
-	drawString(f.MinX, f.MinY, f.name, termbox.ColorWhite, termbox.ColorDefault)
-	drawLine(f.MinX+len(f.name)+1, f.MinY, f.width, termbox.ColorBlue)
-}
-
-func (f *Field) HandleKey(key termbox.Key) {
+func (s *Setting) Draw() {
+	drawString(s.MinX, s.MinY, s.name, termbox.ColorWhite, termbox.ColorDefault)
+	s.Field.Draw()
 }
 
 type SettingsView struct {
 	DefaultView
-	fields []*Field
-	sel    int
+	settings []*Setting
+	sel      int
 }
 
 func (sv *SettingsView) SetDims(r Rectangle) {
 	sv.Rectangle = r
-	for _, f := range sv.fields {
-		f.SetDims(Rectangle{
+	for _, s := range sv.settings {
+		s.SetDims(Rectangle{
 			MinX: r.MinX + 1,
-			MinY: r.MinY + f.offset,
-			MaxX: r.MinX + len(f.name) + f.width + 2,
-			MaxY: r.MinY + f.offset + 1,
+			MinY: r.MinY + s.offset,
+			MaxX: r.MinX + len(s.name) + s.width + 2,
+			MaxY: r.MinY + s.offset + 1,
 		})
 	}
 }
 
 func (sv *SettingsView) Focus() {
-	// focus the first field
-	sv.GiveFocus(sv.fields[0])
+	// focus the first setting
+	sv.GiveFocus(sv.settings[0])
 }
 
 func (sv *SettingsView) Draw() {
-	for i := range sv.fields {
-		sv.fields[i].Draw()
+	for _, s := range sv.settings {
+		s.Draw()
 	}
 }
 
@@ -68,27 +67,33 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 		if sv.sel > 0 {
 			sv.sel--
 		}
-		sv.GiveFocus(sv.fields[sv.sel])
+		sv.GiveFocus(sv.settings[sv.sel])
 	case termbox.KeyArrowDown:
-		if sv.sel+1 < len(sv.fields) {
+		if sv.sel+1 < len(sv.settings) {
 			sv.sel++
 		}
-		sv.GiveFocus(sv.fields[sv.sel])
+		sv.GiveFocus(sv.settings[sv.sel])
 	}
 }
 
 func newSettingsView(parent View) View {
+	// convert config values to strings
+	clientPort := fmt.Sprint(config.Client.Port)
+	serverPort := fmt.Sprint(config.Server.Port)
+	serverID := fmt.Sprint(config.Server.ID)
+
 	sv := &SettingsView{
-		fields: []*Field{
-			{name: "Client Port:", width: 20, offset: 1},
-			{name: "Server Host:", width: 20, offset: 3},
-			{name: "Server Port:", width: 20, offset: 4},
-			{name: "Server ID:  ", width: 20, offset: 5},
+		settings: []*Setting{
+			{Field: Field{text: clientPort}, name: "Client Port:", width: 20, offset: 1},
+			{Field: Field{text: config.Server.Hostname}, name: "Server Host:", width: 20, offset: 3},
+			{Field: Field{text: serverPort}, name: "Server Port:", width: 20, offset: 4},
+			{Field: Field{text: serverID}, name: "Server ID:  ", width: 20, offset: 5},
 		},
 	}
 	sv.Parent = parent
-	for i := range sv.fields {
-		sv.fields[i].Parent = sv
+	for _, s := range sv.settings {
+		s.Parent = sv
+		s.color = SettingColor
 	}
 	return sv
 }
