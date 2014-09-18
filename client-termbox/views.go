@@ -34,6 +34,9 @@ func (dv *DefaultView) HandleKey(_ termbox.Key) {}
 func (dv *DefaultView) HandleChar(_ rune)       {}
 
 func (dv *DefaultView) GiveFocus(v View) {
+	if !dv.hasFocus {
+		panic("focus is not yours to give!")
+	}
 	dv.hasFocus = false
 	v.Focus()
 }
