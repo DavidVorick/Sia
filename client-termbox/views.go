@@ -18,10 +18,20 @@ type View interface {
 }
 
 // The DefaultView contains fields common to most Views.
+// It also implements simple versions of SetDims and Focus, to cut down on
+// boilerplate code.
 type DefaultView struct {
 	Rectangle
 	Parent   View
 	hasFocus bool
+}
+
+func (dv *DefaultView) SetDims(r Rectangle) {
+	dv.Rectangle = r
+}
+
+func (dv *DefaultView) Focus() {
+	dv.hasFocus = true
 }
 
 func (dv *DefaultView) GiveFocus(v View) {
@@ -47,11 +57,6 @@ func (mw *MenuWindow) SetDims(r Rectangle) {
 	for i := range mw.Windows {
 		mw.Windows[i].SetDims(r)
 	}
-}
-
-// Focus implements the View.Focus method.
-func (mw *MenuWindow) Focus() {
-	mw.hasFocus = true
 }
 
 // Draw implements the View.Draw method, drawing the MenuWindow inside the

@@ -20,14 +20,6 @@ type Section struct {
 	fields []Field
 }
 
-func (s *Section) SetDims(r Rectangle) {
-	s.Rectangle = r
-}
-
-func (s *Section) Focus() {
-	s.hasFocus = true
-}
-
 func (s *Section) Draw() {
 	clearRectangle(s.Rectangle)
 	drawString(s.MinX+1, s.MinY+1, s.title, SectionColor, termbox.ColorDefault)

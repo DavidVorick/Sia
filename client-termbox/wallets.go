@@ -52,14 +52,6 @@ type WalletView struct {
 	DefaultView
 }
 
-func (wv *WalletView) SetDims(r Rectangle) {
-	wv.Rectangle = r
-}
-
-func (wv *WalletView) Focus() {
-	wv.hasFocus = true
-}
-
 func (wv *WalletView) Draw() {
 
 }

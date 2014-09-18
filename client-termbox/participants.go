@@ -10,14 +10,6 @@ type ParticipantsView struct {
 	DefaultView
 }
 
-func (pv *ParticipantsView) SetDims(r Rectangle) {
-	pv.Rectangle = r
-}
-
-func (pv *ParticipantsView) Focus() {
-	pv.hasFocus = true
-}
-
 // Draw the wallets section in the priary screen.
 func (pv *ParticipantsView) Draw() {
 	// Fill remaining space with random colors.
