@@ -19,10 +19,6 @@ func drawRectangle(r Rectangle, color termbox.Attribute) {
 	}
 }
 
-func clearRectangle(r Rectangle) {
-	drawRectangle(r, termbox.ColorDefault)
-}
-
 func drawLine(x, y, w int, color termbox.Attribute) {
 	for i := x; i < x+w; i++ {
 		termbox.SetCell(i, y, ' ', color, color)

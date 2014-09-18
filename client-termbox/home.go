@@ -47,11 +47,13 @@ func termboxRun() {
 	w, h := termbox.Size()
 	mw.SetDims(Rectangle{0, 0, w, h})
 	mw.Focus()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	mw.Draw()
-	termbox.Flush()
 
 	for {
+		// update view
+		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+		mw.Draw()
+		termbox.Flush()
+
 		// handle next event
 		event := termbox.PollEvent()
 		switch event.Type {
@@ -68,18 +70,14 @@ func termboxRun() {
 		case termbox.EventResize:
 			w, h = event.Width, event.Height
 			mw.SetDims(Rectangle{0, 0, w, h})
-			mw.Draw()
 
 		case termbox.EventMouse:
 			// mouse events not yet supported
 
 		case termbox.EventError:
-			drawError("Input error:", event.Err)
+			//drawError("Input error:", event.Err)
 			termbox.Flush()
 			return
 		}
-
-		// update view
-		termbox.Flush()
 	}
 }

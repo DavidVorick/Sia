@@ -65,7 +65,6 @@ func (mw *MenuWindow) SetDims(r Rectangle) {
 // given rectangle.
 func (mw *MenuWindow) Draw() {
 	// draw menu
-	clearRectangle(mw.Rectangle)
 	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for i, s := range mw.Items {
 		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
@@ -95,22 +94,18 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 		if mw.sel > 0 {
 			mw.sel--
 		}
-		mw.Draw()
 	case termbox.KeyArrowDown:
 		if mw.sel+1 < len(mw.Items) {
 			mw.sel++
 		}
-		mw.Draw()
 	case termbox.KeyArrowLeft:
 		if mw.Parent != nil {
 			mw.GiveFocus(mw.Parent)
-			mw.Parent.Draw()
 		}
 	case termbox.KeyArrowRight:
 		mw.GiveFocus(mw.Windows[mw.sel])
-		mw.Draw()
 	default:
-		drawError("Invalid key")
+		//drawError("Invalid key")
 	}
 }
 

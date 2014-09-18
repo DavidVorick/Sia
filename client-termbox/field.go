@@ -39,22 +39,18 @@ func (f *Field) HandleKey(key termbox.Key) {
 		f.updateCursor()
 	case termbox.KeySpace:
 		f.HandleChar(' ')
-		f.Draw()
 	case termbox.KeyTab:
 		f.HandleChar('\t')
-		f.Draw()
 	case termbox.KeyDelete:
 		if f.pos < len(f.text) {
 			f.deleteForward()
 		}
-		f.Draw()
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
 		if f.pos > 0 {
 			f.deleteBackward()
 			f.pos--
 			f.updateCursor()
 		}
-		f.Draw()
 	}
 }
 
@@ -65,7 +61,6 @@ func (f *Field) HandleChar(r rune) {
 	f.text = f.text[:f.pos] + string(r) + f.text[f.pos:]
 	f.pos++
 	f.updateCursor()
-	f.Draw()
 }
 
 func (f *Field) updateCursor() {

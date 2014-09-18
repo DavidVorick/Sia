@@ -71,12 +71,10 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 		if sv.sel > 0 {
 			sv.sel--
 		}
-		sv.Draw()
 	case termbox.KeyArrowDown:
 		if sv.sel+1 < len(sv.settings) {
 			sv.sel++
 		}
-		sv.Draw()
 	case termbox.KeyEnter:
 		sv.GiveFocus(sv.settings[sv.sel])
 	}
