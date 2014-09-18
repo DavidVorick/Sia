@@ -95,6 +95,12 @@ This section will probably go into greater detail in future drafts.
 
 \section{Random Number Generation}
 The same POW blockchain that is used for foundational consensus can be used as a source of random numbers.
+Each time that a random number is necessary, the hash of the next winning block can be used as the source of randomness.
+This means that random numbers can be probabilistically manipulated by anyone with sufficient hashing power or luck to create multiple blocks before announcing them to the network.
+
+When making use of these POW based random numbers, me must make sure that the maximum possible profit from manipulating the numbers does not exceed the cost of manipulation.
+The cost of manipulation can be determined by looking at the reward for finding a block.
+This also means that POW random numbers should not be used for 'major' network decisions at all, because the source of random numbers is merely linearly expensive to manipulate.
 
 \section{Proof of Storage}
 Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
@@ -113,9 +119,55 @@ There is also a paper called 'Compact Proofs of Retrievability', which may provi
 Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
 
 \section{Proof of Capacity}
-It would be convenient for Sia to be able to measure the volume of free space on the network.
-This would be best done using some sort of proof-of-capacity.
-So far nothing efficient has been contrived.
+Proof of Capacity is used to enable a host to prove that they have a large volume of unused storage.
+When a host announces that they have unused storage, a random number is generated for them and that is used as the seed.
+Data is generated using: data[index] = Hash(index|data\_seed), until the declared volume of data has been created.
+The hashes are sorted by numerical value before being committed to disk, for easy lookup later.
+The network remembers data\_seed during the challenge phase.
+
+When a challenge needs to be performed, a new random number is generated.
+A challenge is created using: challenge[0] = Hash(challege\_seed) and presented to the network, viewable by everybody.
+The host responds to this challenge by providing the index that results in the hash Hash(index|data\_seed) which is numerically closest to the challenge.
+
+The network has no way of knowing which index is actually closest to the challenge, however the network can trivially verify that the presented hash is in the data set.
+The network can gauge honesty of the host by performing statistical analysis of the responses of the host to the challenge.
+The host can always present an answer, however given the size of the data set that the host is supposed to be storing, the optimal or closest hash will on average be a certain numerical distance away from the challenge.
+If the host is cheating by storing less or using a smaller search space, the host's average answer will be further away from what is statistically expected, and this can be detected by the network.
+
+We observe that in storing the data, optimal storing (assuming that a small number of hashes per response is acceptable - 10,000 or even only 100) does not require storing the hash, only the index.
+For example, say we have are storing data on 1,000,000 indices, and the numerical range for our hash value is 1 to 1 billion.
+We'll create 100 buckets each covering 1\% of the possible values for hashes.
+The first bucket covers the numeric range 0 to 10,000,000, the second covers 10,000,000 to 20,000,000, and so on, up to 1 billion.
+In each bucket, we place all of the indices that produce hashes which fall in the range of that bucket.
+Then, when responding to a challenge, we only need to do M hashes, where M is the number of indices in the bucket containing the challenge hash.
+
+If we assume that the cost of creating buckets is minimal, only a few bytes per bucket, then the actual cost of storing according to this scheme is the number of bytes per index.
+If you are only storing across 2\^16 indices, you can get by with 2 bytes per element, and with doing a minimal amount of computation per challenge.
+
+We take a moment to observe a few things:
+\begin{itemize}
+	\item A non-specialized host must be able to compute enough hashes across all the data they are storing before challenges begin.
+	\item A specialized host can be assumed to hash up to a million times as fast in today's market. For security, a much higher value might be assumed.
+	\item A specialized host could potentially live-compute the entire search space repeatedly when handling challenges.
+	\item We must choose a hash such that a non-specialized host can reasonable compute the data set once before challenges begin, but a live host cannot profitably fake empty storage.
+	\item If we use the same hashing algorithm for proof of capacity as is used for proof of work, a specialized host cannot live compute responses to challenges without also sacrificing proof of work profit.
+	\item Therefore, if the reward for proof of capacity is adjusted such that live computing is less valuable than applying the same hashing power to proof of work, hosts are not economically incentivized to perform this sort of attack.
+\end{itemize}
+
+By using sequential challenges, where the next challenge is dictated by the response to the previous challenge, we can force a specialized host to recompute the entire dataspace multiple times.
+The sequential process works as such: challenge[i+1] = Hash(challenge[i] | responseTo\_challenge[i]).
+Some number of iterations is chosen for the sequential challenges, and the host will need to provide that many responses.
+This is a linear number of responses in the number of sequential challenges unfortunately.
+A better algorithm may exist where the number of responses presented does not need to match the number of sequential challenges.
+
+We now apply some statistical analysis to determine how certain we can be about a hosts honesty for a given number of responses.
+For this analysis, we assume that the host is storing a minimum of 2\^33 indices, and is computing over a hash space of 2\^256 possible values.
+2\^33 indicies can be stored on average in 4 bytes (assuming maximum compression), which is why we have chosen this volume of indicies.
+Storing 2\^33 indicies in a trivially lightweight lookup table at 4 bytes per index will incur a storage cost of 32 GiB.
+We therefore are assuming that the minimum storage under this scheme is 32 GiB.
+
+I don't know what equations to use to figure this out.
+I might end up using a simulation.
 
 \section{Proof of File Transfer}
 There are many cases in which we wish to transfer files from one host to another.
