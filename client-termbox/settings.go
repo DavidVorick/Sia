@@ -80,9 +80,9 @@ func (sv *SettingsView) HandleKey(key termbox.Key) {
 	}
 }
 
-func (sv *SettingsView) HandleChar(r rune) {
+func (sv *SettingsView) HandleRune(r rune) {
 	if !sv.hasFocus {
-		sv.settings[sv.sel].HandleChar(r)
+		sv.settings[sv.sel].HandleRune(r)
 		return
 	}
 }

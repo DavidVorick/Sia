@@ -38,9 +38,9 @@ func (f *Field) HandleKey(key termbox.Key) {
 		}
 		f.updateCursor()
 	case termbox.KeySpace:
-		f.HandleChar(' ')
+		f.HandleRune(' ')
 	case termbox.KeyTab:
-		f.HandleChar('\t')
+		f.HandleRune('\t')
 	case termbox.KeyDelete:
 		if f.pos < len(f.text) {
 			f.deleteForward()
@@ -54,7 +54,7 @@ func (f *Field) HandleKey(key termbox.Key) {
 	}
 }
 
-func (f *Field) HandleChar(r rune) {
+func (f *Field) HandleRune(r rune) {
 	if len(f.text) >= f.MaxX-f.MinX-1 {
 		return
 	}

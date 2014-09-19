@@ -15,7 +15,7 @@ type View interface {
 	Focus()
 	Draw()
 	HandleKey(termbox.Key)
-	HandleChar(rune)
+	HandleRune(rune)
 }
 
 // The DefaultView contains fields common to most Views.
@@ -31,7 +31,7 @@ type DefaultView struct {
 func (dv *DefaultView) SetDims(r Rectangle)     { dv.Rectangle = r }
 func (dv *DefaultView) Focus()                  { dv.hasFocus = true }
 func (dv *DefaultView) HandleKey(_ termbox.Key) {}
-func (dv *DefaultView) HandleChar(_ rune)       {}
+func (dv *DefaultView) HandleRune(_ rune)       {}
 
 func (dv *DefaultView) GiveFocus(v View) {
 	if !dv.hasFocus {
@@ -114,9 +114,9 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 	}
 }
 
-func (mw *MenuWindow) HandleChar(r rune) {
+func (mw *MenuWindow) HandleRune(r rune) {
 	if !mw.hasFocus {
-		mw.Windows[mw.sel].HandleChar(r)
+		mw.Windows[mw.sel].HandleRune(r)
 		return
 	}
 }

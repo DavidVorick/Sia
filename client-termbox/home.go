@@ -60,7 +60,7 @@ func termboxRun() {
 		case termbox.EventKey:
 			switch {
 			case event.Ch != 0:
-				mw.HandleChar(event.Ch)
+				mw.HandleRune(event.Ch)
 			case event.Key == termbox.KeyEsc:
 				return
 			default:
