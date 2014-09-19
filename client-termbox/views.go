@@ -41,10 +41,10 @@ func (dv *DefaultView) GiveFocus(v View) {
 	v.Focus()
 }
 
-// A MenuWindow is a navigable menu and viewing window, vertically separated.
-// Because the window is a View and MenuWindow implements the View interface,
-// MenuWindows can be nested.
-type MenuWindow struct {
+// A MenuView is a navigable menu and viewing window, vertically separated.
+// Because the window is a View and MenuView implements the View interface,
+// MenuViews can be nested.
+type MenuView struct {
 	DefaultView
 	Title     string
 	MenuWidth int
@@ -53,7 +53,7 @@ type MenuWindow struct {
 	sel       int
 }
 
-func (mw *MenuWindow) SetDims(r Rectangle) {
+func (mw *MenuView) SetDims(r Rectangle) {
 	mw.Rectangle = r
 	r.MinX += mw.MenuWidth + DividerWidth
 	for i := range mw.Windows {
@@ -61,9 +61,9 @@ func (mw *MenuWindow) SetDims(r Rectangle) {
 	}
 }
 
-// Draw implements the View.Draw method, drawing the MenuWindow inside the
+// Draw implements the View.Draw method, drawing the MenuView inside the
 // given rectangle.
-func (mw *MenuWindow) Draw() {
+func (mw *MenuView) Draw() {
 	// draw menu
 	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for i, s := range mw.Items {
@@ -88,7 +88,7 @@ func (mw *MenuWindow) Draw() {
 
 // HandleKey implements the View.HandleKey method. If the current focus is on
 // the window (instead of the menu), the input is forwarded to the window View.
-func (mw *MenuWindow) HandleKey(key termbox.Key) {
+func (mw *MenuView) HandleKey(key termbox.Key) {
 	if !mw.hasFocus {
 		mw.Windows[mw.sel].HandleKey(key)
 		return
@@ -114,7 +114,7 @@ func (mw *MenuWindow) HandleKey(key termbox.Key) {
 	}
 }
 
-func (mw *MenuWindow) HandleRune(r rune) {
+func (mw *MenuView) HandleRune(r rune) {
 	if !mw.hasFocus {
 		mw.Windows[mw.sel].HandleRune(r)
 		return

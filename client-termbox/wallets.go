@@ -10,7 +10,7 @@ import (
 const WalletMenuWidth = 15
 
 type WalletsMenuView struct {
-	MenuWindow
+	MenuView
 }
 
 func newWalletMenuView(parent View) View {

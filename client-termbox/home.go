@@ -14,8 +14,8 @@ const (
 )
 
 func newHomeView() View {
-	// create MenuWindow
-	mw := &MenuWindow{
+	// create MenuView
+	mw := &MenuView{
 		Title:     "Sia Alpha v3",
 		MenuWidth: HomeMenuWidth,
 		Items: []string{
