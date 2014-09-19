@@ -13,6 +13,11 @@ type WalletMenuView struct {
 	MenuView
 }
 
+func (wmv *WalletMenuView) Focus() {
+	wmv.hasFocus = true
+	wmv.loadWallets()
+}
+
 func newWalletMenuView(parent View) View {
 	wmv := new(WalletMenuView)
 	wmv.Parent = parent
@@ -23,17 +28,12 @@ func newWalletMenuView(parent View) View {
 	return wmv
 }
 
-func (wmv *WalletMenuView) Focus() {
-	wmv.hasFocus = true
-	wmv.loadWallets()
-}
-
 func (wmv *WalletMenuView) loadWallets() {
-	wids, err := getWallets()
+	wids, err := server.GetWallets()
 	if err != nil {
 		//drawError("Could not load wallets:", err)
 		wmv.Items = []string{"<empty>"}
-		wmv.Windows = []View{&WalletView{DefaultView{Parent: wmv}}}
+		wmv.Windows = []View{&DefaultView{Parent: wmv}}
 		return
 	}
 	for _, wid := range wids {

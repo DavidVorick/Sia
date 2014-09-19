@@ -28,10 +28,15 @@ type DefaultView struct {
 }
 
 // Bare-bones implementation of the View interface
-func (dv *DefaultView) SetDims(r Rectangle)     { dv.Rectangle = r }
-func (dv *DefaultView) Focus()                  { dv.hasFocus = true }
-func (dv *DefaultView) HandleKey(_ termbox.Key) {}
-func (dv *DefaultView) HandleRune(_ rune)       {}
+func (dv *DefaultView) SetDims(r Rectangle) { dv.Rectangle = r }
+func (dv *DefaultView) Focus()              { dv.hasFocus = true }
+func (dv *DefaultView) Draw()               {}
+func (dv *DefaultView) HandleKey(key termbox.Key) {
+	if key == termbox.KeyArrowLeft && dv.Parent != nil {
+		dv.GiveFocus(dv.Parent)
+	}
+}
+func (dv *DefaultView) HandleRune(rune) {}
 
 func (dv *DefaultView) GiveFocus(v View) {
 	if !dv.hasFocus {

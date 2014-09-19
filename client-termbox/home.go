@@ -28,7 +28,7 @@ func newHomeView() View {
 	// add subviews
 	mw.Windows = []View{
 		newWalletMenuView(mw),
-		&ParticipantsView{DefaultView{Parent: mw}},
+		newParticipantMenuView(mw),
 		newSettingsView(mw),
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/NebulousLabs/Sia/consensus"
 	"github.com/NebulousLabs/Sia/network"
 	"github.com/NebulousLabs/Sia/state"
 )
