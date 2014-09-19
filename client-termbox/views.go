@@ -70,7 +70,12 @@ func (mw *MenuWindow) Draw() {
 		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
 	}
 	// highlight selected item
-	drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], HomeActiveColor, termbox.ColorDefault)
+	if mw.hasFocus {
+		drawLine(mw.MinX, mw.MinY+2*mw.sel+3, mw.MenuWidth, HomeActiveColor)
+		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeActiveColor)
+	} else {
+		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, termbox.ColorDefault)
+	}
 
 	// draw divider
 	for y := mw.MinY; y < mw.MaxY; y++ {

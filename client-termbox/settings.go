@@ -50,7 +50,7 @@ func (sv *SettingsView) SetDims(r Rectangle) {
 
 func (sv *SettingsView) Draw() {
 	for i, s := range sv.settings {
-		if i == sv.sel {
+		if i == sv.sel && sv.hasFocus {
 			s.SetColor(SettingFocusColor)
 		} else {
 			s.SetColor(SettingColor)
