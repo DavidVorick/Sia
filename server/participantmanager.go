@@ -58,8 +58,7 @@ func (s *Server) createParticipantStructures(npi NewParticipantInfo) (dirname st
 	} else {
 		dirname = path.Join(config.Filesystem.ParticipantDir, npi.Name) + "/"
 	}
-	err = os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
-	if err != nil {
+	if err = os.MkdirAll(dirname, os.ModeDir|os.ModePerm); err != nil {
 		return
 	}
 
@@ -97,8 +96,7 @@ func (s *Server) NewBootstrapParticipant(npi NewParticipantInfo, _ *struct{}) (e
 	// Update the list of siblings to contain the bootstrap address, by
 	// getting a list of siblings out of the newParticipant metadata.
 	var metadata state.Metadata
-	err = newParticipant.Metadata(struct{}{}, &metadata)
-	if err != nil {
+	if err = newParticipant.Metadata(struct{}{}, &metadata); err != nil {
 		return
 	}
 	s.metadata.Siblings = metadata.Siblings
@@ -123,8 +121,7 @@ func (s *Server) NewJoiningParticipant(npi NewParticipantInfo, _ *struct{}) (err
 
 	// Refresh the metadata and then grab all the addresses for the joining
 	// participant to use.
-	err = s.refreshMetadata()
-	if err != nil {
+	if err = s.refreshMetadata(); err != nil {
 		return
 	}
 	var siblingAddresses []network.Address
@@ -141,12 +138,19 @@ func (s *Server) NewJoiningParticipant(npi NewParticipantInfo, _ *struct{}) (err
 	// Update the list of siblings to contain the bootstrap address, by
 	// getting a list of siblings out of the joiningParticipant metadata.
 	var metadata state.Metadata
-	err = joiningParticipant.Metadata(struct{}{}, &metadata)
-	if err != nil {
+	if err = joiningParticipant.Metadata(struct{}{}, &metadata); err != nil {
 		return
 	}
 	s.metadata.Siblings = metadata.Siblings
 
+	return
+}
+
+// ParticipantNames returns a list of participant names known to the server.
+func (s *Server) ParticipantNames(_ struct{}, parts *[]string) (err error) {
+	for name := range s.participantManager.participants {
+		*parts = append(*parts, name)
+	}
 	return
 }
 
