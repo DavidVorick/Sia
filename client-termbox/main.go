@@ -19,12 +19,13 @@ type Config struct {
 		Port uint16
 		ID   byte
 	}
-	// not present in config file
-	Router *network.RPCServer
 }
 
 // global config variable
 var config Config
+
+// global server variable
+var server Server
 
 func parseConfig() {
 	// Attempt to load configuration file into config. These values will be
@@ -44,11 +45,12 @@ func parseConfig() {
 
 func commandStart(cmd *cobra.Command, args []string) {
 	var err error
-	config.Router, err = network.NewRPCServer(config.Client.Port)
+	server.Router, err = network.NewRPCServer(config.Client.Port)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	server.UpdateAddress()
 	// TODO: check that server is reachable
 	termboxRun()
 }
