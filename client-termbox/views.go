@@ -84,7 +84,7 @@ func (mw *MenuView) Draw() {
 
 	// draw divider
 	for y := mw.MinY; y < mw.MaxY; y++ {
-		termbox.SetCell(mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
+		termbox.SetCell(mw.MinX+mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
 	}
 
 	// draw window
