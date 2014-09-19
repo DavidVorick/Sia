@@ -28,15 +28,11 @@ type DefaultView struct {
 }
 
 // Bare-bones implementation of the View interface
-func (dv *DefaultView) SetDims(r Rectangle) { dv.Rectangle = r }
-func (dv *DefaultView) Focus()              { dv.hasFocus = true }
-func (dv *DefaultView) Draw()               {}
-func (dv *DefaultView) HandleKey(key termbox.Key) {
-	if key == termbox.KeyArrowLeft && dv.Parent != nil {
-		dv.GiveFocus(dv.Parent)
-	}
-}
-func (dv *DefaultView) HandleRune(rune) {}
+func (dv *DefaultView) SetDims(r Rectangle)   { dv.Rectangle = r }
+func (dv *DefaultView) Focus()                { dv.hasFocus = true }
+func (dv *DefaultView) Draw()                 {}
+func (dv *DefaultView) HandleKey(termbox.Key) {}
+func (dv *DefaultView) HandleRune(rune)       {}
 
 func (dv *DefaultView) GiveFocus(v View) {
 	if !dv.hasFocus {
@@ -66,11 +62,29 @@ func (mw *MenuView) SetDims(r Rectangle) {
 	}
 }
 
+func (mw *MenuView) Focus() {
+	mw.hasFocus = true
+	// return focus to parent if we have nothing to highlight
+	if len(mw.Items) == 0 {
+		mw.GiveFocus(mw.Parent)
+	}
+}
+
 // Draw implements the View.Draw method, drawing the MenuView inside the
 // given rectangle.
 func (mw *MenuView) Draw() {
-	// draw menu
+	// draw title and divider
 	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
+	for y := mw.MinY; y < mw.MaxY; y++ {
+		termbox.SetCell(mw.MinX+mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
+	}
+
+	if len(mw.Items) == 0 {
+		drawString(mw.MinX+1, mw.MinY+3, "<empty>", termbox.ColorWhite, termbox.ColorDefault)
+		return
+	}
+
+	// draw menu items
 	for i, s := range mw.Items {
 		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
 	}
@@ -82,12 +96,7 @@ func (mw *MenuView) Draw() {
 		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, termbox.ColorDefault)
 	}
 
-	// draw divider
-	for y := mw.MinY; y < mw.MaxY; y++ {
-		termbox.SetCell(mw.MinX+mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
-	}
-
-	// draw window
+	// draw current window
 	mw.Windows[mw.sel].Draw()
 }
 
@@ -113,7 +122,9 @@ func (mw *MenuView) HandleKey(key termbox.Key) {
 			mw.GiveFocus(mw.Parent)
 		}
 	case termbox.KeyArrowRight:
-		mw.GiveFocus(mw.Windows[mw.sel])
+		if len(mw.Windows) > mw.sel {
+			mw.GiveFocus(mw.Windows[mw.sel])
+		}
 	default:
 		//drawError("Invalid key")
 	}

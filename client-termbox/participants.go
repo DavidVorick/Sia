@@ -13,8 +13,8 @@ type ParticipantMenuView struct {
 }
 
 func (pmv *ParticipantMenuView) Focus() {
-	pmv.hasFocus = true
 	pmv.loadParticipants()
+	pmv.MenuView.Focus()
 }
 
 func newParticipantMenuView(parent View) View {
@@ -31,8 +31,6 @@ func (pmv *ParticipantMenuView) loadParticipants() {
 	names, err := server.GetParticipantNames()
 	if err != nil {
 		//drawError("Could not load participants:", err)
-		pmv.Items = []string{"<empty>"}
-		pmv.Windows = []View{&DefaultView{Parent: pmv}}
 		return
 	}
 	for _, n := range names {
