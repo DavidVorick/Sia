@@ -90,18 +90,19 @@ func bucketSim() {
 	fmt.Println("Standard Deviation:", sd)
 
 
+	sigma := float64(4)
 	// Calculate the bad-luck data represented on 1 trial.
-	rm0 := float64(n) / (2 * ((3 * mean)+mean))
+	rm0 := float64(n) / (2 * ((sigma * mean)+mean))
 	bld0 := rm0 / float64(m)
-	fmt.Println("4 Sigma Bad Luck, 1 Trial:", bld0)
+	fmt.Println(sigma, "Sigma Bad Luck, 1 Trial:", bld0)
 
 	// Calculate the bad-luck data represented on 10 trials.
-	rm1 := float64(n) / (2 * ((3 * mean / math.Sqrt(10)+mean)))
+	rm1 := float64(n) / (2 * ((sigma * mean / math.Sqrt(10)+mean)))
 	bld1 := rm1 / float64(m)
-	fmt.Println("4 Sigma Bad Luck, 10 Trial:", bld1)
+	fmt.Println(sigma, "Sigma Bad Luck, 10 Trial:", bld1)
 
 	// Calculate the bad-luck data represented on 100 trials.
-	rm2 := float64(n) / (2 * ((3 * mean / math.Sqrt(100)+mean)))
+	rm2 := float64(n) / (2 * ((sigma * mean / math.Sqrt(100)+mean)))
 	bld2 := rm2 / float64(m)
-	fmt.Println("4 Sigma Bad Luck, 10 Trial:", bld2)
+	fmt.Println(sigma, "Sigma Bad Luck, 10 Trial:", bld2)
 }
