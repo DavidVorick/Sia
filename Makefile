@@ -1,5 +1,5 @@
 cgo_ldflags = CGO_LDFLAGS="$(CURDIR)/erasure/longhair/bin/liblonghair.a -lstdc++"
-packages = consensus delta erasure network server siacrypto siaencoding state
+packages = consensus delta erasure network server siacrypto siaencoding sims state
 
 all: submodule-update install
 
@@ -16,6 +16,9 @@ release: fmt
 	$(cgo_ldflags) go install -ldflags '-extldflags "-static"' ./...
 	cp $(GOPATH)/bin/client-cli sia-cli
 	tar -cJvf release.xz sia-cli Release.md && rm -f sia-cli
+
+run-sims:
+	$(cgo ldflags) go test -v -race ./sims
 
 test:
 	$(cgo_ldflags) go test -short ./...
