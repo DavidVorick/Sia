@@ -160,14 +160,20 @@ Some number of iterations is chosen for the sequential challenges, and the host 
 This is a linear number of responses in the number of sequential challenges unfortunately.
 A better algorithm may exist where the number of responses presented does not need to match the number of sequential challenges.
 
-We now apply some statistical analysis to determine how certain we can be about a hosts honesty for a given number of responses.
-For this analysis, we assume that the host is storing a minimum of 2\^33 indices, and is computing over a hash space of 2\^256 possible values.
-2\^33 indicies can be stored on average in 4 bytes (assuming maximum compression), which is why we have chosen this volume of indicies.
-Storing 2\^33 indicies in a trivially lightweight lookup table at 4 bytes per index will incur a storage cost of 32 GiB.
-We therefore are assuming that the minimum storage under this scheme is 32 GiB.
+With the current algorithm, you take the average distance of the host responses from the target value.
+The expected distance if they are storing all the indices is (2 * indices) / (search space).
+Simulations would suggest (though I don't have the exact math) that the standard deviation on a request is equal to the expected distance.
+If we assume that 3 standard deviations is enough, an 'unlucky' host after one attempt could appear to only be storing 25\% of the data set.
+After 10 attemtps, the 'maximally unlucky' host would appear to be storing 51\% of the data set.
+After 100 attempts, the 'maximally unlucky' host would appear to be storing 77\% of the data set.
+If we assume 4 standard deviations are required, an unlucky host after 1, 10, and 100 attempts would appear to store 20\%, 44\%, and 71\% of the data set, respectively.
+(My math should probably be reviewed, simulation can be found in sims/proofofcapacity.go, an run with 'make run-sims')
 
-I don't know what equations to use to figure this out.
-I might end up using a simulation.
+The best approach for determining honesty is probably to use a penalty system, where hosts are penalized if they have 'bad luck' and rewarded if they have 'good luck'.
+The penalties should be adjusted such that a host storing 100\% of the data set in the long run will incur no penalties, but a host storing only 80\% of the data set in the long run will incur prohibitive penalities.
+Care should be taken that an 'unlucky' honest host doesn't incur prohibitive penalties.
+
+Attacks where data is being live computed still need to be considered.
 
 \section{Proof of File Transfer}
 There are many cases in which we wish to transfer files from one host to another.
@@ -343,12 +349,6 @@ We observe four shortcomings with this approach:
 	\item Hosts can be penalized, and there must be a reliable way to enforce the penalties.
 	\item The number of hashes needed to determine the state of the network is the number of hosts times the number of files. This will not scale.
 \end{itemize}
-
-\section{Topology Consensus}
-A byzantine network needs some method for achieving consensus around the network topology.
-Multiple algorithms exist for maintaining byzantine fault tolerant consensus, and are employed by existing cryptocurrencies.
-By looking at how many files a host is storing, we can assign a volume of voting power to a host.
-Hosts can then participate in consensus to have a combined perception of the network topology.
 
 \section{Balanced Tree Distribution}
 There are two valuable properties to the rendezvouz hashing that make it work in a Byzantine environment:
