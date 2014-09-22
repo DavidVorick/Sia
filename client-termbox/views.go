@@ -93,7 +93,8 @@ func (mw *MenuView) Draw() {
 		drawLine(mw.MinX, mw.MinY+2*mw.sel+3, mw.MenuWidth, HomeActiveColor)
 		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeActiveColor)
 	} else {
-		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, termbox.ColorDefault)
+		drawLine(mw.MinX, mw.MinY+2*mw.sel+3, mw.MenuWidth, HomeInactiveColor)
+		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeInactiveColor)
 	}
 
 	// draw current window
