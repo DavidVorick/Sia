@@ -14,7 +14,7 @@ type WalletMenuView struct {
 }
 
 func (wmv *WalletMenuView) Focus() {
-	wmv.loadWallets()
+	//wmv.loadWallets()
 	wmv.MenuView.Focus()
 }
 

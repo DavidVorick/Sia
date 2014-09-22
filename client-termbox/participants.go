@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	ParticipantMenuWidth = 15
+	ParticipantMenuWidth = 18
 )
 
 type ParticipantMenuView struct {
@@ -13,7 +13,7 @@ type ParticipantMenuView struct {
 }
 
 func (pmv *ParticipantMenuView) Focus() {
-	pmv.loadParticipants()
+	//pmv.loadParticipants()
 	pmv.MenuView.Focus()
 }
 
@@ -22,6 +22,8 @@ func newParticipantMenuView(parent View) View {
 	pmv.Parent = parent
 	pmv.Title = "Participants"
 	pmv.MenuWidth = ParticipantMenuWidth
+	pmv.Items = []string{"New Participant"}
+	pmv.Windows = []View{newParticipantCreator(pmv)}
 	// load participant names and create views
 	pmv.loadParticipants()
 	return pmv
@@ -39,7 +41,6 @@ func (pmv *ParticipantMenuView) loadParticipants() {
 }
 
 func (pmv *ParticipantMenuView) addParticipant(name string) {
-	// create participant view
 	pv := new(ParticipantView)
 	pv.Parent = pmv
 	pv.name = name
@@ -54,7 +55,7 @@ type ParticipantView struct {
 }
 
 func (pv *ParticipantView) Draw() {
-
+	// display properities of participant
 }
 
 func (pv *ParticipantView) HandleKey(key termbox.Key) {
@@ -62,4 +63,22 @@ func (pv *ParticipantView) HandleKey(key termbox.Key) {
 	case termbox.KeyArrowLeft:
 		pv.GiveFocus(pv.Parent)
 	}
+}
+
+type ParticipantCreator struct {
+	InputView
+}
+
+func newParticipantCreator(parent View) View {
+	pc := new(ParticipantCreator)
+	pc.settings = []*Setting{
+		{name: "Name:      ", width: 20, offset: 1},
+		{name: "Sibling ID:", width: 20, offset: 2},
+		{name: "Custom Dir:", width: 20, offset: 3},
+	}
+	pc.Parent = parent
+	for _, s := range pc.settings {
+		s.Parent = pc
+	}
+	return pc
 }
