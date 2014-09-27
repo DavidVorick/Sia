@@ -7,13 +7,18 @@
 
 \author{
 {\rm David Vorick}\\
-Nebulous Labs
+Nebulous Inc.\\
+david@nebulouslabs.com
 }
 
 \maketitle
 
 \subsection*{Abstract}
 This paper discusses the desired traits for constructing a federated, decentralized, byzantine fault tolerant file storage system, and then builds up the tools required to implement such a system. Finally, a protocol overview is provided of a system that could possess all of the desired traits.
+
+Note: A strong goal of this system is to make it easily reviewable/auditable.
+It is a complex system with many pieces, and it is important that the paper is layed out in a way that is clean and easy to understand.
+If you have suggestions on how to better organize the paper, please share.
 
 \section{Introduction}
 The goal of Sia is to construct the cheapest, fastest, most secure cloud storage platform that is within plausable technological reach.
@@ -42,6 +47,9 @@ A decentralied strategy is used for creating this storage platform, as we do not
 We wish to design a system such that any storage rig running any software can participate in the network without being able to manipulate, trick, or harm the network.
 The same goes for uploaders, we wish anyone to be able to upload files using any software and any strategy while knowing that they cannot manipulate, trick, or harm the network.
 Sia is therefore a decentralized network operating under byzantine conditions.
+
+While the original goal was complete decentralization, if using a smidgen of centralization would allow for a more efficient and less wasteful system without severely compromising the security of the network, we are open to including it in the protol.
+Currently, there are no centralized components within Sia.
 
 \section{Building Blocks - Overview}
 We wish to use the following building blocks to create a federated storage system:
@@ -74,6 +82,13 @@ Each time that a random number is necessary, the hash of the next winning block 
 This means that random numbers can be probabilistically manipulated by anyone with sufficient hashing power or luck to create multiple blocks before announcing them to the network.
 Executing on this manipulation will result in a lost block reward however, which means that an economic cost of manipulation can be calculated.
 This cost of manipulation is explored in greater detail when we show where random numbers are used within the Sia topology.
+
+\subsection{Potential Improvements}
+For the random number generation, we would like to add a sequential set of computations (perhaps a sequential proof of work) that starts with the block as a seed, and then arrives at a conclusion which can be verified quickly.
+The advantage to doing this is increasing the cost of random number manipulation.
+An honest miner can find a block, announce it, and then the random number resulting from the block can be determined afterwards by doing the sequential POW.
+A manipulator however will need to produce multiple blocks and perfrom the sequential POW on each before deciding which block is favorable to publish.
+For every moment that the manipulator spends determining the random number result, an honest miner has an opportunity to publish a competing block, thus foiling the manipulator.
 
 \section{Proof of Storage}
 Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
@@ -167,6 +182,79 @@ The incentive structure of this approach needs to be tuned.
 An alternate solution to the file transfer problem involves penalizing both the uploader and the downloader an equal amount if there is a dispute, that is greater than if either one confesses to be the non-cooperative party.
 This does enable a malicious entity to forcefully apply penalties to others, however it will be expensive for the entity to do so, and a malicious entity will only ever have this opportunity with random other parties, which is an additional, if incomplete, form of protection against targeted attacks.
 (This can be discussed at greater length)
+
+\section{Quorums}
+Hosts are randomly assembled into small quorums between 85 and 255 hosts in size.
+Within these quorums, they are able maintain consensus by using message passing.
+Each host within the quorum must provide 1TB of storage.
+Some of this storage will be empty, and some of this storage will be storing arbitrary data.
+The host must provide proof of capacity on the empty storage, and proof of retrievability on the arbitrary data.
+
+The quorum as a whole is responsible for tracking a portion of the network topology.
+The quorum is responsible for the files stored within the quorum, as well as keeping all of the hosts within the quorum honest.
+Additionally, a portion of the wallets on the network will be stored on each quorum (such that each wallet only appears in a single quorum).
+
+Because quorums are responsible for managing data that only they are required to store, steps must be taken to guarantee the honesty of quorums.
+
+\subsection{Tree Topology of Quorums}
+The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
+The network starts off as a single quorum, which is just a leaf quorum.
+When a quorum grows to 255 hosts in size, it is split into a parent and 2 child quorums, with each host being randomly assigned to one of the children.
+This does mean that the child quorums may not contain the same number of hosts.
+Each parent is formed from exactly 64 hosts from each child quorum, and those hosts are chosen at random.
+
+\subsection{Random Assembly of Quorums}
+It is important that a dishonest entity consisting of less than 50\% of the hosts on the network cannot comprise more than 75\% of the hosts on a single quorum.
+This security is ensured by randomly assigning quorums to hosts, and by setting rules that prevent manipulation.
+
+Quorums are assembled according to the following rules:
+\begin{enumerate}
+	\item When a host joins the network, they are assigned to a random existing quorum.
+	\item When a host leaves a quorum, it is replaced by a random host from a random quorum.
+	\item When a host leaves a quorum, two additional hosts from the quorum are swapped with two random hosts from the network.
+	\item When a host leaves a quorum, four additional hosts from four random quorums are swapped with four random hosts from the network.
+\end{enumerate}
+
+These rules protect the network against the following types of manipulation:
+\begin{itemize}
+	\item Attempts to manipulate the number of hosts in a particular quorum.
+	\item A dishonest host leaving and rejoining the network to have more chances to be placed in a target quorum.
+	\item A dishonest entity DOSing an honest host and pushing it out of a quorum, with the intent of compromising that quorum.
+\end{itemize}
+
+
+
+
+We now present a method for randomly assembling quorums, and then provide bounds on the probability with which a quorum can be compromised by malicious hosts.
+We start by assuming that a randomly distributed network already exists, and explain how alterations to the network are made while maintaining this distribution.
+We observe that the network can only be changed in the following ways:
+\begin{itemize}
+	\item A new host joins the network.
+	\item An existing host leaves the network.
+\end{itemize}
+
+The goal of randomization is to make sure that no host controlling less than 50\% of the network is able to probabilistically compromise more than 75\% of the machines on a single quorum.
+
+When a host is added to the network, that host is placed in a random quorum, using the POW blockchain as a source of entropy.
+That host is then expected to remain in the chosen quorum for the duration of the hosts life.
+A dishonest entity can manipulate quorum distributions in the following ways:
+\begin{itemize}
+	\item A dishonest party can reduce the host count of certain quorums by leaving those quorums.
+	\item If a dishonest host lands in an unprefered spot, the host can leave and re-join, being given a new random number and thus having another chance to land in a target quorum.
+	\item The dishonest party can attempt DOS attacks on honest hosts in a target quroum to push them out of the quorum, either to reduce the host count of that quorum, or to increase the percentage of dishonest hosts in that quorum.
+\end{itemize}
+
+All methods of manipulation involve a host (either dishonest or honest) leaving a quorum, so all protections against manipulation can be applied upon the exodus of a host.
+The act of leaving signals two potential attacks:
+\begin{itemize}
+	\item A quorum is being manipulated to have the host count reduced.
+	\item A dishonest host is trying to get into a different target quorum.
+	\item An honest host is being pushed out of a target quorum.
+\end{itemize}
+
+First, to prevent an attacker from being able to create low-host-count quorums, the host that left must be replaced.
+Second, we must ensure that enough turbulence is being introduced into the network that the target quorum is safe.
+Third, we must ensure that enough turbulence is being introduced into this quorum that it is safe.
 
 \section{Federated Storage}
 We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
@@ -351,6 +439,12 @@ A few notes on this setup:
 	\item Where a host is in the tree doesn't matter. The tree can be arranged arbitrarily, and the host will just bring its files along.
 	\item The same penalties for leaving early or losing files apply as in the rendezvouz hashing.
 \end{itemize}
+
+\section{Random Number Generator Manipulation}
+The first thing that can be manipulated is the placement of new hosts.
+The second thing that can be manipulated is the turblence caused by hosts dropping.
+Randomness of picking children to participate in parent consensus
+Randomness of picking which hosts go to which child during a split.
 
 \section{Conclusion}
 A brief description of the system, close to a protocol but less well defined, followed by a summary of the weaknesses of the protocol.
