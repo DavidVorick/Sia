@@ -185,11 +185,11 @@ This does enable a malicious entity to forcefully apply penalties to others, how
 
 \section{An Overview of the Architecture}
 The first diagrams will go here, explaining the general structure.
-Discussions on security and complexity are left for later.
+The finer details of security are left to later sections.
 
 The network topology is composed of a tree of quorums.
 Parent nodes manage the aggregate resources of their children.
-Leaf nodes manage actual wallets and data.
+Leaf nodes manage individual wallets and data sectors.
 
 Each quorum is composed of 85 to 255 hosts which act together in consensus over some volume of the network data.
 The use of parent quorums allows child quorums to get information about the rest of the network.
@@ -201,8 +201,32 @@ The trustworthiness of quorums depends on making it difficult to become a host, 
 Being a host requires storing 1TB of data, some of which is arbitrary and has been uploaded to the network, and some of which is unused by the network.
 The host will need to perform proof of retrievability on the arbitrary data, and proof of capacity on the unused storage.
 This prevents attackers from controlling a large volume of consensus seats (spots in quorums) without also having significant economic resources.
-
 Special rules for joining and leaving the network protect an attacker with a minority of hosts to be able to break the trustworthiness of a quorum.
+
+Special rules for adding arbitrary data to the network need to be implemented to ensure that an attacker cannot artificially inflate the volume of storage they appear to provide to the network, as storage volume is used in consensus.
+
+The network state is stored in a merkle tree, with each quorum managing a subset of the data and contributing a hash.
+The root quorum (in the tree of quorums) contains the root hash of the merkle tree of the network state.
+This hash is stored in a POW blockchain.
+Each time that the network hash is updated, an entry is made into the POW blockchain indicating that the network has updated that points to the previous hash.
+Multiple entries can be made stemming from the same previous hash, these are forks.
+Strict rules are applied for interpreting forks that allow outsiders to use the POW blockchain to figure out which network fork to consider the true state.
+The POW blockchain is necessary because the rules for picking a fork require consensus around \textit{when} each fork appeared.
+A fork is invalid if it appears later in the blockchain, indicating that it was not available to previous hosts when determining the new state of the network.
+
+In brief: \\
+Sia is composed of a tree of quorums, where each quorum is assumed to be trustworthy.
+Quorums are composed of randomly assembled hosts.
+Rules make sure that being a host is difficult, and that an attacker with minority economic power cannot be a majority of hosts.
+Rules protect the random assembly of hosts into quorums, to make sure that an attacker with minority hosts cannot defeat the trustworthiness of any single quorum on the network. \\
+Quorums interact in a tree to provide scalability.
+Interactions are regulated such that if every quorum is trustworthy, the network can maintain consensus.
+Trustworthiness is loosely defined, requiring only 15\% of hosts to be honest in each quorum. \\
+Each host only sees a portion of the network, which enables scalability.
+Each host contains the root hash of a merkle tree of the entire network state, which can be used to verify claims about transactions or balances. \\
+The root hash of the network state is stored in a POW blockchain.
+Forks can appear in the blockchain, and the blockchain is used to achieve consensus around \textit{when} a fork appeared.
+Strict rules on forks enable newcomers to determine which fork is the valid fork.
 
 \section{Quorums}
 Hosts are randomly assembled into small quorums between 85 and 255 hosts in size.
