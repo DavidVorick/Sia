@@ -183,6 +183,27 @@ An alternate solution to the file transfer problem involves penalizing both the 
 This does enable a malicious entity to forcefully apply penalties to others, however it will be expensive for the entity to do so, and a malicious entity will only ever have this opportunity with random other parties, which is an additional, if incomplete, form of protection against targeted attacks.
 (This can be discussed at greater length)
 
+\section{An Overview of the Architecture}
+The first diagrams will go here, explaining the general structure.
+Discussions on security and complexity are left for later.
+
+The network topology is composed of a tree of quorums.
+Parent nodes manage the aggregate resources of their children.
+Leaf nodes manage actual wallets and data.
+
+Each quorum is composed of 85 to 255 hosts which act together in consensus over some volume of the network data.
+The use of parent quorums allows child quorums to get information about the rest of the network.
+Security of the network relies on quorums being trustworthy.
+A quorum is trustworthy if at least 15\% of the nodes in the quorum are trustworthy.
+Rules of the network are constructed such that if all quorums are trustworthy, the network will maintain consensus.
+
+The trustworthiness of quorums depends on making it difficult to become a host, and on making sure that quorums are composed of random sets of hosts.
+Being a host requires storing 1TB of data, some of which is arbitrary and has been uploaded to the network, and some of which is unused by the network.
+The host will need to perform proof of retrievability on the arbitrary data, and proof of capacity on the unused storage.
+This prevents attackers from controlling a large volume of consensus seats (spots in quorums) without also having significant economic resources.
+
+Special rules for joining and leaving the network protect an attacker with a minority of hosts to be able to break the trustworthiness of a quorum.
+
 \section{Quorums}
 Hosts are randomly assembled into small quorums between 85 and 255 hosts in size.
 Within these quorums, they are able maintain consensus by using message passing.
