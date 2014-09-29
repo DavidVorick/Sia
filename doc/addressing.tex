@@ -1,4 +1,5 @@
 \documentclass[twocolumn]{article}
+\usepackage[toc,page]{appendix}
 
 \begin{document}
 \frenchspacing
@@ -51,139 +52,31 @@ Sia is therefore a decentralized network operating under byzantine conditions.
 While the original goal was complete decentralization, if using a smidgen of centralization would allow for a more efficient and less wasteful system without severely compromising the security of the network, we are open to including it in the protol.
 Currently, there are no centralized components within Sia.
 
-\section{Building Blocks - Overview}
-We wish to use the following building blocks to create a federated storage system:
+\section{Building Blocks of Sia}
+\subsection{Required Tools}
 \begin{itemize}
 	\item Consensus: each node needs to be in agreement about the state of the network.
 	\item Random Number Generation: the network must have some expensive source of random numbers, where expensive is clearly defined.
 	\item Proof of Retrivability: hosts must be able to prove that they have access to the data they have been assigned to store.
 	\item Proof of Capacity: new hosts can claim they have large volumes of unused storage, there must be a way to verify that claim.
 	\item Proof of File Transfer: if a file is transfered from one party to another, there must be a way to resolve a dispute (where the uploader says they sent the file, the downloader says they did not receive it).
-	\item Scalable Network Topology: there must be a way to figure out where each file is stored, such that the storage requirements and computational requirments per node are minimal.
 \end{itemize}
 
-The following is a set of tradeoffs that we are comfortable with when building the network:
+\subsection{Tradeoffs}
 \begin{itemize}
 	\item Special Hardware: hosts may require special hardware, for example you may need to include a sha2 ASIC in every storage rig. This is okay, the network as a whole is not meant to use commodity hardware.
 	\item Uptime: Rewards for storage will decrease, and perhaps dramatically if hosts do not have large volumes of uptime. This violates 'progress free', but only for the storage components of the network.
 	\item Maximum Downtime: If a host has a downtime of greater than perhaps 2\%, the host cannot profitably particpate in the network. The same goes if the host goes offline for a single stretch exceeding perhaps 24 hours.
 \end{itemize}
 
-\section{Consensus and Random Number Generation}
-We handle both consensus and random number generation by using a POW blockchain.
+\subsection{Assumptions}
+\begin{itemize}
+	\item No group can control more than 50\% of the economic resources of the network, even for a burst period.
+	\item Hosts will have some form of DDOS protection.
+	\item It is difficult to target and hack into an honest hosts machine, thereby making it dishonest.
+\end{itemize}
 
-Consensus is handled by storing the merkle root of the network topology in the blockchain.
-If there is a fork, strict rules are in place to help outsiders figure out which fork to choose.
-All nodes in the network topology are required to have a full copy of the blockchain, which means you can make assumptions about their awareness of a network fork if one appears within a certain number of blocks.
-The strict rules are explained in further detail after the structure of the network topology is explained.
-
-The POW blockchain is also used as a source of random numbers.
-Each time that a random number is necessary, the hash of the next winning block can be used as the source of randomness.
-This means that random numbers can be probabilistically manipulated by anyone with sufficient hashing power or luck to create multiple blocks before announcing them to the network.
-Executing on this manipulation will result in a lost block reward however, which means that an economic cost of manipulation can be calculated.
-This cost of manipulation is explored in greater detail when we show where random numbers are used within the Sia topology.
-
-\subsection{Potential Improvements}
-For the random number generation, we would like to add a sequential set of computations (perhaps a sequential proof of work) that starts with the block as a seed, and then arrives at a conclusion which can be verified quickly.
-The advantage to doing this is increasing the cost of random number manipulation.
-An honest miner can find a block, announce it, and then the random number resulting from the block can be determined afterwards by doing the sequential POW.
-A manipulator however will need to produce multiple blocks and perfrom the sequential POW on each before deciding which block is favorable to publish.
-For every moment that the manipulator spends determining the random number result, an honest miner has an opportunity to publish a competing block, thus foiling the manipulator.
-
-\section{Proof of Storage}
-Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
-We will do this by taking a merkle hash of the file, hashing every 64 bytes into a 32 bytes hash, forming a tree.
-The network topology will store a list of hosts and the merkle roots of every file that each host is responsible for storing.
-A challenge can then be periodically issued to the hosts, asking them to prove that they have a random 64 byte segment of the file.
-The proof is constructed by providing the 64 byte piece, and every hash in the tree that is required to build up to the merkle root.
-The size of the proof is 64 bytes + log(filesize / 64 bytes) * 32 bytes.
-On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is 480 bytes (64 bytes, plus 13 tiers of merkle tree hashes, one hash per tier at 32 bytes each).
-
-A proof does not have to be submitted for every file however, a file can be randomly selected from a host's set of files.
-If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
-This does give a host the opportunity to throw out a very small percentage of the data that it's supposed to be storing with a low probability of detection.
-
-There is also a paper called 'Compact Proofs of Retrievability', which may provide a more compact way to do storage proofs.
-Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
-
-\section{Proof of Capacity}
-Proof of Capacity is used to enable a host to prove that they have a large volume of unused storage.
-When a host announces that they have unused storage, a random number is generated for them and that is used as the seed.
-Data is generated using: data[index] = Hash(index|data\_seed), until the declared volume of data has been created.
-The hashes are sorted by numerical value before being committed to disk, for easy lookup later.
-The network remembers data\_seed during the challenge phase.
-
-When a challenge needs to be performed, a new random number is generated.
-A challenge is created using: challenge[0] = Hash(challege\_seed) and presented to the network, viewable by everybody.
-The host responds to this challenge by providing the index that results in the hash Hash(index||data\_seed) which is numerically closest to the challenge.
-
-The network has no way of knowing which index is actually closest to the challenge, however the network can trivially verify that the presented hash is in the data set.
-The network can gauge honesty of the host by performing statistical analysis of the responses of the host to the challenge.
-The host can always present an answer, however given the size of the data set that the host is supposed to be storing, the optimal or closest hash will on average be a certain numerical distance away from the challenge.
-If the host is cheating by storing less or using a smaller search space, the host's average answer will be further away from what is statistically expected, and this can be detected by the network.
-
-Note: This paragraph could probably be moved to an appendix.
-We observe that in storing the data, optimal storing (assuming that a small number of hashes per response is acceptable - 10,000 or even only 100) does not require storing the hash, only the index.
-For example, say we have are storing data on 1,000,000 indices, and the numerical range for our hash value is 1 to 1 billion.
-We'll create 100 buckets each covering 1\% of the possible values for hashes.
-The first bucket covers the numeric range 0 to 10,000,000, the second covers 10,000,000 to 20,000,000, and so on, up to 1 billion.
-In each bucket, we place all of the indices that produce hashes which fall in the range of that bucket.
-Then, when responding to a challenge, we only need to do M hashes, where M is the number of indices in the bucket containing the challenge hash.
-
-If we assume that the cost of creating buckets is minimal, only a few bytes per bucket, then the actual cost of storing according to this scheme is the number of bytes per index.
-If you are only storing across 2\^16 indices, you can get by with 2 bytes per element, and with doing a minimal amount of computation per challenge.
-
-By using sequential challenges, where the next challenge is dictated by the response to the previous challenge, we can force a specialized host to recompute the entire dataspace multiple times.
-The sequential process works as such: challenge[i+1] = Hash(challenge[i] | responseTo\_challenge[i]).
-Some number of iterations is chosen for the sequential challenges, and the host will need to provide that many responses.
-This is a linear number of responses in the number of sequential challenges unfortunately.
-A better algorithm may exist where the number of responses presented does not need to match the number of sequential challenges.
-
-With the current algorithm, you take the average distance of the host responses from the target value.
-This average distance will approach the expected value.
-The distribution of distances per request follows an exponential distrubution, which means the median response will actually appear to be closer than the average response.
-Unfortunately, it appears that in order to get the variance down, a host will have to be queried on the order of thousands of times, which is too inefficient for Sia.
-Instead, a penalty approach must be taken.
-Upon returning a challenge that is not as close as expected, a host is penalized.
-Upon returning a challenge that is closer than expected, a host is rewarded.
-(There is no risk in doing this, because the set is finite and known to the network - the host cannot search a larger search space than what has been assigned)
-The penalties will need to be tuned such that a host storing less than the full set will on average be penalized enough to make such behavior an economically inferior strategy.
-
-It is possible that a host with specialized hashing hardware will be able to live-compute the data and the search space.
-This can be prevented by using the same hashing algorithm for computing the disk data as is used for the POW blockchain.
-If the expected reward from live computation is lower than the expected reward from mining on the POW blockchain, there is no economic incentive for a host to attack the network through live computing.
-Additionally, if a host claims to have lots of capacity, but then is asked to store a bunch of real files instead of precomputed data, this attack will break and the hosts dishonesty will be revealed.
-
-When discussing network topology, we will discuss if live-compute attacks pose any worthwhile threat to the network.
-
-\section{Proof of File Transfer}
-There are many cases in which we wish to transfer files from one host to another.
-Sometimes, there may be a dispute, where the uploader claims to have uploaded the file, and the downloader claims not to have received it.
-Or, there may be claims of connectivity problems.
-
-We have a solution that involves the use of moderators.
-If there is a dispute, moderators are called in at random from the network.
-The uploader uploads the file to the moderators, who then pass the file along to the downloader.
-If the moderators get the file from the uploader, they sign that the transaction was attempted by the uploader, and that the downloader is at fault.
-If half or more of the moderators sign, then the downloader is penalized.
-Otherwise, the uploader is penalized.
-
-Assuming that 51\% of the chosen moderators behave honestly, this provides a resolution to disputes that is secure.
-If one side feels that the moderators were not 51\% honest, it is possible to bring in additional moderators, which makes it less likely that a minority of dishonest hosts can form a majority of moderators.
-The request for more moderators will only be honored if statistical analysis reveals that it's possible that the batch of moderators was bad. (If 80\% of mods agree, and only 5 were chosen, then a bad batch of mods is possible. If 80\% of mods agree, and 15 have been chosen, a bad batch is less likely.)
-Eventually, requests for more moderators will stop being honored, and the decision will be final.
-An optimal number needs to be chosen.
-Using moderators to assist uploads is very expensive.
-
-One problem with the moderator approach is that there's currently nothing incentivizing the moderators to be honest about the completetion of the upload.
-The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
-The incentive structure of this approach needs to be tuned.
-
-An alternate solution to the file transfer problem involves penalizing both the uploader and the downloader an equal amount if there is a dispute, that is greater than if either one confesses to be the non-cooperative party.
-This does enable a malicious entity to forcefully apply penalties to others, however it will be expensive for the entity to do so, and a malicious entity will only ever have this opportunity with random other parties, which is an additional, if incomplete, form of protection against targeted attacks.
-(This can be discussed at greater length)
-
-\section{An Overview of the Architecture}
+\section{Architecture Overview}
 The first diagrams will go here, explaining the general structure.
 The finer details of security are left to later sections.
 
@@ -226,7 +119,7 @@ Each host only sees a portion of the network, which enables scalability.
 Each host contains the root hash of a merkle tree of the entire network state, which can be used to verify claims about transactions or balances. \\
 The root hash of the network state is stored in a POW blockchain.
 Forks can appear in the blockchain, and the blockchain is used to achieve consensus around \textit{when} a fork appeared.
-Strict rules on forks enable newcomers to determine which fork is the valid fork.
+Strict rules on forks enable newcomers to determine which fork is the network accepted fork.
 
 \section{Quorums}
 Hosts are randomly assembled into small quorums between 85 and 255 hosts in size.
@@ -493,6 +386,133 @@ Randomness of picking which hosts go to which child during a split.
 
 \section{Conclusion}
 A brief description of the system, close to a protocol but less well defined, followed by a summary of the weaknesses of the protocol.
+
+\begin{appendices}
+
+\section{Consensus and Random Number Generation}
+We handle both consensus and random number generation by using a POW blockchain.
+
+Consensus is handled by storing the merkle root of the network topology in the blockchain.
+If there is a fork, strict rules are in place to help outsiders figure out which fork to choose.
+All nodes in the network topology are required to have a full copy of the blockchain, which means you can make assumptions about their awareness of a network fork if one appears within a certain number of blocks.
+The strict rules are explained in further detail after the structure of the network topology is explained.
+
+The POW blockchain is also used as a source of random numbers.
+Each time that a random number is necessary, the hash of the next winning block can be used as the source of randomness.
+This means that random numbers can be probabilistically manipulated by anyone with sufficient hashing power or luck to create multiple blocks before announcing them to the network.
+Executing on this manipulation will result in a lost block reward however, which means that an economic cost of manipulation can be calculated.
+This cost of manipulation is explored in greater detail when we show where random numbers are used within the Sia topology.
+
+\subsection{Potential Improvements}
+For the random number generation, we would like to add a sequential set of computations (perhaps a sequential proof of work) that starts with the block as a seed, and then arrives at a conclusion which can be verified quickly.
+The advantage to doing this is increasing the cost of random number manipulation.
+An honest miner can find a block, announce it, and then the random number resulting from the block can be determined afterwards by doing the sequential POW.
+A manipulator however will need to produce multiple blocks and perfrom the sequential POW on each before deciding which block is favorable to publish.
+For every moment that the manipulator spends determining the random number result, an honest miner has an opportunity to publish a competing block, thus foiling the manipulator.
+
+\section{Proof of Storage}
+Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
+We will do this by taking a merkle hash of the file, hashing every 64 bytes into a 32 bytes hash, forming a tree.
+The network topology will store a list of hosts and the merkle roots of every file that each host is responsible for storing.
+A challenge can then be periodically issued to the hosts, asking them to prove that they have a random 64 byte segment of the file.
+The proof is constructed by providing the 64 byte piece, and every hash in the tree that is required to build up to the merkle root.
+The size of the proof is 64 bytes + log(filesize / 64 bytes) * 32 bytes.
+On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is 480 bytes (64 bytes, plus 13 tiers of merkle tree hashes, one hash per tier at 32 bytes each).
+
+A proof does not have to be submitted for every file however, a file can be randomly selected from a host's set of files.
+If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
+This does give a host the opportunity to throw out a very small percentage of the data that it's supposed to be storing with a low probability of detection.
+
+There is also a paper called 'Compact Proofs of Retrievability', which may provide a more compact way to do storage proofs.
+Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
+
+\section{Proof of Capacity}
+Proof of Capacity is used to enable a host to prove that they have a large volume of unused storage.
+When a host announces that they have unused storage, a random number is generated for them and that is used as the seed.
+Data is generated using: data[index] = Hash(index|data\_seed), until the declared volume of data has been created.
+The hashes are sorted by numerical value before being committed to disk, for easy lookup later.
+The network remembers data\_seed during the challenge phase.
+
+When a challenge needs to be performed, a new random number is generated.
+A challenge is created using: challenge[0] = Hash(challege\_seed) and presented to the network, viewable by everybody.
+The host responds to this challenge by providing the index that results in the hash Hash(index||data\_seed) which is numerically closest to the challenge.
+
+The network has no way of knowing which index is actually closest to the challenge, however the network can trivially verify that the presented hash is in the data set.
+The network can gauge honesty of the host by performing statistical analysis of the responses of the host to the challenge.
+The host can always present an answer, however given the size of the data set that the host is supposed to be storing, the optimal or closest hash will on average be a certain numerical distance away from the challenge.
+If the host is cheating by storing less or using a smaller search space, the host's average answer will be further away from what is statistically expected, and this can be detected by the network.
+
+Note: This paragraph could probably be moved to an appendix.
+We observe that in storing the data, optimal storing (assuming that a small number of hashes per response is acceptable - 10,000 or even only 100) does not require storing the hash, only the index.
+For example, say we have are storing data on 1,000,000 indices, and the numerical range for our hash value is 1 to 1 billion.
+We'll create 100 buckets each covering 1\% of the possible values for hashes.
+The first bucket covers the numeric range 0 to 10,000,000, the second covers 10,000,000 to 20,000,000, and so on, up to 1 billion.
+In each bucket, we place all of the indices that produce hashes which fall in the range of that bucket.
+Then, when responding to a challenge, we only need to do M hashes, where M is the number of indices in the bucket containing the challenge hash.
+
+If we assume that the cost of creating buckets is minimal, only a few bytes per bucket, then the actual cost of storing according to this scheme is the number of bytes per index.
+If you are only storing across 2\^16 indices, you can get by with 2 bytes per element, and with doing a minimal amount of computation per challenge.
+
+By using sequential challenges, where the next challenge is dictated by the response to the previous challenge, we can force a specialized host to recompute the entire dataspace multiple times.
+The sequential process works as such: challenge[i+1] = Hash(challenge[i] | responseTo\_challenge[i]).
+Some number of iterations is chosen for the sequential challenges, and the host will need to provide that many responses.
+This is a linear number of responses in the number of sequential challenges unfortunately.
+A better algorithm may exist where the number of responses presented does not need to match the number of sequential challenges.
+
+With the current algorithm, you take the average distance of the host responses from the target value.
+This average distance will approach the expected value.
+The distribution of distances per request follows an exponential distrubution, which means the median response will actually appear to be closer than the average response.
+Unfortunately, it appears that in order to get the variance down, a host will have to be queried on the order of thousands of times, which is too inefficient for Sia.
+Instead, a penalty approach must be taken.
+Upon returning a challenge that is not as close as expected, a host is penalized.
+Upon returning a challenge that is closer than expected, a host is rewarded.
+(There is no risk in doing this, because the set is finite and known to the network - the host cannot search a larger search space than what has been assigned)
+The penalties will need to be tuned such that a host storing less than the full set will on average be penalized enough to make such behavior an economically inferior strategy.
+
+It is possible that a host with specialized hashing hardware will be able to live-compute the data and the search space.
+This can be prevented by using the same hashing algorithm for computing the disk data as is used for the POW blockchain.
+If the expected reward from live computation is lower than the expected reward from mining on the POW blockchain, there is no economic incentive for a host to attack the network through live computing.
+Additionally, if a host claims to have lots of capacity, but then is asked to store a bunch of real files instead of precomputed data, this attack will break and the hosts dishonesty will be revealed.
+
+When discussing network topology, we will discuss if live-compute attacks pose any worthwhile threat to the network.
+
+\section{Proof of File Transfer}
+There are many cases in which we wish to transfer files from one host to another.
+Sometimes, there may be a dispute, where the uploader claims to have uploaded the file, and the downloader claims not to have received it.
+Or, there may be claims of connectivity problems.
+
+We have a solution that involves the use of moderators.
+If there is a dispute, moderators are called in at random from the network.
+The uploader uploads the file to the moderators, who then pass the file along to the downloader.
+If the moderators get the file from the uploader, they sign that the transaction was attempted by the uploader, and that the downloader is at fault.
+If half or more of the moderators sign, then the downloader is penalized.
+Otherwise, the uploader is penalized.
+
+Assuming that 51\% of the chosen moderators behave honestly, this provides a resolution to disputes that is secure.
+If one side feels that the moderators were not 51\% honest, it is possible to bring in additional moderators, which makes it less likely that a minority of dishonest hosts can form a majority of moderators.
+The request for more moderators will only be honored if statistical analysis reveals that it's possible that the batch of moderators was bad. (If 80\% of mods agree, and only 5 were chosen, then a bad batch of mods is possible. If 80\% of mods agree, and 15 have been chosen, a bad batch is less likely.)
+Eventually, requests for more moderators will stop being honored, and the decision will be final.
+An optimal number needs to be chosen.
+Using moderators to assist uploads is very expensive.
+
+One problem with the moderator approach is that there's currently nothing incentivizing the moderators to be honest about the completetion of the upload.
+The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
+The incentive structure of this approach needs to be tuned.
+
+An alternate solution to the file transfer problem involves penalizing both the uploader and the downloader an equal amount if there is a dispute, that is greater than if either one confesses to be the non-cooperative party.
+This does enable a malicious entity to forcefully apply penalties to others, however it will be expensive for the entity to do so, and a malicious entity will only ever have this opportunity with random other parties, which is an additional, if incomplete, form of protection against targeted attacks.
+(This can be discussed at greater length)
+
+\end{appendices}
+
+\begin{thebibliography}{9}
+
+\bibitem{bgp}
+	Leslie Lamport, Robert Shostak, Marshall Pease,
+	\emph{The Byzantine Generals Problem},
+	ACM Transactions on Programming Languages and Systems, Vol. 4, No. 3, July 1982.
+
+\end{thebibliography}
 
 \end{document}
 
