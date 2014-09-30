@@ -83,6 +83,8 @@ Currently, there are no centralized components within Sia.
 The first diagrams will go here, explaining the general structure.
 The finer details of security are left to later sections.
 
+% Explain what a host is, what they store, etc. So, they have a root hash of the files that every other host is storing, for example. They have a root hash of the seed for proof-of-capacity. They store the block history of their quorum and of potentially other quorums as well.
+
 The network topology is composed of a tree of quorums.
 Parent nodes manage the aggregate resources of their children.
 Leaf nodes manage individual wallets and data sectors.
@@ -197,7 +199,7 @@ The full algorithm for sending a heartbeat is then as follows:
 		\item If any signatures on the heartbeat are invalid or repeated, the heartbeat is ignored.
 		\item If the number of signatures on the heartbeat is less than the current step number, the heartbeat is ignored.
 		\item If two unique heartbeats have already been seen from the originating host of this heartbeat, the heartbeat is ignored.
-		\item If the heartbeat is larger than \hbsize{} (excluding signatures) then the heartbeat is ignored.
+		\item If the heartbeat itself is invalid, the heartbeat is ignored. Conditions for a valid heartbeat are discussed in the 'Heartbeats' subsection.
 		\item The host adds the heartbeat to its list of known heartbeats.
 		\item The host adds their signature to the heartbeat and sends the heartbeat to all other hosts in the quorum.
 	\end{itemize}
@@ -218,7 +220,31 @@ In the interest of keeping the whitepaper as simple as possible, these are large
 These optimizations can bring about DOS vectors, however careful implementation minimizes the attack potentency and will never make communication worse than in the unoptimized case.
 
 \subsection{Heartbeats}
-This describes what goes into a heartbeat.
+Each heartbeat will contain the following:
+\begin{itemize}
+	\item A signature of the previous block, forcing a host to align with a specific previous history.
+	\item A proof of storage, demonstrating that the host is holding onto required data.
+	\item A proof of capacity, demonstrating that the host has as much empty storage as the host is indicating to the network.
+	\item A clock-synchronization message, which will allow for a byzantine set of hosts to maintain synchronized clocks within drift $d$.
+	\item A random 128 bit number.
+	% Aiza recent block?
+	\item Transactions within the network. This can include sending money, uploading files, and other updates.
+\end{itemize}
+
+A heartbeat is invalid if the previous block signature does not match the history that the honest hosts recognize as the previous block.
+A heartbeat is invalid if it is missing the proof of storage, or if the proof of storage is incorrect.
+A heartbeat is invalid if the proof of capacity is missing or incorrect.
+A heartbeat is invalid if the clock synchronization message is incorrect (this may not be necessary, depending on the synchronization algorithm that gets chosen).
+A heartbeat is invalid if the uncompressed size of the core heartbeat (before all of the signatures that get added during consensus) exceeds \hbsize{}.
+
+\subsection{Integrating Blocks}
+% This section should really be discussed after total topology is discussed.
+A block is composed of every heartbeat that survived consensus.
+At most, each host will have one heartbeat that goes into the block.
+Some hosts may have zero heartbeats that go into the block.
+
+When a block is integrated, hosts will receive rewards for successfully completing the proof of storage and proof of capacity elements of consensus.
+The random numbers in the heartbeats will be appended in a specific order and hashed, to create a unique random seed for the quorum.
 
 \subsection{Tree Topology of Quorums}
 The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
