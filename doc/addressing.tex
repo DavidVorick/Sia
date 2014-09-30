@@ -129,7 +129,7 @@ Each host within the quorum must provide 1TB of storage.
 Some of this storage will be empty, and some of this storage will be storing arbitrary data.
 The host must provide proof of capacity on the empty storage, and proof of retrievability on the arbitrary data.
 
-\subsection{Consensus Within a Quorum}
+\subsection{The Byzantine Generals Problem for Single Quorums}
 Quorums have blocks and a blockchain that are used to maintain a consistent and deterministic state within the quorum.
 Each block, every single host in the quorum has to submit a small update called a ``heartbeat''.
 The heartbeat contains information such as transactions, storage and capacity proofs, and confirmation of the previous block.
@@ -164,7 +164,18 @@ Once a host has seen and forwarded 2 heartbeats from another host, no additional
 These omissions can be made without violating the assumption that all honest hosts will end up with the same set of heartbeats.
 Note: this may interfere with alternate histories, as a dishonest hosts heartbeats are not included at all if there are multiple.
 
+The worst case order notation is $O(n^2)$ heartbeats sent per block.
+Each host will send one heartbeat to every other host.
+They will then send every heartbeat from every host to every other host.
+
+\subsection{Completing a Block}
+This is about the step timings.
+
+\subsection{Optimizations}
+This is about sending batches of signatures with hashes, instead of sending whole heartbeats.
+
 \subsection{Heartbeats}
+This describes what goes into a heartbeat.
 
 \subsection{Tree Topology of Quorums}
 The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
