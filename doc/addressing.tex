@@ -74,6 +74,7 @@ Currently, there are no centralized components within Sia.
 	\item No group can control more than 50\% of the economic resources of the network, even for a burst period.
 	\item Hosts will have some form of DDOS protection.
 	\item It is difficult to target and hack into an honest hosts machine, thereby making it dishonest.
+	\item The graph of connections between honest machines forms a single set. That is, no set of honest hosts is fully isolated from another set of honest hosts.
 \end{itemize}
 
 \section{Architecture Overview}
@@ -128,11 +129,42 @@ Each host within the quorum must provide 1TB of storage.
 Some of this storage will be empty, and some of this storage will be storing arbitrary data.
 The host must provide proof of capacity on the empty storage, and proof of retrievability on the arbitrary data.
 
-The quorum as a whole is responsible for tracking a portion of the network topology.
-The quorum is responsible for the files stored within the quorum, as well as keeping all of the hosts within the quorum honest.
-Additionally, a portion of the wallets on the network will be stored on each quorum (such that each wallet only appears in a single quorum).
+\subsection{Consensus Within a Quorum}
+Quorums have blocks and a blockchain that are used to maintain a consistent and deterministic state within the quorum.
+Each block, every single host in the quorum has to submit a small update called a ``heartbeat''.
+The heartbeat contains information such as transactions, storage and capacity proofs, and confirmation of the previous block.
+Each host must submit a heartbeat every block, and honest heartbeats should always be included.
 
-Because quorums are responsible for managing data that only they are required to store, steps must be taken to guarantee the honesty of quorums.
+When performing consensus within a single quorum, we wish to enforce that every single honest host be in consensus, and that every single honest heartbeat gets included in each block recognized by the honest set of hosts.
+We can achieve these goals by using section 4, "A Solution with Signed Messages', from \cite{bgp}.
+The result of this algorithm is that every single honest host will have the same information, and that information will contain a message from every honest host.
+This solution does require that the set of honest hosts is connected such that an attacker cannot prevent an honest heartbeat from being broadcast to all other honest hosts.
+
+The algorithm is described here, however the proof is omitted and can be viewed in \cite{bgp}.
+The algorithm is first described as one host ("the commander") sending a message to all the other hosts ("the lieutenants").
+\begin{enumerate}
+	\item The commander creates a heartbeat, signs it, and sends it to all lieutenants.
+	\item Each time that a lieutenant receives a heartbeat that the lieutenant has not yet seen:
+	\begin{itemize}
+		\item The lieutenant adds the heartbeat to his list of heartbeats from the commander.
+		\item The lieutenant signs the heartbeat and sends it to all other lieutenants.
+	\end{itemize}
+	\item When the lieutenant knows that no more heartbeats will arrive, the lieutenant adds the heartbeats from the commander to the block.
+\end{enumerate}
+
+This algorithm is trivally extended to include all hosts by having each host act as the commander for their own heartbeat.
+For each block, every host sends a heartbeat to every other host, and for every new heartbeat that a host receives, the host sends that heartbeat to every other host.
+In the worst case, each heartbeat will only be sent $O(n)$ times, where $n$ is the number of hosts.
+This is because a host will not re-send a heartbeat that it has already seen.
+
+For further protection, we establish that each host is only allowed to have one heartbeat in each block.
+If multiple heartbeats are submitted, the host reveals itself as dishonest and all heartbeats are excluded from the block.
+This allows for an optimization.
+Once a host has seen and forwarded 2 heartbeats from another host, no additional heartbeats from the dishonest host need to be forwarded, because no honest host will include any heartbeat from the dishonest host.
+These omissions can be made without violating the assumption that all honest hosts will end up with the same set of heartbeats.
+Note: this may interfere with alternate histories, as a dishonest hosts heartbeats are not included at all if there are multiple.
+
+\subsection{Heartbeats}
 
 \subsection{Tree Topology of Quorums}
 The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
@@ -143,9 +175,6 @@ Each parent is formed from exactly 64 hosts from each child quorum, and those ho
 
 When a quorum drops to 85 hosts in size (provided it is not the only quorum on the network), it joins with its siblings to become a single larger quorum.
 In the rare case that an 85 host quorum and it's sibling exceeds 255 total hosts (in the very rare case, because quorum sizes are random and follow a standard distribution), the quorum will split again, effectively randomly shuffling the hosts around.
-
-\subsection{Consensus Within Quorums}
-We use rules established by \cite{bgp}.
 
 % Keeping History
 % Joining quorums
