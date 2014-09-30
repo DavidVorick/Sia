@@ -74,27 +74,27 @@ func (mw *MenuView) Focus() {
 // given rectangle.
 func (mw *MenuView) Draw() {
 	// draw title and divider
-	drawString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
+	drawColorString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
 	for y := mw.MinY; y < mw.MaxY; y++ {
 		termbox.SetCell(mw.MinX+mw.MenuWidth, y, '│', DividerColor, termbox.ColorDefault)
 	}
 
 	if len(mw.Items) == 0 {
-		drawString(mw.MinX+1, mw.MinY+3, "<empty>", termbox.ColorWhite, termbox.ColorDefault)
+		drawString(mw.MinX+1, mw.MinY+3, "<empty>")
 		return
 	}
 
 	// draw menu items
 	for i, s := range mw.Items {
-		drawString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
+		drawColorString(mw.MinX+1, mw.MinY+2*i+3, s, HomeInactiveColor, termbox.ColorDefault)
 	}
 	// highlight selected item
 	if mw.hasFocus {
 		drawLine(mw.MinX, mw.MinY+2*mw.sel+3, mw.MenuWidth, HomeActiveColor)
-		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeActiveColor)
+		drawColorString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeActiveColor)
 	} else {
 		drawLine(mw.MinX, mw.MinY+2*mw.sel+3, mw.MenuWidth, HomeInactiveColor)
-		drawString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeInactiveColor)
+		drawColorString(mw.MinX+1, mw.MinY+2*mw.sel+3, mw.Items[mw.sel], termbox.ColorWhite, HomeInactiveColor)
 	}
 
 	// draw current window

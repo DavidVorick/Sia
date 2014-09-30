@@ -24,7 +24,7 @@ func (f *Field) Focus() {
 
 func (f *Field) Draw() {
 	drawRectangle(f.Rectangle, f.color)
-	drawString(f.MinX, f.MinY, f.text, termbox.ColorWhite, f.color)
+	drawColorString(f.MinX, f.MinY, f.text, termbox.ColorWhite, f.color)
 }
 
 func (f *Field) HandleKey(key termbox.Key) {
@@ -108,7 +108,7 @@ func (s *Setting) SetDims(r Rectangle) {
 }
 
 func (s *Setting) Draw() {
-	drawString(s.MinX, s.MinY, s.name, termbox.ColorWhite, termbox.ColorDefault)
+	drawString(s.MinX, s.MinY, s.name)
 	s.Field.Draw()
 }
 

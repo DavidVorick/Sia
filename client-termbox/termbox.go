@@ -25,7 +25,7 @@ func drawLine(x, y, w int, color termbox.Attribute) {
 	}
 }
 
-func drawString(x, y int, s string, fg, bg termbox.Attribute) {
+func drawColorString(x, y int, s string, fg, bg termbox.Attribute) {
 	// i must be manually incremented because range iterates over code points,
 	// not bytes, meaning i would be incremented multiple times per rune.
 	var i int
@@ -35,10 +35,14 @@ func drawString(x, y int, s string, fg, bg termbox.Attribute) {
 	}
 }
 
+func drawString(x, y int, s string) {
+	drawColorString(x, y, s, termbox.ColorWhite, termbox.ColorDefault)
+}
+
 func drawError(v ...interface{}) {
 	s := strings.Trim(fmt.Sprintln(v...), "\n")
 	strings.Trim(s, s)
 	w, h := termbox.Size()
 	drawRectangle(Rectangle{0, h - 1, w, h}, termbox.ColorRed)
-	drawString(1, h-1, s, termbox.ColorWhite, termbox.ColorRed)
+	drawColorString(1, h-1, s, termbox.ColorWhite, termbox.ColorRed)
 }
