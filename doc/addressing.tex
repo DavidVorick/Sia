@@ -208,7 +208,14 @@ Assuming that all hosts are sufficiently synchronized and that network communica
 % proof/explanation
 
 \subsection{Optimizations}
-This is about sending batches of signatures with hashes, instead of sending whole heartbeats.
+When the goal is for every host to receive every heartbeat, the total amount of required communication is only $O(n)$ heartbeats per host.
+That is, every host must send their own heartbeat to everyone, and every host must receive a heartbeat from everyone.
+The rest of the communications don't need to send the full heartbeats, but only need to send signatures and hashes, which is a significantly smaller payload.
+Furthermore, each step it's only necessary to send one message to each host - that message can contain many signatures, hashes, and (if needed) heartbeats.
+
+This section is merely to suggest that there are lots of optimizations available, which reduce the general case communication to $O(n)$ instead of $O(n^2)$.
+In the interest of keeping the whitepaper as simple as possible, these are largely left undiscussed.
+These optimizations can bring about DOS vectors, however careful implementation minimizes the attack potentency and will never make communication worse than in the unoptimized case.
 
 \subsection{Heartbeats}
 This describes what goes into a heartbeat.
