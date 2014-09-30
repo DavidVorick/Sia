@@ -1,3 +1,5 @@
+\newcommand{\hbsize}{4kb}
+
 \documentclass[twocolumn]{article}
 \usepackage[toc,page]{appendix}
 
@@ -168,8 +170,42 @@ The worst case order notation is $O(n^2)$ heartbeats sent per block.
 Each host will send one heartbeat to every other host.
 They will then send every heartbeat from every host to every other host.
 
-\subsection{Completing a Block}
-This is about the step timings.
+\subsection{Block Progression}
+Hosts must have some way of being certain that no more heartbeats will arrive.
+We use principles similar to those outlined in \cite{timeout} to determine this.
+The network operates in 'steps', following a physical clock.
+
+Each block starts at step 0, and goes to step $n$, where $n$ is the number of hosts.
+Each step is $t$ seconds, where $t$ is enough for an honest host to sign and resend all new heartbeats to all hosts on the network, plus enough time to allow for $d$ clock drift between honest hosts.
+For this paper, we assume 5 minutes is sufficient for $t$, and that sixty seconds is sufficient for $d$, meaning that a host will be able to send all heartbeats received in a step to all other hosts in 4 minutes.
+Given that $n$ can be as large as 255, the total amount of time for one block can be as high as 21 hours and 20 minutes, or 256 steps at 5 minutes each.
+
+A heartbeat is considered honest if it has at least as many signatures as the current step number.
+Therefore, at step 0 and step 1, all heartbeats from hosts are considered valid.
+At step 2, a heartbeat is only considered valid if it has been signed by the originator and at least 1 other host.
+At step 100, a heartbeat is only considered valid if it has been signed by the originator and at least 99 other hosts.
+When an honest host receives a heartbeat that they have not seen, they can add their signature to the heartbeat, which will extend the window in which the heartbeat is valid by one step, giving the honest host at least 1 full step to send the new heartbeat around.
+If a heartbeat arrives even one second late, it is ignored, and the honest host will act as though it had never seen the heartbeat (unless it later recieves the heartbeat with enough signatures for the current step).
+
+The full algorithm for sending a heartbeat is then as follows:
+\begin{enumerate}
+	\item All hosts wait until step 0 to begin.
+	\item All hosts increment their step counter every 5 minutes according to their physical clock.
+	\item All hosts create, sign, and send a heartbeat to all other hosts.
+	\item For each unrecognized heartbeat that a host sees:
+	\begin{itemize}
+		\item If any signatures on the heartbeat are invalid or repeated, the heartbeat is ignored.
+		\item If the number of signatures on the heartbeat is less than the current step number, the heartbeat is ignored.
+		\item If two unique heartbeats have already been seen from the originating host of this heartbeat, the heartbeat is ignored.
+		\item If the heartbeat is larger than \hbsize{} (excluding signatures) then the heartbeat is ignored.
+		\item The host adds the heartbeat to its list of known heartbeats.
+		\item The host adds their signature to the heartbeat and sends the heartbeat to all other hosts in the quorum.
+	\end{itemize}
+	\item When the step number is greater than the number of hosts, hosts can stop receiving heartbeats and build a block out of the heartbeats they have.
+\end{enumerate}
+Assuming that all hosts are sufficiently synchronized and that network communication is quick enough, all honest hosts are guaranteed to end with the same exact set of heartbeats, regardless of byzantine faults during the communication process.
+
+% proof/explanation
 
 \subsection{Optimizations}
 This is about sending batches of signatures with hashes, instead of sending whole heartbeats.
@@ -559,7 +595,12 @@ This does enable a malicious entity to forcefully apply penalties to others, how
 \bibitem{bgp}
 	Leslie Lamport, Robert Shostak, Marshall Pease,
 	\emph{The Byzantine Generals Problem},
-	ACM Transactions on Programming Languages and Systems, Vol. 4, No. 3, July 1982.
+	ACM Transactions on Programming Languages and Systems, Vol. 4, No. 3, July 1982, Pages 382-401.
+
+\bibitem{timeout}
+	Leslie Lamport,
+	\emph{Using Time Instead of Timeout for Fault-Tolerant Distributed Systems},
+	ACM Transactions on Programming Languages and Systems, Vol. 6, No. 2, April 1984, 254-280.
 
 \end{thebibliography}
 
