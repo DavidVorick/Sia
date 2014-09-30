@@ -141,6 +141,15 @@ When a quorum grows to 255 hosts in size, it is split into a parent and 2 child 
 This does mean that the child quorums may not contain the same number of hosts.
 Each parent is formed from exactly 64 hosts from each child quorum, and those hosts are chosen at random.
 
+When a quorum drops to 85 hosts in size (provided it is not the only quorum on the network), it joins with its siblings to become a single larger quorum.
+In the rare case that an 85 host quorum and it's sibling exceeds 255 total hosts (in the very rare case, because quorum sizes are random and follow a standard distribution), the quorum will split again, effectively randomly shuffling the hosts around.
+
+\subsection{Consensus Within Quorums}
+We use rules established by \cite{bgp}.
+
+% Keeping History
+% Joining quorums
+
 \subsection{Random Assembly of Quorums}
 It is important that a dishonest entity consisting of less than 50\% of the hosts on the network cannot comprise more than 75\% of the hosts on a single quorum.
 This security is ensured by randomly assigning quorums to hosts, and by setting rules that prevent manipulation.
@@ -505,7 +514,7 @@ This does enable a malicious entity to forcefully apply penalties to others, how
 
 \end{appendices}
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{1}
 
 \bibitem{bgp}
 	Leslie Lamport, Robert Shostak, Marshall Pease,
