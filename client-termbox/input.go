@@ -27,29 +27,17 @@ type Input interface {
 // A Button is an Input that can trigger a function when pressed.
 type Button struct {
 	DefaultView
-	label  string
-	offset int
-	press  func()
+	label string
+	press func()
 }
 
-func newButton(parent View, label string, press func(), offset int) *Button {
+func newButton(parent View, label string, press func()) *Button {
 	b := &Button{
-		label:  " " + label + " ",
-		offset: offset,
-		press:  press,
+		label: " " + label + " ",
+		press: press,
 	}
 	b.Parent = parent
 	return b
-}
-
-// The implementation of SetDims for Button (and other Inputs) is complicated
-// by the fact that Inputs generally have a fixed size. The positioning of a
-// Button inside the Rectangle (performed via offsets) is also ugly. I hope to
-// find a better solution in the future.
-func (b *Button) SetDims(r Rectangle) {
-	r.MinY += b.offset
-	r.MaxY += b.offset
-	b.Rectangle = r
 }
 
 func (b *Button) Draw() {
@@ -77,24 +65,16 @@ func (b *Button) Focus() {
 type Checkbox struct {
 	DefaultView
 	label   string
-	offset  int
 	checked *bool
 }
 
-func newCheckbox(parent View, label string, checked *bool, offset int) *Checkbox {
+func newCheckbox(parent View, label string, checked *bool) *Checkbox {
 	c := &Checkbox{
 		label:   label,
-		offset:  offset,
 		checked: checked,
 	}
 	c.Parent = parent
 	return c
-}
-
-func (c *Checkbox) SetDims(r Rectangle) {
-	r.MinY += c.offset
-	r.MaxY += c.offset
-	c.Rectangle = r
 }
 
 // Like a Button, a Checkbox can only perform one action. See the matching Button docstring.
@@ -211,16 +191,14 @@ func (f *Field) deleteBackward() {
 type Form struct {
 	Rectangle
 	Field
-	label  string
-	width  int
-	offset int
+	label string
+	width int
 }
 
-func newForm(parent View, label string, ref *string, width, offset int) *Form {
+func newForm(parent View, label string, ref *string, width int) *Form {
 	f := &Form{
-		label:  label,
-		width:  width,
-		offset: offset,
+		label: label,
+		width: width,
 	}
 	f.ref = ref
 	f.text = *ref
@@ -229,7 +207,6 @@ func newForm(parent View, label string, ref *string, width, offset int) *Form {
 }
 
 func (f *Form) SetDims(r Rectangle) {
-	r.MinY += f.offset
 	r.MaxX = r.MinX + len(f.label) + f.width
 	r.MaxY = r.MinY + 1
 	f.Rectangle = r
@@ -251,16 +228,18 @@ func (f *Form) DrawHL() {
 // An InputsView is a collection of Inputs that can be navigated.
 type InputsView struct {
 	DefaultView
-	inputs []Input
-	sel    int
+	inputs  []Input
+	offsets []int
+	sel     int
 }
 
 func (iv *InputsView) SetDims(r Rectangle) {
 	iv.Rectangle = r
-	for _, i := range iv.inputs {
-		i.SetDims(Rectangle{
+	for i := range iv.inputs {
+		// inputs are fixed size, so they only care about MinX/MinY
+		iv.inputs[i].SetDims(Rectangle{
 			MinX: r.MinX + 1,
-			MinY: r.MinY,
+			MinY: r.MinY + iv.offsets[i],
 		})
 	}
 }

@@ -81,12 +81,13 @@ type ParticipantCreator struct {
 func newParticipantCreator(parent View) *ParticipantCreator {
 	pc := new(ParticipantCreator)
 	pc.inputs = []Input{
-		newForm(pc, "Name:      ", &pc.name, 20, 1),
-		newForm(pc, "Sibling ID:", &pc.siblingID, 20, 2),
-		newForm(pc, "Custom Dir:", &pc.customDir, 20, 3),
-		newCheckbox(pc, "Genesis", &pc.genesis, 4),
-		newButton(pc, "Submit", pc.create, 6),
+		newForm(pc, "Name:      ", &pc.name, 20),
+		newForm(pc, "Sibling ID:", &pc.siblingID, 20),
+		newForm(pc, "Custom Dir:", &pc.customDir, 20),
+		newCheckbox(pc, "Genesis", &pc.genesis),
+		newButton(pc, "Submit", pc.create),
 	}
+	pc.offsets = []int{1, 2, 3, 4, 6}
 	pc.Parent = parent
 	return pc
 }

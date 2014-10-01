@@ -24,11 +24,12 @@ func newSettingsView(parent View) *SettingsView {
 	sv.serverID = fmt.Sprint(config.Server.ID)
 
 	sv.inputs = []Input{
-		newForm(sv, "Client Port:", &sv.clientPort, 20, 1),
-		newForm(sv, "Server Host:", &sv.serverHost, 20, 3),
-		newForm(sv, "Server Port:", &sv.serverPort, 20, 4),
-		newForm(sv, "Server ID:  ", &sv.serverID, 20, 5),
+		newForm(sv, "Client Port:", &sv.clientPort, 20),
+		newForm(sv, "Server Host:", &sv.serverHost, 20),
+		newForm(sv, "Server Port:", &sv.serverPort, 20),
+		newForm(sv, "Server ID:  ", &sv.serverID, 20),
 	}
+	sv.offsets = []int{1, 3, 4, 5}
 	sv.Parent = parent
 	return sv
 }
