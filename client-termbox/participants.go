@@ -66,19 +66,18 @@ func (pv *ParticipantView) HandleKey(key termbox.Key) {
 }
 
 type ParticipantCreator struct {
-	InputView
+	InputsView
 }
 
 func newParticipantCreator(parent View) View {
 	pc := new(ParticipantCreator)
-	pc.settings = []*Setting{
-		{name: "Name:      ", width: 20, offset: 1},
-		{name: "Sibling ID:", width: 20, offset: 2},
-		{name: "Custom Dir:", width: 20, offset: 3},
+	pc.inputs = []Input{
+		newForm(pc, "Name:      ", "", 20, 1),
+		newForm(pc, "Sibling ID:", "", 20, 2),
+		newForm(pc, "Custom Dir:", "", 20, 3),
+		newCheckbox(pc, "Genesis", false, 4),
+		newButton(pc, "Submit", func() {}, 6),
 	}
 	pc.Parent = parent
-	for _, s := range pc.settings {
-		s.Parent = pc
-	}
 	return pc
 }

@@ -5,15 +5,107 @@ import (
 )
 
 const (
-	SettingColor      = termbox.ColorBlue
-	SettingFocusColor = termbox.ColorRed
+	ButtonColor   = termbox.ColorBlue
+	ButtonHLColor = termbox.ColorRed
+
+	CheckboxColor   = termbox.ColorDefault
+	CheckboxHLColor = termbox.ColorRed
+
+	FieldColor   = termbox.ColorBlue
+	FieldHLColor = termbox.ColorRed
 )
+
+type Input interface {
+	View
+	DrawHL()
+}
+
+type Button struct {
+	DefaultView
+	label  string
+	offset int
+	press  func()
+}
+
+func (b *Button) SetDims(r Rectangle) {
+	r.MinY += b.offset
+	r.MaxY += b.offset
+	b.Rectangle = r
+}
+
+func (b *Button) Draw() {
+	drawColorString(b.MinX, b.MinY, b.label, termbox.ColorWhite, ButtonColor)
+}
+
+func (b *Button) DrawHL() {
+	drawColorString(b.MinX, b.MinY, b.label, termbox.ColorWhite, ButtonHLColor)
+}
+
+func (b *Button) Focus() {
+	b.hasFocus = true
+	b.press()
+	b.GiveFocus(b.Parent)
+}
+
+func newButton(parent View, label string, press func(), offset int) Input {
+	b := &Button{
+		label:  " " + label + " ",
+		offset: offset,
+		press:  press,
+	}
+	b.Parent = parent
+	return b
+}
+
+type Checkbox struct {
+	DefaultView
+	label   string
+	offset  int
+	checked bool
+}
+
+func (c *Checkbox) SetDims(r Rectangle) {
+	r.MinY += c.offset
+	r.MaxY += c.offset
+	c.Rectangle = r
+}
+
+func (c *Checkbox) Focus() {
+	c.hasFocus = true
+	c.checked = !c.checked
+	c.GiveFocus(c.Parent)
+}
+
+func (c *Checkbox) Draw() {
+	if c.checked {
+		drawColorString(c.MinX, c.MinY, "[X] "+c.label, termbox.ColorWhite, CheckboxColor)
+	} else {
+		drawColorString(c.MinX, c.MinY, "[ ] "+c.label, termbox.ColorWhite, CheckboxColor)
+	}
+}
+
+func (c *Checkbox) DrawHL() {
+	if c.checked {
+		drawColorString(c.MinX, c.MinY, "[X] "+c.label, termbox.ColorWhite, CheckboxHLColor)
+	} else {
+		drawColorString(c.MinX, c.MinY, "[ ] "+c.label, termbox.ColorWhite, CheckboxHLColor)
+	}
+}
+
+func newCheckbox(parent View, label string, checked bool, offset int) Input {
+	c := &Checkbox{
+		label:   label,
+		offset:  offset,
+		checked: checked,
+	}
+	c.Parent = parent
+	return c
+}
 
 type Field struct {
 	DefaultView
-	color termbox.Attribute
-	text  string
-	pos   int
+	text string
+	pos  int
 }
 
 func (f *Field) Focus() {
@@ -23,8 +115,13 @@ func (f *Field) Focus() {
 }
 
 func (f *Field) Draw() {
-	drawRectangle(f.Rectangle, f.color)
-	drawColorString(f.MinX, f.MinY, f.text, termbox.ColorWhite, f.color)
+	drawRectangle(f.Rectangle, FieldColor)
+	drawColorString(f.MinX, f.MinY, f.text, termbox.ColorWhite, FieldColor)
+}
+
+func (f *Field) DrawHL() {
+	drawRectangle(f.Rectangle, FieldHLColor)
+	drawColorString(f.MinX, f.MinY, f.text, termbox.ColorWhite, FieldHLColor)
 }
 
 func (f *Field) HandleKey(key termbox.Key) {
@@ -80,70 +177,74 @@ func (f *Field) deleteBackward() {
 	f.text = f.text[:f.pos-1] + f.text[f.pos:]
 }
 
-func (f *Field) SetColor(color termbox.Attribute) {
-	f.color = color
-}
-
-func newField(parent View, color termbox.Attribute, text string) View {
-	f := &Field{
-		color: color,
-		text:  text,
-	}
-	f.Parent = parent
-	return f
-}
-
-type Setting struct {
+type Form struct {
 	Rectangle
 	Field
-	name   string
+	label  string
 	width  int
 	offset int
 }
 
-func (s *Setting) SetDims(r Rectangle) {
-	s.Rectangle = r
-	r.MinX += len(s.name) + 1
-	s.Field.SetDims(r)
+func (f *Form) SetDims(r Rectangle) {
+	r.MinY += f.offset
+	r.MaxX = r.MinX + len(f.label) + f.width
+	r.MaxY = r.MinY + 1
+	f.Rectangle = r
+
+	r.MinX += len(f.label) + 1
+	f.Field.SetDims(r)
 }
 
-func (s *Setting) Draw() {
-	drawString(s.MinX, s.MinY, s.name)
-	s.Field.Draw()
+func (f *Form) Draw() {
+	drawString(f.MinX, f.MinY, f.label)
+	f.Field.Draw()
 }
 
-type InputView struct {
+func (f *Form) DrawHL() {
+	drawString(f.MinX, f.MinY, f.label)
+	f.Field.DrawHL()
+}
+
+func newForm(parent View, label, text string, width, offset int) Input {
+	f := &Form{
+		label:  label,
+		width:  width,
+		offset: offset,
+	}
+	f.text = text
+	f.Parent = parent
+	return f
+}
+
+type InputsView struct {
 	DefaultView
-	settings []*Setting
-	sel      int
+	inputs []Input
+	sel    int
 }
 
-func (sv *InputView) SetDims(r Rectangle) {
-	sv.Rectangle = r
-	for _, s := range sv.settings {
-		s.SetDims(Rectangle{
+func (iv *InputsView) SetDims(r Rectangle) {
+	iv.Rectangle = r
+	for _, i := range iv.inputs {
+		i.SetDims(Rectangle{
 			MinX: r.MinX + 1,
-			MinY: r.MinY + s.offset,
-			MaxX: r.MinX + len(s.name) + s.width + 2,
-			MaxY: r.MinY + s.offset + 1,
+			MinY: r.MinY,
 		})
 	}
 }
 
-func (sv *InputView) Draw() {
-	for i, s := range sv.settings {
-		if i == sv.sel && sv.hasFocus {
-			s.SetColor(SettingFocusColor)
+func (iv *InputsView) Draw() {
+	for i, in := range iv.inputs {
+		if i == iv.sel && iv.hasFocus {
+			in.DrawHL()
 		} else {
-			s.SetColor(SettingColor)
+			in.Draw()
 		}
-		s.Draw()
 	}
 }
 
-func (sv *InputView) HandleKey(key termbox.Key) {
+func (sv *InputsView) HandleKey(key termbox.Key) {
 	if !sv.hasFocus {
-		sv.settings[sv.sel].HandleKey(key)
+		sv.inputs[sv.sel].HandleKey(key)
 		return
 	}
 	switch key {
@@ -154,17 +255,17 @@ func (sv *InputView) HandleKey(key termbox.Key) {
 			sv.sel--
 		}
 	case termbox.KeyArrowDown:
-		if sv.sel+1 < len(sv.settings) {
+		if sv.sel+1 < len(sv.inputs) {
 			sv.sel++
 		}
 	case termbox.KeyEnter:
-		sv.GiveFocus(sv.settings[sv.sel])
+		sv.GiveFocus(sv.inputs[sv.sel])
 	}
 }
 
-func (sv *InputView) HandleRune(r rune) {
+func (sv *InputsView) HandleRune(r rune) {
 	if !sv.hasFocus {
-		sv.settings[sv.sel].HandleRune(r)
+		sv.inputs[sv.sel].HandleRune(r)
 		return
 	}
 }
