@@ -47,7 +47,7 @@ func (b *Button) Focus() {
 	b.GiveFocus(b.Parent)
 }
 
-func newButton(parent View, label string, press func(), offset int) Input {
+func newButton(parent View, label string, press func(), offset int) *Button {
 	b := &Button{
 		label:  " " + label + " ",
 		offset: offset,
@@ -92,7 +92,7 @@ func (c *Checkbox) DrawHL() {
 	}
 }
 
-func newCheckbox(parent View, label string, checked *bool, offset int) Input {
+func newCheckbox(parent View, label string, checked *bool, offset int) *Checkbox {
 	c := &Checkbox{
 		label:   label,
 		offset:  offset,
@@ -208,7 +208,7 @@ func (f *Form) DrawHL() {
 	f.Field.DrawHL()
 }
 
-func newForm(parent View, label string, ref *string, width, offset int) Input {
+func newForm(parent View, label string, ref *string, width, offset int) *Form {
 	f := &Form{
 		label:  label,
 		width:  width,

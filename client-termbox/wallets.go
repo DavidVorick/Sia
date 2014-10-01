@@ -18,7 +18,7 @@ func (wmv *WalletMenuView) Focus() {
 	wmv.MenuView.Focus()
 }
 
-func newWalletMenuView(parent View) View {
+func newWalletMenuView(parent View) *WalletMenuView {
 	wmv := new(WalletMenuView)
 	wmv.Parent = parent
 	wmv.Title = "Wallets"

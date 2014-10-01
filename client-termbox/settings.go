@@ -12,7 +12,7 @@ type SettingsView struct {
 	serverID   string
 }
 
-func newSettingsView(parent View) View {
+func newSettingsView(parent View) *SettingsView {
 	sv := new(SettingsView)
 
 	// load current config values

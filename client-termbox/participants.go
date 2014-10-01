@@ -17,7 +17,7 @@ func (pmv *ParticipantMenuView) Focus() {
 	pmv.MenuView.Focus()
 }
 
-func newParticipantMenuView(parent View) View {
+func newParticipantMenuView(parent View) *ParticipantMenuView {
 	pmv := new(ParticipantMenuView)
 	pmv.Parent = parent
 	pmv.Title = "Participants"
@@ -73,15 +73,19 @@ type ParticipantCreator struct {
 	genesis   bool
 }
 
-func newParticipantCreator(parent View) View {
+func newParticipantCreator(parent View) *ParticipantCreator {
 	pc := new(ParticipantCreator)
 	pc.inputs = []Input{
 		newForm(pc, "Name:      ", &pc.name, 20, 1),
 		newForm(pc, "Sibling ID:", &pc.siblingID, 20, 2),
 		newForm(pc, "Custom Dir:", &pc.customDir, 20, 3),
 		newCheckbox(pc, "Genesis", &pc.genesis, 4),
-		newButton(pc, "Submit", func() {}, 6),
+		newButton(pc, "Submit", pc.create, 6),
 	}
 	pc.Parent = parent
 	return pc
+}
+
+func (pc *ParticipantCreator) create() {
+
 }

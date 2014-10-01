@@ -13,7 +13,7 @@ const (
 	HomeInactiveColor = termbox.ColorGreen
 )
 
-func newHomeView() View {
+func newHomeView() *MenuView {
 	// create MenuView
 	mw := &MenuView{
 		Title:     "Sia Alpha v3",
