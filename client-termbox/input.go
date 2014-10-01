@@ -61,7 +61,7 @@ type Checkbox struct {
 	DefaultView
 	label   string
 	offset  int
-	checked bool
+	checked *bool
 }
 
 func (c *Checkbox) SetDims(r Rectangle) {
@@ -72,12 +72,12 @@ func (c *Checkbox) SetDims(r Rectangle) {
 
 func (c *Checkbox) Focus() {
 	c.hasFocus = true
-	c.checked = !c.checked
+	*c.checked = !*c.checked
 	c.GiveFocus(c.Parent)
 }
 
 func (c *Checkbox) Draw() {
-	if c.checked {
+	if *c.checked {
 		drawColorString(c.MinX, c.MinY, "[X] "+c.label, termbox.ColorWhite, CheckboxColor)
 	} else {
 		drawColorString(c.MinX, c.MinY, "[ ] "+c.label, termbox.ColorWhite, CheckboxColor)
@@ -85,14 +85,14 @@ func (c *Checkbox) Draw() {
 }
 
 func (c *Checkbox) DrawHL() {
-	if c.checked {
+	if *c.checked {
 		drawColorString(c.MinX, c.MinY, "[X] "+c.label, termbox.ColorWhite, CheckboxHLColor)
 	} else {
 		drawColorString(c.MinX, c.MinY, "[ ] "+c.label, termbox.ColorWhite, CheckboxHLColor)
 	}
 }
 
-func newCheckbox(parent View, label string, checked bool, offset int) Input {
+func newCheckbox(parent View, label string, checked *bool, offset int) Input {
 	c := &Checkbox{
 		label:   label,
 		offset:  offset,
@@ -105,6 +105,7 @@ func newCheckbox(parent View, label string, checked bool, offset int) Input {
 type Field struct {
 	DefaultView
 	text string
+	ref  *string
 	pos  int
 }
 
@@ -127,6 +128,8 @@ func (f *Field) DrawHL() {
 func (f *Field) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyEnter:
+		// save current text to ref
+		*f.ref = f.text
 		termbox.HideCursor()
 		f.GiveFocus(f.Parent)
 	case termbox.KeyArrowLeft:
@@ -205,13 +208,14 @@ func (f *Form) DrawHL() {
 	f.Field.DrawHL()
 }
 
-func newForm(parent View, label, text string, width, offset int) Input {
+func newForm(parent View, label string, ref *string, width, offset int) Input {
 	f := &Form{
 		label:  label,
 		width:  width,
 		offset: offset,
 	}
-	f.text = text
+	f.ref = ref
+	f.text = *ref
 	f.Parent = parent
 	return f
 }
