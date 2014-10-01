@@ -13,11 +13,6 @@ type WalletMenuView struct {
 	MenuView
 }
 
-func (wmv *WalletMenuView) Focus() {
-	//wmv.loadWallets()
-	wmv.MenuView.Focus()
-}
-
 func newWalletMenuView(parent View) *WalletMenuView {
 	wmv := new(WalletMenuView)
 	wmv.Parent = parent
@@ -26,6 +21,11 @@ func newWalletMenuView(parent View) *WalletMenuView {
 	// load wallet IDs and create views
 	wmv.loadWallets()
 	return wmv
+}
+
+func (wmv *WalletMenuView) Focus() {
+	//wmv.loadWallets()
+	wmv.MenuView.Focus()
 }
 
 func (wmv *WalletMenuView) loadWallets() {

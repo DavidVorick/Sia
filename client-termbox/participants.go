@@ -12,11 +12,6 @@ type ParticipantMenuView struct {
 	MenuView
 }
 
-func (pmv *ParticipantMenuView) Focus() {
-	//pmv.loadParticipants()
-	pmv.MenuView.Focus()
-}
-
 func newParticipantMenuView(parent View) *ParticipantMenuView {
 	pmv := new(ParticipantMenuView)
 	pmv.Parent = parent
@@ -27,6 +22,11 @@ func newParticipantMenuView(parent View) *ParticipantMenuView {
 	// load participant names and create views
 	pmv.loadParticipants()
 	return pmv
+}
+
+func (pmv *ParticipantMenuView) Focus() {
+	//pmv.loadParticipants()
+	pmv.MenuView.Focus()
 }
 
 func (pmv *ParticipantMenuView) loadParticipants() {

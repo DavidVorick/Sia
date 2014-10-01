@@ -27,6 +27,16 @@ type Button struct {
 	press  func()
 }
 
+func newButton(parent View, label string, press func(), offset int) *Button {
+	b := &Button{
+		label:  " " + label + " ",
+		offset: offset,
+		press:  press,
+	}
+	b.Parent = parent
+	return b
+}
+
 func (b *Button) SetDims(r Rectangle) {
 	r.MinY += b.offset
 	r.MaxY += b.offset
@@ -47,21 +57,21 @@ func (b *Button) Focus() {
 	b.GiveFocus(b.Parent)
 }
 
-func newButton(parent View, label string, press func(), offset int) *Button {
-	b := &Button{
-		label:  " " + label + " ",
-		offset: offset,
-		press:  press,
-	}
-	b.Parent = parent
-	return b
-}
-
 type Checkbox struct {
 	DefaultView
 	label   string
 	offset  int
 	checked *bool
+}
+
+func newCheckbox(parent View, label string, checked *bool, offset int) *Checkbox {
+	c := &Checkbox{
+		label:   label,
+		offset:  offset,
+		checked: checked,
+	}
+	c.Parent = parent
+	return c
 }
 
 func (c *Checkbox) SetDims(r Rectangle) {
@@ -90,16 +100,6 @@ func (c *Checkbox) DrawHL() {
 	} else {
 		drawColorString(c.MinX, c.MinY, "[ ] "+c.label, termbox.ColorWhite, CheckboxHLColor)
 	}
-}
-
-func newCheckbox(parent View, label string, checked *bool, offset int) *Checkbox {
-	c := &Checkbox{
-		label:   label,
-		offset:  offset,
-		checked: checked,
-	}
-	c.Parent = parent
-	return c
 }
 
 type Field struct {
@@ -188,6 +188,18 @@ type Form struct {
 	offset int
 }
 
+func newForm(parent View, label string, ref *string, width, offset int) *Form {
+	f := &Form{
+		label:  label,
+		width:  width,
+		offset: offset,
+	}
+	f.ref = ref
+	f.text = *ref
+	f.Parent = parent
+	return f
+}
+
 func (f *Form) SetDims(r Rectangle) {
 	r.MinY += f.offset
 	r.MaxX = r.MinX + len(f.label) + f.width
@@ -206,18 +218,6 @@ func (f *Form) Draw() {
 func (f *Form) DrawHL() {
 	drawString(f.MinX, f.MinY, f.label)
 	f.Field.DrawHL()
-}
-
-func newForm(parent View, label string, ref *string, width, offset int) *Form {
-	f := &Form{
-		label:  label,
-		width:  width,
-		offset: offset,
-	}
-	f.ref = ref
-	f.text = *ref
-	f.Parent = parent
-	return f
 }
 
 type InputsView struct {
