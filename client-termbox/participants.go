@@ -8,6 +8,8 @@ const (
 	ParticipantMenuWidth = 18
 )
 
+// ParticipantMenuView lists the Participants available to the user, and allows
+// for the creation of new Participants.
 type ParticipantMenuView struct {
 	MenuView
 }
@@ -40,6 +42,7 @@ func (pmv *ParticipantMenuView) loadParticipants() {
 	}
 }
 
+// TODO: same as WalletMenuView.addWallet
 func (pmv *ParticipantMenuView) addParticipant(name string) {
 	pv := new(ParticipantView)
 	pv.Parent = pmv
@@ -49,6 +52,7 @@ func (pmv *ParticipantMenuView) addParticipant(name string) {
 	pmv.Windows = append(pmv.Windows, pv)
 }
 
+// A ParticipantView displays the properties of a Participant.
 type ParticipantView struct {
 	DefaultView
 	name string
@@ -65,6 +69,7 @@ func (pv *ParticipantView) HandleKey(key termbox.Key) {
 	}
 }
 
+// The ParticipantCreator allows for the creation of new Participants.
 type ParticipantCreator struct {
 	InputsView
 	name      string

@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+// SettingsView is an InputsView that allows the user to modify client
+// settings.
 type SettingsView struct {
 	InputsView
 	clientPort string

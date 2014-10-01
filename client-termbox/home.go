@@ -13,6 +13,7 @@ const (
 	HomeInactiveColor = termbox.ColorGreen
 )
 
+// newHomeView creates the main menu and its subviews.
 func newHomeView() *MenuView {
 	// create MenuView
 	mw := &MenuView{
@@ -35,6 +36,9 @@ func newHomeView() *MenuView {
 	return mw
 }
 
+// termboxRun creates a termbox instance and populates it with Views. It then
+// handles termbox events (such as user input) in an infinite loop, dispatching
+// the event to the proper receiver and redrawing the screen.
 func termboxRun() {
 	if err := termbox.Init(); err != nil {
 		fmt.Println(err)

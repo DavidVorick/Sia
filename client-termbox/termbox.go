@@ -12,6 +12,8 @@ type Rectangle struct {
 }
 
 func drawRectangle(r Rectangle, color termbox.Attribute) {
+	// Note that if MinY == MaxY, nothing is drawn. Usually this means you
+	// should be calling drawLine instead.
 	for x := r.MinX; x < r.MaxX; x++ {
 		for y := r.MinY; y < r.MaxY; y++ {
 			termbox.SetCell(x, y, ' ', color, color)

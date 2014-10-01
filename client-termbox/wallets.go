@@ -9,6 +9,7 @@ import (
 
 const WalletMenuWidth = 15
 
+// WalletMenuView is a MenuView that lists the wallets available to the user.
 type WalletMenuView struct {
 	MenuView
 }
@@ -39,6 +40,7 @@ func (wmv *WalletMenuView) loadWallets() {
 	}
 }
 
+// TODO: to avoid duplicates, merge wallet ids instead of blindly appending
 func (wmv *WalletMenuView) addWallet(wid state.WalletID) {
 	wmv.Items = append(wmv.Items, wid.String())
 	wmv.Windows = append(wmv.Windows, &WalletView{
@@ -46,6 +48,7 @@ func (wmv *WalletMenuView) addWallet(wid state.WalletID) {
 	})
 }
 
+// A WalletView displays the properties of a Wallet.
 type WalletView struct {
 	DefaultView
 }

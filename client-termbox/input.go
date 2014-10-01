@@ -15,11 +15,16 @@ const (
 	FieldHLColor = termbox.ColorRed
 )
 
+// An Input is simply a view that can be highlighted. This may cause some
+// confusion, because Focus() appears to fill this role as well. However,
+// implementation details make using Focus() for inputs ugly and unintuitive. I
+// hope to find a better solution in the future.
 type Input interface {
 	View
 	DrawHL()
 }
 
+// A Button is an Input that can trigger a function when pressed.
 type Button struct {
 	DefaultView
 	label  string
@@ -37,6 +42,10 @@ func newButton(parent View, label string, press func(), offset int) *Button {
 	return b
 }
 
+// The implementation of SetDims for Button (and other Inputs) is complicated
+// by the fact that Inputs generally have a fixed size. The positioning of a
+// Button inside the Rectangle (performed via offsets) is also ugly. I hope to
+// find a better solution in the future.
 func (b *Button) SetDims(r Rectangle) {
 	r.MinY += b.offset
 	r.MaxY += b.offset
@@ -51,12 +60,20 @@ func (b *Button) DrawHL() {
 	drawColorString(b.MinX, b.MinY, b.label, termbox.ColorWhite, ButtonHLColor)
 }
 
+// Buttons can only perform one action, so there is no need for them to have
+// Focus. Accordingly, the Button immediately returns Focus to its parent after
+// triggering the press() function. However, this means that the parent, not
+// the Button, controls what user input triggers it. Whether this is a good
+// idea remains to be seen.
 func (b *Button) Focus() {
 	b.hasFocus = true
 	b.press()
 	b.GiveFocus(b.Parent)
 }
 
+// A Checkbox is an Input that can be toggled on or off. The state of the
+// Checkbox is tied to a boolean, which is supplied when the Checkbox is
+// created.
 type Checkbox struct {
 	DefaultView
 	label   string
@@ -80,6 +97,7 @@ func (c *Checkbox) SetDims(r Rectangle) {
 	c.Rectangle = r
 }
 
+// Like a Button, a Checkbox can only perform one action. See the matching Button docstring.
 func (c *Checkbox) Focus() {
 	c.hasFocus = true
 	*c.checked = !*c.checked
@@ -102,6 +120,8 @@ func (c *Checkbox) DrawHL() {
 	}
 }
 
+// A Field is an Input that allows text entry. The text is tied to a string,
+// which is supplied when the Field is created.
 type Field struct {
 	DefaultView
 	text string
@@ -109,6 +129,7 @@ type Field struct {
 	pos  int
 }
 
+// Focus places the cursor at the end of the text currently in the Field.
 func (f *Field) Focus() {
 	f.hasFocus = true
 	f.pos = len(f.text)
@@ -125,6 +146,11 @@ func (f *Field) DrawHL() {
 	drawColorString(f.MinX, f.MinY, f.text, termbox.ColorWhite, FieldHLColor)
 }
 
+// Fields pose an implementation problem that Buttons and Checkboxes do not.
+// Since the arrow keys are used to control the cursor in the Field, they
+// cannot be used to navigate menus while the user is editing text. This means
+// that an extra key is required to move in and out of "edit mode." It isn't a
+// pretty solution, but it works for now.
 func (f *Field) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyEnter:
@@ -159,6 +185,7 @@ func (f *Field) HandleKey(key termbox.Key) {
 	}
 }
 
+// HandleRune does not yet support unicode.
 func (f *Field) HandleRune(r rune) {
 	if len(f.text) >= f.MaxX-f.MinX-1 {
 		return
@@ -180,6 +207,7 @@ func (f *Field) deleteBackward() {
 	f.text = f.text[:f.pos-1] + f.text[f.pos:]
 }
 
+// A Form is an Input that combines a Field with a label.
 type Form struct {
 	Rectangle
 	Field
@@ -220,6 +248,7 @@ func (f *Form) DrawHL() {
 	f.Field.DrawHL()
 }
 
+// An InputsView is a collection of Inputs that can be navigated.
 type InputsView struct {
 	DefaultView
 	inputs []Input

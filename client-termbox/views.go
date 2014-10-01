@@ -34,6 +34,9 @@ func (dv *DefaultView) Draw()                 {}
 func (dv *DefaultView) HandleKey(termbox.Key) {}
 func (dv *DefaultView) HandleRune(rune)       {}
 
+// GiveFocus is a helper function that removes focus from the current View and
+// focuses its argument. Since only one View should have focus at any given
+// time, it checks that the current View has focus before transferring it.
 func (dv *DefaultView) GiveFocus(v View) {
 	if !dv.hasFocus {
 		panic("focus is not yours to give!")
@@ -70,8 +73,6 @@ func (mw *MenuView) Focus() {
 	}
 }
 
-// Draw implements the View.Draw method, drawing the MenuView inside the
-// given rectangle.
 func (mw *MenuView) Draw() {
 	// draw title and divider
 	drawColorString(mw.MinX+1, mw.MinY+1, mw.Title, HomeHeaderColor, termbox.ColorDefault)
@@ -101,8 +102,9 @@ func (mw *MenuView) Draw() {
 	mw.Windows[mw.sel].Draw()
 }
 
-// HandleKey implements the View.HandleKey method. If the current focus is on
-// the window (instead of the menu), the input is forwarded to the window View.
+// If the current focus is on the window (instead of the menu), the input is
+// forwarded to the current subview. This is a common pattern in Views that
+// contain subviews.
 func (mw *MenuView) HandleKey(key termbox.Key) {
 	if !mw.hasFocus {
 		mw.Windows[mw.sel].HandleKey(key)

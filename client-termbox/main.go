@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Config resembles the structure of the client config file.
 type Config struct {
 	Client struct {
 		Port uint16
@@ -70,7 +71,7 @@ func main() {
 		Run:   func(_ *cobra.Command, _ []string) { fmt.Println("Sia Termbox Client v0.0.2.1") },
 	})
 
-	// The config data is initially set here. These default have the lowest priority.
+	// The config data is initially set here. These defaults have the lowest priority.
 	root.Flags().Uint16VarP(&config.Client.Port, "port", "p", 9980, "Which port the client messenger should listen on")
 	root.Flags().StringVarP(&config.Server.Host, "server-hostname", "H", "localhost", "The hostname of the server you are connecting to.")
 	root.Flags().Uint16VarP(&config.Server.Port, "server-port", "P", 9988, "The port on which the server is listening.")
