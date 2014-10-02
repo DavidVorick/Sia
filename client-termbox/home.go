@@ -79,7 +79,7 @@ func termboxRun() {
 			// mouse events not yet supported
 
 		case termbox.EventError:
-			//drawError("Input error:", event.Err)
+			drawError("Input error:", event.Err)
 			termbox.Flush()
 			return
 		}

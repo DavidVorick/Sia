@@ -139,7 +139,7 @@ func (m *MenuMVC) HandleKey(key termbox.Key) {
 			m.GiveFocus(m.Windows[m.sel])
 		}
 	default:
-		//drawError("Invalid key")
+		drawError("Invalid key")
 	}
 }
 

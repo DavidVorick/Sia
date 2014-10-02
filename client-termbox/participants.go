@@ -34,7 +34,7 @@ func (pm *ParticipantMenuMVC) Focus() {
 func (pm *ParticipantMenuMVC) loadParticipants() {
 	names, err := server.GetParticipantNames()
 	if err != nil {
-		//drawError("Could not load participants:", err)
+		drawError("Could not load participants:", err)
 		return
 	}
 	for _, n := range names {

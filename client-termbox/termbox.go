@@ -43,8 +43,21 @@ func drawString(x, y int, s string) {
 
 func drawError(v ...interface{}) {
 	s := strings.Trim(fmt.Sprintln(v...), "\n")
-	strings.Trim(s, s)
 	w, h := termbox.Size()
 	drawRectangle(Rectangle{0, h - 1, w, h}, termbox.ColorRed)
 	drawColorString(1, h-1, s, termbox.ColorWhite, termbox.ColorRed)
+	// this isn't a great solution; I'd prefer to handle the event as usual as
+	// well as clear the error. Also, note that resize events will clear the
+	// error too.
+	termbox.Flush()
+	termbox.PollEvent()
+}
+
+func drawInfo(v ...interface{}) {
+	s := strings.Trim(fmt.Sprintln(v...), "\n")
+	w, h := termbox.Size()
+	drawRectangle(Rectangle{0, h - 1, w, h}, termbox.ColorBlue)
+	drawColorString(1, h-1, s, termbox.ColorWhite, termbox.ColorBlue)
+	termbox.Flush()
+	termbox.PollEvent()
 }

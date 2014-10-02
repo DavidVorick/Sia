@@ -40,22 +40,22 @@ func (s *SettingsMVC) save() {
 	// validate values
 	cport, err := strconv.Atoi(s.clientPort)
 	if err != nil || cport < 1024 || cport > 65535 {
-		//drawError("invalid client port number")
+		drawError("Invalid client port number")
 		return
 	}
 	// TODO: warn if host not pingable?
 	if s.serverHost == "" {
-		//drawError("invalid hostname")
+		drawError("Invalid hostname")
 		return
 	}
 	sport, err := strconv.Atoi(s.serverPort)
 	if err != nil || sport < 1024 || sport > 65535 {
-		//drawError("invalid server port number")
+		drawError("Invalid server port number")
 		return
 	}
 	sid, err := strconv.Atoi(s.serverID)
 	if err != nil || sid > 255 {
-		//drawError("invalid server ID")
+		drawError("Invalid server ID")
 		return
 	}
 
@@ -72,5 +72,5 @@ func (s *SettingsMVC) save() {
 	// already in string form. This will be changed if write support is added
 	// to the gcfg package.
 
-	//drawInfo("saved to " + configFilename + "!")
+	drawInfo("saved to " + configFilename)
 }
