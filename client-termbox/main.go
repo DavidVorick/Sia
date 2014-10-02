@@ -24,23 +24,17 @@ type Config struct {
 
 // global config variable
 var config Config
+var configFilename string
 
 // global server variable
 var server Server
 
-func parseConfig() {
-	// Attempt to load configuration file into config. These values will be
-	// overwritten by any specified on the command line.
-	var filename string
+func init() {
 	homeLocation, err := siafiles.HomeFilename("config-client")
 	if err == nil && siafiles.Exists(homeLocation) {
-		filename = homeLocation
+		configFilename = homeLocation
 	} else if etcLocation := "/etc/config-client"; siafiles.Exists(etcLocation) {
-		filename = etcLocation
-	}
-	if filename != "" {
-		gcfg.ReadFileInto(&config, filename)
-		// log error?
+		configFilename = etcLocation
 	}
 }
 
@@ -78,7 +72,10 @@ func main() {
 	root.Flags().Uint8VarP(&config.Server.ID, "server-id", "I", 1, "The id of the server you are connecting to.")
 
 	// Then, config file is parsed, and any modified values are overwritten.
-	parseConfig()
+	if configFilename != "" {
+		gcfg.ReadFileInto(&config, configFilename)
+		// log error?
+	}
 
 	// Finally, the command line arguments are parsed. They have the highest priority.
 	root.Execute()
