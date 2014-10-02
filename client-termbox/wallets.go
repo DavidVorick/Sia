@@ -25,7 +25,7 @@ func newWalletMenuMVC(parent MVC) *WalletMenuMVC {
 }
 
 func (wm *WalletMenuMVC) Focus() {
-	//wm.loadWallets()
+	wm.loadWallets()
 	wm.MenuMVC.Focus()
 }
 
@@ -35,12 +35,17 @@ func (wm *WalletMenuMVC) loadWallets() {
 		drawError("Could not load wallets:", err)
 		return
 	}
+
+	// clear existing wallets
+	// (see comment on loadParticipants)
+	wm.Items = []string{}
+	wm.Windows = []MVC{}
+
 	for _, wid := range wids {
 		wm.addWallet(wid)
 	}
 }
 
-// TODO: to avoid duplicates, merge wallet ids instead of blindly appending
 func (wm *WalletMenuMVC) addWallet(wid state.WalletID) {
 	wm.Items = append(wm.Items, wid.String())
 	wm.Windows = append(wm.Windows, &WalletMVC{

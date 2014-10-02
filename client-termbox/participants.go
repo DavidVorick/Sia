@@ -29,7 +29,7 @@ func newParticipantMenuMVC(parent MVC) *ParticipantMenuMVC {
 }
 
 func (pm *ParticipantMenuMVC) Focus() {
-	//pm.loadParticipants()
+	pm.loadParticipants()
 	pm.MenuMVC.Focus()
 }
 
@@ -39,19 +39,23 @@ func (pm *ParticipantMenuMVC) loadParticipants() {
 		drawError("Could not load participants:", err)
 		return
 	}
+
+	// clear existing participants
+	// TODO: only update participants that are new or have been removed
+	pm.Items = pm.Items[:1]
+	pm.Windows = pm.Windows[:1]
+
 	for _, n := range names {
 		pm.addParticipant(n)
 	}
 }
 
-// TODO: same as WalletMenuMVC.addWallet
 func (pm *ParticipantMenuMVC) addParticipant(name string) {
-	pv := new(ParticipantMVC)
-	pv.Parent = pm
-	pv.name = name
-
 	pm.Items = append(pm.Items, name)
-	pm.Windows = append(pm.Windows, pv)
+	pm.Windows = append(pm.Windows, &ParticipantMVC{
+		DefaultMVC{Parent: pm},
+		name,
+	})
 }
 
 // A ParticipantMVC displays the properties of a Participant.
