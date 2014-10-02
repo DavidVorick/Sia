@@ -12,6 +12,10 @@
 {\rm David Vorick}\\
 Nebulous Inc.\\
 david@nebulouslabs.com
+\and
+{\rm Luke Champine}\\
+Nebulous Inc. \\
+luke@nebulouslabs.com
 }
 
 \maketitle
@@ -74,7 +78,7 @@ Currently, there are no centralized components within Sia.
 \subsection{Assumptions}
 \begin{itemize}
 	\item No group can control more than 50\% of the economic resources of the network, even for a burst period.
-	\item Hosts will have some form of DDOS protection.
+	\item Most hosts will have some form of DDOS protection.
 	\item It is difficult to target and hack into an honest hosts machine, thereby making it dishonest.
 	\item The graph of connections between honest machines forms a single set. That is, no set of honest hosts is fully isolated from another set of honest hosts.
 \end{itemize}
@@ -89,7 +93,7 @@ The network topology is composed of a tree of quorums.
 Parent nodes manage the aggregate resources of their children.
 Leaf nodes manage individual wallets and data sectors.
 
-Each quorum is composed of 85 to 255 hosts which act together in consensus over some volume of the network data.
+Each quorum is composed of 100 to 255 hosts which act together in consensus over some volume of the network data.
 The use of parent quorums allows child quorums to get information about the rest of the network.
 Security of the network relies on quorums being trustworthy.
 A quorum is trustworthy if at least 15\% of the nodes in the quorum are trustworthy.
@@ -127,7 +131,7 @@ Forks can appear in the blockchain, and the blockchain is used to achieve consen
 Strict rules on forks enable newcomers to determine which fork is the network accepted fork.
 
 \section{Quorums}
-Hosts are randomly assembled into small quorums between 85 and 255 hosts in size.
+Hosts are randomly assembled into small quorums between 100 and 255 hosts in size.
 Within these quorums, they are able maintain consensus by using message passing.
 Each host within the quorum must provide 1TB of storage.
 Some of this storage will be empty, and some of this storage will be storing arbitrary data.
@@ -266,8 +270,8 @@ When a quorum grows to 255 hosts in size, it is split into a parent and 2 child 
 This does mean that the child quorums may not contain the same number of hosts.
 Each parent is formed from exactly 64 hosts from each child quorum, and those hosts are chosen at random.
 
-When a quorum drops to 85 hosts in size (provided it is not the only quorum on the network), it joins with its siblings to become a single larger quorum.
-In the rare case that an 85 host quorum and it's sibling exceeds 255 total hosts (in the very rare case, because quorum sizes are random and follow a standard distribution), the quorum will split again, effectively randomly shuffling the hosts around.
+When a quorum drops to 100 hosts in size (provided it is not the only quorum on the network), it joins with its siblings to become a single larger quorum.
+In the rare case that a 100 host quorum and it's sibling exceed 255 total hosts (in the very rare case, because quorum sizes are random and follow a normal distribution), the quorum will split again, effectively randomly shuffling the hosts around.
 
 Each host keeps an entire history of their own quorum and of their parent quorum.
 When there is a split, all children keep the history of the previously unified quorum.
@@ -290,7 +294,7 @@ To prevent manipulation, quorums are assembled according to the following rules:
 \begin{enumerate}
 	\item When a host joins the network, they are assigned to a random existing quorum.
 	\item When a host leaves a quorum, it is replaced by a random host from a random quorum. (replacement action)
-	\item When a host leaves a quorum, two additional hosts from two random quorums are swapped with two random hosts from two different random quorums on the network. (network turbulence)
+	\item When a host leaves a quorum, one host from a random quorum is swapped with one honst from another random quorum on the network. (network turbulence)
 	\item When a host leaves a quorum, two additional hosts from the quorum are swapped with two random hosts from the network. (quorum turbulence)
 \end{enumerate}
 
@@ -309,19 +313,38 @@ The second goal is to make sure that a malicious host cannot corrupt a targetted
 We protect from DDOS assasinations by adding turblence to a quorum that a host leaves.
 We protect from targeted quorum attacks by adding turbulence to the network at large.
 
+(fuzzy probability on this next part, but it's close enough for a rough draft)
+When initially placing hosts in quorums, the distribution is random.
+We can look at the number of malicious hosts as a coin flip problem, where the probability of getting a malicious host is equal to the number of malicious hosts on the network.
+Assuming the attacker has at most 50\% of the hosts on the network, and that all quorums are the minimium of 100 hosts in size, the probability of an attacker controlling at least 75\% of a given quorum is:
+\begin{equation}
+\sum_{i=0}^{i=25} {100 \choose i} \; 0.5^{i} \; 0.5^{100-i} = 2.818\times10^{-7}
+\end{equation}
+Which is one in 28 million, meaning Sia can have up to 28 million quorums and an attacker will probabilistically control no more than 75\% of the hosts on any of them.
+
+The goal of the network turbulence is to make sure that any amount of rerolling and honest assassinations will still result in an attacker having an equilibrium at 75\% control, which is a full 10\% away from the 85\% required to acheive a dishonest quorum.
+
 Given the conditions, we explore what happens when an attacker tries to corrupt a target quorum by rerolling host destinations.
 In the event that an attacker is targeting a quorum or set of quorums to corrupt them, each time they join the network there is a $\frac{1}{s}$ chance of the attacker landing in the target quorum, where $s$ is the number of quorms times the size of the set of quorums being attacked.
-When the attacker leaves a quorum that is not the target quorum and then joins again, the effect is:
-% EQUATION
-Assuming that the attacker controls 50\% of the network.
-% EQUATION
+The gain for the attacker is then $\frac{1}{s}$.
+When the attacker is replaced in the quorum that the attacker left, there is a $\frac{1}{s}$ chance that a host will be pulled from the target quorum, and a 75\% chance that the host pulled will belong to the attacker, assuming that the attacker is targeting a quorum which they already control 75\% of.
+The loss for the attacker is then $(\frac{1}{s})(0.75)$.
+When network turbulence is introduced, there is a $\frac{1}{s}$ chance that the target quorum will be chosen as a source, and a $\frac{1}{s}$ chance that the target quorum will be chosen as a destination, which is two chances to lose or gain hosts.
+The other quorum will be random, which means there will be an equal chance of getting a malicious host vs. honest host.
+The gain is then $(2)(\frac{1}{s})(\frac{1}{2})(\frac{1}{4})$.
+The loss is $(2)(\frac{1}{s})(\frac{1}{2})(\frac{3}{4})$.
+Assuming that the host leaves a quorum which it has nearly or exactly 75\% control of (but is not the target quorum), the quorum turbulence will cancel out, as the probability is of swapping hosts from two quorums with the same ratios.
+We note that in all components, $\frac{1}{s}$ will cancel out, and can be reduced to 1.
+Put together, we get the expected change in host count during a reroll to be:
+\begin{equation}
+1 - 0.75 + (2)(\frac{1}{2})(\frac{1}{4}) - (2)(\frac{1}{2})(\frac{3}{4}) = -\frac{1}{4}
+\end{equation}
+
+Therefore, the turbulence we have introduced will actually probabilistically drive the attacker below 75\% control, requiring an extreme amount of luck to push a quorum all the way towards 85\%.
+As the number of quorums increases, the number of rerolls needed to attack a quorum rises quadratically, smoothing out the turbulence as probability of rolling the target quorum decreases and the volume of turbulence increases.
 
 If a host is removed from a quorum as the result of a DDOS, the effect is:
-% EQUAITON
-which reduces to:
 % EQUATION
-
-Because we define a quorum as honest if only 15\% of hosts in the quorum are honest, we can see that even under attack from a 50\% strong attacker, the equilibrium is above that number for target quorums.
 %
 %
 %
