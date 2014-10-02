@@ -148,6 +148,7 @@ func (s *Server) NewJoiningParticipant(npi NewParticipantInfo, _ *struct{}) (err
 
 // ParticipantNames returns a list of participant names known to the server.
 func (s *Server) ParticipantNames(_ struct{}, parts *[]string) (err error) {
+	*parts = make([]string, 0, len(s.participantManager.participants))
 	for name := range s.participantManager.participants {
 		*parts = append(*parts, name)
 	}
