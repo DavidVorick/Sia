@@ -223,46 +223,6 @@ This section is merely to suggest that there are lots of optimizations available
 In the interest of keeping the whitepaper as simple as possible, these are largely left undiscussed.
 These optimizations can bring about DOS vectors, however careful implementation minimizes the attack potentency and will never make communication worse than in the unoptimized case.
 
-\subsection{Heartbeats}
-Each heartbeat will contain the following:
-\begin{itemize}
-	\item A signature of the previous block, forcing a host to align with a specific previous history.
-	\item A proof of storage, demonstrating that the host is holding onto required data.
-	\item A proof of capacity, demonstrating that the host has as much empty storage as the host is indicating to the network.
-	\item A clock-synchronization message, which will allow for a byzantine set of hosts to maintain synchronized clocks within drift $d$.
-	\item A random 128 bit number.
-	% Aiza recent block?
-	\item Transactions within the network. This can include sending money, uploading files, and other updates.
-\end{itemize}
-
-A heartbeat is invalid if the previous block signature does not match the history that the honest hosts recognize as the previous block.
-A heartbeat is invalid if it is missing the proof of storage, or if the proof of storage is incorrect.
-A heartbeat is invalid if the proof of capacity is missing or incorrect.
-A heartbeat is invalid if the clock synchronization message is incorrect (this may not be necessary, depending on the synchronization algorithm that gets chosen).
-A heartbeat is invalid if the uncompressed size of the core heartbeat (before all of the signatures that get added during consensus) exceeds \hbsize{}.
-
-\subsection{Integrating Blocks}
-A block is composed of every heartbeat that survived consensus.
-At most, each host will have one heartbeat that goes into the block.
-Some hosts may have zero heartbeats that go into the block.
-
-The history of a quorum is kept in a blockchain, which is stored in the quorum's available storage.
-Each host is expected to keep the entire blockchain for their quorum, and the block histroy will be included in the storage proofs.
-
-\subsection{Random Numbers}
-Quorums need to be able to produce random numbers.
-Each block, all hosts (in their heartbeats) submit a 128 bit random number.
-A 'unique seed' is created by appending all of the random numbers and taking the hash: H(host\_1\_seed || host\_2\_seed || ...).
-Becasue it is difficult to find the collision of a hash, so long as one of the random numbers is truly random, the seed will be unique and an attacker cannot feasibly grind for collisions.
-
-After getting a unique seed, the quorum will wait for a new global random number to be announced.
-Concurrent to creating the unique seed, hosts will lock down the set of events that are determined by the random number.
-The quorum must wait enough time that there is no possibility of a dishonest member of the quorum knowing the global number before submitting a random number to the unique seed.
-% explain this in greater detail.
-The the root quorum will announce a globally random number, which is derived from the Sia's POW blockchain.
-Each leaf quorum will take their unique seed, and derive a unique random number by taking H(unique\_seed || global\_random\_number).
-This random number will then be applied to the events that have already been locked down.
-
 \section{Tree Topology of Quorums}
 The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
 The network starts off as a single quorum, which is just a leaf quorum.
@@ -321,35 +281,38 @@ Assuming the attacker has at most 50\% of the hosts on the network, and that all
 \sum_{i=0}^{i=25} {100 \choose i} \; 0.5^{i} \; 0.5^{100-i} = 2.818\times10^{-7}
 \end{equation}
 Which is one in 28 million, meaning Sia can have up to 28 million quorums and an attacker will probabilistically control no more than 75\% of the hosts on any of them.
-
-The goal of the network turbulence is to make sure that any amount of rerolling and honest assassinations will still result in an attacker having an equilibrium at 75\% control, which is a full 10\% away from the 85\% required to acheive a dishonest quorum.
+The actual probability is much more favorable, as most quorums will have more than 100 hosts.
 
 Given the conditions, we explore what happens when an attacker tries to corrupt a target quorum by rerolling host destinations.
-In the event that an attacker is targeting a quorum or set of quorums to corrupt them, each time they join the network there is a $\frac{1}{s}$ chance of the attacker landing in the target quorum, where $s$ is the number of quorms times the size of the set of quorums being attacked.
-The gain for the attacker is then $\frac{1}{s}$.
-When the attacker is replaced in the quorum that the attacker left, there is a $\frac{1}{s}$ chance that a host will be pulled from the target quorum, and a 75\% chance that the host pulled will belong to the attacker, assuming that the attacker is targeting a quorum which they already control 75\% of.
-The loss for the attacker is then $(\frac{1}{s})(0.75)$.
+We now investigate the protective power of the turbulence in the event of an attacker continuously rejoining the network trying to target a quorum at 75\% attacker control.
+We define $s$ as the number of quorums.
+
+In the event that an attacker is targeting a quorum or set of quorums to corrupt them, each time they join the network there is a $\frac{1}{s}$ chance of the attacker landing in the target quorum.
+When the attacker is replaced in the quorum that the attacker left, there is a $\frac{1}{s}$ chance that a host will be pulled from the target quorum, and a 75\% chance that the host pulled will belong to the attacker.
 When network turbulence is introduced, there is a $\frac{1}{s}$ chance that the target quorum will be chosen as a source, and a $\frac{1}{s}$ chance that the target quorum will be chosen as a destination, which is two chances to lose or gain hosts.
-The other quorum will be random, which means there will be an equal chance of getting a malicious host vs. honest host.
-The gain is then $(2)(\frac{1}{s})(\frac{1}{2})(\frac{1}{4})$.
-The loss is $(2)(\frac{1}{s})(\frac{1}{2})(\frac{3}{4})$.
-Assuming that the host leaves a quorum which it has nearly or exactly 75\% control of (but is not the target quorum), the quorum turbulence will cancel out, as the probability is of swapping hosts from two quorums with the same ratios.
-We note that in all components, $\frac{1}{s}$ will cancel out, and can be reduced to 1.
-Put together, we get the expected change in host count during a reroll to be:
-\begin{equation}
-1 - 0.75 + (2)(\frac{1}{2})(\frac{1}{4}) - (2)(\frac{1}{2})(\frac{3}{4}) = -\frac{1}{4}
-\end{equation}
+The other quorum will be random, which means the attacker will have at best a 50\% chance of drawing a malicious host.
+The change is then $(2)(\frac{1}{s})(\frac{1}{2})(\frac{1}{4})$ more malicious hosts, and $(2)(\frac{1}{s})(\frac{1}{2})(\frac{3}{4})$ more honest hosts.
+We assume that quorum turbulence will introduce no change, which is true where the percent of malicious hosts in the source quorum is equal to the percent of malicious hosts in the target quorum.
+Over $s$ rerolls, we get the expected change in the number of malicious hosts in the target quorum to be:
+$1 - 0.75 + (2)(\frac{1}{2})(\frac{1}{4}) - (2)(\frac{1}{2})(\frac{3}{4}) = -\frac{1}{4}$
 
 Therefore, the turbulence we have introduced will actually probabilistically drive the attacker below 75\% control, requiring an extreme amount of luck to push a quorum all the way towards 85\%.
 As the number of quorums increases, the number of rerolls needed to attack a quorum rises quadratically, smoothing out the turbulence as probability of rolling the target quorum decreases and the volume of turbulence increases.
 
 If a host is removed from a quorum as the result of a DDOS, the effect is:
-% EQUATION
-%
-%
-%
-%
+Losing 1 honest host from the quorum.
+Gaining a host from a random quorum, which has a 50\% chance of being honest as a result of the replacement action.
+The network turbulence will have no effect.
+Two additional hosts from the quorum will be selected at random to be removed as a result of quorum turbulence.
+This results in two 25\% chances of an honest host being removed.
+And this also results in two 50\% chances of an honest host being added.
+The net change in the number of honest hosts as result of an assasination is then: $-1 + 0.5 - 2(0.25) + 2(0.5) = 0$.
+There is no probabilistic benefit to doing assassinations when an attacker already controls 75\% of a quorum.
 
+It is noted however that because the attacker can directly pick which host to attack, and can attack multiple hosts at once, this DDOS protection is still not very strong.
+For small quorums, an attacker only needs to pull off a small volume of assassinations before potentially getting lucky, especially when compared to host rerolling.
+Therefore we will need to require that honest hosts have some form of DDOS protection, or else admit a vulnerability to DDOS attacks.
+It is also noted that this DDOS protection scheme is responsible for more than half of the turbulence introduced into the network, resulting in 4 hosts (of 7 total) that need to switch quorums.
 
 \subsection{Random Placement of Files}
 
@@ -367,6 +330,47 @@ The types of transactions are:
 
 An aggregate transaction is just the hash of a full transaciton, which keeps the transactions small.
 The destination quorum is responsible for contacting the source quorum to figure out how the aggregate transaction breaks down.
+
+\section{Something}
+\subsection{Heartbeats}
+Each heartbeat will contain the following:
+\begin{itemize}
+	\item A signature of the previous block, forcing a host to align with a specific previous history.
+	\item A proof of storage, demonstrating that the host is holding onto required data.
+	\item A proof of capacity, demonstrating that the host has as much empty storage as the host is indicating to the network.
+	\item A clock-synchronization message, which will allow for a byzantine set of hosts to maintain synchronized clocks within drift $d$.
+	\item A random 128 bit number.
+	% Aiza recent block?
+	\item Transactions within the network. This can include sending money, uploading files, and other updates.
+\end{itemize}
+
+A heartbeat is invalid if the previous block signature does not match the history that the honest hosts recognize as the previous block.
+A heartbeat is invalid if it is missing the proof of storage, or if the proof of storage is incorrect.
+A heartbeat is invalid if the proof of capacity is missing or incorrect.
+A heartbeat is invalid if the clock synchronization message is incorrect (this may not be necessary, depending on the synchronization algorithm that gets chosen).
+A heartbeat is invalid if the uncompressed size of the core heartbeat (before all of the signatures that get added during consensus) exceeds \hbsize{}.
+
+\subsection{Integrating Blocks}
+A block is composed of every heartbeat that survived consensus.
+At most, each host will have one heartbeat that goes into the block.
+Some hosts may have zero heartbeats that go into the block.
+
+The history of a quorum is kept in a blockchain, which is stored in the quorum's available storage.
+Each host is expected to keep the entire blockchain for their quorum, and the block histroy will be included in the storage proofs.
+
+\subsection{Random Numbers}
+Quorums need to be able to produce random numbers.
+Each block, all hosts (in their heartbeats) submit a 128 bit random number.
+A 'unique seed' is created by appending all of the random numbers and taking the hash: H(host\_1\_seed || host\_2\_seed || ...).
+Becasue it is difficult to find the collision of a hash, so long as one of the random numbers is truly random, the seed will be unique and an attacker cannot feasibly grind for collisions.
+
+After getting a unique seed, the quorum will wait for a new global random number to be announced.
+Concurrent to creating the unique seed, hosts will lock down the set of events that are determined by the random number.
+The quorum must wait enough time that there is no possibility of a dishonest member of the quorum knowing the global number before submitting a random number to the unique seed.
+% explain this in greater detail.
+The the root quorum will announce a globally random number, which is derived from the Sia's POW blockchain.
+Each leaf quorum will take their unique seed, and derive a unique random number by taking H(unique\_seed || global\_random\_number).
+This random number will then be applied to the events that have already been locked down.
 
 \subsection{Block Announcements}
 
