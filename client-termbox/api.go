@@ -37,3 +37,35 @@ func (s *Server) GetParticipantNames() (names []string, err error) {
 	})
 	return
 }
+
+func (s *Server) CreateParticipant(name string, id uint64, dir string, bootstrap bool) error {
+	// construct NewParticipantInfo
+	// this type is defined in the server's main package, so we have to
+	// recreate it here.
+	npi := struct {
+		Name               string
+		SiblingID          state.WalletID
+		UseUniqueDirectory bool
+		UniqueDirectory    string
+	}{
+		Name:            name,
+		SiblingID:       state.WalletID(id),
+		UniqueDirectory: dir,
+	}
+	if dir != "" {
+		npi.UseUniqueDirectory = true
+	}
+
+	var proc string
+	if bootstrap {
+		proc = "NewBootstrapParticipant"
+	} else {
+		proc = "NewJoiningParticipant"
+	}
+
+	return s.Router.SendMessage(network.Message{
+		Dest: s.Address,
+		Proc: "Server." + proc,
+		Args: npi,
+	})
+}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/nsf/termbox-go"
 )
 
@@ -75,7 +77,7 @@ type ParticipantCreator struct {
 	name      string
 	siblingID string
 	customDir string
-	genesis   bool
+	bootstrap bool
 }
 
 func newParticipantCreator(parent MVC) *ParticipantCreator {
@@ -84,7 +86,7 @@ func newParticipantCreator(parent MVC) *ParticipantCreator {
 		newForm(pc, "Name:      ", &pc.name, 20),
 		newForm(pc, "Sibling ID:", &pc.siblingID, 20),
 		newForm(pc, "Custom Dir:", &pc.customDir, 20),
-		newCheckbox(pc, "Genesis", &pc.genesis),
+		newCheckbox(pc, "New quorum", &pc.bootstrap),
 		newButton(pc, "Create", pc.create),
 	}
 	pc.offsets = []int{1, 2, 3, 4, 6}
@@ -93,5 +95,21 @@ func newParticipantCreator(parent MVC) *ParticipantCreator {
 }
 
 func (pc *ParticipantCreator) create() {
+	// validate values
+	if pc.name == "" {
+		drawError("Please provide a name")
+		return
+	}
+	id, err := strconv.ParseUint(pc.siblingID, 10, 64)
+	if err != nil {
+		drawError("Invalid sibling ID")
+		return
+	}
 
+	err = server.CreateParticipant(pc.name, id, pc.customDir, pc.bootstrap)
+	if err != nil {
+		drawError("Participant creation failed:", err)
+	} else {
+		drawInfo("Created " + pc.name)
+	}
 }
