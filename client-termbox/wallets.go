@@ -9,55 +9,55 @@ import (
 
 const WalletMenuWidth = 15
 
-// WalletMenuView is a MenuView that lists the wallets available to the user.
-type WalletMenuView struct {
-	MenuView
+// WalletMenuMVC is a MenuMVC that lists the wallets available to the user.
+type WalletMenuMVC struct {
+	MenuMVC
 }
 
-func newWalletMenuView(parent View) *WalletMenuView {
-	wmv := new(WalletMenuView)
-	wmv.Parent = parent
-	wmv.Title = "Wallets"
-	wmv.MenuWidth = WalletMenuWidth
+func newWalletMenuMVC(parent MVC) *WalletMenuMVC {
+	wm := new(WalletMenuMVC)
+	wm.Parent = parent
+	wm.Title = "Wallets"
+	wm.MenuWidth = WalletMenuWidth
 	// load wallet IDs and create views
-	wmv.loadWallets()
-	return wmv
+	wm.loadWallets()
+	return wm
 }
 
-func (wmv *WalletMenuView) Focus() {
-	//wmv.loadWallets()
-	wmv.MenuView.Focus()
+func (wm *WalletMenuMVC) Focus() {
+	//wm.loadWallets()
+	wm.MenuMVC.Focus()
 }
 
-func (wmv *WalletMenuView) loadWallets() {
+func (wm *WalletMenuMVC) loadWallets() {
 	wids, err := server.GetWallets()
 	if err != nil {
 		//drawError("Could not load wallets:", err)
 		return
 	}
 	for _, wid := range wids {
-		wmv.addWallet(wid)
+		wm.addWallet(wid)
 	}
 }
 
 // TODO: to avoid duplicates, merge wallet ids instead of blindly appending
-func (wmv *WalletMenuView) addWallet(wid state.WalletID) {
-	wmv.Items = append(wmv.Items, wid.String())
-	wmv.Windows = append(wmv.Windows, &WalletView{
-		DefaultView{Parent: wmv},
+func (wm *WalletMenuMVC) addWallet(wid state.WalletID) {
+	wm.Items = append(wm.Items, wid.String())
+	wm.Windows = append(wm.Windows, &WalletMVC{
+		DefaultMVC{Parent: wm},
 	})
 }
 
-// A WalletView displays the properties of a Wallet.
-type WalletView struct {
-	DefaultView
+// A WalletMVC displays the properties of a Wallet.
+type WalletMVC struct {
+	DefaultMVC
 }
 
-func (wv *WalletView) Draw() {
+func (wv *WalletMVC) Draw() {
 
 }
 
-func (wv *WalletView) HandleKey(key termbox.Key) {
+func (wv *WalletMVC) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyArrowLeft:
 		wv.GiveFocus(wv.Parent)

@@ -8,84 +8,84 @@ const (
 	ParticipantMenuWidth = 18
 )
 
-// ParticipantMenuView lists the Participants available to the user, and allows
+// ParticipantMenuMVC lists the Participants available to the user, and allows
 // for the creation of new Participants.
-type ParticipantMenuView struct {
-	MenuView
+type ParticipantMenuMVC struct {
+	MenuMVC
 }
 
-func newParticipantMenuView(parent View) *ParticipantMenuView {
-	pmv := new(ParticipantMenuView)
-	pmv.Parent = parent
-	pmv.Title = "Participants"
-	pmv.MenuWidth = ParticipantMenuWidth
-	pmv.Items = []string{"New Participant"}
-	pmv.Windows = []View{newParticipantCreator(pmv)}
+func newParticipantMenuMVC(parent MVC) *ParticipantMenuMVC {
+	pm := new(ParticipantMenuMVC)
+	pm.Parent = parent
+	pm.Title = "Participants"
+	pm.MenuWidth = ParticipantMenuWidth
+	pm.Items = []string{"New Participant"}
+	pm.Windows = []MVC{newParticipantCreator(pm)}
 	// load participant names and create views
-	pmv.loadParticipants()
-	return pmv
+	pm.loadParticipants()
+	return pm
 }
 
-func (pmv *ParticipantMenuView) Focus() {
-	//pmv.loadParticipants()
-	pmv.MenuView.Focus()
+func (pm *ParticipantMenuMVC) Focus() {
+	//pm.loadParticipants()
+	pm.MenuMVC.Focus()
 }
 
-func (pmv *ParticipantMenuView) loadParticipants() {
+func (pm *ParticipantMenuMVC) loadParticipants() {
 	names, err := server.GetParticipantNames()
 	if err != nil {
 		//drawError("Could not load participants:", err)
 		return
 	}
 	for _, n := range names {
-		pmv.addParticipant(n)
+		pm.addParticipant(n)
 	}
 }
 
-// TODO: same as WalletMenuView.addWallet
-func (pmv *ParticipantMenuView) addParticipant(name string) {
-	pv := new(ParticipantView)
-	pv.Parent = pmv
+// TODO: same as WalletMenuMVC.addWallet
+func (pm *ParticipantMenuMVC) addParticipant(name string) {
+	pv := new(ParticipantMVC)
+	pv.Parent = pm
 	pv.name = name
 
-	pmv.Items = append(pmv.Items, name)
-	pmv.Windows = append(pmv.Windows, pv)
+	pm.Items = append(pm.Items, name)
+	pm.Windows = append(pm.Windows, pv)
 }
 
-// A ParticipantView displays the properties of a Participant.
-type ParticipantView struct {
-	DefaultView
+// A ParticipantMVC displays the properties of a Participant.
+type ParticipantMVC struct {
+	DefaultMVC
 	name string
 }
 
-func (pv *ParticipantView) Draw() {
+func (p *ParticipantMVC) Draw() {
 	// display properities of participant
 }
 
-func (pv *ParticipantView) HandleKey(key termbox.Key) {
+func (p *ParticipantMVC) HandleKey(key termbox.Key) {
 	switch key {
 	case termbox.KeyArrowLeft:
-		pv.GiveFocus(pv.Parent)
+		p.GiveFocus(p.Parent)
 	}
 }
 
 // The ParticipantCreator allows for the creation of new Participants.
 type ParticipantCreator struct {
-	InputsView
+	InputGroupMVC
 	name      string
 	siblingID string
 	customDir string
 	genesis   bool
 }
 
-func newParticipantCreator(parent View) *ParticipantCreator {
+func newParticipantCreator(parent MVC) *ParticipantCreator {
 	pc := new(ParticipantCreator)
 	pc.inputs = []Input{
 		newForm(pc, "Name:      ", &pc.name, 20),
 		newForm(pc, "Sibling ID:", &pc.siblingID, 20),
 		newForm(pc, "Custom Dir:", &pc.customDir, 20),
 		newCheckbox(pc, "Genesis", &pc.genesis),
-		newButton(pc, "Submit", pc.create),
+		newButton(pc, "Create", pc.create),
 	}
 	pc.offsets = []int{1, 2, 3, 4, 6}
 	pc.Parent = parent

@@ -15,23 +15,24 @@ const (
 	FieldHLColor = termbox.ColorRed
 )
 
-// An Input is simply a view that can be highlighted. This may cause some
-// confusion, because Focus() appears to fill this role as well. However,
-// implementation details make using Focus() for inputs ugly and unintuitive. I
-// hope to find a better solution in the future.
+// An Input is simply an MVC that can be highlighted. This may cause some
+// confusion, because Focus() appears to fill this role as well. However, in
+// some cases it is desirable to highlight an Input without transferring
+// control to it. This property may be extended to other MVCs if it is found to
+// be more widely applicable.
 type Input interface {
-	View
+	MVC
 	DrawHL()
 }
 
 // A Button is an Input that can trigger a function when pressed.
 type Button struct {
-	DefaultView
+	DefaultMVC
 	label string
 	press func()
 }
 
-func newButton(parent View, label string, press func()) *Button {
+func newButton(parent MVC, label string, press func()) *Button {
 	b := &Button{
 		label: " " + label + " ",
 		press: press,
@@ -63,12 +64,12 @@ func (b *Button) Focus() {
 // Checkbox is tied to a boolean, which is supplied when the Checkbox is
 // created.
 type Checkbox struct {
-	DefaultView
+	DefaultMVC
 	label   string
 	checked *bool
 }
 
-func newCheckbox(parent View, label string, checked *bool) *Checkbox {
+func newCheckbox(parent MVC, label string, checked *bool) *Checkbox {
 	c := &Checkbox{
 		label:   label,
 		checked: checked,
@@ -103,7 +104,7 @@ func (c *Checkbox) DrawHL() {
 // A Field is an Input that allows text entry. The text is tied to a string,
 // which is supplied when the Field is created.
 type Field struct {
-	DefaultView
+	DefaultMVC
 	text string
 	ref  *string
 	pos  int
@@ -195,7 +196,7 @@ type Form struct {
 	width int
 }
 
-func newForm(parent View, label string, ref *string, width int) *Form {
+func newForm(parent MVC, label string, ref *string, width int) *Form {
 	f := &Form{
 		label: label,
 		width: width,
@@ -225,28 +226,28 @@ func (f *Form) DrawHL() {
 	f.Field.DrawHL()
 }
 
-// An InputsView is a collection of Inputs that can be navigated.
-type InputsView struct {
-	DefaultView
+// An InputGroupMVC is a collection of Inputs that can be navigated.
+type InputGroupMVC struct {
+	DefaultMVC
 	inputs  []Input
 	offsets []int
 	sel     int
 }
 
-func (iv *InputsView) SetDims(r Rectangle) {
-	iv.Rectangle = r
-	for i := range iv.inputs {
+func (ig *InputGroupMVC) SetDims(r Rectangle) {
+	ig.Rectangle = r
+	for i := range ig.inputs {
 		// inputs are fixed size, so they only care about MinX/MinY
-		iv.inputs[i].SetDims(Rectangle{
+		ig.inputs[i].SetDims(Rectangle{
 			MinX: r.MinX + 1,
-			MinY: r.MinY + iv.offsets[i],
+			MinY: r.MinY + ig.offsets[i],
 		})
 	}
 }
 
-func (iv *InputsView) Draw() {
-	for i, in := range iv.inputs {
-		if i == iv.sel && iv.hasFocus {
+func (ig *InputGroupMVC) Draw() {
+	for i, in := range ig.inputs {
+		if i == ig.sel && ig.hasFocus {
 			in.DrawHL()
 		} else {
 			in.Draw()
@@ -254,30 +255,30 @@ func (iv *InputsView) Draw() {
 	}
 }
 
-func (sv *InputsView) HandleKey(key termbox.Key) {
-	if !sv.hasFocus {
-		sv.inputs[sv.sel].HandleKey(key)
+func (ig *InputGroupMVC) HandleKey(key termbox.Key) {
+	if !ig.hasFocus {
+		ig.inputs[ig.sel].HandleKey(key)
 		return
 	}
 	switch key {
 	case termbox.KeyArrowLeft:
-		sv.GiveFocus(sv.Parent)
+		ig.GiveFocus(ig.Parent)
 	case termbox.KeyArrowUp:
-		if sv.sel > 0 {
-			sv.sel--
+		if ig.sel > 0 {
+			ig.sel--
 		}
 	case termbox.KeyArrowDown:
-		if sv.sel+1 < len(sv.inputs) {
-			sv.sel++
+		if ig.sel+1 < len(ig.inputs) {
+			ig.sel++
 		}
 	case termbox.KeyEnter:
-		sv.GiveFocus(sv.inputs[sv.sel])
+		ig.GiveFocus(ig.inputs[ig.sel])
 	}
 }
 
-func (sv *InputsView) HandleRune(r rune) {
-	if !sv.hasFocus {
-		sv.inputs[sv.sel].HandleRune(r)
+func (ig *InputGroupMVC) HandleRune(r rune) {
+	if !ig.hasFocus {
+		ig.inputs[ig.sel].HandleRune(r)
 		return
 	}
 }

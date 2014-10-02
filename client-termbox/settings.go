@@ -4,32 +4,31 @@ import (
 	"fmt"
 )
 
-// SettingsView is an InputsView that allows the user to modify client
-// settings.
-type SettingsView struct {
-	InputsView
+// SettingsMVC allows the user to modify client settings.
+type SettingsMVC struct {
+	InputGroupMVC
 	clientPort string
 	serverHost string
 	serverPort string
 	serverID   string
 }
 
-func newSettingsView(parent View) *SettingsView {
-	sv := new(SettingsView)
+func newSettingsMVC(parent MVC) *SettingsMVC {
+	s := new(SettingsMVC)
 
 	// load current config values
-	sv.clientPort = fmt.Sprint(config.Client.Port)
-	sv.serverHost = config.Server.Host
-	sv.serverPort = fmt.Sprint(config.Server.Port)
-	sv.serverID = fmt.Sprint(config.Server.ID)
+	s.clientPort = fmt.Sprint(config.Client.Port)
+	s.serverHost = config.Server.Host
+	s.serverPort = fmt.Sprint(config.Server.Port)
+	s.serverID = fmt.Sprint(config.Server.ID)
 
-	sv.inputs = []Input{
-		newForm(sv, "Client Port:", &sv.clientPort, 20),
-		newForm(sv, "Server Host:", &sv.serverHost, 20),
-		newForm(sv, "Server Port:", &sv.serverPort, 20),
-		newForm(sv, "Server ID:  ", &sv.serverID, 20),
+	s.inputs = []Input{
+		newForm(s, "Client Port:", &s.clientPort, 20),
+		newForm(s, "Server Host:", &s.serverHost, 20),
+		newForm(s, "Server Port:", &s.serverPort, 20),
+		newForm(s, "Server ID:  ", &s.serverID, 20),
 	}
-	sv.offsets = []int{1, 3, 4, 5}
-	sv.Parent = parent
-	return sv
+	s.offsets = []int{1, 3, 4, 5}
+	s.Parent = parent
+	return s
 }

@@ -13,10 +13,10 @@ const (
 	HomeInactiveColor = termbox.ColorGreen
 )
 
-// newHomeView creates the main menu and its subviews.
-func newHomeView() *MenuView {
-	// create MenuView
-	mw := &MenuView{
+// newHomeMVC creates the main menu and its subviews.
+func newHomeMVC() *MenuMVC {
+	// create MenuMVC
+	m := &MenuMVC{
 		Title:     "Sia Alpha v3",
 		MenuWidth: HomeMenuWidth,
 		Items: []string{
@@ -27,16 +27,16 @@ func newHomeView() *MenuView {
 	}
 
 	// add subviews
-	mw.Windows = []View{
-		newWalletMenuView(mw),
-		newParticipantMenuView(mw),
-		newSettingsView(mw),
+	m.Windows = []MVC{
+		newWalletMenuMVC(m),
+		newParticipantMenuMVC(m),
+		newSettingsMVC(m),
 	}
 
-	return mw
+	return m
 }
 
-// termboxRun creates a termbox instance and populates it with Views. It then
+// termboxRun creates a termbox instance and populates it with MVCs. It then
 // handles termbox events (such as user input) in an infinite loop, dispatching
 // the event to the proper receiver and redrawing the screen.
 func termboxRun() {
@@ -47,7 +47,7 @@ func termboxRun() {
 	defer termbox.Close()
 
 	// create main window
-	mw := newHomeView()
+	mw := newHomeMVC()
 	w, h := termbox.Size()
 	mw.SetDims(Rectangle{0, 0, w, h})
 	mw.Focus()
