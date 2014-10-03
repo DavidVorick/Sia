@@ -50,17 +50,16 @@ func (s *Server) WalletType(id state.WalletID, walletType *string) (err error) {
 func (s *Server) RequestGenericWallet(id state.WalletID, _ *struct{}) (err error) {
 	// Query to verify that the wallet id is available.
 	var w state.Wallet
-	err = s.router.SendMessage(network.Message{
+	existErr := s.router.SendMessage(network.Message{
 		Dest: s.metadata.Siblings[0].Address,
 		Proc: "Participant.Wallet",
 		Args: id,
 		Resp: &w,
 	})
-	if err == nil {
+	if existErr == nil {
 		err = errors.New("Wallet already exists!")
 		return
 	}
-	err = nil
 
 	// Create a generic wallet with a keypair for the request.
 	pk, sk, err := siacrypto.CreateKeyPair()

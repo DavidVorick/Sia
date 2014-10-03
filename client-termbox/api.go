@@ -37,6 +37,14 @@ func (s *Server) Wallet(id state.WalletID, w *state.Wallet) error {
 	})
 }
 
+func (s *Server) RequestGenericWallet(id uint64) error {
+	return s.Router.SendMessage(network.Message{
+		Dest: s.Address,
+		Proc: "Server.RequestGenericWallet",
+		Args: state.WalletID(id),
+	})
+}
+
 func (s *Server) ParticipantNames() (names []string, err error) {
 	err = s.Router.SendMessage(network.Message{
 		Dest: s.Address,

@@ -141,12 +141,13 @@ func (pc *ParticipantCreator) create() {
 	err = server.CreateParticipant(pc.name, id, pc.customDir, pc.bootstrap)
 	if err != nil {
 		drawError("Participant creation failed:", err)
-	} else {
-		drawInfo("Created " + pc.name)
-		// TODO: need a good way of calling both:
-		// ParticipantMenuMVC.loadParticipants() and
-		// WalletMenuMVC.loadWallets()
-		// This problem will only get worse as more features are added.
-		// Maybe use channels?
+		return
 	}
+
+	drawInfo("Created " + pc.name)
+	// TODO: need a good way of calling both:
+	// ParticipantMenuMVC.loadParticipants() and
+	// WalletMenuMVC.loadWallets()
+	// This problem will only get worse as more features are added.
+	// Maybe use channels?
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/NebulousLabs/Sia/state"
 
@@ -20,6 +21,8 @@ func newWalletMenuMVC(parent MVC) *WalletMenuMVC {
 	wm.Parent = parent
 	wm.Title = "Wallets"
 	wm.MenuWidth = WalletMenuWidth
+	wm.Items = []string{"New Wallet"}
+	wm.Windows = []MVC{newWalletCreator(wm)}
 	// load wallet IDs and create views
 	wm.loadWallets()
 	return wm
@@ -39,8 +42,8 @@ func (wm *WalletMenuMVC) loadWallets() {
 
 	// clear existing wallets
 	// (see comment on loadParticipants)
-	wm.Items = []string{}
-	wm.Windows = []MVC{}
+	wm.Items = wm.Items[:1]
+	wm.Windows = wm.Windows[:1]
 
 	for _, wid := range wids {
 		wm.addWallet(wid)
@@ -78,4 +81,39 @@ func (wv *WalletMVC) HandleKey(key termbox.Key) {
 	case termbox.KeyArrowLeft:
 		wv.GiveFocus(wv.Parent)
 	}
+}
+
+// The WalletCreator allows for the creation of new Wallets.
+// For now, only GenericWallets can be created.
+type WalletCreator struct {
+	InputGroupMVC
+	id string
+}
+
+func newWalletCreator(parent MVC) *WalletCreator {
+	wc := new(WalletCreator)
+	wc.inputs = []Input{
+		newForm(wc, "ID:", &wc.id, 20),
+		newButton(wc, "Request", wc.request),
+	}
+	wc.offsets = []int{1, 3}
+	wc.Parent = parent
+	return wc
+}
+
+func (wc *WalletCreator) request() {
+	// validate values
+	id, err := strconv.ParseUint(wc.id, 10, 64)
+	if err != nil {
+		drawError("Invalid Wallet ID")
+		return
+	}
+
+	err = server.RequestGenericWallet(id)
+	if err != nil {
+		drawError("Wallet creation failed:", err)
+		return
+	}
+
+	drawInfo(fmt.Sprint("Created wallet ", id))
 }
