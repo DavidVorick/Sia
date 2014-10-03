@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
+
+	"github.com/NebulousLabs/Sia/state"
 
 	"github.com/nsf/termbox-go"
 )
@@ -48,24 +51,49 @@ func (pm *ParticipantMenuMVC) loadParticipants() {
 	for _, n := range names {
 		pm.addParticipant(n)
 	}
+	// set dimensions of children
+	pm.SetDims(pm.Rectangle)
 }
 
 func (pm *ParticipantMenuMVC) addParticipant(name string) {
+	p := new(ParticipantMVC)
+	p.Parent = pm
+	p.name = name
+	if err := server.FetchMetadata(name, &p.metadata); err != nil {
+		drawError("Could not fetch metadata of "+name+":", err)
+		return
+	}
 	pm.Items = append(pm.Items, name)
-	pm.Windows = append(pm.Windows, &ParticipantMVC{
-		DefaultMVC{Parent: pm},
-		name,
-	})
+	pm.Windows = append(pm.Windows, p)
 }
 
 // A ParticipantMVC displays the properties of a Participant.
 type ParticipantMVC struct {
 	DefaultMVC
-	name string
+	name     string
+	metadata state.Metadata
 }
 
 func (p *ParticipantMVC) Draw() {
-	// display properities of participant
+	drawString(p.MinX+1, p.MinY+1, "Siblings:")
+	for i, sib := range p.metadata.Siblings {
+		var status string
+		var color termbox.Attribute
+		switch {
+		case sib.Active():
+			status, color = "Active", termbox.ColorGreen
+		case sib.Inactive():
+			status, color = "Inactive", termbox.ColorRed
+		default:
+			status = fmt.Sprintf("Passive for %d more compiles", sib.Status)
+			color = termbox.ColorBlack | termbox.AttrBold
+		}
+		str := fmt.Sprintf("Sibling %d:", i)
+		drawString(p.MinX+5, p.MinY+i+3, str)
+		drawColorString(p.MinX+6+len(str), p.MinY+i+3, status, color, termbox.ColorDefault)
+	}
+	drawString(p.MinX+1, p.MinY+len(p.metadata.Siblings)+4, fmt.Sprintf("Height: %d", p.metadata.Height))
+	drawString(p.MinX+1, p.MinY+len(p.metadata.Siblings)+5, fmt.Sprintf("Parent: %v", p.metadata.ParentBlock))
 }
 
 func (p *ParticipantMVC) HandleKey(key termbox.Key) {
@@ -115,5 +143,10 @@ func (pc *ParticipantCreator) create() {
 		drawError("Participant creation failed:", err)
 	} else {
 		drawInfo("Created " + pc.name)
+		// TODO: need a good way of calling both:
+		// ParticipantMenuMVC.loadParticipants() and
+		// WalletMenuMVC.loadWallets()
+		// This problem will only get worse as more features are added.
+		// Maybe use channels?
 	}
 }

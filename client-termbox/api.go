@@ -69,3 +69,12 @@ func (s *Server) CreateParticipant(name string, id uint64, dir string, bootstrap
 		Args: npi,
 	})
 }
+
+func (s *Server) FetchMetadata(name string, metadata *state.Metadata) error {
+	return s.Router.SendMessage(network.Message{
+		Dest: s.Address,
+		Proc: "Server.ParticipantMetadata",
+		Args: name,
+		Resp: metadata,
+	})
+}
