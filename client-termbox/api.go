@@ -18,7 +18,7 @@ func (s *Server) UpdateAddress() {
 	}
 }
 
-func (s *Server) GetWallets() (ids []state.WalletID, err error) {
+func (s *Server) WalletIDs() (ids []state.WalletID, err error) {
 	err = s.Router.SendMessage(network.Message{
 		Dest: s.Address,
 		Proc: "Server.WalletIDs",
@@ -28,7 +28,7 @@ func (s *Server) GetWallets() (ids []state.WalletID, err error) {
 	return
 }
 
-func (s *Server) GetParticipantNames() (names []string, err error) {
+func (s *Server) ParticipantNames() (names []string, err error) {
 	err = s.Router.SendMessage(network.Message{
 		Dest: s.Address,
 		Proc: "Server.ParticipantNames",
@@ -70,7 +70,7 @@ func (s *Server) CreateParticipant(name string, id uint64, dir string, bootstrap
 	})
 }
 
-func (s *Server) FetchMetadata(name string, metadata *state.Metadata) error {
+func (s *Server) ParticipantMetadata(name string, metadata *state.Metadata) error {
 	return s.Router.SendMessage(network.Message{
 		Dest: s.Address,
 		Proc: "Server.ParticipantMetadata",

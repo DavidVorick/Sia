@@ -37,7 +37,7 @@ func (pm *ParticipantMenuMVC) Focus() {
 }
 
 func (pm *ParticipantMenuMVC) loadParticipants() {
-	names, err := server.GetParticipantNames()
+	names, err := server.ParticipantNames()
 	if err != nil {
 		drawError("Could not load participants:", err)
 		return
@@ -59,7 +59,7 @@ func (pm *ParticipantMenuMVC) addParticipant(name string) {
 	p := new(ParticipantMVC)
 	p.Parent = pm
 	p.name = name
-	if err := server.FetchMetadata(name, &p.metadata); err != nil {
+	if err := server.ParticipantMetadata(name, &p.metadata); err != nil {
 		drawError("Could not fetch metadata of "+name+":", err)
 		return
 	}

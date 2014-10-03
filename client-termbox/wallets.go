@@ -30,7 +30,7 @@ func (wm *WalletMenuMVC) Focus() {
 }
 
 func (wm *WalletMenuMVC) loadWallets() {
-	wids, err := server.GetWallets()
+	wids, err := server.WalletIDs()
 	if err != nil {
 		drawError("Could not load wallets:", err)
 		return
