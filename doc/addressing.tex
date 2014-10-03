@@ -255,7 +255,7 @@ To prevent manipulation, quorums are assembled according to the following rules:
 	\item When a host joins the network, they are assigned to a random existing quorum.
 	\item When a host leaves a quorum, it is replaced by a random host from a random quorum. (replacement action)
 	\item When a host leaves a quorum, one host from a random quorum is swapped with one honst from another random quorum on the network. (network turbulence)
-	% \item When a host leaves a quorum, two additional hosts from the quorum are swapped with two random hosts from the network. (quorum turbulence)
+	\item When a host leaves a quorum, two additional hosts from the quorum are swapped with two random hosts from the network. (quorum turbulence)
 \end{enumerate}
 
 By randomly assigning a host to a quorum upon joining, we can assume that there will be no potential for a host to manipulate the distribution of hosts in quorum.
@@ -299,23 +299,49 @@ $1 - 0.75 + (2)(\frac{1}{2})(\frac{1}{4}) - (2)(\frac{1}{2})(\frac{3}{4}) = -\fr
 Therefore, the turbulence we have introduced will actually probabilistically drive the attacker below 75\% control, requiring an extreme amount of luck to push a quorum all the way towards 85\%.
 As the number of quorums increases, the number of rerolls needed to attack a quorum rises quadratically, smoothing out the turbulence as probability of rolling the target quorum decreases and the volume of turbulence increases.
 
-%If a host is removed from a quorum as the result of a DDOS, the effect is:
-%Losing 1 honest host from the quorum.
-%Gaining a host from a random quorum, which has a 50\% chance of being honest as a result of the replacement action.
-%The network turbulence will have no effect.
-%Two additional hosts from the quorum will be selected at random to be removed as a result of quorum turbulence.
-%This results in two 25\% chances of an honest host being removed.
-%And this also results in two 50\% chances of an honest host being added.
-%The net change in the number of honest hosts as result of an assasination is then: $-1 + 0.5 - 2(0.25) + 2(0.5) = 0$.
-%There is no probabilistic benefit to doing assassinations when an attacker already controls 75\% of a quorum.
+If a host is removed from a quorum as the result of a DDOS, the effect is:
+Losing 1 honest host from the quorum.
+Gaining a host from a random quorum, which has a 50\% chance of being honest as a result of the replacement action.
+The network turbulence will have no effect.
+Two additional hosts from the quorum will be selected at random to be removed as a result of quorum turbulence.
+This results in two 25\% chances of an honest host being removed.
+And this also results in two 50\% chances of an honest host being added.
+The net change in the number of honest hosts as result of an assasination is then: $-1 + 0.5 - 2(0.25) + 2(0.5) = 0$.
+There is no probabilistic benefit to doing assassinations when an attacker already controls 75\% of a quorum.
 
-%It is noted however that because the attacker can directly pick which host to attack, and can attack multiple hosts at once, this DDOS protection is still not very strong.
-%For small quorums, an attacker only needs to pull off a small volume of assassinations before potentially getting lucky, especially when compared to host rerolling.
-%Therefore we will need to require that honest hosts have some form of DDOS protection, or else admit a vulnerability to DDOS attacks.
-%It is also noted that this DDOS protection scheme is responsible for more than half of the turbulence introduced into the network, resulting in 4 hosts (of 7 total) that need to switch quorums.
+It is noted however that because the attacker can directly pick which host to attack, and can attack multiple hosts at once, this DDOS protection is still not very strong.
+For small quorums, an attacker only needs to pull off a small volume of assassinations before potentially getting lucky, especially when compared to host rerolling.
+Therefore we will need to require that honest hosts have some form of DDOS protection, or else admit a vulnerability to DDOS attacks.
+It is also noted that this DDOS protection scheme is responsible for more than half of the turbulence introduced into the network, resulting in 4 hosts (of 7 total) that need to switch quorums.
 
 \subsection{Consensus Across the Tree}
 The tree needs to have a way to come to consensus about the status of the blockchain of each quorum.
+This is managed through the tree structure.
+The parent quorum is composed of exaclty 64 hosts from each child quorum.
+If the quorum is honest, then with high probability there will be at least one honest host in the parent quorum.
+
+A quorum can have forks.
+This happens when dishonest hosts release a block that contains a different set of heartbeats than the one determined by the honest hosts.
+Internal to the quorum, honest hosts will ignore all honest blocks, and are guarnateed to maintain synchronization.
+When the following block is released, each host will include in their heartbeat a signature of the previous block.
+The previous block with the most supporters is accepted as cannon by the parent.
+
+A dishonest set of hosts cannot release an illegal block, however if an attacker controls the majority in a leaf quorum, it can exclude honest heartbeats from the quorum.
+Honest hosts will never switch to an attackers fork, which means they will appear inactive to the quorum.
+The result will be the honest hosts dropping from the network, which will result in new hosts being brought in, and in turbulence being applied.
+
+The same rule goes for parent quorums, except that supporters applies to all child quorums as well.
+If a parent quorum dishonestly announces a block that is missing the winning block from one of its children, all of the honest hosts beneath the parent will reject the block.
+This prevents an attacker who controls the majority in a parent quorum from being able to apply dishonest forks without controlling the majority of that entire segement of the quorum tree.
+
+%FAILURE MODE
+There is a failure that occurs if there are honest hosts in a quorum who settle on a block, and then realize that the block was not included in the parent block.
+This would mean that either there are no honest hosts in the parent, or all of the honest hosts in the parent are being ignored.
+The second is not really a concern because then the parent just forks, and the acceptance for the parent hits.
+But if no other parent blocks percolate...?
+Also, how do children end up seeing all possible parents?
+===> They see the possible parents because someone percolates the possible parents to them.
+I guess we can assume that information is cheap and there are easy ways to access it.
 
 \section{Something}
 \subsection{Heartbeats}
