@@ -20,6 +20,16 @@ func (s *Server) WalletIDs(_ struct{}, ids *[]state.WalletID) (err error) {
 	return
 }
 
+// Returns the wallet object corresponding to a WalletID.
+func (s *Server) Wallet(id state.WalletID, w *state.Wallet) (err error) {
+	return s.router.SendMessage(network.Message{
+		Dest: s.metadata.Siblings[0].Address,
+		Proc: "Participant.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+}
+
 // Wallet type takes an id as input and returns the wallet type. An error is
 // returned if the wallet is not found by the client.
 func (s *Server) WalletType(id state.WalletID, walletType *string) (err error) {

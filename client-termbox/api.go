@@ -28,6 +28,15 @@ func (s *Server) WalletIDs() (ids []state.WalletID, err error) {
 	return
 }
 
+func (s *Server) Wallet(id state.WalletID, w *state.Wallet) error {
+	return s.Router.SendMessage(network.Message{
+		Dest: s.Address,
+		Proc: "Server.Wallet",
+		Args: id,
+		Resp: &w,
+	})
+}
+
 func (s *Server) ParticipantNames() (names []string, err error) {
 	err = s.Router.SendMessage(network.Message{
 		Dest: s.Address,

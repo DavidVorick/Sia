@@ -1,7 +1,8 @@
 package main
 
 import (
-	//"github.com/NebulousLabs/Sia/network"
+	"fmt"
+
 	"github.com/NebulousLabs/Sia/state"
 
 	"github.com/nsf/termbox-go"
@@ -44,22 +45,32 @@ func (wm *WalletMenuMVC) loadWallets() {
 	for _, wid := range wids {
 		wm.addWallet(wid)
 	}
+	// set dimensions of children
+	wm.SetDims(wm.Rectangle)
 }
 
 func (wm *WalletMenuMVC) addWallet(wid state.WalletID) {
+	w := new(WalletMVC)
+	w.Parent = wm
+	if err := server.Wallet(wid, &w.wallet); err != nil {
+		drawError(fmt.Sprintf("Could not fetch wallet %v: %v", wid, err))
+		return
+	}
 	wm.Items = append(wm.Items, wid.String())
-	wm.Windows = append(wm.Windows, &WalletMVC{
-		DefaultMVC{Parent: wm},
-	})
+	wm.Windows = append(wm.Windows, w)
 }
 
 // A WalletMVC displays the properties of a Wallet.
 type WalletMVC struct {
 	DefaultMVC
+	id     state.WalletID
+	wallet state.Wallet
 }
 
 func (wv *WalletMVC) Draw() {
-
+	drawString(wv.MinX+1, wv.MinY+1, fmt.Sprint("Balance: ", wv.wallet.Balance))
+	drawString(wv.MinX+1, wv.MinY+2, fmt.Sprint("Atoms: ", wv.wallet.Sector.Atoms))
+	drawString(wv.MinX+1, wv.MinY+3, fmt.Sprint("Hash: ", wv.wallet.Sector.Hash()))
 }
 
 func (wv *WalletMVC) HandleKey(key termbox.Key) {
