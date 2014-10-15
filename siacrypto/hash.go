@@ -4,6 +4,7 @@ package siacrypto
 
 import (
 	"crypto/sha512"
+	"encoding/hex"
 
 	"github.com/NebulousLabs/Sia/siaencoding"
 )
@@ -15,6 +16,11 @@ const (
 
 // A Hash is the first 32 bytes of a sha512 checksum.
 type Hash [HashSize]byte
+
+// String returns a Hash formatted as a sequence of hex digits.
+func (h Hash) String() string {
+	return hex.EncodeToString(h[:])
+}
 
 // HashBytes returns the first 32 bytes of the sha512 checksum of the input.
 func HashBytes(data []byte) (h Hash) {

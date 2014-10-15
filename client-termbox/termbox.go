@@ -2,83 +2,62 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/nsf/termbox-go"
 )
 
-const (
-	HomeBoxWidth = 15
-	Border       = 1
-
-	HomeHeaderColor   = termbox.ColorRed
-	HomeActiveColor   = termbox.ColorYellow
-	HomeInactiveColor = termbox.ColorGreen
-
-	DividerColor = termbox.ColorBlue
-)
-
-type Context struct {
-	Width  int
-	Height int
-
-	Focus string
-
-	WalletsActive      bool
-	ParticipantsActive bool
-	SettingsActive     bool
+type Rectangle struct {
+	MinX, MinY, MaxX, MaxY int
 }
 
-var context Context
+func drawRectangle(r Rectangle, color termbox.Attribute) {
+	// Note that if MinY == MaxY, nothing is drawn. Usually this means you
+	// should be calling drawLine instead.
+	for x := r.MinX; x < r.MaxX; x++ {
+		for y := r.MinY; y < r.MaxY; y++ {
+			termbox.SetCell(x, y, ' ', color, color)
+		}
+	}
+}
 
-// Draw uses the context field to determine what functions to call when drawing
-// the image. Siabox uses a box-style of programming, each function receives a
-// box in which it can draw things, and is given an offset so that it knows
-// where that box is.
-func draw() {
-	// Get size of whole window.
-	context.Width, context.Height = termbox.Size()
-	drawHome()
+func drawLine(x, y, w int, color termbox.Attribute) {
+	for i := x; i < x+w; i++ {
+		termbox.SetCell(i, y, ' ', color, color)
+	}
+}
+
+func drawColorString(x, y int, s string, fg, bg termbox.Attribute) {
+	// i must be manually incremented because range iterates over code points,
+	// not bytes, meaning i would be incremented multiple times per rune.
+	var i int
+	for _, c := range s {
+		termbox.SetCell(x+i, y, c, fg, bg)
+		i++
+	}
+}
+
+func drawString(x, y int, s string) {
+	drawColorString(x, y, s, termbox.ColorWhite, termbox.ColorDefault)
+}
+
+func drawError(v ...interface{}) {
+	s := strings.Trim(fmt.Sprintln(v...), "\n")
+	w, h := termbox.Size()
+	drawRectangle(Rectangle{0, h - 1, w, h}, termbox.ColorRed)
+	drawColorString(1, h-1, s, termbox.ColorWhite, termbox.ColorRed)
+	// this isn't a great solution; I'd prefer to handle the event as usual as
+	// well as clear the error. Also, note that resize events will clear the
+	// error too.
 	termbox.Flush()
+	termbox.PollEvent()
 }
 
-func termboxRun() {
-	err := termbox.Init()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer termbox.Close()
-
-	event_queue := make(chan termbox.Event)
-	go func() {
-		for {
-			event_queue <- termbox.PollEvent()
-		}
-	}()
-
-	context.Focus = "home"
-	context.WalletsActive = true
-
-	draw()
-
-	for {
-		select {
-		case event := <-event_queue:
-			// Check for the quit signal.
-			if event.Type == termbox.EventKey && event.Key == termbox.KeyEsc {
-				return
-			}
-
-			switch context.Focus {
-			case "home":
-				homeEvent(event)
-			default:
-				panic("focus not home!") // Panic because focus should never be off of home yet!
-			}
-		default:
-			draw()
-			time.Sleep(25 * time.Millisecond)
-		}
-	}
+func drawInfo(v ...interface{}) {
+	s := strings.Trim(fmt.Sprintln(v...), "\n")
+	w, h := termbox.Size()
+	drawRectangle(Rectangle{0, h - 1, w, h}, termbox.ColorBlue)
+	drawColorString(1, h-1, s, termbox.ColorWhite, termbox.ColorBlue)
+	termbox.Flush()
+	termbox.PollEvent()
 }

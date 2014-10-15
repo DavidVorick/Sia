@@ -36,6 +36,11 @@ func (id WalletID) Bytes() []byte {
 	return siaencoding.EncUint64(uint64(id))
 }
 
+// String returns the WalletID as a printable string.
+func (id WalletID) String() string {
+	return fmt.Sprintf("%x", uint64(id))
+}
+
 // CompensationWeight calculates the weight of the wallet as reported when
 // charging the wallet. This includes the atoms, weight of any updates in the
 // works, and the weight of the wallet itself.
