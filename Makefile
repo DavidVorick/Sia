@@ -90,6 +90,6 @@ race-libs:
 
 docs:
 	pdflatex -output-directory=doc/ doc/whitepaper.tex 
-	pdflatex -output-directory=doc/ doc/addressing.tex
+	pdflatex -output-directory=doc/ doc/brokenWhitepaper.tex
 
 .PHONY: all submodule-update fmt install test test-verbose test-race test-race-verbose test-long test-long-verbose test-consensus test-delta test-state dependencies race-libs docs
