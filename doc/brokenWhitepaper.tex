@@ -1,0 +1,732 @@
+\newcommand{\hbsize}{4kb}
+
+\documentclass[twocolumn]{article}
+\usepackage[toc,page]{appendix}
+
+\begin{document}
+\frenchspacing
+
+\title{Sia: Federated Decentralized Storage}
+
+\author{
+{\rm David Vorick}\\
+Nebulous Inc.\\
+david@nebulouslabs.com
+\and
+{\rm Luke Champine}\\
+Nebulous Inc. \\
+luke@nebulouslabs.com
+}
+
+\maketitle
+
+\section{Forward}
+This paper contains many good ideas, and a few fatal ideas.
+The technology here is broken, but there's enough value in the ashes that I'm keeping it for prosperity.
+
+\section{Introduction}
+The goal of Sia is to construct the cheapest, fastest, most secure cloud storage platform that is within plausable technological reach.
+Bitcoin created an arms race for cheaper sha2 hashes, and massive technological advancements were made for this explicit purpose.
+We wish to apply the same market forces that made sha2 hashing so efficient to cloud storage.
+We wish to create a system where anyone with a storage rig can join the network and get paid for contributing storage.
+In Bitcoin, the source of payment comes from newly minted coins.
+In Sia, the source of payment comes from those who are storing arbitrary files on the network.
+
+We wish to set the price on a market, where there is a set cost for storing files on the network, and a set reward for contributing files to the network.
+As the volume of empty storage on the network increases, the price decreases, which should increase the demand for the storage, and the overall value of the network should increase.
+As the volume of used storage on the network incrases, the price increases, which will drive down demand and insure that there are never more files being stored on the network than the network can safely manage.
+This equilibrium encourages hosts to find cheaper ways to provide storage to the network than their competitors, because this will mean greater margins for them.
+
+There are numerous advantages to this style of storage beyond simply creating an arms race for cheaper datacenters.
+When data is stored on many small storage rigs around the world, in can be downloaded in a massively parallel fashion, which means that throughput can be high even when each rig only has a minimal amount of bandwidth.
+High redundancy can be used to minimize latency: if you only need to connect to the closest 15 of 1000 machines worldwide, you can download a small file almost instantly.
+Low redundancy is also improved: if you store your file across 1000 random machines, you can rely on network uptime statistics to estimate the minimum necessary redundancy.
+The result is a file that is massively colocated and safe from major disaster in any single global region, even if the redundancy is lower than the traditionally used 3 full copies.
+
+To improve storage efficiently, we wish ensure that a file fragment is being stored by exactly one machine, with no waste resulting from multiple machines fighting for the reward for storing the same file.
+This gives uploaders greater control over redundancy settings: they can choose any volume of fragments to upload and they can choose their own redundancy for the fragments.
+Redundancy becomes necessary, because it is nearly guaranteed that each file fragment is only being stored by one potentially unstable machine.
+
+A decentralied strategy is used for creating this storage platform, as we do not wish to trust the datacenters or the uploaders.
+We wish to design a system such that any storage rig running any software can participate in the network without being able to manipulate, trick, or harm the network.
+The same goes for uploaders, we wish anyone to be able to upload files using any software and any strategy while knowing that they cannot manipulate, trick, or harm the network.
+Sia is therefore a decentralized network operating under byzantine conditions.
+
+While the original goal was complete decentralization, if using a smidgen of centralization would allow for a more efficient and less wasteful system without severely compromising the security of the network, we are open to including it in the protol.
+Currently, there are no centralized components within Sia.
+
+\section{Building Blocks of Sia}
+\subsection{Required Tools}
+\begin{itemize}
+	\item Consensus: each node needs to be in agreement about the state of the network.
+	\item Random Number Generation: the network must have some expensive source of random numbers, where expensive is clearly defined.
+	\item Proof of Retrivability: hosts must be able to prove that they have access to the data they have been assigned to store.
+	\item Proof of Capacity: new hosts can claim they have large volumes of unused storage, there must be a way to verify that claim.
+	\item Proof of File Transfer: if a file is transfered from one party to another, there must be a way to resolve a dispute (where the uploader says they sent the file, the downloader says they did not receive it).
+\end{itemize}
+
+\subsection{Tradeoffs}
+\begin{itemize}
+	\item Special Hardware: hosts may require special hardware, for example you may need to include a sha2 ASIC in every storage rig. This is okay, the network as a whole is not meant to use commodity hardware.
+	\item Uptime: Rewards for storage will decrease, and perhaps dramatically if hosts do not have large volumes of uptime. This violates 'progress free', but only for the storage components of the network.
+	\item Maximum Downtime: If a host has a downtime of greater than perhaps 2\%, the host cannot profitably particpate in the network. The same goes if the host goes offline for a single stretch exceeding perhaps 24 hours.
+\end{itemize}
+
+\subsection{Assumptions}
+\begin{itemize}
+	\item No group can control more than 50\% of the economic resources of the network, even for a burst period.
+	\item Most hosts will have some form of strong DDOS protection. This is a big issue in the current design.
+	\item It is difficult to target and hack into an honest hosts machine, thereby making it dishonest.
+	\item The graph of connections between honest machines forms a single set. That is, no set of honest hosts is fully isolated from another set of honest hosts.
+\end{itemize}
+
+\section{Architecture Overview}
+The first diagrams will go here, explaining the general structure.
+The finer details of security are left to later sections.
+
+% Explain what a host is, what they store, etc. So, they have a root hash of the files that every other host is storing, for example. They have a root hash of the seed for proof-of-capacity. They store the block history of their quorum and of potentially other quorums as well.
+
+The network topology is composed of a tree of quorums.
+Parent nodes manage the aggregate resources of their children.
+Leaf nodes manage individual wallets and data sectors.
+
+Each quorum is composed of 100 to 255 hosts which act together in consensus over some volume of the network data.
+The use of parent quorums allows child quorums to get information about the rest of the network.
+Security of the network relies on quorums being trustworthy.
+A quorum is trustworthy if at least 15\% of the nodes in the quorum are trustworthy.
+Rules of the network are constructed such that if all quorums are trustworthy, the network will maintain consensus.
+
+The trustworthiness of quorums depends on making it difficult to become a host, and on making sure that quorums are composed of random sets of hosts.
+Being a host requires storing 1TB of data, some of which is arbitrary and has been uploaded to the network, and some of which is unused by the network.
+The host will need to perform proof of retrievability on the arbitrary data, and proof of capacity on the unused storage.
+This prevents attackers from controlling a large volume of consensus seats (spots in quorums) without also having significant economic resources.
+Special rules for joining and leaving the network protect an attacker with a minority of hosts to be able to break the trustworthiness of a quorum.
+
+Special rules for adding arbitrary data to the network need to be implemented to ensure that an attacker cannot artificially inflate the volume of storage they appear to provide to the network, as storage volume is used in consensus.
+
+The network state is stored in a merkle tree, with each quorum managing a subset of the data and contributing a hash.
+The root quorum (in the tree of quorums) contains the root hash of the merkle tree of the network state.
+This hash is stored in a POW blockchain.
+Each time that the network hash is updated, an entry is made into the POW blockchain indicating that the network has updated that points to the previous hash.
+Multiple entries can be made stemming from the same previous hash, these are forks.
+Strict rules are applied for interpreting forks that allow outsiders to use the POW blockchain to figure out which network fork to consider the true state.
+The POW blockchain is necessary because the rules for picking a fork require consensus around \textit{when} each fork appeared.
+A fork is invalid if it appears later in the blockchain, indicating that it was not available to previous hosts when determining the new state of the network.
+
+In brief: \\
+Sia is composed of a tree of quorums, where each quorum is assumed to be trustworthy.
+Quorums are composed of randomly assembled hosts.
+Rules make sure that being a host is difficult, and that an attacker with minority economic power cannot be a majority of hosts.
+Rules protect the random assembly of hosts into quorums, to make sure that an attacker with minority hosts cannot defeat the trustworthiness of any single quorum on the network. \\
+Quorums interact in a tree to provide scalability.
+Interactions are regulated such that if every quorum is trustworthy, the network can maintain consensus.
+Trustworthiness is loosely defined, requiring only 15\% of hosts to be honest in each quorum. \\
+Each host only sees a portion of the network, which enables scalability.
+Each host contains the root hash of a merkle tree of the entire network state, which can be used to verify claims about transactions or balances. \\
+The root hash of the network state is stored in a POW blockchain.
+Forks can appear in the blockchain, and the blockchain is used to achieve consensus around \textit{when} a fork appeared.
+Strict rules on forks enable newcomers to determine which fork is the network accepted fork.
+
+\section{Quorums}
+Hosts are randomly assembled into small quorums between 100 and 255 hosts in size.
+Within these quorums, they are able maintain consensus by using message passing.
+Each host within the quorum must provide 1TB of storage.
+Some of this storage will be empty, and some of this storage will be storing arbitrary data.
+The host must provide proof of capacity on the empty storage, and proof of retrievability on the arbitrary data.
+
+\subsection{The Byzantine Generals Problem for Single Quorums}
+Quorums have blocks and a blockchain that are used to maintain a consistent and deterministic state within the quorum.
+Each block, every single host in the quorum has to submit a small update called a ``heartbeat''.
+The heartbeat contains information such as transactions, storage and capacity proofs, and confirmation of the previous block.
+Each host must submit a heartbeat every block, and honest heartbeats should always be included.
+
+When performing consensus within a single quorum, we wish to enforce that every single honest host be in consensus, and that every single honest heartbeat gets included in each block recognized by the honest set of hosts.
+We can achieve these goals by using section 4, "A Solution with Signed Messages', from \cite{bgp}.
+The result of this algorithm is that every single honest host will have the same information, and that information will contain a message from every honest host.
+This solution does require that the set of honest hosts is connected such that an attacker cannot prevent an honest heartbeat from being broadcast to all other honest hosts.
+
+The algorithm is described here, however the proof is omitted and can be viewed in \cite{bgp}.
+The algorithm is first described as one host ("the commander") sending a message to all the other hosts ("the lieutenants").
+\begin{enumerate}
+	\item The commander creates a heartbeat, signs it, and sends it to all lieutenants.
+	\item Each time that a lieutenant receives a heartbeat that the lieutenant has not yet seen:
+	\begin{itemize}
+		\item The lieutenant adds the heartbeat to his list of heartbeats from the commander.
+		\item The lieutenant signs the heartbeat and sends it to all other lieutenants.
+	\end{itemize}
+	\item When the lieutenant knows that no more heartbeats will arrive, the lieutenant adds the heartbeats from the commander to the block.
+\end{enumerate}
+
+This algorithm is trivally extended to include all hosts by having each host act as the commander for their own heartbeat.
+For each block, every host sends a heartbeat to every other host, and for every new heartbeat that a host receives, the host sends that heartbeat to every other host.
+In the worst case, each heartbeat will only be sent $O(n)$ times, where $n$ is the number of hosts.
+This is because a host will not re-send a heartbeat that it has already seen.
+
+For further protection, we establish that each host is only allowed to have one heartbeat in each block.
+If multiple heartbeats are submitted, the host reveals itself as dishonest and all heartbeats are excluded from the block.
+This allows for an optimization.
+Once a host has seen and forwarded 2 heartbeats from another host, no additional heartbeats from the dishonest host need to be forwarded, because no honest host will include any heartbeat from the dishonest host.
+These omissions can be made without violating the assumption that all honest hosts will end up with the same set of heartbeats.
+Note: this may interfere with alternate histories, as a dishonest hosts heartbeats are not included at all if there are multiple.
+
+The worst case order notation is $O(n^2)$ heartbeats sent per block.
+Each host will send one heartbeat to every other host.
+They will then send every heartbeat from every host to every other host.
+
+\subsection{Block Progression}
+Hosts must have some way of being certain that no more heartbeats will arrive.
+We use principles similar to those outlined in \cite{timeout} to determine this.
+The network operates in 'steps', following a physical clock.
+
+Each block starts at step 0, and goes to step $n$, where $n$ is the number of hosts.
+Each step is $t$ seconds, where $t$ is enough for an honest host to sign and resend all new heartbeats to all hosts on the network, plus enough time to allow for $d$ clock drift between honest hosts.
+For this paper, we assume 5 minutes is sufficient for $t$, and that sixty seconds is sufficient for $d$, meaning that a host will be able to send all heartbeats received in a step to all other hosts in 4 minutes.
+Given that $n$ can be as large as 255, the total amount of time for one block can be as high as 21 hours and 20 minutes, or 256 steps at 5 minutes each.
+
+A heartbeat is considered honest if it has at least as many signatures as the current step number.
+Therefore, at step 0 and step 1, all heartbeats from hosts are considered valid.
+At step 2, a heartbeat is only considered valid if it has been signed by the originator and at least 1 other host.
+At step 100, a heartbeat is only considered valid if it has been signed by the originator and at least 99 other hosts.
+When an honest host receives a heartbeat that they have not seen, they can add their signature to the heartbeat, which will extend the window in which the heartbeat is valid by one step, giving the honest host at least 1 full step to send the new heartbeat around.
+If a heartbeat arrives even one second late, it is ignored, and the honest host will act as though it had never seen the heartbeat (unless it later recieves the heartbeat with enough signatures for the current step).
+
+The full algorithm for sending a heartbeat is then as follows:
+\begin{enumerate}
+	\item All hosts wait until step 0 to begin.
+	\item All hosts increment their step counter every 5 minutes according to their physical clock.
+	\item All hosts create, sign, and send a heartbeat to all other hosts.
+	\item For each unrecognized heartbeat that a host sees:
+	\begin{itemize}
+		\item If any signatures on the heartbeat are invalid or repeated, the heartbeat is ignored.
+		\item If the number of signatures on the heartbeat is less than the current step number, the heartbeat is ignored.
+		\item If two unique heartbeats have already been seen from the originating host of this heartbeat, the heartbeat is ignored.
+		\item If the heartbeat itself is invalid, the heartbeat is ignored. Conditions for a valid heartbeat are discussed in the 'Heartbeats' subsection.
+		\item The host adds the heartbeat to its list of known heartbeats.
+		\item The host adds their signature to the heartbeat and sends the heartbeat to all other hosts in the quorum.
+	\end{itemize}
+	\item When the step number is greater than the number of hosts, hosts can stop receiving heartbeats and build a block out of the heartbeats they have.
+\end{enumerate}
+Assuming that all hosts are sufficiently synchronized and that network communication is quick enough, all honest hosts are guaranteed to end with the same exact set of heartbeats, regardless of byzantine faults during the communication process.
+
+% proof/explanation
+
+\subsection{Optimizations}
+When the goal is for every host to receive every heartbeat, the total amount of required communication is only $O(n)$ heartbeats per host.
+That is, every host must send their own heartbeat to everyone, and every host must receive a heartbeat from everyone.
+The rest of the communications don't need to send the full heartbeats, but only need to send signatures and hashes, which is a significantly smaller payload.
+Furthermore, each step it's only necessary to send one message to each host - that message can contain many signatures, hashes, and (if needed) heartbeats.
+
+This section is merely to suggest that there are lots of optimizations available, which reduce the general case communication to $O(n)$ instead of $O(n^2)$.
+In the interest of keeping the whitepaper as simple as possible, these are largely left undiscussed.
+These optimizations can bring about DOS vectors, however careful implementation minimizes the attack potentency and will never make communication worse than in the unoptimized case.
+
+\section{Tree Topology of Quorums}
+The network is divided into a tree of quorums, with the parent quorums being responsible for managing the aggregate resources of their children, and with the leaf quorums being responsible for managing actual data and wallets.
+The network starts off as a single quorum, which is just a leaf quorum.
+When a quorum grows to 255 hosts in size, it is split into a parent and 2 child quorums, with each host being randomly assigned to one of the children.
+This does mean that the child quorums may not contain the same number of hosts.
+Each parent is formed from exactly 64 hosts from each child quorum, and those hosts are chosen at random.
+
+When a quorum drops to 100 hosts in size (provided it is not the only quorum on the network), it joins with its siblings to become a single larger quorum.
+In the rare case that a 100 host quorum and it's sibling exceed 255 total hosts (in the very rare case, because quorum sizes are random and follow a normal distribution), the quorum will split again, effectively randomly shuffling the hosts around.
+
+Each host keeps an entire history of their own quorum and of their parent quorum.
+When there is a split, all children keep the history of the previously unified quorum.
+When there is a join, the merged quorum hosts keep the whole history of the previous two children, including all blocks that occurred during and after the fork.
+
+% A diagram here to illustrate which blocks hosts keep.
+
+Parent quorums are meant to be very lightweight, with small blocks.
+Because hosts in parent quorums are randomly assembled and are already providing storage in leaf quorums, there are no proofs of storage and no proofs of capacity.
+This includes the block histories, because the leaf hosts are expected to have the full block history of all parents.
+The transactions that can appear in a parent quorum are limited to the aggregate motion of resources from one child to the next.
+This is limited to blocks from the children, a single aggregate transaction of each type from one child to the other child, and a single aggregate transaction of each type from one child to someewhere else on the network, for each level on the network.
+
+\subsection{Random Assembly of Quorums}
+It is important that a dishonest entity consisting of less than 50\% of the hosts on the network cannot comprise more than 75\% of the hosts on a single quorum.
+This security is ensured by randomly assigning quorums to hosts, and by setting rules that prevent manipulation.
+The only times in Sia that the assignment of hosts to quorums changes is when a host joins or leaves the network.
+
+To prevent manipulation, quorums are assembled according to the following rules:
+\begin{enumerate}
+	\item When a host joins the network, they are assigned to a random existing quorum.
+	\item When a host leaves a quorum, it is replaced by a random host from a random quorum. (replacement action)
+	\item When a host leaves a quorum, one host from a random quorum is swapped with one honst from another random quorum on the network. (network turbulence)
+	\item When a host leaves a quorum, two additional hosts from the quorum are swapped with two random hosts from the network. (quorum turbulence)
+\end{enumerate}
+
+By randomly assigning a host to a quorum upon joining, we can assume that there will be no potential for a host to manipulate the distribution of hosts in quorum.
+A host that leaves a quorum however has the option of re-joining, which gives them the effective ability to re-roll which quorum they land in.
+We also address the attack vector that a host may experience a targeted DDOS, which will result in an honest host being pushed out of a quorum that is being target by a dishonest party.
+There is no way to tell whether the leaving host was an honest host leaving for honest reasons, an honest host that was victim to a DDOS, or a malicious host trying to get into a new quorum.
+Therefore, each time that a host leaves, we add turbulence to the network to defeat each type of distribution manipulation, and provide bounds on how effective attacks can be.
+
+The first goal is to make sure that the volume of hosts in each quorum follows a perfectly random distribution.
+This is achieved by pulling a random host from a random quorum to replace a host that leaves the quorum.
+Each time that a host leaves the network, they are unable to choose which quorum is affected by their departure.
+This makes them unable to target specific quorums and reduce or increase the number of hosts that they have, protecting the distribution of number of hosts per quorum.
+
+The second goal is to make sure that a malicious host cannot corrupt a targetted quorum.
+We protect from DDOS assasinations by adding turblence to a quorum that a host leaves.
+We protect from targeted quorum attacks by adding turbulence to the network at large.
+
+(fuzzy probability on this next part, but it's close enough for a rough draft)
+When initially placing hosts in quorums, the distribution is random.
+We can look at the number of malicious hosts as a coin flip problem, where the probability of getting a malicious host is equal to the number of malicious hosts on the network.
+Assuming the attacker has at most 50\% of the hosts on the network, and that all quorums are the minimium of 100 hosts in size, the probability of an attacker controlling at least 75\% of a given quorum is:
+\begin{equation}
+\sum_{i=0}^{i=25} {100 \choose i} \; 0.5^{i} \; 0.5^{100-i} = 2.818\times10^{-7}
+\end{equation}
+Which is one in 3.5 million, meaning Sia can have up to 3.5 million quorums and an attacker will probabilistically control no more than 75\% of the hosts on any of them.
+The actual probability is much more favorable, as most quorums will have more than 100 hosts.
+
+Given the conditions, we explore what happens when an attacker tries to corrupt a target quorum by rerolling host destinations.
+We now investigate the protective power of the turbulence in the event of an attacker continuously rejoining the network trying to target a quorum at 75\% attacker control.
+We define $s$ as the number of quorums.
+
+In the event that an attacker is targeting a quorum or set of quorums to corrupt them, each time they join the network there is a $\frac{1}{s}$ chance of the attacker landing in the target quorum.
+When the attacker is replaced in the quorum that the attacker left, there is a $\frac{1}{s}$ chance that a host will be pulled from the target quorum, and a 75\% chance that the host pulled will belong to the attacker.
+When network turbulence is introduced, there is a $\frac{1}{s}$ chance that the target quorum will be chosen as a source, and a $\frac{1}{s}$ chance that the target quorum will be chosen as a destination, which is two chances to lose or gain hosts.
+The other quorum will be random, which means the attacker will have at best a 50\% chance of drawing a malicious host.
+The change is then $(2)(\frac{1}{s})(\frac{1}{2})(\frac{1}{4})$ more malicious hosts, and $(2)(\frac{1}{s})(\frac{1}{2})(\frac{3}{4})$ more honest hosts.
+We assume that quorum turbulence will introduce no change, which is true where the percent of malicious hosts in the source quorum is equal to the percent of malicious hosts in the target quorum.
+Over $s$ rerolls, we get the expected change in the number of malicious hosts in the target quorum to be:
+$1 - 0.75 + (2)(\frac{1}{2})(\frac{1}{4}) - (2)(\frac{1}{2})(\frac{3}{4}) = -\frac{1}{4}$
+
+Therefore, the turbulence we have introduced will actually probabilistically drive the attacker below 75\% control, requiring an extreme amount of luck to push a quorum all the way towards 85\%.
+As the number of quorums increases, the number of rerolls needed to attack a quorum rises quadratically, smoothing out the turbulence as probability of rolling the target quorum decreases and the volume of turbulence increases.
+
+If a host is removed from a quorum as the result of a DDOS, the effect is:
+Losing 1 honest host from the quorum.
+Gaining a host from a random quorum, which has a 50\% chance of being honest as a result of the replacement action.
+The network turbulence will have no effect.
+Two additional hosts from the quorum will be selected at random to be removed as a result of quorum turbulence.
+This results in two 25\% chances of an honest host being removed.
+And this also results in two 50\% chances of an honest host being added.
+The net change in the number of honest hosts as result of an assasination is then: $-1 + 0.5 - 2(0.25) + 2(0.5) = 0$.
+There is no probabilistic benefit to doing assassinations when an attacker already controls 75\% of a quorum.
+
+It is noted however that because the attacker can directly pick which host to attack, and can attack multiple hosts at once, this DDOS protection is still not very strong.
+For small quorums, an attacker only needs to pull off a small volume of assassinations before potentially getting lucky, especially when compared to host rerolling.
+Therefore we will need to require that honest hosts have some form of DDOS protection, or else admit a vulnerability to DDOS attacks.
+It is also noted that this DDOS protection scheme is responsible for more than half of the turbulence introduced into the network, resulting in 4 hosts (of 7 total) that need to switch quorums.
+
+\subsection{Consensus Across the Tree}
+The tree needs to have a way to come to consensus about the status of the blockchain of each quorum.
+This is managed through the tree structure.
+The parent quorum is composed of exaclty 64 hosts from each child quorum.
+If the quorum is honest, then with high probability there will be at least one honest host in the parent quorum.
+
+A quorum can have forks.
+This happens when dishonest hosts release a block that contains a different set of heartbeats than the one determined by the honest hosts.
+Internal to the quorum, honest hosts will ignore all honest blocks, and are guarnateed to maintain synchronization.
+When the following block is released, each host will include in their heartbeat a signature of the previous block.
+The previous block with the most supporters is accepted as cannon by the parent.
+
+A dishonest set of hosts cannot release an illegal block, however if an attacker controls the majority in a leaf quorum, it can exclude honest heartbeats from the quorum.
+Honest hosts will never switch to an attackers fork, which means they will appear inactive to the quorum.
+The result will be the honest hosts dropping from the network, which will result in new hosts being brought in, and in turbulence being applied.
+
+The same rule goes for parent quorums, except that supporters applies to all child quorums as well.
+If a parent quorum dishonestly announces a block that is missing the winning block from one of its children, all of the honest hosts beneath the parent will reject the block.
+This prevents an attacker who controls the majority in a parent quorum from being able to apply dishonest forks without controlling the majority of that entire segement of the quorum tree.
+
+%FAILURE MODE
+There is a failure that occurs if there are honest hosts in a quorum who settle on a block, and then realize that the block was not included in the parent block.
+This would mean that either there are no honest hosts in the parent, or all of the honest hosts in the parent are being ignored.
+The second is not really a concern because then the parent just forks, and the acceptance for the parent hits.
+But if no other parent blocks percolate...?
+Also, how do children end up seeing all possible parents?
+===> They see the possible parents because someone percolates the possible parents to them.
+I guess we can assume that information is cheap and there are easy ways to access it.
+
+\section{Something}
+\subsection{Heartbeats}
+Each heartbeat will contain the following:
+\begin{itemize}
+	\item A signature of the previous block, forcing a host to align with a specific previous history.
+	\item A proof of storage, demonstrating that the host is holding onto required data.
+	\item A proof of capacity, demonstrating that the host has as much empty storage as the host is indicating to the network.
+	\item A clock-synchronization message, which will allow for a byzantine set of hosts to maintain synchronized clocks within drift $d$.
+	\item A random 128 bit number.
+	% Aiza recent block?
+	\item Transactions within the network. This can include sending money, uploading files, and other updates.
+\end{itemize}
+
+A heartbeat is invalid if the previous block signature does not match the history that the honest hosts recognize as the previous block.
+A heartbeat is invalid if it is missing the proof of storage, or if the proof of storage is incorrect.
+A heartbeat is invalid if the proof of capacity is missing or incorrect.
+A heartbeat is invalid if the clock synchronization message is incorrect (this may not be necessary, depending on the synchronization algorithm that gets chosen).
+A heartbeat is invalid if the uncompressed size of the core heartbeat (before all of the signatures that get added during consensus) exceeds \hbsize{}.
+
+\subsection{Integrating Blocks}
+A block is composed of every heartbeat that survived consensus.
+At most, each host will have one heartbeat that goes into the block.
+Some hosts may have zero heartbeats that go into the block.
+
+The history of a quorum is kept in a blockchain, which is stored in the quorum's available storage.
+Each host is expected to keep the entire blockchain for their quorum, and the block histroy will be included in the storage proofs.
+
+\subsection{Random Numbers}
+Quorums need to be able to produce random numbers.
+Each block, all hosts (in their heartbeats) submit a 128 bit random number.
+A 'unique seed' is created by appending all of the random numbers and taking the hash: H(host\_1\_seed || host\_2\_seed || ...).
+Becasue it is difficult to find the collision of a hash, so long as one of the random numbers is truly random, the seed will be unique and an attacker cannot feasibly grind for collisions.
+
+After getting a unique seed, the quorum will wait for a new global random number to be announced.
+Concurrent to creating the unique seed, hosts will lock down the set of events that are determined by the random number.
+The quorum must wait enough time that there is no possibility of a dishonest member of the quorum knowing the global number before submitting a random number to the unique seed.
+% explain this in greater detail.
+The the root quorum will announce a globally random number, which is derived from the Sia's POW blockchain.
+Each leaf quorum will take their unique seed, and derive a unique random number by taking H(unique\_seed || global\_random\_number).
+This random number will then be applied to the events that have already been locked down.
+
+\subsection{Block Announcements}
+
+% Comment overview:
+% Send a transaction, plus an indication of which level it skips over to the other side of the quorum.
+
+\subsection{Random Placement of Files}
+
+\subsection{Editable Files}
+
+\subsection{Aggregate Transactions}
+% This is an oversimplification.
+% At no point should the paper ever be wrong.
+The types of transactions are:
+\begin{itemize}
+	\item Monetary transaction
+	\item File transaction (adding a file to the network)
+	\item Host transaction (adding a host to the network)
+\end{itemize}
+
+An aggregate transaction is just the hash of a full transaciton, which keeps the transactions small.
+The destination quorum is responsible for contacting the source quorum to figure out how the aggregate transaction breaks down.
+
+\section{Federated Storage}
+We wish to build a network of hosts and files, where every host stores a set of files, and every file is stored by exactly one host.
+This network is dynamic, meaning that files can be added at any time, and hosts can be added at any time.
+We further wish to perform consensus operations on this network.
+To prevent Sybil attacks, hosts must submit storage proofs to be eligible to participate in consensus.
+In order to protect consensus, we only wish to make sure that no malicious party can gain control of a majority of the voting power.
+
+We make the following assumptions:
+\begin{itemize}
+	\item All non-malicious files are fully compressed and non-redundant.
+	\item No party can afford more than 50\% of the total resources available to the network. That is, a party cannot perform a 50\% attack by buying enough storage hardware, renting 50\% of the storage available on the network, or some combination of the two.
+	\item Renting a volume of storage on the network is at least as expensive as renting the same volume off the network.
+\end{itemize}
+
+Given these assumptions, we wish to build a network that satisfies the following properties:
+\begin{itemize}
+	\item Every file is stored on a host.
+	\item On a sufficiently large network, the variance in the number of files stored by each host is bounded.
+	\item A party controlling less than 50\% of the physical storage on the network cannot appear to control greater than 50\% of the storage without incurring greater economic cost than the cost of owning 50\% of the storage.
+\end{itemize}
+
+We establish that the following condition is sufficient to achieve the third property:
+\begin{itemize}
+	\item A set of hosts that comprise less than 50\% of the network cannot probabilistically control greater than 50\% of the files they have uploaded at any time without incurring prohibitive economic cost.
+\end{itemize}
+Because we assume a mechanism for proof of storage, we hold that the only way for a party to appear to control greater storage than it actually controls is to through the use of a specially constructed ``fake file'' whose storage proof can be spoofed.
+This allows the malicious party to pretend to store the file without needing to consume physical storage.
+To prevent such attacks, we must ensure that the cost of spoofing the storage proof is more expensive than the cost of genuinely storing the file, which is what we will define as prohibitive economic cost.
+
+The fake file attack requires that the fake file uploaded to the network land on a conspiring host.
+If the fake file has a greater chance of being on a non-conspiring host than a conspiring host, the cost of keeping the fake file will exceed the cost required to just buy raw storage.
+If a set of hosts comprising less than 50\% of the network cannot store greater than 50\% of the fake files they upload without incurring prohibitive economic cost, then they cannot appear to control greater than 50\% of the raw storage space on the network.
+
+The remainder of the paper shall design a system that prevents such an attack. The following properties will be achieved (given the prior assumptions):
+\begin{enumerate}
+	\item Every file is stored on a host.
+	\item A set of hosts that comprise less than 50\% of the network cannot probabilistically control greater than 50\% of the files they have uploaded at any time without incurring prohibitive economic cost.
+	\item On a sufficiently large network, the variance in the number of files stored by each host is bounded.
+\end{enumerate}
+
+Throughout this paper, only the quantity of files is discussed, with no mention of how large these files might be.
+It can be assumed that all files are given a weight equal to their size in bytes when calculating penalties or making other considerations.
+Additionally, hosts are discussed, with no mention of how much each host is stored.
+It can be assumed that hosts are given a weight equal to the volume of files that they are storing.
+Parts of this paper mention numbers like 10,000 files per host.
+It can be assumed that there is a minimum volume of files that need to be stored, and that files have a maximum size.
+
+\section{Rendezvouz Hashing Scheme}
+A modified rendezvouz hashing scheme will be used to achieve the aforementioned goals.
+Every host and file on the network is paired with a trusted random seed after joining the network.
+The source of these seeds is outside the scope of this paper, though something like the hash of a future Bitcoin block could be used.
+To determine which host stores a file, each host is assigned a number determined by concatenating its seed with the seed of file and hashing the result.
+The host with the largest hash is chosen to store the file.
+
+To achieve the first property, we simply require that at least one host be on the network at all times.
+
+Achieving the second property requires enumerating all of the ways in which the network can reconfigure, and then demonstrating that none of the reconfigurations are vulnerable to manipulation.
+The network will reconfigure during the following actions:
+\begin{itemize}
+	\item A file is added to the network.
+	\item A file is removed from the network.
+	\item A host is added to the network.
+	\item A host is removed from the network.
+\end{itemize}
+For simplicity, we mandate that only one of these actions can happen at a time.
+
+\subsection{Adding and Removing Files}
+When a file is added to the network, it is given a random seed which will determine which host is responsible for storing it.
+This process is sufficiently random, unless a conspirator tries to ``reroll'' the seed of a file by repeatedly adding and removing it from the network.
+We limit this by forcing files to be pre-paid, preventing funds from being added to a file after it has been uploaded, and preventing a file from being removed from the network until the funds are depleted.
+We also prevent the contents of the file from being altered, so that a conspiring uploader cannot edit a file to be ``fake'' after uploading it.
+(This attack is only useful if the attacker intends to upload legitimate files anyway; files that land on conspiring hosts are made fake, and the original file is reuploaded to the network. Various social engineering attacks, like offering cheap storage, could be used to help the attacker locate a source of legitimate files that provide extra funds for the attack.)
+With these limitations, there is no way for an uploader to manipulate the probability of a file landing on a conspiring host.
+
+Files can be removed from the network prematurely if (and only if) the host that was storing the file loses the file.
+When this occurs, the uploader is refunded for the remaining time that the file should have spent on the network.
+A conspiring host can corrupt or remove valid files in order to increase the percentage of fake files it is storing.
+When a file is lost or corrupt, the host is no longer responsible for storing it.
+Therefore, a penalty must be incurred on the host that is as economically expensive as holding onto the file for the duration of the file's life.
+This is as simple as forcing the host to refund the uploader an amount equal to the funds remaining in the file.
+This holds even if the file had enough funds to outlive the host; at the end of a hosts life all of its files are transferred to another location on the network.
+
+Using this penalty has a nice property: it allows hosts to selectively corrupt files without having to leave the network entirely.
+This is good for legal reasons, as it allows hosts under legal pressure to delete files that are illegal without being forced away from participation in the network.
+This may satisfy potential participants who are concerned about the legal and moral responsibilities accompanying hosting potentially objectionable files.
+It is also noted that this property does not eliminate privacy: through encryption and obfuscation, an uploader can protect their own privacy, while still allowing law enforcement to prevent the distribution of illegal content without disrupting the foundational functioning of the network.
+
+\subsection{Adding Hosts}
+When a host joins the network, it receives a random set of files from throughout the network, taking them from random places.
+The host can manipulate the outcome of this random event by leaving and rejoining, effectively rerolling the set of files it receives.
+If we assume that the host is performing a reroll to increase the likelihood of receiving fake files, we can penalize the host for leaving early a greater amount than the host stands to gain by performing a reroll.
+We can define ``leaving early'' by forcing the host to commit to an exact amount of time of being on the network.
+Once that time has expired, the host is forced to leave.
+If the host leaves before that time has expired, the host has left early.
+The host stands to gain the most from doing a single reroll (multiple rerolls will have diminishing returns), so the network will assume that the host only intends to reroll once on average when determining the penalty.
+We observe that a single reroll means that the host will get a better arrangement of files with approximately half of a standard deviation, meaning if the standard deviation for the number of fake files the host expects to get is 100, then a single reroll means the host can expect to get 50 fake files more than what would be expected without doing any rerolls.
+The network can assume that no more than 50\% of the files are fake.
+The network can calculate the standard deviation by taking the square root of 50\% of the files, times the probability of getting each file, times the inverse of that probability.
+The penalty for leaving early is then defined by the cost of storing a half standard deviation of files for the amount of time that the host had remaining.
+
+\begin{equation}
+Penalty = \frac{1}{2} * \sqrt{(fakes) * \frac{1}{hosts} * (1 - \frac{1}{hosts})}
+\end{equation}
+
+On networks where hosts are expected to have a large number of files, the standard deviation is very small compared to the number of files that the host is storing.
+At 10,000 files per host, the above equation works out to a penalty of 70.6 files.
+70.6 is a small fraction of 10,000, and so a host storing an expected 10,000 files will have at most a penalty that is less than 1\% of the total expected income for storing the files.
+This penalty is a reasonable risk for honest hosts to take.
+
+\subsection{Removing Hosts}
+When a host leaves the network, whether early or late, it has the responsibility of transferring all files to the next owner.
+The host has the ability to decide not to transfer the file, which is the same as corrupting the file.
+Preventing manipulation upon leaving the network is already covered if the same file corruption penalties are applied to hosts who do not properly transfer a file to their successor upon leaving the network.
+
+We want to give hosts a way to deal with file corruption that does not result in them personally paying out for the full refund of the files lost, as this is prohibitively expensive.
+The purpose of the penalty is not to discourage corruption, but instead to discourage manipulation of file distribution.
+In the case of wholesale corruption, the goal is either to remove files from a host that has a high volume of valid files, or to prevent a high volume of valid files from being sent to other conspiring hosts on the network, or to prevent a high-volume of fake files from going to non-conspiring hosts on the network.
+For this case, we need to look at the high probability cases, because a host can predict the outcome of wholesale corruption before executing, meaning that they can choose to execute the corruption only in favorable or unusual cases.
+We do not care about extremely unusual cases, because a conspiring set of hosts will have very few opportunities to execute on these, and cannot use them to adjust the network by more than a fraction of a percent.
+We will establish ``extremely unusual'' as being 4 standard deviations outside of the expected, which will happen 0.003\% of the time.
+A host moving files favorably at 4 standard deviations, in the case of 10,000 files per host, will be manipulating around 560 files.
+Therefore we set the penalty of wholesale corruption equivalent to the benefit of moving 560 files, or about 6\%, where you pay for the average time remaining on the files.
+Though a bit scarier than the leaving early penalty, the wholesale corruption penalty is manageable.
+
+\subsection{Distribution of Files Per Host}
+The distribution of files cannot be disrupted by adding files to the network, as files join with a random seed, are sent to random hosts, and are stored for a fixed amount of time.
+The distribution of files can be disrupted however by removing hosts when the hosts get an unfavorable random seed, or are able have a set of files sent to a favorable location by leaving,
+All of the penalties associated with manipulating the distribution of files are expensive, regardless of whether the goal of manipulation involves fake files or not.
+A conspiring set of hosts comprising 50\% of the hosts on the network looking to cause a disparity of 5\% between conspiring and non-conspiring hosts would have to move the network 2.5 standard deviations in each direction (assuming 10,000 files per host).
+Shifting the average conspiring host by 2.5 standard deviations would require well over 100 rerolls per host, something that we can assume is economically prohibitive.
+In conclusion, disrupting the distribution of files per host beyond any reasonable value (defined as a 5\% gap) is economically prohibitive.
+
+\subsection{Summary of Rendezvouz Hashing}
+A full summary of the rules of the network follows:
+\begin{itemize}
+	\item Files and hosts join the network with a precise, prepaid lifetime.
+	\item After joining, each file and host is given a random seed.
+	\item Files are placed onto hosts using the random seeds and rendezvouz hashing.
+	\item Hosts are penalized for losing files ('corrupting files') an amount equivalent to how much time the file had remaining on the network, and the uploader is refunded.
+	\item Hosts are penalized for leaving early equivalent to how useful a reroll might be in changing the distribution of fake files on the hosts machine.
+	\item Hosts are penalized for 4 standard deviations of file redistribution if they lose all of the files --- and they are pardoned from any penalties for individual files in that set.
+\end{itemize}
+This set of rules enforces the three conditions established at the beginning of the paper, given the assumptions established at the beginning of the paper.
+
+We observe four shortcomings with this approach:
+\begin{itemize}
+	\item Files need to obtain new seeds after their original payment expires. This causes turbulence, as the expired file will need to be uploaded to a new location.
+	\item Hosts need to obtain new seeds after their allotted time expires. This causes turbulence, as the host will need to download a new set of files.
+	\item Hosts can be penalized, and there must be a reliable way to enforce the penalties.
+	\item The number of hashes needed to determine the state of the network is the number of hosts times the number of files. This will not scale.
+\end{itemize}
+
+\section{Balanced Tree Distribution}
+There are two valuable properties to the rendezvouz hashing that make it work in a Byzantine environment:
+\begin{itemize}
+	\item When adding a host to the network, the host has an equal chance of receiving every single file in the network.
+	\item When adding a file to the network, the file has an equal chance of landing on every host in the network.
+\end{itemize}
+We can reduce the volume of hashing required by organizing hosts into a tree, and putting files on the hosts.
+Because hosts can leave at any time, this tree is not guaranteed to be balanced.
+However, it is known how many hosts remain on each side of the tree at all times.
+When a file is added, it is given a random seed to determine which host it shall end up on.
+At each level of the tree, the file will use to randomly pick a side weighted according to the total number of hosts in each side of the tree.
+The seed is then hashed to produce a new seed for picking a direction at the next level.
+When the file hits the bottom of the tree, it will be on a random host.
+
+When a host is added to the network, it is placed on the lightest side of the tree.
+This helps to maintain balance, and does not disrupt the randomness of the network because hosts do not draw files from their neighbors.
+Instead, the host uses a random seed to pull files from around the network.
+To get a file, the host hashes the seed and uses that as a random number to transverse the tree, similar to adding a file.
+When it arrives at a host, it will draw a file at random from the host, using the next iteration of the original seed to pick a file.
+This will be repeated for every file that the host draws, and the host will draw files until it has pulled a number of files equivalent the amount of storage it is bringing to the network.
+The host will need to leave some extra space for new files that join the network and have a chance of landing of the host.
+It is left to the host to optimize this process.
+
+When a host leaves the network, its files are assigned new random seeds and given a new position on the network, which eliminates the possibility of leaving hosts to know where on the network the files will end up.
+
+A few notes on this setup:
+\begin{itemize}
+	\item Files don't have a permanent seed anymore. They use a random seed to get placed, but then they tether to that host, getting a new seed if the host disappears.
+	\item Where a host is in the tree doesn't matter. The tree can be arranged arbitrarily, and the host will just bring its files along.
+	\item The same penalties for leaving early or losing files apply as in the rendezvouz hashing.
+\end{itemize}
+
+\section{Random Number Generator Manipulation}
+The first thing that can be manipulated is the placement of new hosts.
+The second thing that can be manipulated is the turblence caused by hosts dropping.
+Randomness of picking children to participate in parent consensus
+Randomness of picking which hosts go to which child during a split.
+
+\section{Conclusion}
+A brief description of the system, close to a protocol but less well defined, followed by a summary of the weaknesses of the protocol.
+
+\begin{appendices}
+
+\section{Consensus and Random Number Generation}
+We handle both consensus and random number generation by using a POW blockchain.
+
+Consensus is handled by storing the merkle root of the network topology in the blockchain.
+If there is a fork, strict rules are in place to help outsiders figure out which fork to choose.
+All nodes in the network topology are required to have a full copy of the blockchain, which means you can make assumptions about their awareness of a network fork if one appears within a certain number of blocks.
+The strict rules are explained in further detail after the structure of the network topology is explained.
+
+The POW blockchain is also used as a source of random numbers.
+Each time that a random number is necessary, the hash of the next winning block can be used as the source of randomness.
+This means that random numbers can be probabilistically manipulated by anyone with sufficient hashing power or luck to create multiple blocks before announcing them to the network.
+Executing on this manipulation will result in a lost block reward however, which means that an economic cost of manipulation can be calculated.
+This cost of manipulation is explored in greater detail when we show where random numbers are used within the Sia topology.
+
+\subsection{Potential Improvements}
+For the random number generation, we would like to add a sequential set of computations (perhaps a sequential proof of work) that starts with the block as a seed, and then arrives at a conclusion which can be verified quickly.
+The advantage to doing this is increasing the cost of random number manipulation.
+An honest miner can find a block, announce it, and then the random number resulting from the block can be determined afterwards by doing the sequential POW.
+A manipulator however will need to produce multiple blocks and perfrom the sequential POW on each before deciding which block is favorable to publish.
+For every moment that the manipulator spends determining the random number result, an honest miner has an opportunity to publish a competing block, thus foiling the manipulator.
+
+\section{Proof of Storage}
+Since we wish to distribute storage to foreign hosts, we must have a method to force the hosts to prove that they are storing the files that they are in charge of.
+We will do this by taking a merkle hash of the file, hashing every 64 bytes into a 32 bytes hash, forming a tree.
+The network topology will store a list of hosts and the merkle roots of every file that each host is responsible for storing.
+A challenge can then be periodically issued to the hosts, asking them to prove that they have a random 64 byte segment of the file.
+The proof is constructed by providing the 64 byte piece, and every hash in the tree that is required to build up to the merkle root.
+The size of the proof is 64 bytes + log(filesize / 64 bytes) * 32 bytes.
+On Sia, the maximum file size is limited to 25MB, which means the maximum proof size is 480 bytes (64 bytes, plus 13 tiers of merkle tree hashes, one hash per tier at 32 bytes each).
+
+A proof does not have to be submitted for every file however, a file can be randomly selected from a host's set of files.
+If a host can complete many consecutive storage proofs on random files that are being stored, it is very likely that the host is storing all or almost all of the files it is supposed to store.
+This does give a host the opportunity to throw out a very small percentage of the data that it's supposed to be storing with a low probability of detection.
+
+There is also a paper called 'Compact Proofs of Retrievability', which may provide a more compact way to do storage proofs.
+Because merkle tree proofs are sufficient, this is one of the last things that we will visit for protocol improvement.
+
+\section{Proof of Capacity}
+Proof of Capacity is used to enable a host to prove that they have a large volume of unused storage.
+When a host announces that they have unused storage, a random number is generated for them and that is used as the seed.
+Data is generated using: data[index] = Hash(index|data\_seed), until the declared volume of data has been created.
+The hashes are sorted by numerical value before being committed to disk, for easy lookup later.
+The network remembers data\_seed during the challenge phase.
+
+When a challenge needs to be performed, a new random number is generated.
+A challenge is created using: challenge[0] = Hash(challege\_seed) and presented to the network, viewable by everybody.
+The host responds to this challenge by providing the index that results in the hash Hash(index||data\_seed) which is numerically closest to the challenge.
+
+The network has no way of knowing which index is actually closest to the challenge, however the network can trivially verify that the presented hash is in the data set.
+The network can gauge honesty of the host by performing statistical analysis of the responses of the host to the challenge.
+The host can always present an answer, however given the size of the data set that the host is supposed to be storing, the optimal or closest hash will on average be a certain numerical distance away from the challenge.
+If the host is cheating by storing less or using a smaller search space, the host's average answer will be further away from what is statistically expected, and this can be detected by the network.
+
+Note: This paragraph could probably be moved to an appendix.
+We observe that in storing the data, optimal storing (assuming that a small number of hashes per response is acceptable - 10,000 or even only 100) does not require storing the hash, only the index.
+For example, say we have are storing data on 1,000,000 indices, and the numerical range for our hash value is 1 to 1 billion.
+We'll create 100 buckets each covering 1\% of the possible values for hashes.
+The first bucket covers the numeric range 0 to 10,000,000, the second covers 10,000,000 to 20,000,000, and so on, up to 1 billion.
+In each bucket, we place all of the indices that produce hashes which fall in the range of that bucket.
+Then, when responding to a challenge, we only need to do M hashes, where M is the number of indices in the bucket containing the challenge hash.
+
+If we assume that the cost of creating buckets is minimal, only a few bytes per bucket, then the actual cost of storing according to this scheme is the number of bytes per index.
+If you are only storing across 2\^16 indices, you can get by with 2 bytes per element, and with doing a minimal amount of computation per challenge.
+
+By using sequential challenges, where the next challenge is dictated by the response to the previous challenge, we can force a specialized host to recompute the entire dataspace multiple times.
+The sequential process works as such: challenge[i+1] = Hash(challenge[i] | responseTo\_challenge[i]).
+Some number of iterations is chosen for the sequential challenges, and the host will need to provide that many responses.
+This is a linear number of responses in the number of sequential challenges unfortunately.
+A better algorithm may exist where the number of responses presented does not need to match the number of sequential challenges.
+
+With the current algorithm, you take the average distance of the host responses from the target value.
+This average distance will approach the expected value.
+The distribution of distances per request follows an exponential distrubution, which means the median response will actually appear to be closer than the average response.
+Unfortunately, it appears that in order to get the variance down, a host will have to be queried on the order of thousands of times, which is too inefficient for Sia.
+Instead, a penalty approach must be taken.
+Upon returning a challenge that is not as close as expected, a host is penalized.
+Upon returning a challenge that is closer than expected, a host is rewarded.
+(There is no risk in doing this, because the set is finite and known to the network - the host cannot search a larger search space than what has been assigned)
+The penalties will need to be tuned such that a host storing less than the full set will on average be penalized enough to make such behavior an economically inferior strategy.
+
+It is possible that a host with specialized hashing hardware will be able to live-compute the data and the search space.
+This can be prevented by using the same hashing algorithm for computing the disk data as is used for the POW blockchain.
+If the expected reward from live computation is lower than the expected reward from mining on the POW blockchain, there is no economic incentive for a host to attack the network through live computing.
+Additionally, if a host claims to have lots of capacity, but then is asked to store a bunch of real files instead of precomputed data, this attack will break and the hosts dishonesty will be revealed.
+
+When discussing network topology, we will discuss if live-compute attacks pose any worthwhile threat to the network.
+
+\section{Proof of File Transfer}
+There are many cases in which we wish to transfer files from one host to another.
+Sometimes, there may be a dispute, where the uploader claims to have uploaded the file, and the downloader claims not to have received it.
+Or, there may be claims of connectivity problems.
+
+We have a solution that involves the use of moderators.
+If there is a dispute, moderators are called in at random from the network.
+The uploader uploads the file to the moderators, who then pass the file along to the downloader.
+If the moderators get the file from the uploader, they sign that the transaction was attempted by the uploader, and that the downloader is at fault.
+If half or more of the moderators sign, then the downloader is penalized.
+Otherwise, the uploader is penalized.
+
+Assuming that 51\% of the chosen moderators behave honestly, this provides a resolution to disputes that is secure.
+If one side feels that the moderators were not 51\% honest, it is possible to bring in additional moderators, which makes it less likely that a minority of dishonest hosts can form a majority of moderators.
+The request for more moderators will only be honored if statistical analysis reveals that it's possible that the batch of moderators was bad. (If 80\% of mods agree, and only 5 were chosen, then a bad batch of mods is possible. If 80\% of mods agree, and 15 have been chosen, a bad batch is less likely.)
+Eventually, requests for more moderators will stop being honored, and the decision will be final.
+An optimal number needs to be chosen.
+Using moderators to assist uploads is very expensive.
+
+One problem with the moderator approach is that there's currently nothing incentivizing the moderators to be honest about the completetion of the upload.
+The uploader or downloader could potentially bribe the miner to lie in their favor, thus dodging the penalty and thrusting it upon the other party.
+The incentive structure of this approach needs to be tuned.
+
+An alternate solution to the file transfer problem involves penalizing both the uploader and the downloader an equal amount if there is a dispute, that is greater than if either one confesses to be the non-cooperative party.
+This does enable a malicious entity to forcefully apply penalties to others, however it will be expensive for the entity to do so, and a malicious entity will only ever have this opportunity with random other parties, which is an additional, if incomplete, form of protection against targeted attacks.
+(This can be discussed at greater length)
+
+\end{appendices}
+
+\begin{thebibliography}{2}
+
+\bibitem{bgp}
+	Leslie Lamport, Robert Shostak, Marshall Pease,
+	\emph{The Byzantine Generals Problem},
+	ACM Transactions on Programming Languages and Systems, Vol. 4, No. 3, July 1982, Pages 382-401.
+
+\bibitem{timeout}
+	Leslie Lamport,
+	\emph{Using Time Instead of Timeout for Fault-Tolerant Distributed Systems},
+	ACM Transactions on Programming Languages and Systems, Vol. 6, No. 2, April 1984, 254-280.
+
+\end{thebibliography}
+
+\end{document}
+
